@@ -342,7 +342,8 @@ export default class OpenAIProvider extends BaseProvider {
       messages: messages as ChatCompletionMessageParam[],
       stream,
       keep_alive: this.keepAliveTime,
-      temperature: assistant?.settings?.temperature
+      temperature: assistant?.settings?.temperature,
+      ...(model.id.startsWith('yi-') && { max_tokens: 8192 })
     })
 
     if (!stream) {
