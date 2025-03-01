@@ -94,7 +94,7 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic }) => {
 
   const showKnowledgeIcon = useSidebarIconShow('knowledge')
 
-  const estimateTextTokens = useCallback(debounce(estimateTxtTokens, 1000), [])
+  const estimateTextTokens = useCallback(debounce(estimateTxtTokens, 100), [])
   const inputTokenCount = useMemo(
     () => (showInputEstimatedTokens ? estimateTextTokens(text) || 0 : 0),
     [estimateTextTokens, showInputEstimatedTokens, text]
