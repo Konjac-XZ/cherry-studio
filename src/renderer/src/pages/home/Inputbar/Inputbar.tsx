@@ -33,7 +33,7 @@ import { Button, Popconfirm, Tooltip } from 'antd'
 import TextArea, { TextAreaRef } from 'antd/es/input/TextArea'
 import dayjs from 'dayjs'
 import Logger from 'electron-log/renderer'
-import { debounce, isEmpty } from 'lodash'
+import { debounce, isEmpty, throttle } from 'lodash'
 import React, { CSSProperties, FC, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
@@ -94,11 +94,25 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic }) => {
 
   const showKnowledgeIcon = useSidebarIconShow('knowledge')
 
-  const estimateTextTokens = useCallback(debounce(estimateTxtTokens, 1000), [])
-  const inputTokenCount = useMemo(
-    () => (showInputEstimatedTokens ? estimateTextTokens(text) || 0 : 0),
-    [estimateTextTokens, showInputEstimatedTokens, text]
-  )
+  const [tokenCount, setTokenCount] = useState(0);
+
+  const debouncedEstimate = useCallback(
+  debounce((newText) => {
+      if (showInputEstimatedTokens) {
+      const count = estimateTxtTokens(newText) || 0;
+      setTokenCount(count);
+      }
+  }, 500),
+  [showInputEstimatedTokens]
+  );
+
+  useEffect(() => {
+  debouncedEstimate(text);
+  }, [text, debouncedEstimate]);
+
+    // Use the state variable directly
+    const inputTokenCount = showInputEstimatedTokens ? tokenCount : 0;
+
   const newTopicShortcut = useShortcutDisplay('new_topic')
   const newContextShortcut = useShortcutDisplay('toggle_new_context')
   const cleanTopicShortcut = useShortcutDisplay('clear_topic')
