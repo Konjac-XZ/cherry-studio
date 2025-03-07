@@ -14,6 +14,16 @@ const initialState: WebSearchState = {
     {
       id: 'tavily',
       name: 'Tavily',
+      apiKey: ''
+    },
+    {
+      id: 'searxng',
+      name: 'Searxng',
+      apiHost: ''
+    },
+    {
+      id: 'exa',
+      name: 'Exa',
       enabled: false,
       apiKey: ''
     },
