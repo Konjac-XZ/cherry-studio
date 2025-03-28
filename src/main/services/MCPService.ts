@@ -1,8 +1,12 @@
-import { getBinaryPath } from '@main/utils/process'
+import os from 'node:os'
+import path from 'node:path'
+
+import { getBinaryName, getBinaryPath } from '@main/utils/process'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js'
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { MCPServer } from '@types'
+import { app } from 'electron'
 import Logger from 'electron-log'
 
 class McpService {
@@ -43,7 +47,7 @@ class McpService {
     }
 
     // Create new client instance for each connection
-    this.client = new Client({ name: 'McpService', version: '1.0.0' }, { capabilities: {} })
+    this.client = new Client({ name: 'Cherry Studio', version: app.getVersion() }, { capabilities: {} })
 
     const args = [...(server.args || [])]
 
@@ -150,6 +154,15 @@ class McpService {
       Logger.error(`[MCP] Error calling tool ${name} on ${server.name}:`, error)
       throw error
     }
+  }
+
+  public async getInstallInfo() {
+    const dir = path.join(os.homedir(), '.cherrystudio', 'bin')
+    const uvName = await getBinaryName('uv')
+    const bunName = await getBinaryName('bun')
+    const uvPath = path.join(dir, uvName)
+    const bunPath = path.join(dir, bunName)
+    return { dir, uvPath, bunPath }
   }
 }
 

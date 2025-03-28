@@ -902,7 +902,8 @@
           "pathSelector.return": "戻る",
           "pathSelector.currentPath": "現在のパス",
           "new_folder.button.confirm": "確認",
-          "new_folder.button.cancel": "キャンセル"
+          "new_folder.button.cancel": "キャンセル",
+          "new_folder.button": "新しいフォルダー"
         }
       },
       "display.assistant.title": "アシスタント設定",
@@ -1009,7 +1010,9 @@
         "url": "URL",
         "errors": {
           "32000": "MCP サーバーが起動しませんでした。パラメーターを確認してください"
-        }
+        },
+        "editMcpJson": "MCP 設定を編集",
+        "installHelp": "インストールヘルプを取得"
       },
       "messages.divider": "メッセージ間に区切り線を表示",
       "messages.grid_columns": "メッセージグリッドの表示列数",
