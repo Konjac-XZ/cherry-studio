@@ -162,7 +162,7 @@ export interface Painting {
 }
 
 export type MinAppType = {
-  id?: string | number
+  id: string
   name: string
   logo?: string
   url: string
@@ -308,6 +308,7 @@ export type GenerateImageParams = {
 }
 
 export type GenerateImageResponse = {
+  type: 'url' | 'base64'
   images: string[]
 }
 
