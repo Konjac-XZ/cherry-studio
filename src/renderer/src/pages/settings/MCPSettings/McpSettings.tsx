@@ -1,3 +1,4 @@
+import { DeleteOutlined, SaveOutlined } from '@ant-design/icons'
 import { useMCPServers } from '@renderer/hooks/useMCPServers'
 import { MCPServer, MCPTool } from '@renderer/types'
 import { Button, Flex, Form, Input, Radio, Switch } from 'antd'
@@ -81,27 +82,28 @@ const McpSettings: React.FC<Props> = ({ server }) => {
 
   // Load tools on initial mount if server is active
   useEffect(() => {
-    const fetchTools = async () => {
-      if (server.isActive) {
-        try {
-          setLoadingServer(server.id)
-          const localTools = await window.api.mcp.listTools(server)
-          setTools(localTools)
-          // window.message.success(t('settings.mcp.toolsLoaded'))
-        } catch (error) {
-          window.message.error({
-            content: t('settings.mcp.toolsLoadError') + formatError(error),
-            key: 'mcp-tools-error'
-          })
-        } finally {
-          setLoadingServer(null)
-        }
-      }
-    }
-
     fetchTools()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const fetchTools = async () => {
+    if (server.isActive) {
+      try {
+        setLoadingServer(server.id)
+        const localTools = await window.api.mcp.listTools(server)
+        setTools(localTools)
+        // window.message.success(t('settings.mcp.toolsLoaded'))
+      } catch (error) {
+        window.message.error({
+          content: t('settings.mcp.toolsLoadError') + formatError(error),
+          key: 'mcp-tools-error'
+        })
+      } finally {
+        setLoadingServer(null)
+      }
+    }
+  }
+
   // Save the form data
   const onSave = async () => {
     setLoading(true)
@@ -140,6 +142,7 @@ const McpSettings: React.FC<Props> = ({ server }) => {
         await window.api.mcp.restartServer(mcpServer)
         updateMCPServer({ ...mcpServer, isActive: true })
         window.message.success({ content: t('settings.mcp.updateSuccess'), key: 'mcp-update-success' })
+        await fetchTools()
         setLoading(false)
         setIsFormChanged(false)
       } catch (error: any) {
@@ -159,9 +162,16 @@ const McpSettings: React.FC<Props> = ({ server }) => {
   const onDeleteMcpServer = useCallback(
     async (server: MCPServer) => {
       try {
-        await window.api.mcp.removeServer(server)
-        deleteMCPServer(server.id)
-        window.message.success({ content: t('settings.mcp.deleteSuccess'), key: 'mcp-list' })
+        window.modal.confirm({
+          title: t('settings.mcp.deleteServer'),
+          content: t('settings.mcp.deleteServerConfirm'),
+          centered: true,
+          onOk: async () => {
+            await window.api.mcp.removeServer(server)
+            deleteMCPServer(server.id)
+            window.message.success({ content: t('settings.mcp.deleteSuccess'), key: 'mcp-list' })
+          }
+        })
       } catch (error: any) {
         window.message.error({
           content: `${t('settings.mcp.deleteError')}: ${error.message}`,
@@ -214,7 +224,10 @@ const McpSettings: React.FC<Props> = ({ server }) => {
     <SettingContainer>
       <SettingGroup style={{ marginBottom: 0 }}>
         <SettingTitle>
-          <ServerName>{server?.name}</ServerName>
+          <Flex justify="space-between" align="center" gap={5} style={{ marginRight: 10 }}>
+            <ServerName className="text-nowrap">{server?.name}</ServerName>
+            <Button danger icon={<DeleteOutlined />} type="text" onClick={() => onDeleteMcpServer(server)} />
+          </Flex>
           <Flex align="center" gap={16}>
             <Switch
               value={server.isActive}
@@ -222,11 +235,8 @@ const McpSettings: React.FC<Props> = ({ server }) => {
               loading={loadingServer === server.id}
               onChange={onToggleActive}
             />
-            <Button type="primary" size="small" onClick={onSave} loading={loading} disabled={!isFormChanged}>
+            <Button type="primary" icon={<SaveOutlined />} onClick={onSave} loading={loading} disabled={!isFormChanged}>
               {t('common.save')}
-            </Button>
-            <Button danger type="primary" size="small" onClick={() => onDeleteMcpServer(server)} loading={loading}>
-              {t('common.delete')}
             </Button>
           </Flex>
         </SettingTitle>
@@ -251,8 +261,8 @@ const McpSettings: React.FC<Props> = ({ server }) => {
             <Radio.Group
               onChange={(e) => setServerType(e.target.value)}
               options={[
-                { label: 'SSE', value: 'sse' },
-                { label: 'STDIO', value: 'stdio' }
+                { label: 'STDIO', value: 'stdio' },
+                { label: 'SSE', value: 'sse' }
               ]}
             />
           </Form.Item>
@@ -288,7 +298,6 @@ const McpSettings: React.FC<Props> = ({ server }) => {
             </>
           )}
         </Form>
-
         {server.isActive && <MCPToolsSection tools={tools} />}
       </SettingGroup>
     </SettingContainer>
