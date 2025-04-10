@@ -21,6 +21,7 @@ import { useMessageOperations, useTopicLoading } from '@renderer/hooks/useMessag
 import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import { getMessageTitle, resetAssistantMessage } from '@renderer/services/MessagesService'
 import { translateText } from '@renderer/services/TranslateService'
+import { RootState } from '@renderer/store'
 import type { Message, Model } from '@renderer/types'
 import type { Assistant, Topic } from '@renderer/types'
 import { captureScrollableDivAsBlob, captureScrollableDivAsDataURL, removeTrailingDoubleSpaces } from '@renderer/utils'
@@ -38,6 +39,7 @@ import dayjs from 'dayjs'
 import { clone } from 'lodash'
 import { FC, memo, useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useSelector } from 'react-redux'
 import styled from 'styled-components'
 
 interface Props {
@@ -67,6 +69,8 @@ const MessageMenubar: FC<Props> = (props) => {
   const loading = useTopicLoading(topic)
 
   const isUserMessage = message.role === 'user'
+
+  const exportMenuOptions = useSelector((state: RootState) => state.settings.exportMenuOptions)
 
   const onCopy = useCallback(
     (e: React.MouseEvent) => {
@@ -108,6 +112,14 @@ const MessageMenubar: FC<Props> = (props) => {
 
     let textToEdit = message.content
 
+    // 如果是包含图片的消息，添加图片的 markdown 格式
+    if (message.metadata?.generateImage?.images) {
+      const imageMarkdown = message.metadata.generateImage.images
+        .map((image, index) => `![image-${index}](${image})`)
+        .join('\n')
+      textToEdit = `${textToEdit}\n\n${imageMarkdown}`
+    }
+
     if (message.role === 'assistant' && message.model && isReasoningModel(message.model)) {
       const processedMessage = withMessageThought(clone(message))
       textToEdit = processedMessage.content
@@ -131,8 +143,40 @@ const MessageMenubar: FC<Props> = (props) => {
     })
 
     if (editedText && editedText !== textToEdit) {
-      await editMessage(message.id, { content: editedText })
-      resendMessage && handleResendUserMessage({ ...message, content: editedText })
+      // 解析编辑后的文本，提取图片 URL
+      const imageRegex = /!\[image-\d+\]\((.*?)\)/g
+      const imageUrls: string[] = []
+      let match
+      let content = editedText
+      
+      while ((match = imageRegex.exec(editedText)) !== null) {
+        imageUrls.push(match[1])
+        content = content.replace(match[0], '')
+      }
+      
+      // 更新消息内容，保留图片信息
+      await editMessage(message.id, { 
+        content: content.trim(),
+        metadata: {
+          ...message.metadata,
+          generateImage: imageUrls.length > 0 ? {
+            type: 'url',
+            images: imageUrls
+          } : undefined
+        }
+      })
+      
+      resendMessage && handleResendUserMessage({ 
+        ...message, 
+        content: content.trim(),
+        metadata: {
+          ...message.metadata,
+          generateImage: imageUrls.length > 0 ? {
+            type: 'url',
+            images: imageUrls
+          } : undefined
+        }
+      })
     }
   }, [message, editMessage, handleResendUserMessage, t])
 
@@ -182,7 +226,7 @@ const MessageMenubar: FC<Props> = (props) => {
         key: 'export',
         icon: <UploadOutlined />,
         children: [
-          {
+          exportMenuOptions.image && {
             label: t('chat.topics.copy.image'),
             key: 'img',
             onClick: async () => {
@@ -193,7 +237,7 @@ const MessageMenubar: FC<Props> = (props) => {
               })
             }
           },
-          {
+          exportMenuOptions.image && {
             label: t('chat.topics.export.image'),
             key: 'image',
             onClick: async () => {
@@ -204,9 +248,17 @@ const MessageMenubar: FC<Props> = (props) => {
               }
             }
           },
-          { label: t('chat.topics.export.md'), key: 'markdown', onClick: () => exportMessageAsMarkdown(message) },
-
-          {
+          exportMenuOptions.markdown && {
+            label: t('chat.topics.export.md'),
+            key: 'markdown',
+            onClick: () => exportMessageAsMarkdown(message)
+          },
+          exportMenuOptions.markdown_reason && {
+            label: t('chat.topics.export.md.reason'),
+            key: 'markdown_reason',
+            onClick: () => exportMessageAsMarkdown(message, true)
+          },
+          exportMenuOptions.docx && {
             label: t('chat.topics.export.word'),
             key: 'word',
             onClick: async () => {
@@ -215,7 +267,7 @@ const MessageMenubar: FC<Props> = (props) => {
               window.api.export.toWord(markdown, title)
             }
           },
-          {
+          exportMenuOptions.notion && {
             label: t('chat.topics.export.notion'),
             key: 'notion',
             onClick: async () => {
@@ -224,7 +276,7 @@ const MessageMenubar: FC<Props> = (props) => {
               exportMarkdownToNotion(title, markdown)
             }
           },
-          {
+          exportMenuOptions.yuque && {
             label: t('chat.topics.export.yuque'),
             key: 'yuque',
             onClick: async () => {
@@ -233,7 +285,7 @@ const MessageMenubar: FC<Props> = (props) => {
               exportMarkdownToYuque(title, markdown)
             }
           },
-          {
+          exportMenuOptions.obsidian && {
             label: t('chat.topics.export.obsidian'),
             key: 'obsidian',
             onClick: async () => {
@@ -242,7 +294,7 @@ const MessageMenubar: FC<Props> = (props) => {
               await ObsidianExportPopup.show({ title, markdown, processingMethod: '1' })
             }
           },
-          {
+          exportMenuOptions.joplin && {
             label: t('chat.topics.export.joplin'),
             key: 'joplin',
             onClick: async () => {
@@ -251,7 +303,7 @@ const MessageMenubar: FC<Props> = (props) => {
               exportMarkdownToJoplin(title, markdown)
             }
           },
-          {
+          exportMenuOptions.siyuan && {
             label: t('chat.topics.export.siyuan'),
             key: 'siyuan',
             onClick: async () => {
@@ -260,10 +312,10 @@ const MessageMenubar: FC<Props> = (props) => {
               exportMarkdownToSiyuan(title, markdown)
             }
           }
-        ]
+        ].filter(Boolean)
       }
     ],
-    [message, messageContainerRef, onEdit, onNewBranch, t, topic.name]
+    [message, messageContainerRef, onEdit, onNewBranch, t, topic.name, exportMenuOptions]
   )
 
   const onRegenerate = async (e: React.MouseEvent | undefined) => {

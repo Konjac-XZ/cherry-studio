@@ -59,7 +59,7 @@
       "settings.reasoning_effort.low": "短",
       "settings.reasoning_effort.medium": "中",
       "settings.reasoning_effort.off": "关",
-      "settings.reasoning_effort.tip": "仅支持 OpenAI o-series 和 Anthropic 推理模型",
+      "settings.reasoning_effort.tip": "仅支持 OpenAI o-series、Anthropic、Grok 推理模型",
       "settings.more": "助手设置"
     },
     "auth": {
@@ -129,11 +129,13 @@
       "input.new_topic": "新话题 {{Command}}",
       "input.pause": "暂停",
       "input.placeholder": "在这里输入消息...",
+      "input.translating": "翻译中...",
       "input.send": "发送",
       "input.settings": "设置",
       "input.topics": " 话题 ",
       "input.translate": "翻译成{{target_language}}",
       "input.upload": "上传图片或文档",
+      "input.upload.upload_from_local": "上传本地文件...",
       "input.upload.document": "上传文档（模型不支持图片）",
       "input.web_search": "开启网络搜索",
       "input.web_search.button.ok": "去设置",
@@ -159,6 +161,14 @@
       "save": "保存",
       "settings.code_collapsible": "代码块可折叠",
       "settings.code_wrappable": "代码块可换行",
+      "settings.code_cacheable": "代码块缓存",
+      "settings.code_cacheable.tip": "缓存代码块可以减少长代码块的渲染时间，但会增加内存占用",
+      "settings.code_cache_max_size": "缓存上限",
+      "settings.code_cache_max_size.tip": "允许缓存的字符数上限（千字符），按照高亮后的代码计算。高亮后的代码长度相比于纯文本会长很多。",
+      "settings.code_cache_ttl": "缓存期限",
+      "settings.code_cache_ttl.tip": "缓存过期时间（分钟）",
+      "settings.code_cache_threshold": "缓存阈值",
+      "settings.code_cache_threshold.tip": "允许缓存的最小代码长度（千字符），超过阈值的代码块才会被缓存",
       "settings.context_count": "上下文数",
       "settings.context_count.tip": "要保留在上下文中的消息数量，数值越大，上下文越长，消耗的 token 越多。普通聊天建议 5-10",
       "settings.max": "不限",
@@ -188,6 +198,7 @@
       "topics.export.image": "导出为图片",
       "topics.export.joplin": "导出到 Joplin",
       "topics.export.md": "导出为 Markdown",
+      "topics.export.md.reason": "导出为 Markdown (包含思考)",
       "topics.export.notion": "导出到 Notion",
       "topics.export.obsidian": "导出到 Obsidian",
       "topics.export.obsidian_vault": "保管库",
@@ -266,6 +277,7 @@
       "duplicate": "复制",
       "edit": "编辑",
       "expand": "展开",
+      "collapse": "折叠",
       "footnote": "引用内容",
       "footnotes": "引用内容",
       "fullscreen": "已进入全屏模式，按 F11 退出",
@@ -286,7 +298,13 @@
       "select": "选择",
       "topics": "话题",
       "warning": "警告",
-      "you": "用户"
+      "you": "用户",
+      "reasoning_content": "已深度思考",
+      "sort": {
+        "pinyin": "按拼音排序",
+        "pinyin.asc": "按拼音升序",
+        "pinyin.desc": "按拼音降序"
+      }
     },
     "docs": {
       "title": "帮助文档"
@@ -328,7 +346,7 @@
     "files": {
       "actions": "操作",
       "all": "所有文件",
-      "count": "文件数",
+      "count": "个文件",
       "created_at": "创建时间",
       "delete": "删除",
       "delete.content": "删除文件会删除文件在所有消息中的引用，确定要删除此文件吗?",
@@ -580,15 +598,19 @@
       },
       "footer": {
         "copy_last_message": "按 C 键复制",
+        "backspace_clear": "按 Backspace 清空",
         "esc": "按 ESC {{action}}",
         "esc_back": "返回",
-        "esc_close": "关闭窗口"
+        "esc_close": "关闭"
       },
       "input": {
         "placeholder": {
           "empty": "询问 {{model}} 获取帮助...",
           "title": "你想对下方文字做什么"
         }
+      },
+      "tooltip": {
+        "pin": "窗口置顶"
       }
     },
     "models": {
@@ -693,7 +715,6 @@
       "gitee-ai": "Gitee AI",
       "github": "GitHub Models",
       "gpustack": "GPUStack",
-      "graphrag-kylin-mountain": "GraphRAG",
       "grok": "Grok",
       "groq": "Groq",
       "hunyuan": "腾讯混元",
@@ -722,7 +743,8 @@
       "yi": "零一万物",
       "zhinao": "360智脑",
       "zhipu": "智谱AI",
-      "voyageai": "Voyage AI"
+      "voyageai": "Voyage AI",
+      "qiniu": "七牛云"
     },
     "restore": {
       "confirm": "确定要恢复数据吗？",
@@ -782,8 +804,24 @@
           "title": "清除缓存"
         },
         "data.title": "数据目录",
+        "divider.basic": "基础数据设置",
+        "divider.cloud_storage": "云备份设置",
+        "divider.export_settings": "导出设置",
+        "divider.third_party": "第三方连接",
         "hour_interval_one": "{{count}} 小时",
         "hour_interval_other": "{{count}} 小时",
+        "export_menu": {
+          "title": "导出菜单设置",
+          "image": "导出为图片",
+          "markdown": "导出为Markdown",
+          "markdown_reason": "导出为Markdown（包含思考）",
+          "notion": "导出到Notion",
+          "yuque": "导出到语雀",
+          "obsidian": "导出到Obsidian",
+          "siyuan": "导出到思源笔记",
+          "joplin": "导出到Joplin",
+          "docx": "导出为Word"
+        },
         "joplin": {
           "check": {
             "button": "检查",
@@ -995,6 +1033,10 @@
         "argsTooltip": "每个参数占一行",
         "baseUrlTooltip": "远程 URL 地址",
         "command": "命令",
+        "sse": "服务器发送事件 (sse)",
+        "streamableHttp": "可流式传输的HTTP (streamableHttp)",
+        "stdio": "标准输入/输出 (stdio)",
+        "inMemory": "内存",
         "config_description": "配置模型上下文协议服务器",
         "deleteError": "删除服务器失败",
         "deleteSuccess": "服务器删除成功",
@@ -1056,7 +1098,10 @@
         "deleteServerConfirm": "确定要删除此服务器吗？",
         "registry": "包管理源",
         "registryTooltip": "选择用于安装包的源，以解决默认源的网络问题。",
-        "registryDefault": "默认"
+        "registryDefault": "默认",
+        "not_support": "模型不支持",
+        "user": "用户",
+        "system": "系统"
       },
       "messages.divider": "消息分割线",
       "messages.grid_columns": "消息网格展示列数",
@@ -1068,6 +1113,7 @@
       "messages.input.send_shortcuts": "发送快捷键",
       "messages.input.show_estimated_tokens": "显示预估 Token 数",
       "messages.input.title": "输入设置",
+      "messages.input.enable_quick_triggers": "启用 '/' 和 '@' 触发快捷菜单",
       "messages.markdown_rendering_input_message": "Markdown 渲染输入消息",
       "messages.math_engine": "数学公式引擎",
       "messages.metrics": "首字时延 {{time_first_token_millsec}}ms | 每秒 {{token_speed}} tokens",
@@ -1234,17 +1280,28 @@
       "websearch": {
         "blacklist": "黑名单",
         "blacklist_description": "在搜索结果中不会出现以下网站的结果",
-        "blacklist_tooltip": "请使用以下格式(换行分隔)\nexample.com\nhttps://www.example.com\nhttps://example.com\n*://*.example.com",
+        "blacklist_tooltip": "请使用以下格式(换行分隔)\n匹配模式: *://*.example.com/*\n正则表达式: /example\\.(net|org)/",
         "check": "检查",
         "check_failed": "验证失败",
         "check_success": "验证成功",
         "enhance_mode": "搜索增强模式",
         "enhance_mode_tooltip": "使用默认模型提取关键词后搜索",
+        "overwrite": "覆盖服务商搜索",
+        "overwrite_tooltip": "强制使用搜索服务商而不是大语言模型进行搜索",
         "get_api_key": "点击这里获取密钥",
         "no_provider_selected": "请选择搜索服务商后再检查",
         "search_max_result": "搜索结果个数",
         "search_provider": "搜索服务商",
         "search_provider_placeholder": "选择一个搜索服务商",
+        "subscribe": "订阅",
+        "subscribe_tooltip": "订阅黑名单列表",
+        "subscribe_update": "立即更新",
+        "subscribe_add": "添加订阅",
+        "subscribe_url": "订阅源地址",
+        "subscribe_name": "替代名字",
+        "subscribe_name.placeholder": "当下载的订阅源没有名称时所使用的替代名称",
+        "subscribe_add_success": "订阅源添加成功!",
+        "subscribe_delete": "删除订阅源",
         "search_result_default": "默认",
         "search_with_time": "搜索包含日期",
         "tavily": {
@@ -1253,7 +1310,34 @@
           "description": "Tavily 是一个为 AI 代理量身定制的搜索引擎，提供实时、准确的结果、智能查询建议和深入的研究能力",
           "title": "Tavily"
         },
-        "title": "网络搜索"
+        "title": "网络搜索",
+        "apikey": "API 密钥",
+        "free": "免费"
+      },
+      "quickPhrase": {
+        "title": "快捷短语",
+        "add": "添加短语",
+        "edit": "编辑短语",
+        "titleLabel": "标题",
+        "contentLabel": "内容",
+        "titlePlaceholder": "请输入短语标题",
+        "contentPlaceholder": "请输入短语内容，支持使用变量，然后按Tab键可以快速定位到变量进行修改。比如：\n帮我规划从${from}到${to}的路线，然后发送到${email}。",
+        "delete": "删除短语",
+        "deleteConfirm": "删除短语后将无法恢复，是否继续？"
+      },
+      "quickPanel": {
+        "title": "快捷菜单",
+        "close": "关闭",
+        "select": "选择",
+        "page": "翻页",
+        "confirm": "确认",
+        "back": "后退",
+        "forward": "前进",
+        "multiple": "多选"
+      },
+      "privacy": {
+        "title": "隐私设置",
+        "enable_privacy_mode": "匿名发送错误报告和数据统计"
       }
     },
     "translate": {
@@ -1272,6 +1356,9 @@
         "delete": "删除",
         "empty": "暂无翻译历史",
         "title": "翻译历史"
+      },
+      "menu": {
+        "description": "对当前输入框内容进行翻译"
       },
       "input.placeholder": "输入文本进行翻译",
       "output.placeholder": "翻译",
@@ -1294,3 +1381,5 @@
     }
   }
 }
+
+
