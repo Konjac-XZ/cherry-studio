@@ -33,7 +33,7 @@
     },
     "assistants": {
       "title": "Assistants",
-      "abbr": "Assistant",
+      "abbr": "Assistants",
       "settings.title": "Assistant Settings",
       "clear.content": "Clearing the topic will delete all topics and files in the assistant. Are you sure you want to continue?",
       "clear.title": "Clear topics",
@@ -1072,6 +1072,8 @@
         "editServer": "Edit Server",
         "env": "Environment Variables",
         "envTooltip": "Format: KEY=value, one per line",
+        "headers": "Headers",
+        "headersTooltip": "Custom headers for HTTP requests",
         "findMore": "Find More MCP",
         "searchNpx": "Search MCP",
         "install": "Install",
