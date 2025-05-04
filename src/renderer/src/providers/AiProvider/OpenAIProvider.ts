@@ -1,15 +1,19 @@
 import { DEFAULT_MAX_TOKENS } from '@renderer/config/constant'
 import {
+  findTokenLimit,
   getOpenAIWebSearchParams,
-  isGrokReasoningModel,
   isHunyuanSearchModel,
-  isOpenAIoSeries,
   isOpenAIWebSearch,
   isReasoningModel,
   isSupportedModel,
+  isSupportedReasoningEffortGrokModel,
+  isSupportedReasoningEffortModel,
+  isSupportedReasoningEffortOpenAIModel,
+  isSupportedThinkingTokenClaudeModel,
+  isSupportedThinkingTokenModel,
+  isSupportedThinkingTokenQwenModel,
   isVisionModel,
-  isZhipuModel,
-  OPENAI_NO_SUPPORT_DEV_ROLE_MODELS
+  isZhipuModel
 } from '@renderer/config/models'
 import { getStoreSetting } from '@renderer/hooks/useSettings'
 import i18n from '@renderer/i18n'
@@ -25,6 +29,7 @@ import { processReqMessages } from '@renderer/services/ModelMessageService'
 import store from '@renderer/store'
 import {
   Assistant,
+  EFFORT_RATIO,
   FileTypes,
   GenerateImageParams,
   MCPToolResponse,
@@ -58,8 +63,6 @@ import { FileLike } from 'openai/uploads'
 
 import { CompletionsParams } from '.'
 import BaseProvider from './BaseProvider'
-
-type ReasoningEffort = 'low' | 'medium' | 'high'
 
 export default class OpenAIProvider extends BaseProvider {
   private sdk: OpenAI
@@ -262,55 +265,75 @@ export default class OpenAIProvider extends BaseProvider {
       return {}
     }
 
-    if (isReasoningModel(model)) {
-      if (model.provider === 'openrouter') {
+    if (!isReasoningModel(model)) {
+      return {}
+    }
+    const reasoningEffort = assistant?.settings?.reasoning_effort
+    if (!reasoningEffort) {
+      if (isSupportedThinkingTokenQwenModel(model)) {
+        return { enable_thinking: false }
+      }
+
+      if (isSupportedThinkingTokenClaudeModel(model)) {
+        return { thinking: { type: 'disabled' } }
+      }
+
+      return {}
+    }
+    const effortRatio = EFFORT_RATIO[reasoningEffort]
+    const budgetTokens = Math.floor((findTokenLimit(model.id)?.max || 0) * effortRatio)
+    // OpenRouter models
+    if (model.provider === 'openrouter') {
+      if (isSupportedReasoningEffortModel(model) || isSupportedThinkingTokenClaudeModel(model)) {
         return {
           reasoning: {
             effort: assistant?.settings?.reasoning_effort
           }
         }
       }
-
-      if (isGrokReasoningModel(model)) {
+      if (isSupportedThinkingTokenModel(model)) {
         return {
-          reasoning_effort: assistant?.settings?.reasoning_effort
-        }
-      }
-
-      if (isOpenAIoSeries(model)) {
-        return {
-          reasoning_effort: assistant?.settings?.reasoning_effort
-        }
-      }
-
-      if (model.id.includes('claude-3.7-sonnet') || model.id.includes('claude-3-7-sonnet')) {
-        const effortRatios: Record<ReasoningEffort, number> = {
-          high: 0.8,
-          medium: 0.5,
-          low: 0.2
-        }
-
-        const effort = assistant?.settings?.reasoning_effort as ReasoningEffort
-        const effortRatio = effortRatios[effort]
-
-        if (!effortRatio) {
-          return {}
-        }
-
-        const maxTokens = assistant?.settings?.maxTokens || DEFAULT_MAX_TOKENS
-        const budgetTokens = Math.trunc(Math.max(Math.min(maxTokens * effortRatio, 32000), 1024))
-
-        return {
-          thinking: {
-            type: 'enabled',
-            budget_tokens: budgetTokens
+          reasoning: {
+            max_tokens: budgetTokens
           }
         }
       }
-
-      return {}
     }
 
+    // Qwen models
+    if (isSupportedThinkingTokenQwenModel(model)) {
+      return {
+        enable_thinking: true,
+        thinking_budget: budgetTokens
+      }
+    }
+
+    // Grok models
+    if (isSupportedReasoningEffortGrokModel(model)) {
+      return {
+        reasoning_effort: assistant?.settings?.reasoning_effort
+      }
+    }
+
+    // OpenAI models
+    if (isSupportedReasoningEffortOpenAIModel(model)) {
+      return {
+        reasoning_effort: assistant?.settings?.reasoning_effort
+      }
+    }
+
+    // Claude models
+    const { maxTokens } = getAssistantSettings(assistant)
+    if (isSupportedThinkingTokenClaudeModel(model)) {
+      return {
+        thinking: {
+          type: 'enabled',
+          budget_tokens: Math.floor(Math.max(Math.min(budgetTokens, maxTokens || DEFAULT_MAX_TOKENS), 1024))
+        }
+      }
+    }
+
+    // Default case: no special thinking settings
     return {}
   }
 
@@ -343,7 +366,7 @@ export default class OpenAIProvider extends BaseProvider {
     const isEnabledWebSearch = assistant.enableWebSearch || !!assistant.webSearchProviderId
     messages = addImageFileToContents(messages)
     let systemMessage = { role: 'system', content: assistant.prompt || '' }
-    if (isOpenAIoSeries(model) && !OPENAI_NO_SUPPORT_DEV_ROLE_MODELS.includes(model.id)) {
+    if (isSupportedReasoningEffortOpenAIModel(model)) {
       systemMessage = {
         role: 'developer',
         content: `Formatting re-enabled${systemMessage ? '\n' + systemMessage.content : ''}`
@@ -562,9 +585,6 @@ export default class OpenAIProvider extends BaseProvider {
               thinking_millsec: final_time_thinking_millsec_delta
             })
 
-            // FIXME: 临时方案，重置时间戳和思考内容
-            time_first_token_millsec = 0
-            time_first_content_millsec = 0
             thinkingContent = ''
             isFirstThinkingChunk = true
             hasReasoningContent = false
@@ -588,8 +608,11 @@ export default class OpenAIProvider extends BaseProvider {
               )
             }
           }
-          if (isFirstChunk) {
+          // 说明前面没有思考内容
+          if (isFirstChunk && time_first_token_millsec === 0 && time_first_token_millsec_delta === 0) {
             isFirstChunk = false
+            time_first_token_millsec = currentTime
+            time_first_token_millsec_delta = time_first_token_millsec - start_time_millsec
           }
           content += delta.content // Still accumulate for processToolUses
 
@@ -689,8 +712,9 @@ export default class OpenAIProvider extends BaseProvider {
         }
       })
 
-      // OpenAI stream typically doesn't provide a final summary chunk easily.
-      // We are sending per-chunk usage if available.
+      // FIXME: 临时方案，重置时间戳和思考内容
+      time_first_token_millsec = 0
+      time_first_content_millsec = 0
     }
 
     console.debug('[completions] reqMessages before processing', model.id, reqMessages)
@@ -1143,8 +1167,7 @@ export default class OpenAIProvider extends BaseProvider {
           validUserFiles.map(async (f) => {
             // f.file is guaranteed to exist here due to the filter above
             const fileInfo = f.file!
-            const binaryData = await FileManager.readFile(fileInfo)
-            console.log('binaryData', binaryData)
+            const binaryData = await FileManager.readBinaryImage(fileInfo)
             const file = await toFile(binaryData, fileInfo.origin_name || 'image.png', {
               type: 'image/png'
             })
