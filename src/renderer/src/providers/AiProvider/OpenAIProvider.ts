@@ -11,6 +11,7 @@ import {
   isSupportedReasoningEffortOpenAIModel,
   isSupportedThinkingTokenClaudeModel,
   isSupportedThinkingTokenModel,
+  isSupportedThinkingTokenGeminiModel,
   isSupportedThinkingTokenQwenModel,
   isVisionModel,
   isZhipuModel
@@ -273,11 +274,14 @@ export default class OpenAIProvider extends BaseProvider {
       if (isSupportedThinkingTokenQwenModel(model)) {
         return { enable_thinking: false }
       }
-
       if (isSupportedThinkingTokenClaudeModel(model)) {
         return { thinking: { type: 'disabled' } }
       }
-
+      if (isSupportedThinkingTokenGeminiModel(model)) {
+        return {
+            reasoning_effort: 'none',
+        }
+    }
       return {}
     }
     const effortRatio = EFFORT_RATIO[reasoningEffort]
@@ -308,6 +312,13 @@ export default class OpenAIProvider extends BaseProvider {
       }
     }
 
+    if (isSupportedThinkingTokenGeminiModel(model)) {
+      return {
+        reasoning_effort: assistant?.settings?.reasoning_effort === 'auto' ? undefined : assistant?.settings?.reasoning_effort,
+      }
+    }
+
+
     // Grok models
     if (isSupportedReasoningEffortGrokModel(model)) {
       return {
@@ -321,6 +332,7 @@ export default class OpenAIProvider extends BaseProvider {
         reasoning_effort: assistant?.settings?.reasoning_effort
       }
     }
+
 
     // Claude models
     const { maxTokens } = getAssistantSettings(assistant)
