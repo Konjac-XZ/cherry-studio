@@ -11,6 +11,7 @@ import {
   isSupportedReasoningEffortModel,
   isSupportedReasoningEffortOpenAIModel,
   isSupportedThinkingTokenClaudeModel,
+  isSupportedThinkingTokenGeminiModel,
   isSupportedThinkingTokenModel,
   isSupportedThinkingTokenQwenModel,
   isVisionModel,
@@ -247,6 +248,9 @@ export default class OpenAICompatibleProvider extends OpenAIProvider {
       if (isSupportedThinkingTokenClaudeModel(model)) {
         return { thinking: { type: 'disabled' } }
       }
+      if (isSupportedThinkingTokenGeminiModel(model)) {
+        return { reasoning_effort: 'none' }
+      }
 
       return {}
     }
@@ -283,6 +287,12 @@ export default class OpenAICompatibleProvider extends OpenAIProvider {
     if (isSupportedReasoningEffortGrokModel(model)) {
       return {
         reasoning_effort: assistant?.settings?.reasoning_effort
+      }
+    }
+
+    if (isSupportedThinkingTokenGeminiModel(model)) {
+      return {
+        reasoning_effort: assistant?.settings?.reasoning_effort === 'auto' ? undefined : assistant?.settings?.reasoning_effort,
       }
     }
 
@@ -775,7 +785,7 @@ export default class OpenAICompatibleProvider extends OpenAIProvider {
       const deltaContent = chunk.choices[0]?.delta?.content || ''
 
       if (isReasoning) {
-        if (deltaContent.includes('<think>')) {
+        if (deltaContent.includes('<think>') || deltaContent.includes('<thought>')) {
           isThinking = true
         }
 
@@ -784,7 +794,7 @@ export default class OpenAICompatibleProvider extends OpenAIProvider {
           onResponse?.(text, false)
         }
 
-        if (deltaContent.includes('</think>')) {
+        if (deltaContent.includes('</think>') || deltaContent.includes('</thought>')) {
           isThinking = false
         }
       } else {
