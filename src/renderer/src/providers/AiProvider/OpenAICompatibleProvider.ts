@@ -748,7 +748,7 @@ export default class OpenAICompatibleProvider extends OpenAIProvider {
       const deltaContent = chunk.choices[0]?.delta?.content || ''
 
       if (isReasoning) {
-        if (deltaContent.includes('<think>') || deltaContent.includes('<thought>')) {
+        if (deltaContent.includes('<think>')) {
           isThinking = true
         }
 
@@ -757,7 +757,7 @@ export default class OpenAICompatibleProvider extends OpenAIProvider {
           onResponse?.(text, false)
         }
 
-        if (deltaContent.includes('</think>') || deltaContent.includes('</thought>')) {
+        if (deltaContent.includes('</think>')) {
           isThinking = false
         }
       } else {

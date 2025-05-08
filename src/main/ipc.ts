@@ -249,10 +249,10 @@ export function registerIpc(mainWindow: BrowserWindow, app: Electron.App) {
   })
 
   ipcMain.handle(IpcChannel.Windows_ResetMinimumSize, () => {
-    mainWindow?.setMinimumSize(960, 600)
-    const [width, height] = mainWindow?.getSize() ?? [960, 600]
-    if (width < 960) {
-      mainWindow?.setSize(960, height)
+    mainWindow?.setMinimumSize(1080, 600)
+    const [width, height] = mainWindow?.getSize() ?? [1080, 600]
+    if (width < 1080) {
+      mainWindow?.setSize(1080, height)
     }
   })
 
