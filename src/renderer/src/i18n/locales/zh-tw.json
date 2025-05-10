@@ -25,6 +25,9 @@
           "invalid_format": "無效的代理人格式：缺少必填欄位"
         }
       },
+      "export": {
+        "agent": "匯出智慧代理人"
+      },
       "delete.popup.content": "確定要刪除此智慧代理人嗎？",
       "edit.message.add.title": "新增",
       "edit.message.assistant.placeholder": "輸入助手訊息",
@@ -301,6 +304,7 @@
       "confirm": "確認",
       "copied": "已複製",
       "copy": "複製",
+      "inspect": "檢查",
       "cut": "剪下",
       "default": "預設",
       "delete": "刪除",
@@ -702,6 +706,7 @@
       "rerank_model_tooltip": "在設定->模型服務中點擊管理按鈕添加",
       "search": "搜尋模型...",
       "stream_output": "串流輸出",
+      "enable_tool_use": "工具調用",
       "type": {
         "embedding": "嵌入",
         "free": "免費",
@@ -712,7 +717,8 @@
         "text": "文字",
         "vision": "視覺",
         "websearch": "網路搜尋"
-      }
+      },
+      "rerank_model_not_support_provider": "目前，重新排序模型不支援此提供者（{{provider}}）"
     },
     "navbar": {
       "expand": "伸縮對話框",

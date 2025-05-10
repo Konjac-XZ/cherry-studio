@@ -25,6 +25,9 @@
           "invalid_format": "Invalid agent format: missing required fields"
         }
       },
+      "export": {
+        "agent": "Export Agent"
+      },
       "delete.popup.content": "Are you sure you want to delete this agent?",
       "edit.message.add.title": "Add",
       "edit.message.assistant.placeholder": "Enter assistant message",
@@ -301,6 +304,7 @@
       "confirm": "Confirm",
       "copied": "Copied",
       "copy": "Copy",
+      "inspect": "Inspect",
       "cut": "Cut",
       "default": "Default",
       "delete": "Delete",
@@ -699,9 +703,11 @@
       "pinned": "Pinned",
       "rerank_model": "Reordering Model",
       "rerank_model_support_provider": "Currently, the reordering model only supports some providers ({{provider}})",
+      "rerank_model_not_support_provider": "Currently, the reordering model does not support this provider ({{provider}})",
       "rerank_model_tooltip": "Click the Manage button in Settings -> Model Services to add.",
       "search": "Search models...",
       "stream_output": "Stream output",
+      "enable_tool_use": "Enable Tool Use",
       "type": {
         "embedding": "Embedding",
         "free": "Free",
