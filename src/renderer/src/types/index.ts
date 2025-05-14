@@ -25,6 +25,7 @@ export type Assistant = {
   enableGenerateImage?: boolean
   mcpServers?: MCPServer[]
   knowledgeRecognition?: 'off' | 'on'
+  regularPhrases?: QuickPhrase[] // Added for regular phrase
 }
 
 export type AssistantMessage = {
@@ -120,8 +121,8 @@ export type Usage = OpenAI.Completions.CompletionUsage & {
 }
 
 export type Metrics = {
-  completion_tokens?: number
-  time_completion_millsec?: number
+  completion_tokens: number
+  time_completion_millsec: number
   time_first_token_millsec?: number
   time_thinking_millsec?: number
 }
@@ -161,7 +162,7 @@ export type Provider = {
   notes?: string
 }
 
-export type ProviderType = 'openai' | 'openai-compatible' | 'anthropic' | 'gemini' | 'qwenlm' | 'azure-openai'
+export type ProviderType = 'openai' | 'openai-response' | 'anthropic' | 'gemini' | 'qwenlm' | 'azure-openai'
 
 export type ModelType = 'text' | 'vision' | 'embedding' | 'reasoning' | 'function_calling' | 'web_search'
 
@@ -461,7 +462,7 @@ export type WebSearchResults =
 export enum WebSearchSource {
   WEBSEARCH = 'websearch',
   OPENAI = 'openai',
-  OPENAI_COMPATIBLE = 'openai-compatible',
+  OPENAI_RESPONSE = 'openai-response',
   OPENROUTER = 'openrouter',
   ANTHROPIC = 'anthropic',
   GEMINI = 'gemini',

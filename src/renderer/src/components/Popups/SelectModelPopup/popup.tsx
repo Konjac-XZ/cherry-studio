@@ -20,7 +20,7 @@ import styled from 'styled-components'
 import { useScrollState } from './hook'
 import { FlatListItem } from './types'
 
-const PAGE_SIZE = 9
+const PAGE_SIZE = 10
 const ITEM_HEIGHT = 36
 
 interface PopupParams {
@@ -256,22 +256,17 @@ const PopupContainer: React.FC<Props> = ({ model, resolve }) => {
   const handleItemClick = useCallback(
     (item: FlatListItem) => {
       if (item.type === 'model') {
-        setScrollTrigger('initial')
         resolve(item.model)
         setOpen(false)
       }
     },
-    [resolve, setScrollTrigger]
+    [resolve]
   )
 
   // 处理键盘导航
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      if (!open) return
-
-      if (modelItems.length === 0) {
-        return
-      }
+      if (!open || modelItems.length === 0 || e.isComposing) return
 
       // 键盘操作时禁用鼠标 hover
       if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Enter', 'Escape'].includes(e.key)) {
@@ -637,16 +632,7 @@ export class SelectModelPopup {
 
   static show(params: PopupParams) {
     return new Promise<Model | undefined>((resolve) => {
-      TopView.show(
-        <PopupContainer
-          {...params}
-          resolve={(v) => {
-            resolve(v)
-            TopView.hide(TopViewKey)
-          }}
-        />,
-        TopViewKey
-      )
+      TopView.show(<PopupContainer {...params} resolve={(v) => resolve(v)} />, TopViewKey)
     })
   }
 }
