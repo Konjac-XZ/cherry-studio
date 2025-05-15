@@ -12,6 +12,7 @@ import {
   isSupportedThinkingTokenClaudeModel,
   isSupportedThinkingTokenModel,
   isSupportedThinkingTokenQwenModel,
+  isSupportedThinkingTokenGeminiModel,
   isVisionModel,
   isZhipuModel
 } from '@renderer/config/models'
@@ -267,6 +268,10 @@ export default class OpenAIProvider extends BaseOpenAiProvider {
         return { thinking: { type: 'disabled' } }
       }
 
+      if (isSupportedThinkingTokenGeminiModel(model)) {
+        return { reasoning_effort: 'none' }
+      }
+
       return {}
     }
     const effortRatio = EFFORT_RATIO[reasoningEffort]
@@ -304,6 +309,14 @@ export default class OpenAIProvider extends BaseOpenAiProvider {
         reasoning_effort: assistant?.settings?.reasoning_effort
       }
     }
+
+    // Gemini models
+
+    if (isSupportedThinkingTokenGeminiModel(model)) {
+      return {
+        reasoning_effort: assistant?.settings?.reasoning_effort === 'auto' ? undefined : assistant?.settings?.reasoning_effort,
+      }
+    }   
 
     // OpenAI models
     if (isSupportedReasoningEffortOpenAIModel(model)) {

@@ -135,7 +135,7 @@ const TranslatePage: FC = () => {
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     const isEnterPressed = e.keyCode == 13
-    if (isEnterPressed && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+    if (isEnterPressed && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
       e.preventDefault()
       onTranslate()
     }
@@ -299,7 +299,7 @@ const TranslatePage: FC = () => {
               styles={{ body: { fontSize: '12px' } }}
               title={
                 <div style={{ textAlign: 'center' }}>
-                  Enter: {t('translate.button.translate')}
+                  Ctrl + Enter: {t('translate.button.translate')}
                   <br />
                   Shift + Enter: {t('translate.tooltip.newline')}
                 </div>

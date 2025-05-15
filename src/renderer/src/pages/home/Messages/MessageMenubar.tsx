@@ -2,7 +2,7 @@ import { CheckOutlined, EditOutlined, QuestionCircleOutlined, SyncOutlined } fro
 import ObsidianExportPopup from '@renderer/components/Popups/ObsidianExportPopup'
 import SelectModelPopup from '@renderer/components/Popups/SelectModelPopup'
 import TextEditPopup from '@renderer/components/Popups/TextEditPopup'
-import { TranslateLanguageOptions } from '@renderer/config/translate'
+import { translateLanguageOptions } from '@renderer/config/translate'
 import { useMessageOperations, useTopicLoading } from '@renderer/hooks/useMessageOperations'
 import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import { getMessageTitle } from '@renderer/services/MessagesService'
@@ -441,7 +441,7 @@ const MessageMenubar: FC<Props> = (props) => {
         <Dropdown
           menu={{
             items: [
-              ...TranslateLanguageOptions.map((item) => ({
+              ...translateLanguageOptions().map((item) => ({
                 label: item.emoji + ' ' + item.label,
                 key: item.value,
                 onClick: () => handleTranslate(item.value)
