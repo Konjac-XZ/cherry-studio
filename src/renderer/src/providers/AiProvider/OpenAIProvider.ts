@@ -1,9 +1,9 @@
 import {
   findTokenLimit,
   getOpenAIWebSearchParams,
+  isClaudeReasoningModel,
   isHunyuanSearchModel,
   isOpenAIReasoningModel,
-  isOpenAIWebSearch,
   isReasoningModel,
   isSupportedModel,
   isSupportedReasoningEffortGrokModel,
@@ -54,6 +54,7 @@ import {
   convertLinksToZhipu
 } from '@renderer/utils/linkConverter'
 import {
+  isEnabledToolUse,
   mcpToolCallResponseToOpenAICompatibleMessage,
   mcpToolsToOpenAIChatTools,
   openAIToolsToMcpTool,
@@ -193,14 +194,18 @@ export default class OpenAIProvider extends BaseOpenAIProvider {
     } as ChatCompletionMessageParam
   }
 
-  /**
-   * Get the temperature for the assistant
-   * @param assistant - The assistant
-   * @param model - The model
-   * @returns The temperature
-   */
-  override getTemperature(assistant: Assistant, model: Model) {
-    return isReasoningModel(model) || isOpenAIWebSearch(model) ? undefined : assistant?.settings?.temperature
+  override getTemperature(assistant: Assistant, model: Model): number | undefined {
+    if (isOpenAIReasoningModel(model) || (assistant.settings?.reasoning_effort && isClaudeReasoningModel(model))) {
+      return undefined
+    }
+    return assistant.settings?.temperature
+  }
+
+  override getTopP(assistant: Assistant, model: Model): number | undefined {
+    if (isOpenAIReasoningModel(model) || (assistant.settings?.reasoning_effort && isClaudeReasoningModel(model))) {
+      return undefined
+    }
+    return assistant.settings?.topP
   }
 
   /**
@@ -228,20 +233,6 @@ export default class OpenAIProvider extends BaseOpenAIProvider {
     }
 
     return {}
-  }
-
-  /**
-   * Get the top P for the assistant
-   * @param assistant - The assistant
-   * @param model - The model
-   * @returns The top P
-   */
-  override getTopP(assistant: Assistant, model: Model) {
-    if (isReasoningModel(model) || isOpenAIWebSearch(model)) {
-      return undefined
-    }
-
-    return assistant?.settings?.topP
   }
 
   /**
@@ -374,7 +365,7 @@ export default class OpenAIProvider extends BaseOpenAIProvider {
     const defaultModel = getDefaultModel()
     const model = assistant.model || defaultModel
 
-    const { contextCount, maxTokens, streamOutput, enableToolUse } = getAssistantSettings(assistant)
+    const { contextCount, maxTokens, streamOutput } = getAssistantSettings(assistant)
     const isEnabledBultinWebSearch = assistant.enableWebSearch
     messages = addImageFileToContents(messages)
     const enableReasoning =
@@ -388,7 +379,11 @@ export default class OpenAIProvider extends BaseOpenAIProvider {
         content: `Formatting re-enabled${systemMessage ? '\n' + systemMessage.content : ''}`
       }
     }
-    const { tools } = this.setupToolsConfig<ChatCompletionTool>({ mcpTools, model, enableToolUse })
+    const { tools } = this.setupToolsConfig<ChatCompletionTool>({
+      mcpTools,
+      model,
+      enableToolUse: isEnabledToolUse(assistant)
+    })
 
     if (this.useSystemPromptForTools) {
       systemMessage.content = buildSystemPrompt(systemMessage.content || '', mcpTools)
@@ -1126,6 +1121,9 @@ export default class OpenAIProvider extends BaseOpenAIProvider {
     const body = {
       model: model.id,
       messages: [{ role: 'user', content: 'hi' }],
+      max_completion_tokens: 1, // openAI
+      max_tokens: 1, // openAI deprecated 但大部分OpenAI兼容的提供商继续用这个头
+      enable_thinking: false, // qwen3
       stream
     }
 
@@ -1212,11 +1210,15 @@ export default class OpenAIProvider extends BaseOpenAIProvider {
   public async getEmbeddingDimensions(model: Model): Promise<number> {
     await this.checkIsCopilot()
 
-    const data = await this.sdk.embeddings.create({
-      model: model.id,
-      input: model?.provider === 'baidu-cloud' ? ['hi'] : 'hi'
-    })
-    return data.data[0].embedding.length
+    try {
+      const data = await this.sdk.embeddings.create({
+        model: model.id,
+        input: model?.provider === 'baidu-cloud' ? ['hi'] : 'hi'
+      })
+      return data.data[0].embedding.length
+    } catch (e) {
+      return 0
+    }
   }
 
   public async checkIsCopilot() {
