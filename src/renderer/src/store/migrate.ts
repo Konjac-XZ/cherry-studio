@@ -1412,6 +1412,15 @@ const migrateConfig = {
     } catch (error) {
       return state
     }
+  },
+  '104': (state: RootState) => {
+    try {
+      addProvider(state, 'burncloud')
+      state.llm.providers = moveProvider(state.llm.providers, 'burncloud', 10)
+      return state
+    } catch (error) {
+      return state
+    }
   }
 }
 
