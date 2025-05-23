@@ -683,6 +683,8 @@
         "refresh": "Обновить",
         "close": "Закрыть встроенное приложение",
         "minimize": "Свернуть встроенное приложение",
+        "goBack": "Назад",
+        "goForward": "Вперед",
         "devtools": "Инструменты разработчика",
         "openExternal": "Открыть в браузере",
         "rightclick_copyurl": "ПКМ → Копировать URL",
@@ -938,7 +940,8 @@
       "zhinao": "360AI",
       "zhipu": "ZHIPU AI",
       "voyageai": "Voyage AI",
-      "qiniu": "Qiniu"
+      "qiniu": "Qiniu",
+      "tokenflux": "TokenFlux"
     },
     "restore": {
       "confirm": "Вы уверены, что хотите восстановить данные?",
@@ -1626,6 +1629,7 @@
       "topic.position.left": "Слева",
       "topic.position.right": "Справа",
       "topic.show.time": "Показывать время топика",
+      "topic.pin_to_top": "Закрепленные топики сверху",
       "tray.onclose": "Свернуть в трей при закрытии",
       "tray.show": "Показать значок в трее",
       "tray.title": "Трей",
