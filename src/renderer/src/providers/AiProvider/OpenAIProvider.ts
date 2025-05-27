@@ -262,18 +262,34 @@ export default class OpenAIProvider extends BaseOpenAIProvider {
       }
 
       if (isSupportedThinkingTokenGeminiModel(model)) {
-        // openrouter没有提供一个不推理的选项，先隐藏
-        if (this.provider.id === 'openrouter') {
-          return { reasoning: { maxTokens: 0, exclude: true } }
-        }
         return {
-          reasoning_effort: 'none'
+          thinkingConfig: {
+            includeThoughts: false,
+            thinkingBudget: 0
+          }
         }
       }
 
       return {}
     }
     const effortRatio = EFFORT_RATIO[reasoningEffort]
+
+    // Handle Gemini reasoning models with enabled thinking
+    if (isSupportedThinkingTokenGeminiModel(model)) {
+      if (effortRatio > 1) {
+        return {}
+      }
+
+      const { max } = findTokenLimit(model.id) || { max: 0 }
+
+      return {
+        thinkingConfig: {
+          thinkingBudget: Math.floor(max * effortRatio),
+          includeThoughts: true
+        }
+      }
+    }
+
     const budgetTokens = Math.floor(
       (findTokenLimit(model.id)?.max! - findTokenLimit(model.id)?.min!) * effortRatio + findTokenLimit(model.id)?.min!
     )
@@ -311,14 +327,6 @@ export default class OpenAIProvider extends BaseOpenAIProvider {
         reasoning_effort: assistant?.settings?.reasoning_effort
       }
     }
-
-    // Gemini models
-
-    if (isSupportedThinkingTokenGeminiModel(model)) {
-      return {
-        reasoning_effort: assistant?.settings?.reasoning_effort === 'auto' ? undefined : assistant?.settings?.reasoning_effort,
-      }
-    }   
 
     // OpenAI models
     if (isSupportedReasoningEffortOpenAIModel(model) || isSupportedThinkingTokenGeminiModel(model)) {
