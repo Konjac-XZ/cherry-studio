@@ -14,7 +14,6 @@ import { getModelUniqId, hasModel } from '@renderer/services/ModelService'
 import type { Model, TranslateHistory } from '@renderer/types'
 import type { TranslationMessageBlock } from '@renderer/types/newMessage'
 import { runAsyncFunction, uuid } from '@renderer/utils'
-import { removeTrailingDoubleSpaces } from '@renderer/utils/markdown'
 import {
   createInputScrollHandler,
   createOutputScrollHandler,
@@ -344,7 +343,6 @@ const TranslatePage: FC = () => {
     setIsBidirectional(value)
     db.settings.put({ id: 'translate:bidirectional:enabled', value })
   }
-
   const onCopy = () => {
     navigator.clipboard.writeText(result)
     setCopied(true)
@@ -605,7 +603,7 @@ const Container = styled.div`
 const ContentContainer = styled.div<{ $historyDrawerVisible: boolean }>`
   height: calc(100vh - var(--navbar-height));
   display: grid;
-  grid-template-columns: auto 1fr 1fr;
+  grid-template-rows: auto 30% 70%;
   flex: 1;
   padding: 20px 15px;
   position: relative;
@@ -620,7 +618,7 @@ const InputContainer = styled.div`
   border-radius: 10px;
   padding-bottom: 5px;
   padding-right: 2px;
-  margin-right: 15px;
+  margin-bottom: 15px;
 `
 
 const OperationBar = styled.div`
@@ -684,14 +682,14 @@ const BidirectionalLanguageDisplay = styled.div`
 `
 
 const HistoryContainner = styled.div<{ $historyDrawerVisible: boolean }>`
-  width: ${({ $historyDrawerVisible }) => ($historyDrawerVisible ? '300px' : '0')};
-  height: calc(100vh - var(--navbar-height) - 40px);
+  width: ${({ $historyDrawerVisible }) => ($historyDrawerVisible ? '100%' : '0')};
+  height: ${({ $historyDrawerVisible }) => ($historyDrawerVisible ? '300px' : '0')};
   transition:
-    width 0.2s,
+    height 0.2s,
     opacity 0.2s;
   border: 1px solid var(--color-border-soft);
   border-radius: 10px;
-  margin-right: 15px;
+  margin-bottom: 15px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -702,7 +700,7 @@ const HistoryContainner = styled.div<{ $historyDrawerVisible: boolean }>`
     !$historyDrawerVisible &&
     `
     border: none;
-    margin-right: 0;
+    margin-bottom: 0;
     opacity: 0;
   `}
 `
