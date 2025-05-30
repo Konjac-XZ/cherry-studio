@@ -7,11 +7,14 @@ import { translateLanguageOptions } from '@renderer/config/translate'
 import db from '@renderer/databases'
 import { useDefaultModel } from '@renderer/hooks/useAssistant'
 import { useProviders } from '@renderer/hooks/useProvider'
+import Markdown from '@renderer/pages/home/Markdown/Markdown'
 import { fetchTranslate } from '@renderer/services/ApiService'
 import { getDefaultTranslateAssistant } from '@renderer/services/AssistantService'
 import { getModelUniqId, hasModel } from '@renderer/services/ModelService'
 import type { Model, TranslateHistory } from '@renderer/types'
+import type { TranslationMessageBlock } from '@renderer/types/newMessage'
 import { runAsyncFunction, uuid } from '@renderer/utils'
+import { removeTrailingDoubleSpaces } from '@renderer/utils/markdown'
 import {
   createInputScrollHandler,
   createOutputScrollHandler,
@@ -311,8 +314,8 @@ const TranslatePage: FC = () => {
       const actualTargetLanguage = result.language as string
       if (isBidirectional) {
         setTargetLanguage(actualTargetLanguage)
-      }
-
+      }      
+      
       const assistant = getDefaultTranslateAssistant(actualTargetLanguage, text)
       let translatedText = ''
       await fetchTranslate({
@@ -562,10 +565,17 @@ const TranslatePage: FC = () => {
               disabled={!result}
               icon={copied ? <CheckOutlined style={{ color: 'var(--color-primary)' }} /> : <CopyIcon />}
             />
-          </OperationBar>
-
-          <OutputText ref={outputTextRef} onScroll={handleOutputScroll} className="selectable">
-            {result || t('translate.output.placeholder')}
+          </OperationBar>          <OutputText ref={outputTextRef} onScroll={handleOutputScroll} className="selectable">
+            {result ? (
+              <Markdown 
+                block={{
+                  type: 'translation',
+                  content: result
+                } as TranslationMessageBlock}
+              />
+            ) : (
+              <PlaceholderText>{t('translate.output.placeholder')}</PlaceholderText>
+            )}
           </OutputText>
         </OutputContainer>
       </ContentContainer>
@@ -652,7 +662,11 @@ const OutputText = styled.div`
   flex: 1;
   padding: 5px 16px;
   overflow-y: auto;
-  white-space: pre-wrap;
+`
+
+const PlaceholderText = styled.div`
+  color: var(--color-text-2);
+  font-style: italic;
 `
 
 const TranslateButton = styled(Button)``
