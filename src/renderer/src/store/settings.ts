@@ -50,6 +50,7 @@ export interface SettingsState {
   proxyUrl?: string
   userName: string
   showPrompt: boolean
+  showTokens: boolean
   showMessageDivider: boolean
   messageFont: 'system' | 'serif'
   showInputEstimatedTokens: boolean
@@ -69,6 +70,7 @@ export interface SettingsState {
   pasteLongTextThreshold: number
   clickAssistantToShowTopic: boolean
   autoCheckUpdate: boolean
+  earlyAccess: boolean
   renderInputMessageAsMarkdown: boolean
   // 代码执行
   codeExecution: {
@@ -131,14 +133,16 @@ export interface SettingsState {
   markdownExportPath: string | null
   forceDollarMathInMarkdown: boolean
   useTopicNamingForMessageTitle: boolean
+  showModelNameInMarkdown: boolean
+  showModelProviderInMarkdown: boolean
   thoughtAutoCollapse: boolean
-  notionAutoSplit: boolean
-  notionSplitSize: number
+  notionExportReasoning: boolean
   yuqueToken: string | null
   yuqueUrl: string | null
   yuqueRepoId: string | null
   joplinToken: string | null
   joplinUrl: string | null
+  joplinExportReasoning: boolean
   defaultObsidianVault: string | null
   defaultAgent: string | null
   // 思源笔记配置
@@ -195,6 +199,7 @@ export const initialState: SettingsState = {
   proxyUrl: undefined,
   userName: '',
   showPrompt: true,
+  showTokens: true,
   showMessageDivider: true,
   messageFont: 'system',
   showInputEstimatedTokens: false,
@@ -216,6 +221,7 @@ export const initialState: SettingsState = {
   pasteLongTextThreshold: 1500,
   clickAssistantToShowTopic: true,
   autoCheckUpdate: true,
+  earlyAccess: false,
   renderInputMessageAsMarkdown: false,
   codeExecution: {
     enabled: false,
@@ -273,14 +279,16 @@ export const initialState: SettingsState = {
   markdownExportPath: null,
   forceDollarMathInMarkdown: false,
   useTopicNamingForMessageTitle: false,
+  showModelNameInMarkdown: false,
+  showModelProviderInMarkdown: false,
   thoughtAutoCollapse: true,
-  notionAutoSplit: false,
-  notionSplitSize: 90,
+  notionExportReasoning: false,
   yuqueToken: '',
   yuqueUrl: '',
   yuqueRepoId: '',
   joplinToken: '',
   joplinUrl: '',
+  joplinExportReasoning: false,
   defaultObsidianVault: null,
   defaultAgent: null,
   siyuanApiUrl: null,
@@ -362,6 +370,9 @@ const settingsSlice = createSlice({
     setShowPrompt: (state, action: PayloadAction<boolean>) => {
       state.showPrompt = action.payload
     },
+    setShowTokens: (state, action: PayloadAction<boolean>) => {
+      state.showTokens = action.payload
+    },
     setShowMessageDivider: (state, action: PayloadAction<boolean>) => {
       state.showMessageDivider = action.payload
     },
@@ -415,6 +426,9 @@ const settingsSlice = createSlice({
     },
     setAutoCheckUpdate: (state, action: PayloadAction<boolean>) => {
       state.autoCheckUpdate = action.payload
+    },
+    setEarlyAccess: (state, action: PayloadAction<boolean>) => {
+      state.earlyAccess = action.payload
     },
     setRenderInputMessageAsMarkdown: (state, action: PayloadAction<boolean>) => {
       state.renderInputMessageAsMarkdown = action.payload
@@ -582,14 +596,17 @@ const settingsSlice = createSlice({
     setUseTopicNamingForMessageTitle: (state, action: PayloadAction<boolean>) => {
       state.useTopicNamingForMessageTitle = action.payload
     },
+    setShowModelNameInMarkdown: (state, action: PayloadAction<boolean>) => {
+      state.showModelNameInMarkdown = action.payload
+    },
+    setShowModelProviderInMarkdown: (state, action: PayloadAction<boolean>) => {
+      state.showModelProviderInMarkdown = action.payload
+    },
     setThoughtAutoCollapse: (state, action: PayloadAction<boolean>) => {
       state.thoughtAutoCollapse = action.payload
     },
-    setNotionAutoSplit: (state, action: PayloadAction<boolean>) => {
-      state.notionAutoSplit = action.payload
-    },
-    setNotionSplitSize: (state, action: PayloadAction<number>) => {
-      state.notionSplitSize = action.payload
+    setNotionExportReasoning: (state, action: PayloadAction<boolean>) => {
+      state.notionExportReasoning = action.payload
     },
     setYuqueToken: (state, action: PayloadAction<string>) => {
       state.yuqueToken = action.payload
@@ -605,6 +622,9 @@ const settingsSlice = createSlice({
     },
     setJoplinUrl: (state, action: PayloadAction<string>) => {
       state.joplinUrl = action.payload
+    },
+    setJoplinExportReasoning: (state, action: PayloadAction<boolean>) => {
+      state.joplinExportReasoning = action.payload
     },
     setMessageNavigation: (state, action: PayloadAction<'none' | 'buttons' | 'anchor'>) => {
       state.messageNavigation = action.payload
@@ -667,6 +687,8 @@ const settingsSlice = createSlice({
 })
 
 export const {
+  setShowModelNameInMarkdown,
+  setShowModelProviderInMarkdown,
   setShowAssistants,
   toggleShowAssistants,
   setShowTopics,
@@ -680,6 +702,7 @@ export const {
   setProxyUrl,
   setUserName,
   setShowPrompt,
+  setShowTokens,
   setShowMessageDivider,
   setMessageFont,
   setShowInputEstimatedTokens,
@@ -697,6 +720,7 @@ export const {
   setAssistantIconType,
   setPasteLongTextAsFile,
   setAutoCheckUpdate,
+  setEarlyAccess,
   setRenderInputMessageAsMarkdown,
   setClickAssistantToShowTopic,
   setSkipBackupFile,
@@ -739,13 +763,13 @@ export const {
   setForceDollarMathInMarkdown,
   setUseTopicNamingForMessageTitle,
   setThoughtAutoCollapse,
-  setNotionAutoSplit,
-  setNotionSplitSize,
+  setNotionExportReasoning,
   setYuqueToken,
   setYuqueRepoId,
   setYuqueUrl,
   setJoplinToken,
   setJoplinUrl,
+  setJoplinExportReasoning,
   setMessageNavigation,
   setDefaultObsidianVault,
   setDefaultAgent,

@@ -285,7 +285,6 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
                 key={key}
                 messages={groupMessages}
                 topic={topic}
-                hidePresetMessages={assistant.settings?.hideMessages}
                 registerMessageElement={registerMessageElement}
               />
             ))}
