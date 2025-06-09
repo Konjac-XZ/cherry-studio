@@ -1,7 +1,7 @@
 import { CheckOutlined, EditOutlined, MenuOutlined, QuestionCircleOutlined, SyncOutlined } from '@ant-design/icons'
 import ObsidianExportPopup from '@renderer/components/Popups/ObsidianExportPopup'
 import SelectModelPopup from '@renderer/components/Popups/SelectModelPopup'
-import { translateLanguageOptions } from '@renderer/config/translate'
+import { TranslateLanguageOptions } from '@renderer/config/translate'
 import { useMessageEditing } from '@renderer/context/MessageEditingContext'
 import { useChatContext } from '@renderer/hooks/useChatContext'
 import { useMessageOperations, useTopicLoading } from '@renderer/hooks/useMessageOperations'
@@ -396,8 +396,12 @@ const MessageMenubar: FC<Props> = (props) => {
         ) : (
           <Dropdown
             menu={{
+              style: {
+                maxHeight: 250,
+                overflowY: 'auto'
+              },
               items: [
-                ...translateLanguageOptions().map((item) => ({
+                ...TranslateLanguageOptions.map((item) => ({
                   label: item.emoji + ' ' + item.label,
                   key: item.value,
                   onClick: () => handleTranslate(item.value)
@@ -451,7 +455,7 @@ const MessageMenubar: FC<Props> = (props) => {
               onClick: (e) => e.domEvent.stopPropagation()
             }}
             trigger={['click']}
-            placement="topRight"
+            placement="top"
             arrow>
             <Tooltip title={t('chat.translate')} mouseEnterDelay={1.2}>
               <ActionButton className="message-action-button" onClick={(e) => e.stopPropagation()}>

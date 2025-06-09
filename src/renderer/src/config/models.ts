@@ -395,6 +395,37 @@ export function getModelLogo(modelId: string) {
 }
 
 export const SYSTEM_MODELS: Record<string, Model[]> = {
+  defaultModel: [
+    {
+      // 默认助手模型
+      id: 'deepseek-ai/DeepSeek-V3',
+      name: 'deepseek-ai/DeepSeek-V3',
+      provider: 'silicon',
+      group: 'deepseek-ai'
+    },
+    {
+      // 默认话题命名模型
+      id: 'Qwen/Qwen3-8B',
+      name: 'Qwen/Qwen3-8B',
+      provider: 'silicon',
+      group: 'Qwen'
+    },
+    {
+      // 默认翻译模型
+      id: 'deepseek-ai/DeepSeek-V3',
+      name: 'deepseek-ai/DeepSeek-V3',
+      provider: 'silicon',
+      group: 'deepseek-ai'
+    },
+    {
+      // 默认快捷助手模型
+      id: 'deepseek-ai/DeepSeek-V3',
+      name: 'deepseek-ai/DeepSeek-V3',
+      provider: 'silicon',
+      group: 'deepseek-ai'
+    }
+  ],
+
   aihubmix: [
     {
       id: 'gpt-4o',
@@ -601,16 +632,16 @@ export const SYSTEM_MODELS: Record<string, Model[]> = {
       group: 'Qwen'
     },
     {
-      id: 'meta-llama/Llama-3.3-70B-Instruct',
-      name: 'meta-llama/Llama-3.3-70B-Instruct',
-      provider: 'silicon',
-      group: 'meta-llama'
-    },
-    {
       id: 'BAAI/bge-m3',
       name: 'BAAI/bge-m3',
       provider: 'silicon',
       group: 'BAAI'
+    },
+    {
+      id: 'Qwen/Qwen3-8B',
+      name: 'Qwen/Qwen3-8B',
+      provider: 'silicon',
+      group: 'Qwen'
     }
   ],
   ppio: [
@@ -1707,24 +1738,6 @@ export const SYSTEM_MODELS: Record<string, Model[]> = {
       id: 'ERNIE-Speed-128K',
       provider: 'dmxapi',
       name: 'ERNIE-Speed-128K',
-      group: '免费模型'
-    },
-    {
-      id: 'THUDM/glm-4-9b-chat',
-      provider: 'dmxapi',
-      name: 'THUDM/glm-4-9b-chat',
-      group: '免费模型'
-    },
-    {
-      id: 'glm-4-flash',
-      provider: 'dmxapi',
-      name: 'glm-4-flash',
-      group: '免费模型'
-    },
-    {
-      id: 'hunyuan-lite',
-      provider: 'dmxapi',
-      name: 'hunyuan-lite',
       group: '免费模型'
     },
     {
