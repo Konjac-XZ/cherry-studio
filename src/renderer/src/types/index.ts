@@ -423,6 +423,7 @@ export interface KnowledgeBase {
 export type KnowledgeBaseParams = {
   id: string
   model: string
+  provider: string
   dimensions?: number
   apiKey: string
   apiVersion?: string
@@ -704,3 +705,4 @@ export interface StoreSyncAction {
 
 export type OpenAISummaryText = 'auto' | 'concise' | 'detailed' | 'off'
 export type OpenAIServiceTier = 'auto' | 'default' | 'flex'
+export type { Message } from './newMessage'
