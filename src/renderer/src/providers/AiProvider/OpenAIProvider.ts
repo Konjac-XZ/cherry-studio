@@ -14,6 +14,7 @@ import {
   isSupportedThinkingTokenModel,
   isSupportedThinkingTokenQwenModel,
   isSupportedThinkingTokenGeminiModel,
+  isSupportedThinkingTokenDoubaoModel,
   isVisionModel,
   isWebSearchModel,
   isZhipuModel
@@ -271,26 +272,13 @@ export default class OpenAIProvider extends BaseOpenAIProvider {
         }
       }
 
+      if (isSupportedThinkingTokenDoubaoModel(model)) {
+        return { thinking: { type: 'disabled' } }
+      }
+
       return {}
     }
     const effortRatio = EFFORT_RATIO[reasoningEffort]
-
-    // Handle Gemini reasoning models with enabled thinking
-    if (isSupportedThinkingTokenGeminiModel(model)) {
-      if (effortRatio > 1) {
-        return {}
-      }
-
-      const { max } = findTokenLimit(model.id) || { max: 0 }
-
-      return {
-        thinkingConfig: {
-          thinkingBudget: Math.floor(max * effortRatio),
-          includeThoughts: true
-        }
-      }
-    }
-
     const budgetTokens = Math.floor(
       (findTokenLimit(model.id)?.max! - findTokenLimit(model.id)?.min!) * effortRatio + findTokenLimit(model.id)?.min!
     )
@@ -337,6 +325,33 @@ export default class OpenAIProvider extends BaseOpenAIProvider {
           budget_tokens: Math.floor(
             Math.max(1024, Math.min(budgetTokens, (maxTokens || DEFAULT_MAX_TOKENS) * effortRatio))
           )
+        }
+      }
+    }
+
+    // Gemini models
+    if (isSupportedThinkingTokenGeminiModel(model)) {
+      if (effortRatio > 1) {
+        return {}
+      }
+
+      const { max } = findTokenLimit(model.id) || { max: 0 }
+
+      return {
+        thinkingConfig: {
+          thinkingBudget: Math.floor(max * effortRatio),
+          includeThoughts: true
+        }
+      }
+    }
+
+    // Doubao models
+    if (isSupportedThinkingTokenDoubaoModel(model)) {
+      if (assistant.settings?.reasoning_effort === 'high') {
+        return {
+          thinking: {
+            type: 'enabled',
+          }
         }
       }
     }
