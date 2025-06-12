@@ -2,14 +2,16 @@ import { DEFAULT_MAX_TOKENS } from '@renderer/config/constant'
 import Logger from '@renderer/config/logger'
 import {
   findTokenLimit,
+  GEMINI_FLASH_MODEL_REGEX,
   getOpenAIWebSearchParams,
+  isDoubaoThinkingAutoModel,
   isReasoningModel,
   isSupportedReasoningEffortGrokModel,
   isSupportedReasoningEffortModel,
   isSupportedReasoningEffortOpenAIModel,
   isSupportedThinkingTokenClaudeModel,
-  isSupportedThinkingTokenGeminiModel,
   isSupportedThinkingTokenDoubaoModel,
+  isSupportedThinkingTokenGeminiModel,
   isSupportedThinkingTokenModel,
   isSupportedThinkingTokenQwenModel,
   isVisionModel
@@ -93,6 +95,23 @@ export class OpenAIAPIClient extends OpenAIBaseClient<
       return {}
     }
     const reasoningEffort = assistant?.settings?.reasoning_effort
+
+    // Doubao 思考模式支持
+    if (isSupportedThinkingTokenDoubaoModel(model)) {
+      // reasoningEffort 为空，默认开启 enabled
+      if (!reasoningEffort) {
+        return { thinking: { type: 'disabled' } }
+      }
+      if (reasoningEffort === 'high') {
+        return { thinking: { type: 'enabled' } }
+      }
+      if (reasoningEffort === 'auto' && isDoubaoThinkingAutoModel(model)) {
+        return { thinking: { type: 'auto' } }
+      }
+      // 其他情况不带 thinking 字段
+      return {}
+    }
+
     if (!reasoningEffort) {
       if (isSupportedThinkingTokenQwenModel(model)) {
         return { enable_thinking: false }
@@ -107,9 +126,10 @@ export class OpenAIAPIClient extends OpenAIBaseClient<
         if (this.provider.id === 'openrouter') {
           return { reasoning: { max_tokens: 0, exclude: true } }
         }
-        return {
-          reasoning_effort: 'none'
+        if (GEMINI_FLASH_MODEL_REGEX.test(model.id)) {
+          return { reasoning_effort: 'none' }
         }
+        return {}
       }
 
       if (isSupportedThinkingTokenDoubaoModel(model)) {
