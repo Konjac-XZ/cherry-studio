@@ -9,6 +9,7 @@ import {
   isSupportedReasoningEffortOpenAIModel,
   isSupportedThinkingTokenClaudeModel,
   isSupportedThinkingTokenGeminiModel,
+  isSupportedThinkingTokenDoubaoModel,
   isSupportedThinkingTokenModel,
   isSupportedThinkingTokenQwenModel,
   isVisionModel
@@ -111,6 +112,10 @@ export class OpenAIAPIClient extends OpenAIBaseClient<
         }
       }
 
+      if (isSupportedThinkingTokenDoubaoModel(model)) {
+        return { thinking: { type: 'disabled' } }
+      }
+
       return {}
     }
     const effortRatio = EFFORT_RATIO[reasoningEffort]
@@ -160,6 +165,17 @@ export class OpenAIAPIClient extends OpenAIBaseClient<
           budget_tokens: Math.floor(
             Math.max(1024, Math.min(budgetTokens, (maxTokens || DEFAULT_MAX_TOKENS) * effortRatio))
           )
+        }
+      }
+    }
+
+    // Doubao models
+    if (isSupportedThinkingTokenDoubaoModel(model)) {
+      if (assistant.settings?.reasoning_effort === 'high') {
+        return {
+          thinking: {
+            type: 'enabled'
+          }
         }
       }
     }

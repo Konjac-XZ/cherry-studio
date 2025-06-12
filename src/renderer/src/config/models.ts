@@ -2411,7 +2411,8 @@ export function isSupportedThinkingTokenModel(model?: Model): boolean {
   return (
     isSupportedThinkingTokenGeminiModel(model) ||
     isSupportedThinkingTokenQwenModel(model) ||
-    isSupportedThinkingTokenClaudeModel(model)
+    isSupportedThinkingTokenClaudeModel(model) ||
+    isSupportedThinkingTokenDoubaoModel(model)
   )
 }
 
@@ -2491,6 +2492,16 @@ export function isSupportedThinkingTokenQwenModel(model?: Model): boolean {
       'qwen-turbo-2025-04-28'
     ].includes(model.id.toLowerCase())
   )
+}
+
+export function isSupportedThinkingTokenDoubaoModel(model?: Model): boolean {
+  if (!model) {
+    return false
+  }
+  if (model.id.includes('doubao-seed-1.6')) {
+    return true
+  }
+  return model.name.toLowerCase().includes('doubao') && (model.type?.includes('reasoning') ?? false)
 }
 
 export function isClaudeReasoningModel(model?: Model): boolean {

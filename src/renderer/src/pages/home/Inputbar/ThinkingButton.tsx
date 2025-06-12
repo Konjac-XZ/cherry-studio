@@ -9,7 +9,8 @@ import { useQuickPanel } from '@renderer/components/QuickPanel'
 import {
   isSupportedReasoningEffortGrokModel,
   isSupportedThinkingTokenGeminiModel,
-  isSupportedThinkingTokenQwenModel
+  isSupportedThinkingTokenQwenModel,
+  isSupportedThinkingTokenDoubaoModel
 } from '@renderer/config/models'
 import { useAssistant } from '@renderer/hooks/useAssistant'
 import { Assistant, Model, ReasoningEffortOptions } from '@renderer/types'
@@ -35,7 +36,8 @@ const MODEL_SUPPORTED_OPTIONS: Record<string, ThinkingOption[]> = {
   default: ['off', 'low', 'medium', 'high'],
   grok: ['off', 'low', 'high'],
   gemini: ['off', 'low', 'medium', 'high', 'auto'],
-  qwen: ['off', 'low', 'medium', 'high']
+  qwen: ['off', 'low', 'medium', 'high'],
+  doubao: ['off', 'auto', 'high']
 }
 
 // 选项转换映射表：当选项不支持时使用的替代选项
@@ -55,6 +57,7 @@ const ThinkingButton: FC<Props> = ({ ref, model, assistant, ToolbarButton }): Re
   const isGrokModel = isSupportedReasoningEffortGrokModel(model)
   const isGeminiModel = isSupportedThinkingTokenGeminiModel(model)
   const isQwenModel = isSupportedThinkingTokenQwenModel(model)
+  const isDoubaoModel = isSupportedThinkingTokenDoubaoModel(model)
 
   const currentReasoningEffort = useMemo(() => {
     return assistant.settings?.reasoning_effort || 'off'
@@ -65,8 +68,9 @@ const ThinkingButton: FC<Props> = ({ ref, model, assistant, ToolbarButton }): Re
     if (isGeminiModel) return 'gemini'
     if (isGrokModel) return 'grok'
     if (isQwenModel) return 'qwen'
+    if (isDoubaoModel) return 'doubao'
     return 'default'
-  }, [isGeminiModel, isGrokModel, isQwenModel])
+  }, [isGeminiModel, isGrokModel, isQwenModel, isDoubaoModel])
 
   // 获取当前模型支持的选项
   const supportedOptions = useMemo(() => {
