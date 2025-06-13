@@ -7,7 +7,9 @@ import {
 } from '@renderer/components/Icons/SVGIcon'
 import { useQuickPanel } from '@renderer/components/QuickPanel'
 import {
+  isDoubaoThinkingAutoModel,
   isSupportedReasoningEffortGrokModel,
+  isSupportedThinkingTokenDoubaoModel,
   isSupportedThinkingTokenGeminiModel,
   isSupportedThinkingTokenQwenModel,
   isSupportedThinkingTokenDoubaoModel
@@ -43,7 +45,7 @@ const MODEL_SUPPORTED_OPTIONS: Record<string, ThinkingOption[]> = {
 // 选项转换映射表：当选项不支持时使用的替代选项
 const OPTION_FALLBACK: Record<ThinkingOption, ThinkingOption> = {
   off: 'off',
-  low: 'low',
+  low: 'high',
   medium: 'high', // medium -> high (for Grok models)
   high: 'high',
   auto: 'high' // auto -> high (for non-Gemini models)
@@ -70,12 +72,18 @@ const ThinkingButton: FC<Props> = ({ ref, model, assistant, ToolbarButton }): Re
     if (isQwenModel) return 'qwen'
     if (isDoubaoModel) return 'doubao'
     return 'default'
-  }, [isGeminiModel, isGrokModel, isQwenModel])
+  }, [isGeminiModel, isGrokModel, isQwenModel, isDoubaoModel])
 
   // 获取当前模型支持的选项
   const supportedOptions = useMemo(() => {
+    if (modelType === 'doubao') {
+      if (isDoubaoThinkingAutoModel(model)) {
+        return ['off', 'auto', 'high'] as ThinkingOption[]
+      }
+      return ['off', 'high'] as ThinkingOption[]
+    }
     return MODEL_SUPPORTED_OPTIONS[modelType]
-  }, [modelType])
+  }, [model, modelType])
 
   // 检查当前设置是否与当前模型兼容
   useEffect(() => {
