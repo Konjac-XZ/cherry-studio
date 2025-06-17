@@ -7,12 +7,10 @@ import { translateLanguageOptions } from '@renderer/config/translate'
 import db from '@renderer/databases'
 import { useDefaultModel } from '@renderer/hooks/useAssistant'
 import { useProviders } from '@renderer/hooks/useProvider'
-import Markdown from '@renderer/pages/home/Markdown/Markdown'
 import { fetchTranslate } from '@renderer/services/ApiService'
 import { getDefaultTranslateAssistant } from '@renderer/services/AssistantService'
 import { getModelUniqId, hasModel } from '@renderer/services/ModelService'
 import type { Model, TranslateHistory } from '@renderer/types'
-import type { TranslationMessageBlock } from '@renderer/types/newMessage'
 import { runAsyncFunction, uuid } from '@renderer/utils'
 import {
   createInputScrollHandler,
@@ -28,6 +26,7 @@ import { find, isEmpty, sortBy } from 'lodash'
 import { HelpCircle, Settings2, TriangleAlert } from 'lucide-react'
 import { FC, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import ReactMarkdown from 'react-markdown'
 import styled from 'styled-components'
 
 let _text = ''
@@ -41,6 +40,8 @@ const TranslateSettings: FC<{
   setIsScrollSyncEnabled: (value: boolean) => void
   isBidirectional: boolean
   setIsBidirectional: (value: boolean) => void
+  enableMarkdown: boolean
+  setEnableMarkdown: (value: boolean) => void
   bidirectionalPair: [string, string]
   setBidirectionalPair: (value: [string, string]) => void
   translateModel: Model | undefined
@@ -54,6 +55,8 @@ const TranslateSettings: FC<{
   setIsScrollSyncEnabled,
   isBidirectional,
   setIsBidirectional,
+  enableMarkdown,
+  setEnableMarkdown,
   bidirectionalPair,
   setBidirectionalPair,
   translateModel,
@@ -84,6 +87,7 @@ const TranslateSettings: FC<{
     setBidirectionalPair(localPair)
     db.settings.put({ id: 'translate:bidirectional:pair', value: localPair })
     db.settings.put({ id: 'translate:scroll:sync', value: isScrollSyncEnabled })
+    db.settings.put({ id: 'translate:markdown:enabled', value: enableMarkdown })
     window.message.success({
       content: t('message.save.success.title'),
       key: 'translate-settings-save'
@@ -135,6 +139,13 @@ const TranslateSettings: FC<{
           <div style={{ marginTop: 8, fontSize: 12, color: 'var(--color-text-3)' }}>
             {t('translate.settings.model_desc')}
           </div>
+        </div>
+
+        <div>
+          <Flex align="center" justify="space-between">
+            <div style={{ fontWeight: 500 }}>{t('translate.settings.preview')}</div>
+            <Switch checked={enableMarkdown} onChange={setEnableMarkdown} />
+          </Flex>
         </div>
 
         <div>
@@ -214,6 +225,7 @@ const TranslatePage: FC = () => {
   const [historyDrawerVisible, setHistoryDrawerVisible] = useState(false)
   const [isScrollSyncEnabled, setIsScrollSyncEnabled] = useState(false)
   const [isBidirectional, setIsBidirectional] = useState(false)
+  const [enableMarkdown, setEnableMarkdown] = useState(false)
   const [bidirectionalPair, setBidirectionalPair] = useState<[string, string]>(['english', 'chinese'])
   const [settingsVisible, setSettingsVisible] = useState(false)
   const [detectedLanguage, setDetectedLanguage] = useState<string | null>(null)
@@ -321,8 +333,8 @@ const TranslatePage: FC = () => {
       const actualTargetLanguage = result.language as string
       if (isBidirectional) {
         setTargetLanguage(actualTargetLanguage)
-      }      
-      
+      }
+
       const assistant = getDefaultTranslateAssistant(actualTargetLanguage, text)
       let translatedText = ''
       await fetchTranslate({
@@ -351,6 +363,7 @@ const TranslatePage: FC = () => {
     setIsBidirectional(value)
     db.settings.put({ id: 'translate:bidirectional:enabled', value })
   }
+
   const onCopy = () => {
     navigator.clipboard.writeText(result)
     setCopied(true)
@@ -389,12 +402,15 @@ const TranslatePage: FC = () => {
 
       const scrollSyncSetting = await db.settings.get({ id: 'translate:scroll:sync' })
       setIsScrollSyncEnabled(scrollSyncSetting ? scrollSyncSetting.value : false)
+
+      const markdownSetting = await db.settings.get({ id: 'translate:markdown:enabled' })
+      setEnableMarkdown(markdownSetting ? markdownSetting.value : false)
     })
   }, [])
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     const isEnterPressed = e.keyCode == 13
-    if (isEnterPressed && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
+    if (isEnterPressed && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
       e.preventDefault()
       onTranslate()
     }
@@ -544,7 +560,7 @@ const TranslatePage: FC = () => {
               styles={{ body: { fontSize: '12px' } }}
               title={
                 <div style={{ textAlign: 'center' }}>
-                  Ctrl + Enter: {t('translate.button.translate')}
+                  Enter: {t('translate.button.translate')}
                   <br />
                   Shift + Enter: {t('translate.tooltip.newline')}
                 </div>
@@ -584,16 +600,15 @@ const TranslatePage: FC = () => {
               disabled={!result}
               icon={copied ? <CheckOutlined style={{ color: 'var(--color-primary)' }} /> : <CopyIcon />}
             />
-          </OperationBar>          <OutputText ref={outputTextRef} onScroll={handleOutputScroll} className="selectable">
-            {result ? (
-              <Markdown 
-                block={{
-                  type: 'translation',
-                  content: result
-                } as TranslationMessageBlock}
-              />
+          </OperationBar>
+
+          <OutputText ref={outputTextRef} onScroll={handleOutputScroll} className="selectable">
+            {!result ? (
+              t('translate.output.placeholder')
+            ) : enableMarkdown ? (
+              <ReactMarkdown>{result}</ReactMarkdown>
             ) : (
-              <PlaceholderText>{t('translate.output.placeholder')}</PlaceholderText>
+              result
             )}
           </OutputText>
         </OutputContainer>
@@ -606,6 +621,8 @@ const TranslatePage: FC = () => {
         setIsScrollSyncEnabled={setIsScrollSyncEnabled}
         isBidirectional={isBidirectional}
         setIsBidirectional={toggleBidirectional}
+        enableMarkdown={enableMarkdown}
+        setEnableMarkdown={setEnableMarkdown}
         bidirectionalPair={bidirectionalPair}
         setBidirectionalPair={setBidirectionalPair}
         translateModel={translateModel}
@@ -624,7 +641,7 @@ const Container = styled.div`
 const ContentContainer = styled.div<{ $historyDrawerVisible: boolean }>`
   height: calc(100vh - var(--navbar-height));
   display: grid;
-  grid-template-rows: auto 30% 70%;
+  grid-template-columns: auto 1fr 1fr;
   flex: 1;
   padding: 20px 15px;
   position: relative;
@@ -639,7 +656,7 @@ const InputContainer = styled.div`
   border-radius: 10px;
   padding-bottom: 5px;
   padding-right: 2px;
-  margin-bottom: 15px;
+  margin-right: 15px;
 `
 
 const OperationBar = styled.div`
@@ -681,11 +698,7 @@ const OutputText = styled.div`
   flex: 1;
   padding: 5px 16px;
   overflow-y: auto;
-`
-
-const PlaceholderText = styled.div`
-  color: var(--color-text-2);
-  font-style: italic;
+  white-space: pre-wrap;
 `
 
 const TranslateButton = styled(Button)``
@@ -703,14 +716,14 @@ const BidirectionalLanguageDisplay = styled.div`
 `
 
 const HistoryContainner = styled.div<{ $historyDrawerVisible: boolean }>`
-  width: ${({ $historyDrawerVisible }) => ($historyDrawerVisible ? '100%' : '0')};
-  height: ${({ $historyDrawerVisible }) => ($historyDrawerVisible ? '300px' : '0')};
+  width: ${({ $historyDrawerVisible }) => ($historyDrawerVisible ? '300px' : '0')};
+  height: calc(100vh - var(--navbar-height) - 40px);
   transition:
-    height 0.2s,
+    width 0.2s,
     opacity 0.2s;
   border: 1px solid var(--color-border-soft);
   border-radius: 10px;
-  margin-bottom: 15px;
+  margin-right: 15px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -721,7 +734,7 @@ const HistoryContainner = styled.div<{ $historyDrawerVisible: boolean }>`
     !$historyDrawerVisible &&
     `
     border: none;
-    margin-bottom: 0;
+    margin-right: 0;
     opacity: 0;
   `}
 `

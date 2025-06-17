@@ -1,13 +1,7 @@
 import { CheckOutlined } from '@ant-design/icons'
 import { HStack } from '@renderer/components/Layout'
 import Scrollbar from '@renderer/components/Scrollbar'
-import {
-  DEFAULT_CONTEXTCOUNT,
-  DEFAULT_MAX_TOKENS,
-  DEFAULT_TEMPERATURE,
-  isMac,
-  isWindows
-} from '@renderer/config/constant'
+import { DEFAULT_CONTEXTCOUNT, DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE } from '@renderer/config/constant'
 import {
   isOpenAIModel,
   isSupportedFlexServiceTier,
@@ -61,6 +55,7 @@ import {
 } from '@renderer/types'
 import { TranslateLanguageOption, TranslateLanguageOptions } from '@renderer/config/translate'
 import { modalConfirm } from '@renderer/utils'
+import { getSendMessageShortcutLabel } from '@renderer/utils/input'
 import { Button, Col, InputNumber, Row, Select, Slider, Switch, Tooltip } from 'antd'
 import { CircleHelp, Settings2 } from 'lucide-react'
 import { FC, useCallback, useEffect, useMemo, useState } from 'react'
@@ -702,10 +697,11 @@ const SettingsTab: FC<Props> = (props) => {
               value={sendMessageShortcut}
               menuItemSelectedIcon={<CheckOutlined />}
               options={[
-                { value: 'Enter', label: 'Enter' },
-                { value: 'Shift+Enter', label: 'Shift + Enter' },
-                { value: 'Ctrl+Enter', label: 'Ctrl + Enter' },
-                { value: 'Command+Enter', label: `${isMac ? '⌘' : isWindows ? 'Win' : 'Super'} + Enter` }
+                { value: 'Enter', label: getSendMessageShortcutLabel('Enter') },
+                { value: 'Ctrl+Enter', label: getSendMessageShortcutLabel('Ctrl+Enter') },
+                { value: 'Alt+Enter', label: getSendMessageShortcutLabel('Alt+Enter') },
+                { value: 'Command+Enter', label: getSendMessageShortcutLabel('Command+Enter') },
+                { value: 'Shift+Enter', label: getSendMessageShortcutLabel('Shift+Enter') }
               ]}
               onChange={(value) => setSendMessageShortcut(value as SendMessageShortcut)}
               style={{ width: 135 }}
