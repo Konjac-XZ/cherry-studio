@@ -9,7 +9,6 @@ import { useQuickPanel } from '@renderer/components/QuickPanel'
 import {
   isDoubaoThinkingAutoModel,
   isSupportedReasoningEffortGrokModel,
-  isSupportedThinkingTokenDoubaoModel,
   isSupportedThinkingTokenGeminiModel,
   isSupportedThinkingTokenQwenModel,
   isSupportedThinkingTokenDoubaoModel

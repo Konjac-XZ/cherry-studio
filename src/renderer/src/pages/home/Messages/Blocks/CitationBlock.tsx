@@ -1,5 +1,5 @@
 import { GroundingMetadata } from '@google/genai'
-import Spinner from '@renderer/components/Spinner'
+// import Spinner from '@renderer/components/Spinner'
 import type { RootState } from '@renderer/store'
 import { selectFormattedCitationsByBlockId } from '@renderer/store/messageBlock'
 import { WebSearchSource } from '@renderer/types'
@@ -21,9 +21,9 @@ function CitationBlock({ block }: { block: CitationMessageBlock }) {
     )
   }, [formattedCitations, block.knowledge, hasGeminiBlock])
 
-  if (block.status === MessageBlockStatus.PROCESSING) {
-    return <Spinner text="message.searching" />
-  }
+  // if (block.status === MessageBlockStatus. ) {
+  //   return <Spinner text="message.searching" />
+  // }
 
   if (!hasCitations) {
     return null

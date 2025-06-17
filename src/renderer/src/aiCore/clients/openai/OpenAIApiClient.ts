@@ -3,7 +3,6 @@ import Logger from '@renderer/config/logger'
 import {
   findTokenLimit,
   GEMINI_FLASH_MODEL_REGEX,
-  getOpenAIWebSearchParams,
   isDoubaoThinkingAutoModel,
   isReasoningModel,
   isSupportedReasoningEffortGrokModel,
@@ -397,7 +396,7 @@ export class OpenAIAPIClient extends OpenAIBaseClient<
         messages: OpenAISdkMessageParam[]
         metadata: Record<string, any>
       }> => {
-        const { messages, mcpTools, maxTokens, streamOutput, enableWebSearch } = coreRequest
+        const { messages, mcpTools, maxTokens, streamOutput } = coreRequest
         // 1. 处理系统消息
         let systemMessage = { role: 'system', content: assistant.prompt || '' }
 
@@ -467,7 +466,7 @@ export class OpenAIAPIClient extends OpenAIBaseClient<
           service_tier: this.getServiceTier(model),
           ...this.getProviderSpecificParameters(assistant, model),
           ...this.getReasoningEffort(assistant, model),
-          ...getOpenAIWebSearchParams(model, enableWebSearch),
+          // ...getOpenAIWebSearchParams(model, enableWebSearch),
           ...this.getCustomParameters(assistant)
         }
 

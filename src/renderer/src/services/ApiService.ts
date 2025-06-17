@@ -295,7 +295,7 @@ export async function fetchChatCompletion({
   assistant: Assistant
   onChunkReceived: (chunk: Chunk) => void
   // TODO
-  // onChunkStatus: (status: 'searching' | 'processing' | 'success' | 'error') => void
+  // onChunkStatus: (status: ' ' | 'processing' | 'success' | 'error') => void
 }) {
   console.log('fetchChatCompletion', messages, assistant)
 

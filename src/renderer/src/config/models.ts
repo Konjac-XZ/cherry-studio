@@ -147,7 +147,7 @@ import { getProviderByModel } from '@renderer/services/AssistantService'
 import { Model } from '@renderer/types'
 import OpenAI from 'openai'
 
-import { WEB_SEARCH_PROMPT_FOR_OPENROUTER } from './prompts'
+// import { WEB_SEARCH_PROMPT_FOR_OPENROUTER } from './prompts'
 import { getWebSearchTools } from './tools'
 
 // Vision models
@@ -2735,7 +2735,7 @@ export function getOpenAIWebSearchParams(model: Model, isEnableWebSearch?: boole
 
   if (model.provider === 'openrouter') {
     return {
-      plugins: [{ id: 'web', search_prompts: WEB_SEARCH_PROMPT_FOR_OPENROUTER }]
+      // plugins: [{ id: 'web', search_prompts: WEB_SEARCH_PROMPT_FOR_OPENROUTER }]
     }
   }
 
