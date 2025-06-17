@@ -15,6 +15,7 @@ import type { Model } from '@renderer/types'
 import type { Assistant, Topic } from '@renderer/types'
 import type { Message } from '@renderer/types/newMessage'
 import { captureScrollableDivAsBlob, captureScrollableDivAsDataURL } from '@renderer/utils'
+import { copyMessageAsPlainText } from '@renderer/utils/copy'
 import {
   exportMarkdownToJoplin,
   exportMarkdownToSiyuan,
@@ -23,7 +24,6 @@ import {
   exportMessageToNotion,
   messageToMarkdown
 } from '@renderer/utils/export'
-import { copyMessageAsPlainText } from '@renderer/utils/copy'
 // import { withMessageThought } from '@renderer/utils/formats'
 import { removeTrailingDoubleSpaces } from '@renderer/utils/markdown'
 import { findMainTextBlocks, findTranslationBlocks, getMainTextContent } from '@renderer/utils/messageUtils/find'
@@ -125,10 +125,13 @@ const MessageMenubar: FC<Props> = (props) => {
   const handleResendUserMessage = useCallback(
     async (messageUpdate?: Message) => {
       if (!loading) {
-        await resendMessage(messageUpdate ?? message, assistant)
+        const assistantWithTopicPrompt = topic.prompt
+          ? { ...assistant, prompt: `${assistant.prompt}\n${topic.prompt}` }
+          : assistant
+        await resendMessage(messageUpdate ?? message, assistantWithTopicPrompt)
       }
     },
-    [assistant, loading, message, resendMessage]
+    [assistant, loading, message, resendMessage, topic.prompt]
   )
 
   const { startEditing } = useMessageEditing()
@@ -182,13 +185,13 @@ const MessageMenubar: FC<Props> = (props) => {
       },
       ...(isEditable
         ? [
-          {
-            label: t('common.edit'),
-            key: 'edit',
-            icon: <FilePenLine size={16} />,
-            onClick: onEdit
-          }
-        ]
+            {
+              label: t('common.edit'),
+              key: 'edit',
+              icon: <FilePenLine size={16} />,
+              onClick: onEdit
+            }
+          ]
         : []),
       {
         label: t('chat.message.new.branch'),
@@ -323,8 +326,12 @@ const MessageMenubar: FC<Props> = (props) => {
     // const _message = resetAssistantMessage(message, selectedModel)
     // editMessage(message.id, { ..._message }) // REMOVED
 
+    const assistantWithTopicPrompt = topic.prompt
+      ? { ...assistant, prompt: `${assistant.prompt}\n${topic.prompt}` }
+      : assistant
+
     // Call the function from the hook
-    regenerateAssistantMessage(message, assistant)
+    regenerateAssistantMessage(message, assistantWithTopicPrompt)
   }
 
   const onMentionModel = async (e: React.MouseEvent) => {
@@ -401,9 +408,11 @@ const MessageMenubar: FC<Props> = (props) => {
           </ActionButton>
         </Tooltip>
       )}
-      {!isUserMessage && (
-        userNativeLanguage?.value && !hasTranslationBlocks ? (
-          <Tooltip title={`${t('chat.translate')} (${userNativeLanguage.emoji} ${userNativeLanguage.label})`} mouseEnterDelay={1.2}>
+      {!isUserMessage &&
+        (userNativeLanguage?.value && !hasTranslationBlocks ? (
+          <Tooltip
+            title={`${t('chat.translate')} (${userNativeLanguage.emoji} ${userNativeLanguage.label})`}
+            mouseEnterDelay={1.2}>
             <ActionButton className="message-action-button" onClick={handleDirectTranslate}>
               <Languages size={16} />
             </ActionButton>
@@ -413,7 +422,8 @@ const MessageMenubar: FC<Props> = (props) => {
             menu={{
               style: {
                 maxHeight: 250,
-                overflowY: 'auto'
+                overflowY: 'auto',
+                backgroundClip: 'border-box'
               },
               items: [
                 ...TranslateLanguageOptions.map((item) => ({
@@ -423,48 +433,48 @@ const MessageMenubar: FC<Props> = (props) => {
                 })),
                 ...(hasTranslationBlocks
                   ? [
-                    { type: 'divider' as const },
-                    {
-                      label: '📋 ' + t('common.copy'),
-                      key: 'translate-copy',
-                      onClick: () => {
-                        const translationBlocks = message.blocks
-                          .map((blockId) => blockEntities[blockId])
-                          .filter((block) => block?.type === 'translation')
+                      { type: 'divider' as const },
+                      {
+                        label: '📋 ' + t('common.copy'),
+                        key: 'translate-copy',
+                        onClick: () => {
+                          const translationBlocks = message.blocks
+                            .map((blockId) => blockEntities[blockId])
+                            .filter((block) => block?.type === 'translation')
 
-                        if (translationBlocks.length > 0) {
-                          const translationContent = translationBlocks
-                            .map((block) => block?.content || '')
-                            .join('\n\n')
-                            .trim()
+                          if (translationBlocks.length > 0) {
+                            const translationContent = translationBlocks
+                              .map((block) => block?.content || '')
+                              .join('\n\n')
+                              .trim()
 
-                          if (translationContent) {
-                            navigator.clipboard.writeText(translationContent)
-                            window.message.success({ content: t('translate.copied'), key: 'translate-copy' })
-                          } else {
-                            window.message.warning({ content: t('translate.empty'), key: 'translate-copy' })
+                            if (translationContent) {
+                              navigator.clipboard.writeText(translationContent)
+                              window.message.success({ content: t('translate.copied'), key: 'translate-copy' })
+                            } else {
+                              window.message.warning({ content: t('translate.empty'), key: 'translate-copy' })
+                            }
+                          }
+                        }
+                      },
+                      {
+                        label: '✖ ' + t('translate.close'),
+                        key: 'translate-close',
+                        onClick: () => {
+                          const translationBlocks = message.blocks
+                            .map((blockId) => blockEntities[blockId])
+                            .filter((block) => block?.type === 'translation')
+                            .map((block) => block?.id)
+
+                          if (translationBlocks.length > 0) {
+                            translationBlocks.forEach((blockId) => {
+                              if (blockId) removeMessageBlock(message.id, blockId)
+                            })
+                            window.message.success({ content: t('translate.closed'), key: 'translate-close' })
                           }
                         }
                       }
-                    },
-                    {
-                      label: '✖ ' + t('translate.close'),
-                      key: 'translate-close',
-                      onClick: () => {
-                        const translationBlocks = message.blocks
-                          .map((blockId) => blockEntities[blockId])
-                          .filter((block) => block?.type === 'translation')
-                          .map((block) => block?.id)
-
-                        if (translationBlocks.length > 0) {
-                          translationBlocks.forEach((blockId) => {
-                            if (blockId) removeMessageBlock(message.id, blockId)
-                          })
-                          window.message.success({ content: t('translate.closed'), key: 'translate-close' })
-                        }
-                      }
-                    }
-                  ]
+                    ]
                   : [])
               ],
               onClick: (e) => e.domEvent.stopPropagation()
@@ -478,8 +488,7 @@ const MessageMenubar: FC<Props> = (props) => {
               </ActionButton>
             </Tooltip>
           </Dropdown>
-        )
-      )}
+        ))}
       {isAssistantMessage && isGrouped && (
         <Tooltip title={t('chat.message.useful')} mouseEnterDelay={0.8}>
           <ActionButton className="message-action-button" onClick={onUseful} $softHoverBg={softHoverBg}>
