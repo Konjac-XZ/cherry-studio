@@ -148,7 +148,7 @@ import { Model } from '@renderer/types'
 import { getBaseModelName } from '@renderer/utils'
 import OpenAI from 'openai'
 
-// import { WEB_SEARCH_PROMPT_FOR_OPENROUTER } from './prompts'
+import { WEB_SEARCH_PROMPT_FOR_OPENROUTER } from './prompts'
 import { getWebSearchTools } from './tools'
 
 // Vision models
@@ -2723,7 +2723,7 @@ export function isGenerateImageModel(model: Model): boolean {
 
   const baseName = getBaseModelName(model.id, '/').toLowerCase()
   if (GENERATE_IMAGE_MODELS.includes(baseName)) {
-    return true
+    return false
   }
   return false
 }
@@ -2774,7 +2774,7 @@ export function getOpenAIWebSearchParams(model: Model, isEnableWebSearch?: boole
 
   if (model.provider === 'openrouter') {
     return {
-      // plugins: [{ id: 'web', search_prompts: WEB_SEARCH_PROMPT_FOR_OPENROUTER }]
+      plugins: [{ id: 'web', search_prompts: WEB_SEARCH_PROMPT_FOR_OPENROUTER }]
     }
   }
 
