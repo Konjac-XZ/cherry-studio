@@ -1,5 +1,6 @@
 import fs from 'node:fs'
 import { arch } from 'node:os'
+import path from 'node:path'
 
 import { isMac, isWin } from '@main/constant'
 import { getBinaryPath, isBinaryExists, runInstallScript } from '@main/utils/process'
@@ -57,7 +58,8 @@ export function registerIpc(mainWindow: BrowserWindow, app: Electron.App) {
     resourcesPath: getResourcePath(),
     logsPath: log.transports.file.getFile().path,
     arch: arch(),
-    isPortable: isWin && 'PORTABLE_EXECUTABLE_DIR' in process.env
+    isPortable: isWin && 'PORTABLE_EXECUTABLE_DIR' in process.env,
+    installPath: path.dirname(app.getPath('exe'))
   }))
 
   ipcMain.handle(IpcChannel.App_Proxy, async (_, proxy: string) => {
@@ -83,6 +85,26 @@ export function registerIpc(mainWindow: BrowserWindow, app: Electron.App) {
   // language
   ipcMain.handle(IpcChannel.App_SetLanguage, (_, language) => {
     configManager.setLanguage(language)
+  })
+
+  // spell check
+  ipcMain.handle(IpcChannel.App_SetEnableSpellCheck, (_, isEnable: boolean) => {
+    const windows = BrowserWindow.getAllWindows()
+    windows.forEach((window) => {
+      window.webContents.session.setSpellCheckerEnabled(isEnable)
+    })
+  })
+
+  // spell check languages
+  ipcMain.handle(IpcChannel.App_SetSpellCheckLanguages, (_, languages: string[]) => {
+    if (languages.length === 0) {
+      return
+    }
+    const windows = BrowserWindow.getAllWindows()
+    windows.forEach((window) => {
+      window.webContents.session.setSpellCheckerLanguages(languages)
+    })
+    configManager.set('spellCheckLanguages', languages)
   })
 
   // launch on boot
@@ -233,7 +255,13 @@ export function registerIpc(mainWindow: BrowserWindow, app: Electron.App) {
     BrowserWindow.getAllWindows().forEach((w) => {
       w.webContents.session.flushStorageData()
       w.webContents.session.cookies.flushStore()
+
+      w.webContents.session.closeAllConnections()
     })
+
+    session.defaultSession.flushStorageData()
+    session.defaultSession.cookies.flushStore()
+    session.defaultSession.closeAllConnections()
   })
 
   ipcMain.handle(IpcChannel.App_IsNotEmptyDir, async (_, path: string) => {

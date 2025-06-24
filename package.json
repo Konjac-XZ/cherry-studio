@@ -112,6 +112,7 @@
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
     "@tryfabric/martian": "^1.2.4",
+    "@types/balanced-match": "^3",
     "@types/diff": "^7",
     "@types/fs-extra": "^11",
     "@types/lodash": "^4.17.5",
@@ -124,6 +125,7 @@
     "@types/react-infinite-scroll-component": "^5.0.0",
     "@types/react-window": "^1",
     "@types/tinycolor2": "^1",
+    "@types/word-extractor": "^1",
     "@uiw/codemirror-extensions-langs": "^4.23.12",
     "@uiw/codemirror-themes-all": "^4.23.12",
     "@uiw/react-codemirror": "^4.23.12",
@@ -137,6 +139,7 @@
     "archiver": "^7.0.1",
     "async-mutex": "^0.5.0",
     "axios": "^1.7.3",
+    "balanced-match": "^3.0.1",
     "browser-image-compression": "^2.0.2",
     "color": "^5.0.0",
     "dayjs": "^1.11.11",
@@ -218,6 +221,7 @@
     "vite": "6.2.6",
     "vitest": "^3.1.4",
     "webdav": "^5.8.0",
+    "word-extractor": "^1.0.4",
     "zipread": "^1.3.3"
   },
   "resolutions": {
