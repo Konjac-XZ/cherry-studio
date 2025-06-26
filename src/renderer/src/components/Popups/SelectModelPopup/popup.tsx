@@ -29,7 +29,7 @@ import styled from 'styled-components'
 import { useScrollState } from './hook'
 import { FlatListItem } from './types'
 
-const PAGE_SIZE = 10
+const PAGE_SIZE = 30
 const ITEM_HEIGHT = 36
 
 interface PopupParams {
