@@ -7,10 +7,12 @@ import { translateLanguageOptions } from '@renderer/config/translate'
 import db from '@renderer/databases'
 import { useDefaultModel } from '@renderer/hooks/useAssistant'
 import { useProviders } from '@renderer/hooks/useProvider'
+import Markdown from '@renderer/pages/home/Markdown/Markdown'
 import { fetchTranslate } from '@renderer/services/ApiService'
 import { getDefaultTranslateAssistant } from '@renderer/services/AssistantService'
 import { getModelUniqId, hasModel } from '@renderer/services/ModelService'
 import type { Model, TranslateHistory } from '@renderer/types'
+import type { TranslationMessageBlock } from '@renderer/types/newMessage'
 import { runAsyncFunction, uuid } from '@renderer/utils'
 import {
   createInputScrollHandler,
@@ -26,7 +28,6 @@ import { find, isEmpty, sortBy } from 'lodash'
 import { ChevronDown, HelpCircle, Settings2, TriangleAlert } from 'lucide-react'
 import { FC, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import ReactMarkdown from 'react-markdown'
 import styled from 'styled-components'
 
 let _text = ''
@@ -616,7 +617,14 @@ const TranslatePage: FC = () => {
             {!result ? (
               t('translate.output.placeholder')
             ) : enableMarkdown ? (
-              <ReactMarkdown>{result}</ReactMarkdown>
+              <Markdown
+                block={
+                  {
+                    type: 'translation',
+                    content: result
+                  } as TranslationMessageBlock
+                }
+              />
             ) : (
               result
             )}
@@ -709,6 +717,24 @@ const OutputText = styled.div`
   padding: 5px 16px;
   overflow-y: auto;
   white-space: pre-wrap;
+
+  /* Reset styles for markdown content */
+  .markdown {
+    white-space: normal;
+    
+    /* Ensure proper paragraph spacing for translation content */
+    p {
+      margin: 0.5em 0;
+      
+      &:first-child {
+        margin-top: 0;
+      }
+      
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+  }
 `
 
 const TranslateButton = styled(Button)``
