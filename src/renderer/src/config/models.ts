@@ -2555,6 +2555,7 @@ export function isReasoningModel(model?: Model): boolean {
     isOpenAIReasoningModel(model) ||
     isGeminiReasoningModel(model) ||
     isQwenReasoningModel(model) ||
+    isSupportedThinkingTokenDoubaoModel(model) ||
     isGrokReasoningModel(model) ||
     model.id.includes('glm-z1') ||
     model.id.includes('magistral')
