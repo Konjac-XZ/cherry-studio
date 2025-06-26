@@ -56,7 +56,8 @@ import {
 import { TranslateLanguageOption, TranslateLanguageOptions } from '@renderer/config/translate'
 import { modalConfirm } from '@renderer/utils'
 import { getSendMessageShortcutLabel } from '@renderer/utils/input'
-import { Button, Col, InputNumber, Row, Slider, Switch, Tooltip } from 'antd'
+import { Button, Col, InputNumber, Row, Select, Slider, Switch, Tooltip } from 'antd'
+import { CheckOutlined } from '@ant-design/icons'
 import { CircleHelp, Settings2 } from 'lucide-react'
 import { FC, useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -647,16 +648,15 @@ const SettingsTab: FC<Props> = (props) => {
               menuItemSelectedIcon={<CheckOutlined />}
               onChange={(value) => {
                 if (value === 'unspecified') {
-                  dispatch(setUserNativeLanguage(undefined));
+                  dispatch(setUserNativeLanguage(undefined))
                 } else {
-                  const selectedOption = TranslateLanguageOptions.find(option => option.value === value);
+                  const selectedOption = TranslateLanguageOptions.find((option) => option.value === value)
                   if (selectedOption) {
-                    dispatch(setUserNativeLanguage(selectedOption));
+                    dispatch(setUserNativeLanguage(selectedOption))
                   }
                 }
               }}
-              style={{ width: 135 }}
-            >
+              style={{ width: 135 }}>
               <Select.Option key="unspecified" value="unspecified">
                 {t('settings.input.user_native_language.unspecified')}
               </Select.Option>
@@ -709,6 +709,14 @@ const SettingGroup = styled.div<{ theme?: ThemeMode }>`
   margin-top: 0;
   border-radius: 8px;
   margin-bottom: 10px;
+`
+
+const StyledSelect = styled(Select)`
+  .ant-select-selector {
+    border-radius: 15px !important;
+    padding: 4px 10px !important;
+    height: 26px !important;
+  }
 `
 
 export default SettingsTab

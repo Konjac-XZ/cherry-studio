@@ -718,18 +718,16 @@ const OutputText = styled.div`
   overflow-y: auto;
   white-space: pre-wrap;
 
-  /* Reset styles for markdown content */
   .markdown {
     white-space: normal;
-    
-    /* Ensure proper paragraph spacing for translation content */
+
     p {
       margin: 0.5em 0;
-      
+
       &:first-child {
         margin-top: 0;
       }
-      
+
       &:last-child {
         margin-bottom: 0;
       }
