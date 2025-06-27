@@ -11,6 +11,8 @@ import {
   ThemeMode,
   TranslateLanguageVarious
 } from '@renderer/types'
+
+import { UpgradeChannel } from '@shared/config/constant'
 import { TranslateLanguageOption } from '@renderer/config/translate'
 
 
@@ -71,6 +73,7 @@ export interface SettingsState {
   clickAssistantToShowTopic: boolean
   autoCheckUpdate: boolean
   earlyAccess: boolean
+  upgradeChannel: UpgradeChannel
   renderInputMessageAsMarkdown: boolean
   // 代码执行
   codeExecution: {
@@ -225,6 +228,7 @@ export const initialState: SettingsState = {
   clickAssistantToShowTopic: true,
   autoCheckUpdate: true,
   earlyAccess: false,
+  upgradeChannel: UpgradeChannel.LATEST,
   renderInputMessageAsMarkdown: false,
   codeExecution: {
     enabled: false,
@@ -435,6 +439,9 @@ const settingsSlice = createSlice({
     },
     setEarlyAccess: (state, action: PayloadAction<boolean>) => {
       state.earlyAccess = action.payload
+    },
+    setUpgradeChannel: (state, action: PayloadAction<UpgradeChannel>) => {
+      state.upgradeChannel = action.payload
     },
     setRenderInputMessageAsMarkdown: (state, action: PayloadAction<boolean>) => {
       state.renderInputMessageAsMarkdown = action.payload
@@ -733,6 +740,7 @@ export const {
   setPasteLongTextAsFile,
   setAutoCheckUpdate,
   setEarlyAccess,
+  setUpgradeChannel,
   setRenderInputMessageAsMarkdown,
   setClickAssistantToShowTopic,
   setSkipBackupFile,

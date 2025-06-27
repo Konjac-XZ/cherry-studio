@@ -7,6 +7,7 @@ import db from '@renderer/databases'
 import i18n from '@renderer/i18n'
 import { Assistant, Provider, WebSearchProvider } from '@renderer/types'
 import { getDefaultGroupName, getLeadingEmoji, runAsyncFunction, uuid } from '@renderer/utils'
+import { UpgradeChannel } from '@shared/config/constant'
 import { isEmpty } from 'lodash'
 import { createMigrate } from 'redux-persist'
 
@@ -1627,6 +1628,34 @@ const migrateConfig = {
           }
         }
       })
+      if (state.settings) {
+        state.settings.upgradeChannel = UpgradeChannel.LATEST
+      }
+      return state
+    } catch (error) {
+      return state
+    }
+  },
+  '116': (state: RootState) => {
+    try {
+      if (state.websearch) {
+        // migrate contentLimit to cutoffLimit
+        // @ts-ignore eslint-disable-next-line
+        if (state.websearch.contentLimit) {
+          state.websearch.compressionConfig = {
+            method: 'cutoff',
+            cutoffUnit: 'char',
+            // @ts-ignore eslint-disable-next-line
+            cutoffLimit: state.websearch.contentLimit
+          }
+        } else {
+          state.websearch.compressionConfig = { method: 'none', cutoffUnit: 'char' }
+        }
+
+        // @ts-ignore eslint-disable-next-line
+        delete state.websearch.contentLimit
+      }
+
       return state
     } catch (error) {
       return state
