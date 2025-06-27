@@ -25,14 +25,76 @@ import TextArea, { TextAreaRef } from 'antd/es/input/TextArea'
 import dayjs from 'dayjs'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { find, isEmpty, sortBy } from 'lodash'
-import { ChevronDown, HelpCircle, Settings2, TriangleAlert } from 'lucide-react'
-import { FC, useEffect, useMemo, useRef, useState } from 'react'
+import { ChevronDown, HelpCircle, Settings2, TriangleAlert, GripVertical } from 'lucide-react'
+import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 
 let _text = ''
 let _result = ''
 let _targetLanguage = 'english'
+const DraggableDivider: FC<{
+  isVertical: boolean
+  onResize: (size: number) => void
+  containerRef: React.RefObject<HTMLDivElement | null>
+}> = ({ isVertical, onResize, containerRef }) => {
+  const dividerRef = useRef<HTMLDivElement>(null)
+  const isDragging = useRef(false)
+
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault()
+      isDragging.current = true
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = isVertical ? 'row-resize' : 'col-resize'
+      document.body.style.userSelect = 'none'
+    },
+    [isVertical]
+  )
+
+  const handleMouseMove = useCallback(
+    (e: MouseEvent) => {
+      if (!isDragging.current || !containerRef.current) return
+
+      const container = containerRef.current
+      const rect = container.getBoundingClientRect()
+
+      if (isVertical) {
+        const minHeight = 200 
+        const maxHeightPercent = Math.max(30, ((rect.height - minHeight) / rect.height) * 100)
+        const newSize = ((e.clientY - rect.top) / rect.height) * 100
+        onResize(Math.max(30, Math.min(maxHeightPercent, newSize)))
+      } else {
+        const historyPanel = container.querySelector('[data-history-panel]') as HTMLElement
+        const historyWidth = historyPanel && historyPanel.offsetWidth > 0 ? historyPanel.offsetWidth + 15 : 0
+        const availableWidth = rect.width - historyWidth
+        const minWidth = 350
+        const maxWidthPercent = Math.max(30, ((availableWidth - minWidth) / availableWidth) * 100)
+        const relativeX = e.clientX - rect.left - historyWidth
+        const newSize = (relativeX / availableWidth) * 100
+        onResize(Math.max(30, Math.min(maxWidthPercent, newSize)))
+      }
+    },
+    [isVertical, onResize, containerRef]
+  )
+
+  const handleMouseUp = useCallback(() => {
+    isDragging.current = false
+    document.removeEventListener('mousemove', handleMouseMove)
+    document.removeEventListener('mouseup', handleMouseUp)
+    document.body.style.cursor = ''
+    document.body.style.userSelect = ''
+  }, [handleMouseMove])
+
+  return (
+    <DividerContainer ref={dividerRef} $isVertical={isVertical} onMouseDown={handleMouseDown}>
+      <DividerHandle $isVertical={isVertical}>
+        <GripVertical size={16} />
+      </DividerHandle>
+    </DividerContainer>
+  )
+}
 
 const TranslateSettings: FC<{
   visible: boolean
@@ -234,6 +296,9 @@ const TranslatePage: FC = () => {
   const [settingsVisible, setSettingsVisible] = useState(false)
   const [detectedLanguage, setDetectedLanguage] = useState<string | null>(null)
   const [sourceLanguage, setSourceLanguage] = useState<string>('auto')
+  const [panelSize, setPanelSize] = useState(50)
+  const [isVerticalLayout, setIsVerticalLayout] = useState(false)
+
   const contentContainerRef = useRef<HTMLDivElement>(null)
   const textAreaRef = useRef<TextAreaRef>(null)
   const outputTextRef = useRef<HTMLDivElement>(null)
@@ -307,7 +372,6 @@ const TranslatePage: FC = () => {
 
     setLoading(true)
     try {
-      // 确定源语言：如果用户选择了特定语言，使用用户选择的；如果选择'auto'，则自动检测
       let actualSourceLanguage: string
       if (sourceLanguage === 'auto') {
         actualSourceLanguage = await detectLanguage(text)
@@ -424,8 +488,30 @@ const TranslatePage: FC = () => {
 
   const handleInputScroll = createInputScrollHandler(outputTextRef, isProgrammaticScroll, isScrollSyncEnabled)
   const handleOutputScroll = createOutputScrollHandler(textAreaRef, isProgrammaticScroll, isScrollSyncEnabled)
+  const handlePanelResize = useCallback((size: number) => {
+    setPanelSize(size)
+    localStorage.setItem('translate-panel-size', size.toString())
+  }, [])
+  useEffect(() => {
+    const handleResize = () => {
+      const windowWidth = window.innerWidth
+      const windowHeight = window.innerHeight
+      const aspectRatio = windowWidth / windowHeight
+      const shouldUseVertical = windowWidth < 900 || aspectRatio < 1.2 || windowHeight > windowWidth * 1.3
 
-  // 获取当前语言状态显示
+      setIsVerticalLayout(shouldUseVertical)
+    }
+
+    handleResize()
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+  useEffect(() => {
+    const savedSize = localStorage.getItem('translate-panel-size')
+    if (savedSize) {
+      setPanelSize(parseFloat(savedSize))
+    }
+  }, [])
   const getLanguageDisplay = () => {
     if (isBidirectional) {
       return (
@@ -477,7 +563,7 @@ const TranslatePage: FC = () => {
         </NavbarCenter>
       </Navbar>
       <ContentContainer id="content-container" ref={contentContainerRef} $historyDrawerVisible={historyDrawerVisible}>
-        <HistoryContainner $historyDrawerVisible={historyDrawerVisible}>
+        <HistoryContainner $historyDrawerVisible={historyDrawerVisible} data-history-panel>
           <OperationBar>
             <span style={{ fontSize: 16 }}>{t('translate.history.title')}</span>
             {!isEmpty(translateHistory) && (
@@ -525,111 +611,119 @@ const TranslatePage: FC = () => {
           )}
         </HistoryContainner>
 
-        <InputContainer>
-          <OperationBar>
-            <Flex align="center" gap={20}>
-              <Select
-                showSearch
-                value={sourceLanguage}
-                style={{ width: 180 }}
-                optionFilterProp="label"
-                onChange={(value) => {
-                  setSourceLanguage(value)
-                  db.settings.put({ id: 'translate:source:language', value })
-                }}
-                options={[
-                  {
-                    value: 'auto',
-                    label: detectedLanguage
-                      ? `${t('translate.detected.language')} (${t(`languages.${detectedLanguage.toLowerCase()}`)})`
-                      : t('translate.detected.language')
-                  },
-                  ...translateLanguageOptions().map((lang) => ({
-                    value: lang.value,
-                    label: (
-                      <Space.Compact direction="horizontal" block>
-                        <span role="img" aria-label={lang.emoji} style={{ marginRight: 8 }}>
-                          {lang.emoji}
-                        </span>
-                        <Space.Compact block>{lang.label}</Space.Compact>
-                      </Space.Compact>
-                    )
-                  }))
-                ]}
-                suffixIcon={<ChevronDown strokeWidth={1.5} size={16} color="var(--color-text-3)" />}
-              />
-              <Button
-                type="text"
-                icon={<Settings2 size={18} />}
-                onClick={() => setSettingsVisible(true)}
-                style={{ color: 'var(--color-text-2)', display: 'flex' }}
-              />
-            </Flex>
+        <TranslateContainer $isVertical={isVerticalLayout} $panelSize={panelSize}>
+          <InputContainer $isVertical={isVerticalLayout}>
+            <OperationBar>
+              <Flex align="center" gap={20}>
+                <Select
+                  showSearch
+                  value={sourceLanguage}
+                  style={{ width: 180 }}
+                  optionFilterProp="label"
+                  onChange={(value) => {
+                    setSourceLanguage(value)
+                    db.settings.put({ id: 'translate:source:language', value })
+                  }}
+                  options={[
+                    {
+                      value: 'auto',
+                      label: detectedLanguage
+                        ? `${t('translate.detected.language')} (${t(`languages.${detectedLanguage.toLowerCase()}`)})`
+                        : t('translate.detected.language')
+                    },
+                    ...translateLanguageOptions().map((lang) => ({
+                      value: lang.value,
+                      label: (
+                        <Space.Compact direction="horizontal" block>
+                          <span role="img" aria-label={lang.emoji} style={{ marginRight: 8 }}>
+                            {lang.emoji}
+                          </span>
+                          <Space.Compact block>{lang.label}</Space.Compact>
+                        </Space.Compact>
+                      )
+                    }))
+                  ]}
+                  suffixIcon={<ChevronDown strokeWidth={1.5} size={16} color="var(--color-text-3)" />}
+                />
+                <Button
+                  type="text"
+                  icon={<Settings2 size={18} />}
+                  onClick={() => setSettingsVisible(true)}
+                  style={{ color: 'var(--color-text-2)', display: 'flex' }}
+                />
+              </Flex>
 
-            <Tooltip
-              mouseEnterDelay={0.5}
-              styles={{ body: { fontSize: '12px' } }}
-              title={
-                <div style={{ textAlign: 'center' }}>
-                  Ctrl + Enter: {t('translate.button.translate')}
-                  <br />
-                  Shift + Enter: {t('translate.tooltip.newline')}
-                </div>
-              }>
-              <TranslateButton
-                type="primary"
-                loading={loading}
-                onClick={onTranslate}
-                disabled={!text.trim()}
-                icon={<SendOutlined />}>
-                {t('translate.button.translate')}
-              </TranslateButton>
-            </Tooltip>
-          </OperationBar>
+              <Tooltip
+                mouseEnterDelay={0.5}
+                styles={{ body: { fontSize: '12px' } }}
+                title={
+                  <div style={{ textAlign: 'center' }}>
+                    Ctrl + Enter: {t('translate.button.translate')}
+                    <br />
+                    Shift + Enter: {t('translate.tooltip.newline')}
+                  </div>
+                }>
+                <TranslateButton
+                  type="primary"
+                  loading={loading}
+                  onClick={onTranslate}
+                  disabled={!text.trim()}
+                  icon={<SendOutlined />}>
+                  {t('translate.button.translate')}
+                </TranslateButton>
+              </Tooltip>
+            </OperationBar>
 
-          <Textarea
-            ref={textAreaRef}
-            variant="borderless"
-            placeholder={t('translate.input.placeholder')}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={onKeyDown}
-            onScroll={handleInputScroll}
-            disabled={loading}
-            spellCheck={false}
-            allowClear
-          />
-        </InputContainer>
-
-        <OutputContainer>
-          <OperationBar>
-            <HStack alignItems="center" gap={5}>
-              {getLanguageDisplay()}
-            </HStack>
-            <CopyButton
-              onClick={onCopy}
-              disabled={!result}
-              icon={copied ? <CheckOutlined style={{ color: 'var(--color-primary)' }} /> : <CopyIcon />}
+            <Textarea
+              ref={textAreaRef}
+              variant="borderless"
+              placeholder={t('translate.input.placeholder')}
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={onKeyDown}
+              onScroll={handleInputScroll}
+              disabled={loading}
+              spellCheck={false}
+              allowClear
             />
-          </OperationBar>
+          </InputContainer>
 
-          <OutputText ref={outputTextRef} onScroll={handleOutputScroll} className="selectable">
-            {!result ? (
-              t('translate.output.placeholder')
-            ) : enableMarkdown ? (
-              <Markdown
-                block={
-                  {
-                    type: 'translation',
-                    content: result
-                  } as TranslationMessageBlock
-                }
+          <DraggableDivider
+            isVertical={isVerticalLayout}
+            onResize={handlePanelResize}
+            containerRef={contentContainerRef}
+          />
+
+          <OutputContainer $isVertical={isVerticalLayout}>
+            <OperationBar>
+              <HStack alignItems="center" gap={5}>
+                {getLanguageDisplay()}
+              </HStack>
+              <CopyButton
+                onClick={onCopy}
+                disabled={!result}
+                icon={copied ? <CheckOutlined style={{ color: 'var(--color-primary)' }} /> : <CopyIcon />}
               />
-            ) : (
-              result
-            )}
-          </OutputText>
-        </OutputContainer>
+            </OperationBar>
+
+            <OutputText ref={outputTextRef} onScroll={handleOutputScroll} className="selectable">
+              {!result ? (
+                t('translate.output.placeholder')
+              ) : enableMarkdown ? (
+                <Markdown
+                  block={
+                    {
+                      type: 'translation',
+                      content: result
+                    } as TranslationMessageBlock
+                  }
+                />
+              ) : (
+                result
+              )}
+            </OutputText>
+          </OutputContainer>
+        </TranslateContainer>
       </ContentContainer>
 
       <TranslateSettings
@@ -658,23 +752,122 @@ const Container = styled.div`
 
 const ContentContainer = styled.div<{ $historyDrawerVisible: boolean }>`
   height: calc(100vh - var(--navbar-height));
-  display: grid;
-  grid-template-columns: auto 1fr 1fr;
+  display: flex;
   flex: 1;
   padding: 20px 15px;
   position: relative;
+  gap: 15px;
 `
 
-const InputContainer = styled.div`
-  position: relative;
+const TranslateContainer = styled.div<{ $isVertical: boolean; $panelSize: number }>`
   display: flex;
   flex: 1;
+  flex-direction: ${({ $isVertical }) => ($isVertical ? 'column' : 'row')};
+  gap: 0;
+  position: relative;
+
+  ${({ $isVertical, $panelSize }) =>
+    $isVertical
+      ? `
+    & > *:first-child {
+      height: ${$panelSize}%;
+      min-height: 200px;
+    }
+    & > *:last-child {
+      height: ${100 - $panelSize}%;
+      min-height: 200px;
+    }
+  `
+      : `
+    & > *:first-child {
+      width: ${$panelSize}%;
+      min-width: 350px;
+    }
+    & > *:last-child {
+      width: ${100 - $panelSize}%;
+      min-width: 350px;
+    }
+  `}
+`
+
+const DividerContainer = styled.div<{ $isVertical: boolean }>`
+  ${({ $isVertical }) =>
+    $isVertical
+      ? `
+    height: 6px;
+    width: 100%;
+    cursor: row-resize;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 10;
+
+    &:hover {
+      background-color: var(--color-primary-bg);
+    }
+  `
+      : `
+    width: 6px;
+    height: 100%;
+    cursor: col-resize;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 10;
+
+    &:hover {
+      background-color: var(--color-primary-bg);
+    }
+  `}
+`
+
+const DividerHandle = styled.div<{ $isVertical: boolean }>`
+  ${({ $isVertical }) =>
+    $isVertical
+      ? `
+    width: 40px;
+    height: 4px;
+    background-color: var(--color-border);
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    svg {
+      transform: rotate(90deg);
+      width: 12px;
+      height: 12px;
+      color: var(--color-text-3);
+    }
+  `
+      : `
+    width: 4px;
+    height: 40px;
+    background-color: var(--color-border);
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    svg {
+      width: 12px;
+      height: 12px;
+      color: var(--color-text-3);
+    }
+  `}
+`
+
+const InputContainer = styled.div<{ $isVertical?: boolean }>`
+  position: relative;
+  display: flex;
   flex-direction: column;
   border: 1px solid var(--color-border-soft);
   border-radius: 10px;
   padding-bottom: 5px;
   padding-right: 2px;
-  margin-right: 15px;
+  ${({ $isVertical }) => ($isVertical ? 'margin-bottom: 0;' : 'margin-right: 0;')}
 `
 
 const OperationBar = styled.div`
@@ -684,6 +877,19 @@ const OperationBar = styled.div`
   justify-content: space-between;
   gap: 20px;
   padding: 10px 8px 10px 10px;
+  min-width: 0; /* Allow flexbox to shrink */
+  flex-shrink: 0; /* Prevent the operation bar from shrinking */
+
+  /* Ensure buttons remain accessible */
+  & > * {
+    flex-shrink: 0;
+  }
+
+  /* Handle overflow on very narrow screens */
+  @media (max-width: 480px) {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
 `
 
 const Textarea = styled(TextArea)`
@@ -700,7 +906,7 @@ const Textarea = styled(TextArea)`
   }
 `
 
-const OutputContainer = styled.div`
+const OutputContainer = styled.div<{ $isVertical?: boolean }>`
   min-height: 0;
   position: relative;
   display: flex;
@@ -709,6 +915,7 @@ const OutputContainer = styled.div`
   border-radius: 10px;
   padding-bottom: 5px;
   padding-right: 2px;
+  ${({ $isVertical }) => ($isVertical ? 'margin-top: 0;' : 'margin-left: 0;')}
 `
 
 const OutputText = styled.div`
