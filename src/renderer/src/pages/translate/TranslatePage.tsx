@@ -61,7 +61,7 @@ const DraggableDivider: FC<{
       const rect = container.getBoundingClientRect()
 
       if (isVertical) {
-        const minHeight = 200 
+        const minHeight = 200
         const maxHeightPercent = Math.max(30, ((rect.height - minHeight) / rect.height) * 100)
         const newSize = ((e.clientY - rect.top) / rect.height) * 100
         onResize(Math.max(30, Math.min(maxHeightPercent, newSize)))
@@ -497,7 +497,7 @@ const TranslatePage: FC = () => {
       const windowWidth = window.innerWidth
       const windowHeight = window.innerHeight
       const aspectRatio = windowWidth / windowHeight
-      const shouldUseVertical = windowWidth < 900 || aspectRatio < 1.2 || windowHeight > windowWidth * 1.3
+      const shouldUseVertical = windowWidth < 900 || aspectRatio < 1 || windowHeight > windowWidth * 1
 
       setIsVerticalLayout(shouldUseVertical)
     }
@@ -877,15 +877,15 @@ const OperationBar = styled.div`
   justify-content: space-between;
   gap: 20px;
   padding: 10px 8px 10px 10px;
-  min-width: 0; /* Allow flexbox to shrink */
-  flex-shrink: 0; /* Prevent the operation bar from shrinking */
+  min-width: 0;
+  flex-shrink: 0;
 
-  /* Ensure buttons remain accessible */
+
   & > * {
     flex-shrink: 0;
   }
 
-  /* Handle overflow on very narrow screens */
+
   @media (max-width: 480px) {
     flex-wrap: wrap;
     gap: 10px;
@@ -925,11 +925,11 @@ const OutputText = styled.div`
   overflow-y: auto;
   white-space: pre-wrap;
 
-  /* Reset styles for markdown content */
+
   .markdown {
     white-space: normal;
 
-    /* Ensure proper paragraph spacing for translation content */
+
     p {
       margin: 0.5em 0;
 
