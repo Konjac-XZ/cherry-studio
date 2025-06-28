@@ -14,6 +14,8 @@ import {
 } from '@renderer/types'
 import { uuid } from '@renderer/utils'
 import { UpgradeChannel } from '@shared/config/constant'
+import { TranslateLanguageOption } from '@renderer/config/translate'
+
 
 import { RemoteSyncState } from './backup'
 
@@ -46,6 +48,7 @@ export interface SettingsState {
   sendMessageShortcut: SendMessageShortcut
   language: LanguageVarious
   targetLanguage: TranslateLanguageVarious
+  userNativeLanguage?: TranslateLanguageOption
   proxyMode: 'system' | 'custom' | 'none'
   proxyUrl?: string
   userName: string
@@ -207,7 +210,8 @@ export const initialState: SettingsState = {
   assistantsTabSortType: 'list',
   sendMessageShortcut: 'Enter',
   language: navigator.language as LanguageVarious,
-  targetLanguage: 'en-us',
+  targetLanguage: 'english',
+  userNativeLanguage: undefined,
   proxyMode: 'system',
   proxyUrl: undefined,
   userName: '',
@@ -392,6 +396,9 @@ const settingsSlice = createSlice({
     },
     setTargetLanguage: (state, action: PayloadAction<TranslateLanguageVarious>) => {
       state.targetLanguage = action.payload
+    },
+    setUserNativeLanguage: (state, action: PayloadAction<TranslateLanguageOption | undefined>) => {
+      state.userNativeLanguage = action.payload
     },
     setProxyMode: (state, action: PayloadAction<'system' | 'custom' | 'none'>) => {
       state.proxyMode = action.payload
@@ -766,6 +773,7 @@ export const {
   setSendMessageShortcut,
   setLanguage,
   setTargetLanguage,
+  setUserNativeLanguage,
   setProxyMode,
   setProxyUrl,
   setUserName,

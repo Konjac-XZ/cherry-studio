@@ -42,9 +42,16 @@ import {
   setShowInputEstimatedTokens,
   setShowPrompt,
   setShowTranslateConfirm,
-  setThoughtAutoCollapse
+  setThoughtAutoCollapse,
+  setUserNativeLanguage
 } from '@renderer/store/settings'
-import { Assistant, AssistantSettings, CodeStyleVarious, MathEngine, ThemeMode } from '@renderer/types'
+import {
+  Assistant,
+  AssistantSettings,
+  CodeStyleVarious,
+  MathEngine,
+  ThemeMode,
+} from '@renderer/types'
 import { modalConfirm } from '@renderer/utils'
 import { getSendMessageShortcutLabel } from '@renderer/utils/input'
 import { Button, Col, InputNumber, Row, Slider, Switch, Tooltip } from 'antd'
@@ -84,6 +91,7 @@ const SettingsTab: FC<Props> = (props) => {
     sendMessageShortcut,
     setSendMessageShortcut,
     targetLanguage,
+    userNativeLanguage,
     setTargetLanguage,
     pasteLongTextAsFile,
     renderInputMessageAsMarkdown,
@@ -616,6 +624,30 @@ const SettingsTab: FC<Props> = (props) => {
               options={translateLanguageOptions.map((item) => {
                 return { value: item.langCode, label: item.emoji + ' ' + item.label() }
               })}
+            />
+          </SettingRow>
+          <SettingDivider />
+          <SettingRow>
+            <SettingRowTitleSmall>{t('settings.input.user_native_language')}</SettingRowTitleSmall>
+            <Selector
+              value={userNativeLanguage?.value || 'unspecified'}
+              onChange={(value) => {
+                if (value === 'unspecified') {
+                  dispatch(setUserNativeLanguage(undefined))
+                } else {
+                  const selectedOption = TranslateLanguageOptions.find((option) => option.value === value)
+                  if (selectedOption) {
+                    dispatch(setUserNativeLanguage(selectedOption))
+                  }
+                }
+              }}
+              options={[
+                { value: 'unspecified', label: t('settings.input.user_native_language.unspecified') },
+                ...TranslateLanguageOptions.map((option: TranslateLanguageOption) => ({
+                  value: option.value,
+                  label: `${option.emoji} ${option.label}`
+                }))
+              ]}
             />
           </SettingRow>
           <SettingDivider />

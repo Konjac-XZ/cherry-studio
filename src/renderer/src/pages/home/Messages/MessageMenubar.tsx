@@ -91,6 +91,7 @@ const MessageMenubar: FC<Props> = (props) => {
   const isUserMessage = message.role === 'user'
 
   const exportMenuOptions = useSelector((state: RootState) => state.settings.exportMenuOptions)
+  const userNativeLanguage = useSelector((state: RootState) => state.settings.userNativeLanguage)
 
   // const processedMessage = useMemo(() => {
   //   if (message.role === 'assistant' && message.model && isReasoningModel(message.model)) {
@@ -175,6 +176,12 @@ const MessageMenubar: FC<Props> = (props) => {
     },
     [isTranslating, message, getTranslationUpdater, mainTextContent]
   )
+
+  const handleDirectTranslate = useCallback(async () => {
+    if (userNativeLanguage?.value) {
+      await handleTranslate(userNativeLanguage.value)
+    }
+  }, [userNativeLanguage, handleTranslate])
 
   const isEditable = useMemo(() => {
     return findMainTextBlocks(message).length > 0 // 使用 MCP Server 后会有大于一段 MatinTextBlock
@@ -454,7 +461,16 @@ const MessageMenubar: FC<Props> = (props) => {
             </ActionButton>
           </Tooltip>
         )}
-        {!isUserMessage && (
+      {!isUserMessage &&
+        (userNativeLanguage?.value && !hasTranslationBlocks ? (
+          <Tooltip
+            title={`${t('chat.translate')} (${userNativeLanguage.emoji} ${userNativeLanguage.label})`}
+            mouseEnterDelay={1.2}>
+            <ActionButton className="message-action-button" onClick={handleDirectTranslate}>
+              <Languages size={16} />
+            </ActionButton>
+          </Tooltip>
+        ) : (
           <Dropdown
             menu={{
               style: {
