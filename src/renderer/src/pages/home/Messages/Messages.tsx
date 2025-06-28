@@ -123,8 +123,12 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
     const unsubscribes = [
       EventEmitter.on(EVENT_NAMES.SEND_MESSAGE, scrollToBottom),
       EventEmitter.on(EVENT_NAMES.CLEAR_MESSAGES, async (data: Topic) => {
-        // Directly clear the topic without confirmation
-        clearTopic(data)
+        window.modal.confirm({
+          title: t('chat.input.clear.title'),
+          content: t('chat.input.clear.content'),
+          centered: true,
+          onOk: () => clearTopic(data)
+        })
       }),
       EventEmitter.on(EVENT_NAMES.COPY_TOPIC_IMAGE, async () => {
         await captureScrollableDivAsBlob(scrollContainerRef, async (blob) => {

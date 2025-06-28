@@ -9,9 +9,9 @@ import { useQuickPanel } from '@renderer/components/QuickPanel'
 import {
   isDoubaoThinkingAutoModel,
   isSupportedReasoningEffortGrokModel,
+  isSupportedThinkingTokenDoubaoModel,
   isSupportedThinkingTokenGeminiModel,
-  isSupportedThinkingTokenQwenModel,
-  isSupportedThinkingTokenDoubaoModel
+  isSupportedThinkingTokenQwenModel
 } from '@renderer/config/models'
 import { useAssistant } from '@renderer/hooks/useAssistant'
 import { Assistant, Model, ReasoningEffortOptions } from '@renderer/types'

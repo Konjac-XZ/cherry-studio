@@ -480,10 +480,13 @@ const MessageMenubar: FC<Props> = (props) => {
               onClick: (e) => e.domEvent.stopPropagation()
             }}
             trigger={['click']}
-            placement="topRight"
+            placement="top"
             arrow>
             <Tooltip title={t('chat.translate')} mouseEnterDelay={1.2}>
-              <ActionButton className="message-action-button" onClick={(e) => e.stopPropagation()}>
+              <ActionButton
+                className="message-action-button"
+                onClick={(e) => e.stopPropagation()}
+                $softHoverBg={softHoverBg}>
                 <Languages size={16} />
               </ActionButton>
             </Tooltip>

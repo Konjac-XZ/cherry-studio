@@ -2670,7 +2670,7 @@ export function isWebSearchModel(model: Model): boolean {
   }
 
   if (provider.id === 'openrouter') {
-    return false
+    return true
   }
 
   if (provider.id === 'grok') {
@@ -2713,7 +2713,7 @@ export function isGenerateImageModel(model: Model): boolean {
 
   const baseName = getLowerBaseModelName(model.id, '/')
   if (GENERATE_IMAGE_MODELS.includes(baseName)) {
-    return false
+    return true
   }
   return false
 }
