@@ -76,6 +76,7 @@ const MessageMenubar: FC<Props> = (props) => {
   const isUserMessage = message.role === 'user'
 
   const exportMenuOptions = useSelector((state: RootState) => state.settings.exportMenuOptions)
+  const userNativeLanguage = useSelector((state: RootState) => state.settings.userNativeLanguage)
 
   // const processedMessage = useMemo(() => {
   //   if (message.role === 'assistant' && message.model && isReasoningModel(message.model)) {
@@ -160,6 +161,12 @@ const MessageMenubar: FC<Props> = (props) => {
     },
     [isTranslating, message, getTranslationUpdater, mainTextContent]
   )
+
+  const handleDirectTranslate = useCallback(async () => {
+    if (userNativeLanguage?.value) {
+      await handleTranslate(userNativeLanguage.value)
+    }
+  }, [userNativeLanguage, handleTranslate])
 
   const isEditable = useMemo(() => {
     return findMainTextBlocks(message).length > 0 // 使用 MCP Server 后会有大于一段 MatinTextBlock
@@ -401,81 +408,90 @@ const MessageMenubar: FC<Props> = (props) => {
           </ActionButton>
         </Tooltip>
       )}
-      {!isUserMessage && (
-        <Dropdown
-          menu={{
-            style: {
-              maxHeight: 250,
-              overflowY: 'auto',
-              backgroundClip: 'border-box'
-            },
-            items: [
-              ...TranslateLanguageOptions.map((item) => ({
-                label: item.emoji + ' ' + item.label,
-                key: item.value,
-                onClick: () => handleTranslate(item.value)
-              })),
-              ...(hasTranslationBlocks
-                ? [
-                    { type: 'divider' as const },
-                    {
-                      label: '📋 ' + t('common.copy'),
-                      key: 'translate-copy',
-                      onClick: () => {
-                        const translationBlocks = message.blocks
-                          .map((blockId) => blockEntities[blockId])
-                          .filter((block) => block?.type === 'translation')
-
-                        if (translationBlocks.length > 0) {
-                          const translationContent = translationBlocks
-                            .map((block) => block?.content || '')
-                            .join('\n\n')
-                            .trim()
-
-                          if (translationContent) {
-                            navigator.clipboard.writeText(translationContent)
-                            window.message.success({ content: t('translate.copied'), key: 'translate-copy' })
-                          } else {
-                            window.message.warning({ content: t('translate.empty'), key: 'translate-copy' })
-                          }
-                        }
-                      }
-                    },
-                    {
-                      label: '✖ ' + t('translate.close'),
-                      key: 'translate-close',
-                      onClick: () => {
-                        const translationBlocks = message.blocks
-                          .map((blockId) => blockEntities[blockId])
-                          .filter((block) => block?.type === 'translation')
-                          .map((block) => block?.id)
-
-                        if (translationBlocks.length > 0) {
-                          translationBlocks.forEach((blockId) => {
-                            if (blockId) removeMessageBlock(message.id, blockId)
-                          })
-                          window.message.success({ content: t('translate.closed'), key: 'translate-close' })
-                        }
-                      }
-                    }
-                  ]
-                : [])
-            ],
-            onClick: (e) => e.domEvent.stopPropagation()
-          }}
-          trigger={['click']}
-          placement="top"
-          arrow>
-          <Tooltip title={t('chat.translate')} mouseEnterDelay={1.2}>
-            <ActionButton
-              className="message-action-button"
-              onClick={(e) => e.stopPropagation()}
-              $softHoverBg={softHoverBg}>
+      {!isUserMessage &&
+        (userNativeLanguage?.value && !hasTranslationBlocks ? (
+          <Tooltip
+            title={`${t('chat.translate')} (${userNativeLanguage.emoji} ${userNativeLanguage.label})`}
+            mouseEnterDelay={1.2}>
+            <ActionButton className="message-action-button" onClick={handleDirectTranslate}>
               <Languages size={16} />
             </ActionButton>
           </Tooltip>
-        </Dropdown>
-      )}
+        ) : (
+          <Dropdown
+            menu={{
+              style: {
+                maxHeight: 250,
+                overflowY: 'auto',
+                backgroundClip: 'border-box'
+              },
+              items: [
+                ...TranslateLanguageOptions.map((item) => ({
+                  label: item.emoji + ' ' + item.label,
+                  key: item.value,
+                  onClick: () => handleTranslate(item.value)
+                })),
+                ...(hasTranslationBlocks
+                  ? [
+                      { type: 'divider' as const },
+                      {
+                        label: '📋 ' + t('common.copy'),
+                        key: 'translate-copy',
+                        onClick: () => {
+                          const translationBlocks = message.blocks
+                            .map((blockId) => blockEntities[blockId])
+                            .filter((block) => block?.type === 'translation')
+
+                          if (translationBlocks.length > 0) {
+                            const translationContent = translationBlocks
+                              .map((block) => block?.content || '')
+                              .join('\n\n')
+                              .trim()
+
+                            if (translationContent) {
+                              navigator.clipboard.writeText(translationContent)
+                              window.message.success({ content: t('translate.copied'), key: 'translate-copy' })
+                            } else {
+                              window.message.warning({ content: t('translate.empty'), key: 'translate-copy' })
+                            }
+                          }
+                        }
+                      },
+                      {
+                        label: '✖ ' + t('translate.close'),
+                        key: 'translate-close',
+                        onClick: () => {
+                          const translationBlocks = message.blocks
+                            .map((blockId) => blockEntities[blockId])
+                            .filter((block) => block?.type === 'translation')
+                            .map((block) => block?.id)
+
+                          if (translationBlocks.length > 0) {
+                            translationBlocks.forEach((blockId) => {
+                              if (blockId) removeMessageBlock(message.id, blockId)
+                            })
+                            window.message.success({ content: t('translate.closed'), key: 'translate-close' })
+                          }
+                        }
+                      }
+                    ]
+                  : [])
+              ],
+              onClick: (e) => e.domEvent.stopPropagation()
+            }}
+            trigger={['click']}
+            placement="top"
+            arrow>
+            <Tooltip title={t('chat.translate')} mouseEnterDelay={1.2}>
+              <ActionButton
+                className="message-action-button"
+                onClick={(e) => e.stopPropagation()}
+                $softHoverBg={softHoverBg}>
+                <Languages size={16} />
+              </ActionButton>
+            </Tooltip>
+          </Dropdown>
+        ))}
       {isAssistantMessage && isGrouped && (
         <Tooltip title={t('chat.message.useful')} mouseEnterDelay={0.8}>
           <ActionButton className="message-action-button" onClick={onUseful} $softHoverBg={softHoverBg}>

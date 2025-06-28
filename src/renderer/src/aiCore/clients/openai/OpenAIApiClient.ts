@@ -539,14 +539,14 @@ export class OpenAIAPIClient extends OpenAIBaseClient<
 
       // OpenRouter citations
       // @ts-ignore - citations may not be in standard type definitions
-      if (context.provider?.id === 'openrouter' && chunk.citations && chunk.citations.length > 0) {
-        hasBeenCollectedWebSearch = true
-        return {
-          // @ts-ignore - citations may not be in standard type definitions
-          results: chunk.citations,
-          source: WebSearchSource.OPENROUTER
-        }
-      }
+      // if (context.provider?.id === 'openrouter' && chunk.citations && chunk.citations.length > 0) {
+      //   hasBeenCollectedWebSearch = true
+      //   return {
+      //     // @ts-ignore - citations may not be in standard type definitions
+      //     results: chunk.citations,
+      //     source: WebSearchSource.OPENROUTER
+      //   }
+      // }
 
       // Zhipu web search
       // @ts-ignore - web_search may not be in standard type definitions

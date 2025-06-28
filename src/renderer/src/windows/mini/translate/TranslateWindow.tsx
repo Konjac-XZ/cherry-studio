@@ -3,9 +3,11 @@ import Scrollbar from '@renderer/components/Scrollbar'
 import { TranslateLanguageOptions } from '@renderer/config/translate'
 import db from '@renderer/databases'
 import { useDefaultModel } from '@renderer/hooks/useAssistant'
+import Markdown from '@renderer/pages/home/Markdown/Markdown'
 import { fetchTranslate } from '@renderer/services/ApiService'
 import { getDefaultTranslateAssistant } from '@renderer/services/AssistantService'
 import { Assistant } from '@renderer/types'
+import type { TranslationMessageBlock } from '@renderer/types/newMessage'
 import { runAsyncFunction } from '@renderer/utils'
 import { Select, Space } from 'antd'
 import { isEmpty } from 'lodash'
@@ -114,7 +116,14 @@ const Translate: FC<Props> = ({ text }) => {
           <LoadingText>{t('translate.output.placeholder')}...</LoadingText>
         ) : (
           <OutputContainer>
-            <ResultText>{result}</ResultText>
+            <Markdown
+              block={
+                {
+                  type: 'translation',
+                  content: result
+                } as TranslationMessageBlock
+              }
+            />
           </OutputContainer>
         )}
       </Main>
@@ -137,12 +146,6 @@ const Main = styled.div`
   flex: 1;
   width: 100%;
   overflow: hidden;
-`
-
-const ResultText = styled.div`
-  white-space: pre-wrap;
-  word-break: break-word;
-  width: 100%;
 `
 
 const LoadingText = styled.div`

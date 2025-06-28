@@ -148,7 +148,7 @@ import { Model } from '@renderer/types'
 import { getLowerBaseModelName } from '@renderer/utils'
 import OpenAI from 'openai'
 
-import { WEB_SEARCH_PROMPT_FOR_OPENROUTER } from './prompts'
+// import { WEB_SEARCH_PROMPT_FOR_OPENROUTER } from './prompts'
 import { getWebSearchTools } from './tools'
 
 // Vision models
@@ -2565,6 +2565,7 @@ export function isReasoningModel(model?: Model): boolean {
     isOpenAIReasoningModel(model) ||
     isGeminiReasoningModel(model) ||
     isQwenReasoningModel(model) ||
+    isSupportedThinkingTokenDoubaoModel(model) ||
     isGrokReasoningModel(model) ||
     model.id.includes('glm-z1') ||
     model.id.includes('magistral')
@@ -2765,7 +2766,7 @@ export function getOpenAIWebSearchParams(model: Model, isEnableWebSearch?: boole
 
   if (model.provider === 'openrouter') {
     return {
-      plugins: [{ id: 'web', search_prompts: WEB_SEARCH_PROMPT_FOR_OPENROUTER }]
+      // plugins: [{ id: 'web', search_prompts: WEB_SEARCH_PROMPT_FOR_OPENROUTER }]
     }
   }
 
