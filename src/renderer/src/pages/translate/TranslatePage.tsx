@@ -9,7 +9,6 @@ import { useCodeStyle } from '@renderer/context/CodeStyleProvider'
 import db from '@renderer/databases'
 import { useDefaultModel } from '@renderer/hooks/useAssistant'
 import { useProviders } from '@renderer/hooks/useProvider'
-import Markdown from '@renderer/pages/home/Markdown/Markdown'
 import { fetchTranslate } from '@renderer/services/ApiService'
 import { getDefaultTranslateAssistant } from '@renderer/services/AssistantService'
 import { getModelUniqId, hasModel } from '@renderer/services/ModelService'
@@ -817,14 +816,7 @@ const TranslatePage: FC = () => {
               {!result ? (
                 t('translate.output.placeholder')
               ) : enableMarkdown ? (
-                <Markdown
-                  block={
-                    {
-                      type: 'translation',
-                      content: result
-                    } as TranslationMessageBlock
-                  }
-                />
+                <div className="markdown" dangerouslySetInnerHTML={{ __html: renderedMarkdown }} />
               ) : (
                 result
               )}
@@ -1032,7 +1024,20 @@ const OutputText = styled.div`
 
   .markdown {
     white-space: normal;
+    font-size: 16px;
+    ul,
+    ol {
+      padding-left: 1.5em;
+      margin: 0.5em 0;
+    }
 
+    li {
+      margin-bottom: 0.25em;
+      display: list-item;
+      &::marker {
+        display: inline-block;
+      }
+    }
     p {
       margin: 0.5em 0;
 
@@ -1043,6 +1048,24 @@ const OutputText = styled.div`
       &:last-child {
         margin-bottom: 0;
       }
+    }
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+      margin: 0.75em 0 0.5em 0;
+
+      &:first-child {
+        margin-top: 0;
+      }
+    }
+    blockquote {
+      margin: 0.5em 0;
+    }
+    pre {
+      margin: 0.5em 0;
     }
   }
 `
