@@ -72,7 +72,7 @@ const DraggableDivider: FC<{
         const historyPanel = container.querySelector('[data-history-panel]') as HTMLElement
         const historyWidth = historyPanel && historyPanel.offsetWidth > 0 ? historyPanel.offsetWidth + 15 : 0
         const availableWidth = rect.width - historyWidth
-        const minWidth = 350
+        const minWidth = window.innerWidth < 600 ? 250 : window.innerWidth < 800 ? 280 : 320
         const maxWidthPercent = Math.max(30, ((availableWidth - minWidth) / availableWidth) * 100)
         const relativeX = e.clientX - rect.left - historyWidth
         const newSize = (relativeX / availableWidth) * 100
@@ -360,6 +360,7 @@ const TranslatePage: FC = () => {
   const [panelSize, setPanelSize] = useState(50)
   const [isVerticalLayout, setIsVerticalLayout] = useState(false)
   const [manualLayoutOverride, setManualLayoutOverride] = useState<'auto' | 'horizontal' | 'vertical'>('auto')
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth)
 
   const contentContainerRef = useRef<HTMLDivElement>(null)
   const textAreaRef = useRef<TextAreaRef>(null)
@@ -616,15 +617,17 @@ const TranslatePage: FC = () => {
   }, [])
   useEffect(() => {
     const handleResize = () => {
+      const newWindowWidth = window.innerWidth
+      setWindowWidth(newWindowWidth)
+
       if (manualLayoutOverride !== 'auto') {
         setIsVerticalLayout(manualLayoutOverride === 'vertical')
         return
       }
 
-      const windowWidth = window.innerWidth
       const windowHeight = window.innerHeight
-      const aspectRatio = windowWidth / windowHeight
-      const shouldUseVertical = windowWidth < 900 || aspectRatio < 1 || windowHeight > windowWidth * 1
+      const aspectRatio = newWindowWidth / windowHeight
+      const shouldUseVertical = newWindowWidth < 900 || aspectRatio < 1 || windowHeight > newWindowWidth * 1
 
       setIsVerticalLayout(shouldUseVertical)
     }
@@ -766,11 +769,11 @@ const TranslatePage: FC = () => {
         <TranslateContainer $isVertical={isVerticalLayout} $panelSize={panelSize}>
           <InputContainer $isVertical={isVerticalLayout}>
             <OperationBar>
-              <Flex align="center" gap={20}>
+              <Flex align="center" gap={20} style={{ minWidth: 0, flex: 1 }}>
                 <Select
                   showSearch
                   value={sourceLanguage !== 'auto' ? sourceLanguage.langCode : 'auto'}
-                  style={{ width: 180 }}
+                  style={{ width: 180, minWidth: 120, maxWidth: '100%' }}
                   optionFilterProp="label"
                   onChange={(value: LanguageCode | 'auto') => {
                     if (value !== 'auto') setSourceLanguage(getLanguageByLangcode(value))
@@ -802,7 +805,7 @@ const TranslatePage: FC = () => {
                   type="text"
                   icon={<Settings2 size={18} />}
                   onClick={() => setSettingsVisible(true)}
-                  style={{ color: 'var(--color-text-2)', display: 'flex' }}
+                  style={{ color: 'var(--color-text-2)', display: 'flex', flexShrink: 0 }}
                 />
               </Flex>
 
@@ -822,7 +825,7 @@ const TranslatePage: FC = () => {
                   onClick={onTranslate}
                   disabled={!text.trim()}
                   icon={<SendOutlined />}>
-                  {t('translate.button.translate')}
+                  {windowWidth >= 600 && t('translate.button.translate')}
                 </TranslateButton>
               </Tooltip>
             </OperationBar>
@@ -911,6 +914,7 @@ const TranslateContainer = styled.div<{ $isVertical: boolean; $panelSize: number
   flex-direction: ${({ $isVertical }) => ($isVertical ? 'column' : 'row')};
   gap: 0;
   position: relative;
+  min-width: 0;
 
   ${({ $isVertical, $panelSize }) =>
     $isVertical
@@ -927,13 +931,39 @@ const TranslateContainer = styled.div<{ $isVertical: boolean; $panelSize: number
       : `
     & > *:first-child {
       width: ${$panelSize}%;
-      min-width: 350px;
+      min-width: 320px;
     }
     & > *:last-child {
       width: ${100 - $panelSize}%;
-      min-width: 350px;
+      min-width: 320px;
     }
   `}
+
+  @media (max-width: 800px) {
+    ${({ $isVertical }) =>
+      !$isVertical &&
+      `
+      & > *:first-child {
+        min-width: 280px;
+      }
+      & > *:last-child {
+        min-width: 280px;
+      }
+    `}
+  }
+
+  @media (max-width: 600px) {
+    ${({ $isVertical }) =>
+      !$isVertical &&
+      `
+      & > *:first-child {
+        min-width: 250px;
+      }
+      & > *:last-child {
+        min-width: 250px;
+      }
+    `}
+  }
 `
 
 const DividerContainer = styled.div<{ $isVertical: boolean }>`
@@ -1013,7 +1043,16 @@ const InputContainer = styled.div<{ $isVertical?: boolean }>`
   border-radius: 10px;
   padding-bottom: 5px;
   padding-right: 2px;
+  min-width: 320px;
   ${({ $isVertical }) => ($isVertical ? 'margin-bottom: 0;' : 'margin-right: 0;')}
+
+  @media (max-width: 600px) {
+    min-width: 280px;
+  }
+
+  @media (max-width: 400px) {
+    min-width: 250px;
+  }
 `
 
 const OperationBar = styled.div`
@@ -1028,6 +1067,21 @@ const OperationBar = styled.div`
 
   & > * {
     flex-shrink: 0;
+  }
+
+  & > *:first-child {
+    min-width: 0;
+    flex: 1;
+    max-width: calc(100% - 120px);
+  }
+
+  @media (max-width: 600px) {
+    gap: 8px;
+    padding: 8px 6px 8px 8px;
+
+    & > *:first-child {
+      max-width: calc(100% - 60px);
+    }
   }
 
   @media (max-width: 480px) {
@@ -1059,7 +1113,16 @@ const OutputContainer = styled.div<{ $isVertical?: boolean }>`
   border-radius: 10px;
   padding-bottom: 5px;
   padding-right: 2px;
+  min-width: 320px;
   ${({ $isVertical }) => ($isVertical ? 'margin-top: 0;' : 'margin-left: 0;')}
+
+  @media (max-width: 600px) {
+    min-width: 280px;
+  }
+
+  @media (max-width: 400px) {
+    min-width: 250px;
+  }
 `
 
 const OutputText = styled.div`
@@ -1117,7 +1180,16 @@ const OutputText = styled.div`
   }
 `
 
-const TranslateButton = styled(Button)``
+const TranslateButton = styled(Button)`
+  min-width: 40px;
+  white-space: nowrap;
+
+  @media (max-width: 600px) {
+    min-width: 36px;
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+`
 
 const CopyButton = styled(Button)``
 
