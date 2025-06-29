@@ -862,16 +862,16 @@ const TranslatePage: FC = () => {
               />
             </OperationBar>
 
-            <OutputText ref={outputTextRef} onScroll={handleOutputScroll} className="selectable">
-              {!result ? (
-                t('translate.output.placeholder')
-              ) : enableMarkdown ? (
-                <div className="markdown" dangerouslySetInnerHTML={{ __html: renderedMarkdown }} />
-              ) : (
-                result
-              )}
-            </OutputText>
-          </OutputContainer>
+          <OutputText ref={outputTextRef} onScroll={handleOutputScroll} className="selectable">
+            {!result ? (
+              t('translate.output.placeholder')
+            ) : enableMarkdown ? (
+              <div className="markdown" dangerouslySetInnerHTML={{ __html: renderedMarkdown }} />
+            ) : (
+              result
+            )}
+          </OutputText>
+        </OutputContainer>
         </TranslateContainer>
       </ContentContainer>
 
