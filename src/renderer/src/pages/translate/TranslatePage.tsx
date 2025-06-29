@@ -28,7 +28,7 @@ import TextArea, { TextAreaRef } from 'antd/es/input/TextArea'
 import dayjs from 'dayjs'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { find, isEmpty, sortBy } from 'lodash'
-import { ChevronDown, HelpCircle, Settings2, TriangleAlert, GripVertical } from 'lucide-react'
+import { ChevronDown, HelpCircle, Settings2, TriangleAlert, GripVertical, Columns, Rows } from 'lucide-react'
 import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
@@ -359,6 +359,7 @@ const TranslatePage: FC = () => {
 
   const [panelSize, setPanelSize] = useState(50)
   const [isVerticalLayout, setIsVerticalLayout] = useState(false)
+  const [manualLayoutOverride, setManualLayoutOverride] = useState<'auto' | 'horizontal' | 'vertical'>('auto')
 
   const contentContainerRef = useRef<HTMLDivElement>(null)
   const textAreaRef = useRef<TextAreaRef>(null)
@@ -427,6 +428,23 @@ const TranslatePage: FC = () => {
 
   const clearHistory = async () => {
     db.translate_history.clear()
+  }
+
+  const toggleLayout = () => {
+    let newOverride: 'auto' | 'horizontal' | 'vertical'
+
+    if (manualLayoutOverride === 'auto') {
+      newOverride = isVerticalLayout ? 'horizontal' : 'vertical'
+    } else if (manualLayoutOverride === 'horizontal') {
+      newOverride = 'vertical'
+    } else if (manualLayoutOverride === 'vertical') {
+      newOverride = 'auto'
+    } else {
+      newOverride = 'auto'
+    }
+
+    setManualLayoutOverride(newOverride)
+    db.settings.put({ id: 'translate:layout:override', value: newOverride })
   }
 
   const onTranslate = async () => {
@@ -576,6 +594,9 @@ const TranslatePage: FC = () => {
 
       const markdownSetting = await db.settings.get({ id: 'translate:markdown:enabled' })
       setEnableMarkdown(markdownSetting ? markdownSetting.value : false)
+
+      const layoutOverrideSetting = await db.settings.get({ id: 'translate:layout:override' })
+      setManualLayoutOverride(layoutOverrideSetting ? layoutOverrideSetting.value : 'auto')
     })
   }, [])
 
@@ -595,6 +616,11 @@ const TranslatePage: FC = () => {
   }, [])
   useEffect(() => {
     const handleResize = () => {
+      if (manualLayoutOverride !== 'auto') {
+        setIsVerticalLayout(manualLayoutOverride === 'vertical')
+        return
+      }
+
       const windowWidth = window.innerWidth
       const windowHeight = window.innerHeight
       const aspectRatio = windowWidth / windowHeight
@@ -606,7 +632,7 @@ const TranslatePage: FC = () => {
     handleResize()
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
-  }, [])
+  }, [manualLayoutOverride])
   useEffect(() => {
     const savedSize = localStorage.getItem('translate-panel-size')
     if (savedSize) {
@@ -664,6 +690,27 @@ const TranslatePage: FC = () => {
             type="text"
             icon={<HistoryOutlined />}
             onClick={() => setHistoryDrawerVisible(!historyDrawerVisible)}
+          />
+          <Button
+            className="nodrag"
+            color="default"
+            variant="text"
+            type="text"
+            icon={
+              manualLayoutOverride === 'vertical' || (manualLayoutOverride === 'auto' && isVerticalLayout) ? (
+                <Rows size={16} />
+              ) : (
+                <Columns size={16} />
+              )
+            }
+            onClick={toggleLayout}
+            title={
+              manualLayoutOverride === 'auto'
+                ? 'Auto Layout'
+                : manualLayoutOverride === 'vertical'
+                  ? 'Vertical Layout'
+                  : 'Horizontal Layout'
+            }
           />
         </NavbarCenter>
       </Navbar>
