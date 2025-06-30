@@ -1130,54 +1130,7 @@ const OutputText = styled.div`
   flex: 1;
   padding: 5px 16px;
   overflow-y: auto;
-  white-space: pre-wrap;
-
-  .markdown {
-    white-space: normal;
-    font-size: 16px;
-    ul,
-    ol {
-      padding-left: 1.5em;
-      margin: 0.5em 0;
-    }
-
-    li {
-      margin-bottom: 0.25em;
-      display: list-item;
-      &::marker {
-        display: inline-block;
-      }
-    }
-    p {
-      margin: 0.5em 0;
-
-      &:first-child {
-        margin-top: 0;
-      }
-
-      &:last-child {
-        margin-bottom: 0;
-      }
-    }
-    h1,
-    h2,
-    h3,
-    h4,
-    h5,
-    h6 {
-      margin: 0.75em 0 0.5em 0;
-
-      &:first-child {
-        margin-top: 0;
-      }
-    }
-    blockquote {
-      margin: 0.5em 0;
-    }
-    pre {
-      margin: 0.5em 0;
-    }
-  }
+  font-size: 16px
 `
 
 const TranslateButton = styled(Button)`
