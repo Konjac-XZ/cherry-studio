@@ -9,6 +9,7 @@ import { useCodeStyle } from '@renderer/context/CodeStyleProvider'
 import db from '@renderer/databases'
 import { useDefaultModel } from '@renderer/hooks/useAssistant'
 import { useProviders } from '@renderer/hooks/useProvider'
+import { useSettings } from '@renderer/hooks/useSettings'
 import { fetchTranslate } from '@renderer/services/ApiService'
 import { getDefaultTranslateAssistant } from '@renderer/services/AssistantService'
 import { getModelUniqId, hasModel } from '@renderer/services/ModelService'
@@ -787,14 +788,14 @@ const TranslatePage: FC = () => {
                         ? `${t('translate.detected.language')} (${t(`languages.${detectedLanguage.label()}`)})`
                         : t('translate.detected.language')
                     },
-                    ...translateLanguageOptions().map((lang) => ({
+                    ...translateLanguageOptions.map((lang) => ({
                       value: lang.langCode,
                       label: (
                         <Space.Compact direction="horizontal" block>
                           <span role="img" aria-label={lang.emoji} style={{ marginRight: 8 }}>
                             {lang.emoji}
                           </span>
-                          <Space.Compact block>{lang.label}</Space.Compact>
+                          <Space.Compact block>{lang.label()}</Space.Compact>
                         </Space.Compact>
                       )
                     }))
@@ -862,16 +863,16 @@ const TranslatePage: FC = () => {
               />
             </OperationBar>
 
-          <OutputText ref={outputTextRef} onScroll={handleOutputScroll} className="selectable">
-            {!result ? (
-              t('translate.output.placeholder')
-            ) : enableMarkdown ? (
-              <div className="markdown" dangerouslySetInnerHTML={{ __html: renderedMarkdown }} />
-            ) : (
-              result
-            )}
-          </OutputText>
-        </OutputContainer>
+            <OutputText ref={outputTextRef} onScroll={handleOutputScroll} className="selectable">
+              {!result ? (
+                t('translate.output.placeholder')
+              ) : enableMarkdown ? (
+                <div className="markdown" dangerouslySetInnerHTML={{ __html: renderedMarkdown }} />
+              ) : (
+                result
+              )}
+            </OutputText>
+          </OutputContainer>
         </TranslateContainer>
       </ContentContainer>
 
@@ -1130,7 +1131,7 @@ const OutputText = styled.div`
   flex: 1;
   padding: 5px 16px;
   overflow-y: auto;
-  font-size: 16px
+  font-size: 16px;
 `
 
 const TranslateButton = styled(Button)`

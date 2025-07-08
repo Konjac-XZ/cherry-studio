@@ -91,7 +91,13 @@ const MessageMenubar: FC<Props> = (props) => {
   const isUserMessage = message.role === 'user'
 
   const exportMenuOptions = useSelector((state: RootState) => state.settings.exportMenuOptions)
-  const userNativeLanguage = useSelector((state: RootState) => state.settings.userNativeLanguage)
+  const userNativeLanguageCode = useSelector((state: RootState) => state.settings.userNativeLanguage)
+
+  // Get the full Language object from the language code
+  const userNativeLanguage = useMemo(() => {
+    if (!userNativeLanguageCode) return undefined
+    return translateLanguageOptions.find((lang) => lang.langCode === userNativeLanguageCode)
+  }, [userNativeLanguageCode])
 
   // const processedMessage = useMemo(() => {
   //   if (message.role === 'assistant' && message.model && isReasoningModel(message.model)) {
@@ -178,8 +184,8 @@ const MessageMenubar: FC<Props> = (props) => {
   )
 
   const handleDirectTranslate = useCallback(async () => {
-    if (userNativeLanguage?.value) {
-      await handleTranslate(userNativeLanguage.value)
+    if (userNativeLanguage) {
+      await handleTranslate(userNativeLanguage)
     }
   }, [userNativeLanguage, handleTranslate])
 
@@ -462,9 +468,9 @@ const MessageMenubar: FC<Props> = (props) => {
           </Tooltip>
         )}
       {!isUserMessage &&
-        (userNativeLanguage?.value && !hasTranslationBlocks ? (
+        (userNativeLanguage && !hasTranslationBlocks ? (
           <Tooltip
-            title={`${t('chat.translate')} (${userNativeLanguage.emoji} ${userNativeLanguage.label})`}
+            title={`${t('chat.translate')} (${userNativeLanguage.emoji} ${userNativeLanguage.label()})`}
             mouseEnterDelay={1.2}>
             <ActionButton className="message-action-button" onClick={handleDirectTranslate}>
               <Languages size={16} />

@@ -8,6 +8,7 @@ import {
   isSupportedFlexServiceTier,
   isSupportedReasoningEffortOpenAIModel
 } from '@renderer/config/models'
+import { Language } from '@renderer/types'
 import { translateLanguageOptions } from '@renderer/config/translate'
 import { useCodeStyle } from '@renderer/context/CodeStyleProvider'
 import { useTheme } from '@renderer/context/ThemeProvider'
@@ -45,13 +46,7 @@ import {
   setThoughtAutoCollapse,
   setUserNativeLanguage
 } from '@renderer/store/settings'
-import {
-  Assistant,
-  AssistantSettings,
-  CodeStyleVarious,
-  MathEngine,
-  ThemeMode,
-} from '@renderer/types'
+import { Assistant, AssistantSettings, CodeStyleVarious, MathEngine, ThemeMode } from '@renderer/types'
 import { modalConfirm } from '@renderer/utils'
 import { getSendMessageShortcutLabel } from '@renderer/utils/input'
 import { Button, Col, InputNumber, Row, Slider, Switch, Tooltip } from 'antd'
@@ -630,22 +625,19 @@ const SettingsTab: FC<Props> = (props) => {
           <SettingRow>
             <SettingRowTitleSmall>{t('settings.input.user_native_language')}</SettingRowTitleSmall>
             <Selector
-              value={userNativeLanguage?.value || 'unspecified'}
+              value={userNativeLanguage || 'unspecified'}
               onChange={(value) => {
                 if (value === 'unspecified') {
                   dispatch(setUserNativeLanguage(undefined))
                 } else {
-                  const selectedOption = TranslateLanguageOptions.find((option) => option.value === value)
-                  if (selectedOption) {
-                    dispatch(setUserNativeLanguage(selectedOption))
-                  }
+                  dispatch(setUserNativeLanguage(value))
                 }
               }}
               options={[
                 { value: 'unspecified', label: t('settings.input.user_native_language.unspecified') },
-                ...TranslateLanguageOptions.map((option: TranslateLanguageOption) => ({
-                  value: option.value,
-                  label: `${option.emoji} ${option.label}`
+                ...translateLanguageOptions.map((option: Language) => ({
+                  value: option.langCode,
+                  label: `${option.emoji} ${option.label()}`
                 }))
               ]}
             />

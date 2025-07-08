@@ -1,5 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 import { TRANSLATE_PROMPT } from '@renderer/config/prompts'
+import { LanguageCode } from '@renderer/types'
 import {
   AssistantsSortType,
   CodeStyleVarious,
@@ -14,8 +15,6 @@ import {
 } from '@renderer/types'
 import { uuid } from '@renderer/utils'
 import { UpgradeChannel } from '@shared/config/constant'
-import { TranslateLanguageOption } from '@renderer/config/translate'
-
 
 import { RemoteSyncState } from './backup'
 
@@ -48,7 +47,7 @@ export interface SettingsState {
   sendMessageShortcut: SendMessageShortcut
   language: LanguageVarious
   targetLanguage: TranslateLanguageVarious
-  userNativeLanguage?: TranslateLanguageOption
+  userNativeLanguage?: LanguageCode
   proxyMode: 'system' | 'custom' | 'none'
   proxyUrl?: string
   userName: string
@@ -210,7 +209,7 @@ export const initialState: SettingsState = {
   assistantsTabSortType: 'list',
   sendMessageShortcut: 'Enter',
   language: navigator.language as LanguageVarious,
-  targetLanguage: 'english',
+  targetLanguage: 'en-us',
   userNativeLanguage: undefined,
   proxyMode: 'system',
   proxyUrl: undefined,
@@ -397,7 +396,7 @@ const settingsSlice = createSlice({
     setTargetLanguage: (state, action: PayloadAction<TranslateLanguageVarious>) => {
       state.targetLanguage = action.payload
     },
-    setUserNativeLanguage: (state, action: PayloadAction<TranslateLanguageOption | undefined>) => {
+    setUserNativeLanguage: (state, action: PayloadAction<LanguageCode | undefined>) => {
       state.userNativeLanguage = action.payload
     },
     setProxyMode: (state, action: PayloadAction<'system' | 'custom' | 'none'>) => {
