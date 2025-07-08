@@ -785,7 +785,7 @@ const TranslatePage: FC = () => {
                     {
                       value: 'auto',
                       label: detectedLanguage
-                        ? `${t('translate.detected.language')} (${t(`languages.${detectedLanguage.label()}`)})`
+                        ? `${t('translate.detected.language')} (${detectedLanguage.label()})`
                         : t('translate.detected.language')
                     },
                     ...translateLanguageOptions.map((lang) => ({

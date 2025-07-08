@@ -196,7 +196,9 @@ const Topics: FC<Props> = ({ assistant: _assistant, activeTopic, setActiveTopic 
             try {
               const summaryText = await fetchMessagesSummary({ messages, assistant })
               if (summaryText) {
-                const updatedTopic = { ...topic, name: summaryText, isNameManuallyEdited: false }
+                // Filter out </think> tags and content before them
+                const filteredName = summaryText.replace(/.*<\/think>\s*/g, '').trim()
+                const updatedTopic = { ...topic, name: filteredName || summaryText, isNameManuallyEdited: false }
                 updateTopic(updatedTopic)
               } else {
                 window.message?.error(t('message.error.fetchTopicName'))

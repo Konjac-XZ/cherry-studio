@@ -550,7 +550,7 @@ const MessageMenubar: FC<Props> = (props) => {
               </ActionButton>
             </Tooltip>
           </Dropdown>
-        )}
+        ))}
         {isAssistantMessage && isGrouped && (
           <Tooltip title={t('chat.message.useful')} mouseEnterDelay={0.8}>
             <ActionButton className="message-action-button" onClick={onUseful} $softHoverBg={softHoverBg}>
