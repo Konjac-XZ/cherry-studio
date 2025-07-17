@@ -35,11 +35,11 @@ import {
   topicToMarkdown
 } from '@renderer/utils/export'
 import { hasTopicPendingRequests } from '@renderer/utils/queue'
-import { Dropdown, MenuProps, Tooltip } from 'antd'
+import { Dropdown, MenuProps, Skeleton, Tooltip } from 'antd'
 import { ItemType, MenuItemType } from 'antd/es/menu/interface'
 import dayjs from 'dayjs'
 import { findIndex } from 'lodash'
-import { FC, useCallback, useDeferredValue, useMemo, useRef, useState } from 'react'
+import { FC, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSelector } from 'react-redux'
 import styled from 'styled-components'
@@ -63,11 +63,13 @@ const Topics: FC<Props> = ({ assistant: _assistant, activeTopic, setActiveTopic 
 
   const [deletingTopicId, setDeletingTopicId] = useState<string | null>(null)
   const deleteTimerRef = useRef<NodeJS.Timeout>(null)
+  const [isPending, startTransition] = useTransition() // React 18+
+  const [displayedTopics, setDisplayedTopics] = useState<Topic[]>([])
 
   const pendingTopics = useMemo(() => {
     return new Set<string>()
   }, [])
-  const isPending = useCallback(
+  const isMessagePending = useCallback(
     (topicId: string) => {
       const hasPending = hasTopicPendingRequests(topicId)
       if (topicId === activeTopic.id && !hasPending) {
@@ -432,21 +434,30 @@ const Topics: FC<Props> = ({ assistant: _assistant, activeTopic, setActiveTopic 
   ])
 
   // Sort topics based on pinned status if pinTopicsToTop is enabled
-  const sortedTopics = useMemo(() => {
-    if (pinTopicsToTop) {
-      return [...assistant.topics].sort((a, b) => {
-        if (a.pinned && !b.pinned) return -1
-        if (!a.pinned && b.pinned) return 1
-        return 0
-      })
-    }
-    return assistant.topics
+  useEffect(() => {
+    startTransition(() => {
+      if (pinTopicsToTop) {
+        setDisplayedTopics(
+          [...assistant.topics].sort((a, b) => {
+            if (a.pinned && !b.pinned) return -1
+            if (!a.pinned && b.pinned) return 1
+            return 0
+          })
+        )
+      } else {
+        setDisplayedTopics(assistant.topics)
+      }
+    })
   }, [assistant.topics, pinTopicsToTop])
+
+  if (isPending) {
+    return <TopicsSkeleton></TopicsSkeleton>
+  }
 
   return (
     <DraggableList
       className="topics-tab"
-      list={sortedTopics}
+      list={displayedTopics}
       onUpdate={updateTopics}
       style={{ padding: '13px 0 10px 10px' }}
       itemContainerStyle={{ paddingBottom: '8px' }}>
@@ -469,7 +480,7 @@ const Topics: FC<Props> = ({ assistant: _assistant, activeTopic, setActiveTopic 
               className={isActive ? 'active' : ''}
               onClick={() => onSwitchTopic(topic)}
               style={{ borderRadius }}>
-              {isPending(topic.id) && !isActive && <PendingIndicator />}
+              {isMessagePending(topic.id) && !isActive && <PendingIndicator />}
               <TopicNameContainer>
                 <TopicName className={getTopicNameClassName()} title={topicName}>
                   {topicName}
@@ -659,5 +670,36 @@ const QuestionIcon = styled(QuestionCircleOutlined)`
   cursor: pointer;
   color: var(--color-text-3);
 `
+
+const SkeletonList = styled.div`
+  padding: 13px 0 10px 10px;
+`
+
+const SkeletonItemContainer = styled.div`
+  padding-bottom: 8px;
+`
+
+const SkeletonItem = styled.div`
+  padding: 7px 12px;
+  box-sizing: content-box;
+  height: 20.8px;
+`
+
+const TopicsSkeleton = () => {
+  const lineLengths = [10, 8, 9, 8, 7, 8, 10, 9, 8, 8, 6, 6, 10, 10, 11, 4, 5]
+  return (
+    <SkeletonList>
+      {lineLengths.map((len, i) => {
+        return (
+          <SkeletonItemContainer key={i}>
+            <SkeletonItem>
+              <Skeleton.Node active style={{ width: `${len * 13}px`, height: `13px` }}></Skeleton.Node>
+            </SkeletonItem>
+          </SkeletonItemContainer>
+        )
+      })}
+    </SkeletonList>
+  )
+}
 
 export default Topics
