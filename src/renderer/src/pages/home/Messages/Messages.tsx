@@ -29,8 +29,9 @@ import {
 import { updateCodeBlock } from '@renderer/utils/markdown'
 import { getMainTextContent } from '@renderer/utils/messageUtils/find'
 import { isTextLikeBlock } from '@renderer/utils/messageUtils/is'
+import { Skeleton } from 'antd'
 import { last } from 'lodash'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { useTranslation } from 'react-i18next'
 import InfiniteScroll from 'react-infinite-scroll-component'
 import styled from 'styled-components'
@@ -61,6 +62,7 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
   const [hasMore, setHasMore] = useState(false)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [isProcessingContext, setIsProcessingContext] = useState(false)
+  const [isPending, startTransition] = useTransition()
 
   const messageElements = useRef<Map<string, HTMLElement>>(new Map())
   const messages = useTopicMessages(topic.id)
@@ -82,9 +84,11 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
   }, [])
 
   useEffect(() => {
-    const newDisplayMessages = computeDisplayMessages(messages, 0, displayCount)
-    setDisplayMessages(newDisplayMessages)
-    setHasMore(messages.length > displayCount)
+    startTransition(() => {
+      const newDisplayMessages = computeDisplayMessages(messages, 0, displayCount)
+      setDisplayMessages(newDisplayMessages)
+      setHasMore(messages.length > displayCount)
+    })
   }, [messages, displayCount])
 
   const scrollToBottom = useCallback(() => {
@@ -276,6 +280,16 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
 
   const groupedMessages = useMemo(() => Object.entries(getGroupedMessages(displayMessages)), [displayMessages])
 
+  if (isPending) {
+    return (
+      <MessagesSkeleton>
+        <MessageSkeleton />
+        <MessageSkeleton />
+        <MessageSkeleton />
+      </MessagesSkeleton>
+    )
+  }
+
   return (
     <MessagesContainer
       id="messages"
@@ -390,5 +404,68 @@ const MessagesContainer = styled(Scrollbar)<ContainerProps>`
   z-index: 1;
   position: relative;
 `
+
+const MessagesSkeleton = styled.div`
+  width: 100%;
+  height: 100%;
+  padding: 10px 16px 20px;
+  overflow: hidden;
+`
+
+// from MessageHeader.tsx
+const MessageHeaderSkeleton = styled.div`
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+  margin-bottom: 10px;
+`
+
+const MessageHeaderInfoSkeleton = styled.div`
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex: 1;
+`
+
+const MessageContentSkeleton = styled.div`
+  max-width: 100%;
+  padding-left: 45px;
+  margin-top: 5px;
+  overflow-y: auto;
+`
+
+const MessageSkeletonContainer = styled.div`
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+`
+
+const MessageSkeleton = () => {
+  return (
+    <MessageSkeletonContainer>
+      <MessageHeaderSkeleton>
+        <Skeleton.Avatar style={{ width: 35 }} />
+        <MessageHeaderInfoSkeleton>
+          <Skeleton.Node active style={{ width: '12ch', height: 16 }}></Skeleton.Node>
+          <Skeleton.Node active style={{ width: '6ch', height: 16 }}></Skeleton.Node>
+        </MessageHeaderInfoSkeleton>
+      </MessageHeaderSkeleton>
+      <MessageContentSkeleton>
+        <ParagraphSkeleton />
+        <ParagraphSkeleton />
+      </MessageContentSkeleton>
+    </MessageSkeletonContainer>
+  )
+}
+
+const ParagraphSkeleton = () => {
+  return (
+    <div style={{ marginBottom: '1.3em' }}>
+      <Skeleton active title={false} paragraph={{ rows: 4 }}></Skeleton>
+    </div>
+  )
+}
 
 export default Messages
