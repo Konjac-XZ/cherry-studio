@@ -84,12 +84,19 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
   }, [])
 
   useEffect(() => {
-    startTransition(() => {
-      const newDisplayMessages = computeDisplayMessages(messages, 0, displayCount)
-      setDisplayMessages(newDisplayMessages)
-      setHasMore(messages.length > displayCount)
-    })
-  }, [messages, displayCount])
+    if (messages.length === 0) {
+      // 在获取到有效messages以前，messages为空数组且多次触发该effect
+      // 这条分支用于处理多次触发重渲染导致的ui闪烁问题
+      setDisplayMessages([])
+      setHasMore(0 > displayCount)
+    } else {
+      startTransition(() => {
+        const newDisplayMessages = computeDisplayMessages(messages, 0, displayCount)
+        setDisplayMessages(newDisplayMessages)
+        setHasMore(messages.length > displayCount)
+      })
+    }
+  }, [displayCount, messages])
 
   const scrollToBottom = useCallback(() => {
     if (scrollContainerRef.current) {
