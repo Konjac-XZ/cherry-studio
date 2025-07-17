@@ -65,6 +65,7 @@ const Topics: FC<Props> = ({ assistant: _assistant, activeTopic, setActiveTopic 
   const deleteTimerRef = useRef<NodeJS.Timeout>(null)
   const [isPending, startTransition] = useTransition() // React 18+
   const [displayedTopics, setDisplayedTopics] = useState<Topic[]>([])
+  const [isFirstRender, setIsFirstRender] = useState(true)
 
   const pendingTopics = useMemo(() => {
     return new Set<string>()
@@ -434,8 +435,9 @@ const Topics: FC<Props> = ({ assistant: _assistant, activeTopic, setActiveTopic 
   ])
 
   // Sort topics based on pinned status if pinTopicsToTop is enabled
+
   useEffect(() => {
-    startTransition(() => {
+    const updateTopics = () => {
       if (pinTopicsToTop) {
         setDisplayedTopics(
           [...assistant.topics].sort((a, b) => {
@@ -447,9 +449,19 @@ const Topics: FC<Props> = ({ assistant: _assistant, activeTopic, setActiveTopic 
       } else {
         setDisplayedTopics(assistant.topics)
       }
-    })
-  }, [assistant.topics, pinTopicsToTop])
+    }
 
+    if (isFirstRender) {
+      startTransition(() => {
+        updateTopics()
+      })
+      setIsFirstRender(false)
+    } else {
+      updateTopics()
+    }
+  }, [assistant.topics, isFirstRender, pinTopicsToTop])
+
+  // FIXME: 如果添加其他transition会导致skeleton重新显示
   if (isPending) {
     return <TopicsSkeleton></TopicsSkeleton>
   }
