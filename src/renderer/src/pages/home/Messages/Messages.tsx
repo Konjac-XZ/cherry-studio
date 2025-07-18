@@ -63,7 +63,8 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [isProcessingContext, setIsProcessingContext] = useState(false)
   const [isPending, startTransition] = useTransition()
-  const [isFirstRender, setIsFirstRender] = useState(true)
+  const [isLoading, setIsLoading] = useState(true)
+  const [pendingCount, setPendingCount] = useState(0)
 
   const messageElements = useRef<Map<string, HTMLElement>>(new Map())
   const messages = useTopicMessages(topic.id)
@@ -85,24 +86,26 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
   }, [])
 
   useEffect(() => {
-    if (messages.length === 0) {
-      // 在获取到有效messages以前，messages为空数组且多次触发该effect
-      // 这条分支用于处理多次触发重渲染导致的ui闪烁问题
-      setDisplayMessages([])
-      setHasMore(0 > displayCount)
-    } else if (isFirstRender) {
-      startTransition(() => {
-        const newDisplayMessages = computeDisplayMessages(messages, 0, displayCount)
-        setDisplayMessages(newDisplayMessages)
-        setHasMore(messages.length > displayCount)
-      })
-      setIsFirstRender(false)
-    } else {
+    startTransition(() => {
       const newDisplayMessages = computeDisplayMessages(messages, 0, displayCount)
       setDisplayMessages(newDisplayMessages)
       setHasMore(messages.length > displayCount)
+    })
+  }, [displayCount, messages])
+
+  useEffect(() => {
+    // 首次加载时isPending为false并触发该useEffect
+    // 需要在第二次isPending变为false时设置setIsLoading(false)
+    // 将setIsLoading(false)放在isPending变为false之后执行很重要，否则会在数据未加载完成前提前终止skeleton显示
+    if (isLoading) {
+      setPendingCount(pendingCount + 1)
+      if (pendingCount >= 2 && !isPending) {
+        // 准备结束skeleton显示
+        setIsLoading(false)
+      }
     }
-  }, [displayCount, isFirstRender, messages])
+    // eslint-disable-next-line
+  }, [isPending])
 
   const scrollToBottom = useCallback(() => {
     if (scrollContainerRef.current) {
@@ -293,7 +296,7 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
 
   const groupedMessages = useMemo(() => Object.entries(getGroupedMessages(displayMessages)), [displayMessages])
 
-  if (isPending) {
+  if (isLoading) {
     return (
       <MessagesSkeleton>
         <MessageSkeleton />
