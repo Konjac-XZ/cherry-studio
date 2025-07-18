@@ -29,7 +29,7 @@ import {
 import { updateCodeBlock } from '@renderer/utils/markdown'
 import { getMainTextContent } from '@renderer/utils/messageUtils/find'
 import { isTextLikeBlock } from '@renderer/utils/messageUtils/is'
-import { Skeleton } from 'antd'
+import { Skeleton, SkeletonProps } from 'antd'
 import { last } from 'lodash'
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -292,7 +292,6 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
       <MessagesSkeleton>
         <MessageSkeleton />
         <MessageSkeleton />
-        <MessageSkeleton />
       </MessagesSkeleton>
     )
   }
@@ -447,6 +446,7 @@ const MessageSkeletonContainer = styled.div`
   display: flex;
   width: 100%;
   flex-direction: column;
+  margin-bottom: 2rem;
 `
 
 const MessageSkeleton = () => {
@@ -455,22 +455,23 @@ const MessageSkeleton = () => {
       <MessageHeaderSkeleton>
         <Skeleton.Avatar style={{ width: 35 }} />
         <MessageHeaderInfoSkeleton>
-          <Skeleton.Node active style={{ width: '12ch', height: 16 }}></Skeleton.Node>
+          <Skeleton.Node active style={{ width: '18ch', height: 16 }}></Skeleton.Node>
           <Skeleton.Node active style={{ width: '6ch', height: 16 }}></Skeleton.Node>
         </MessageHeaderInfoSkeleton>
       </MessageHeaderSkeleton>
       <MessageContentSkeleton>
-        <ParagraphSkeleton />
-        <ParagraphSkeleton />
+        <ParagraphSkeleton paragraph={{ rows: 1, width: '60%' }} />
+        <ParagraphSkeleton paragraph={{ rows: 1, width: '80%' }} />
+        <ParagraphSkeleton paragraph={{ rows: 1, width: '40%' }} />
       </MessageContentSkeleton>
     </MessageSkeletonContainer>
   )
 }
 
-const ParagraphSkeleton = () => {
+const ParagraphSkeleton = ({ paragraph }: Pick<SkeletonProps, 'paragraph'>) => {
   return (
     <div style={{ marginBottom: '1.3em' }}>
-      <Skeleton active title={false} paragraph={{ rows: 4 }}></Skeleton>
+      <Skeleton active title={false} paragraph={paragraph}></Skeleton>
     </div>
   )
 }

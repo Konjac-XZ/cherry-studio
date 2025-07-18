@@ -698,7 +698,7 @@ const SkeletonItem = styled.div`
 `
 
 const TopicsSkeleton = () => {
-  const lineLengths = [10, 8, 9, 8, 7, 8, 10, 9, 8, 8, 6, 6, 10, 10, 11, 4, 5]
+  const lineLengths = [10, 8, 9, 8, 7, 8, 10, 9]
   return (
     <SkeletonList>
       {lineLengths.map((len, i) => {
