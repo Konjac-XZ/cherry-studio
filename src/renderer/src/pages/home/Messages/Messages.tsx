@@ -327,11 +327,13 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
 
   if (isShowSkeleton) {
     return (
-      <MessagesSkeleton>
+      <MessagesSkeletonContainer>
         <MessageSkeleton />
         <MessageSkeleton />
-      </MessagesSkeleton>
+      </MessagesSkeletonContainer>
     )
+  } else if (isLoading) {
+    return <MessagesSkeletonContainer />
   }
 
   return (
@@ -449,7 +451,7 @@ const MessagesContainer = styled(Scrollbar)<ContainerProps>`
   position: relative;
 `
 
-const MessagesSkeleton = styled.div`
+const MessagesSkeletonContainer = styled.div`
   width: 100%;
   height: 100%;
   padding: 10px 16px 20px;
