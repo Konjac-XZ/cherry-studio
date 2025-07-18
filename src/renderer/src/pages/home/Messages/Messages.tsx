@@ -332,8 +332,6 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
         <MessageSkeleton />
       </MessagesSkeletonContainer>
     )
-  } else if (isLoading) {
-    return <MessagesSkeletonContainer />
   }
 
   return (
