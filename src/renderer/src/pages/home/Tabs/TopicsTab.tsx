@@ -13,7 +13,7 @@ import { DraggableVirtualList as DraggableList } from '@renderer/components/Drag
 import CopyIcon from '@renderer/components/Icons/CopyIcon'
 import ObsidianExportPopup from '@renderer/components/Popups/ObsidianExportPopup'
 import PromptPopup from '@renderer/components/Popups/PromptPopup'
-import { isMac } from '@renderer/config/constant'
+import { isMac, SKELETON_MIN_TIME } from '@renderer/config/constant'
 import { useAssistant, useAssistants } from '@renderer/hooks/useAssistant'
 import { modelGenerating } from '@renderer/hooks/useRuntime'
 import { useSettings } from '@renderer/hooks/useSettings'
@@ -63,9 +63,15 @@ const Topics: FC<Props> = ({ assistant: _assistant, activeTopic, setActiveTopic 
 
   const [deletingTopicId, setDeletingTopicId] = useState<string | null>(null)
   const deleteTimerRef = useRef<NodeJS.Timeout>(null)
-  const [isPending, startTransition] = useTransition() // React 18+
+  const [, startTransition] = useTransition() // React 18+
   const [displayedTopics, setDisplayedTopics] = useState<Topic[]>([])
-  const [isFirstRender, setIsFirstRender] = useState(true)
+  const [isShowSkeleton, setIsShowSkeleton] = useState(true)
+
+  useEffect(() => {
+    setTimeout(() => {
+      setIsShowSkeleton(false)
+    }, SKELETON_MIN_TIME)
+  }, [])
 
   const pendingTopics = useMemo(() => {
     return new Set<string>()
@@ -451,18 +457,13 @@ const Topics: FC<Props> = ({ assistant: _assistant, activeTopic, setActiveTopic 
       }
     }
 
-    if (isFirstRender) {
-      startTransition(() => {
-        updateTopics()
-      })
-      setIsFirstRender(false)
-    } else {
+    startTransition(() => {
       updateTopics()
-    }
-  }, [assistant.topics, isFirstRender, pinTopicsToTop])
+    })
+  }, [assistant.topics, pinTopicsToTop])
 
   // FIXME: 如果添加其他transition会导致skeleton重新显示
-  if (isPending) {
+  if (isShowSkeleton) {
     return <TopicsSkeleton></TopicsSkeleton>
   }
 
