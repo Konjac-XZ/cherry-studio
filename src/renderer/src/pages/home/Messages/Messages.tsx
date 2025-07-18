@@ -63,6 +63,7 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [isProcessingContext, setIsProcessingContext] = useState(false)
   const [isPending, startTransition] = useTransition()
+  const [isFirstRender, setIsFirstRender] = useState(true)
 
   const messageElements = useRef<Map<string, HTMLElement>>(new Map())
   const messages = useTopicMessages(topic.id)
@@ -89,14 +90,19 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
       // 这条分支用于处理多次触发重渲染导致的ui闪烁问题
       setDisplayMessages([])
       setHasMore(0 > displayCount)
-    } else {
+    } else if (isFirstRender) {
       startTransition(() => {
         const newDisplayMessages = computeDisplayMessages(messages, 0, displayCount)
         setDisplayMessages(newDisplayMessages)
         setHasMore(messages.length > displayCount)
       })
+      setIsFirstRender(false)
+    } else {
+      const newDisplayMessages = computeDisplayMessages(messages, 0, displayCount)
+      setDisplayMessages(newDisplayMessages)
+      setHasMore(messages.length > displayCount)
     }
-  }, [displayCount, messages])
+  }, [displayCount, isFirstRender, messages])
 
   const scrollToBottom = useCallback(() => {
     if (scrollContainerRef.current) {
