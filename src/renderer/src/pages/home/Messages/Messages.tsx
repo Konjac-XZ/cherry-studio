@@ -1,7 +1,7 @@
 import ContextMenu from '@renderer/components/ContextMenu'
 import SvgSpinners180Ring from '@renderer/components/Icons/SvgSpinners180Ring'
 import Scrollbar from '@renderer/components/Scrollbar'
-import { LOAD_MORE_COUNT } from '@renderer/config/constant'
+import { LOAD_MORE_COUNT, SKELETON_DELAY_TIME, SKELETON_MIN_TIME } from '@renderer/config/constant'
 import { useAssistant } from '@renderer/hooks/useAssistant'
 import { useChatContext } from '@renderer/hooks/useChatContext'
 import { useMessageOperations, useTopicMessages } from '@renderer/hooks/useMessageOperations'
@@ -62,9 +62,13 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
   const [hasMore, setHasMore] = useState(false)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [isProcessingContext, setIsProcessingContext] = useState(false)
+  // skeleton显示生命周期：开始加载数据 -> 加载完成 -> 检查加载时间是否小于等于SKELETON_DELAY_TIME；是则直接显示内容；否则
   const [isPending, startTransition] = useTransition()
   const [isLoading, setIsLoading] = useState(true)
+  const [isShowSkeleton, setIsShowSkeleton] = useState(false)
   const [pendingCount, setPendingCount] = useState(0)
+  const [startTime] = useState(Date.now())
+  const [skeletonTimer, setSkeletonTimer] = useState<NodeJS.Timeout>()
 
   const messageElements = useRef<Map<string, HTMLElement>>(new Map())
   const messages = useTopicMessages(topic.id)
@@ -86,6 +90,15 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
   }, [])
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      // 超过DELAY_TIME后再尝试显示skeleton
+      console.log('skeletonTimer triggered')
+      setIsShowSkeleton(true)
+    }, SKELETON_DELAY_TIME)
+    setSkeletonTimer(timer)
+  }, [])
+
+  useEffect(() => {
     startTransition(() => {
       const newDisplayMessages = computeDisplayMessages(messages, 0, displayCount)
       setDisplayMessages(newDisplayMessages)
@@ -100,8 +113,24 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
     if (isLoading) {
       setPendingCount(pendingCount + 1)
       if (pendingCount >= 2 && !isPending) {
-        // 准备结束skeleton显示
+        // 准备结束loading，处理skeleton显示逻辑
         setIsLoading(false)
+        console.log('准备结束loading，处理skeleton显示逻辑')
+        const currentTime = Date.now()
+        const elapsed = currentTime - startTime
+        console.log('currentTime', currentTime)
+        console.log('elapsed', elapsed)
+        if (elapsed <= SKELETON_DELAY_TIME) {
+          clearTimeout(skeletonTimer)
+        } else {
+          const remainTime = SKELETON_MIN_TIME + SKELETON_DELAY_TIME - elapsed
+          if (remainTime <= 0) {
+            return
+          }
+          setTimeout(() => {
+            setIsShowSkeleton(false)
+          }, remainTime)
+        }
       }
     }
     // eslint-disable-next-line
@@ -296,7 +325,7 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
 
   const groupedMessages = useMemo(() => Object.entries(getGroupedMessages(displayMessages)), [displayMessages])
 
-  if (isLoading) {
+  if (isShowSkeleton) {
     return (
       <MessagesSkeleton>
         <MessageSkeleton />
