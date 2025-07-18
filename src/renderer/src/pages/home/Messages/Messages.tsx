@@ -96,6 +96,11 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
       setIsShowSkeleton(true)
     }, SKELETON_DELAY_TIME)
     setSkeletonTimer(timer)
+
+    // 防止意外的未关闭skeleton显示
+    setTimeout(() => {
+      setIsShowSkeleton(false)
+    }, SKELETON_DELAY_TIME + SKELETON_MIN_TIME)
   }, [])
 
   useEffect(() => {
