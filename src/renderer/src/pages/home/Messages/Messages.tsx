@@ -95,7 +95,7 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
   useEffect(() => {
     const timer = setTimeout(() => {
       // 超过DELAY_TIME后再尝试显示skeleton
-      console.log('skeletonTimer triggered')
+      logger.debug('skeletonTimer triggered')
       setIsShowSkeleton(true)
     }, SKELETON_DELAY_TIME)
     setSkeletonTimer(timer)
@@ -123,11 +123,11 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
       if (pendingCount >= 2 && !isPending) {
         // 准备结束loading，处理skeleton显示逻辑
         setIsLoading(false)
-        console.log('准备结束loading，处理skeleton显示逻辑')
+        logger.debug('准备结束loading，处理skeleton显示逻辑')
         const currentTime = Date.now()
         const elapsed = currentTime - startTime
-        console.log('currentTime', currentTime)
-        console.log('elapsed', elapsed)
+        logger.debug('currentTime', currentTime)
+        logger.debug('elapsed', elapsed)
         if (elapsed <= SKELETON_DELAY_TIME) {
           clearTimeout(skeletonTimer)
         } else {
