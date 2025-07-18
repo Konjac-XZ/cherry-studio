@@ -1,10 +1,11 @@
+import { loggerService } from '@logger'
 import { DEFAULT_MAX_TOKENS } from '@renderer/config/constant'
-import Logger from '@renderer/config/logger'
 import {
   findTokenLimit,
   GEMINI_FLASH_MODEL_REGEX,
   getOpenAIWebSearchParams,
   isDoubaoThinkingAutoModel,
+  isGrokReasoningModel,
   isQwenReasoningModel,
   isReasoningModel,
   isSupportedReasoningEffortGrokModel,
@@ -57,6 +58,8 @@ import { ChatCompletionContentPart, ChatCompletionContentPartRefusal, ChatComple
 import { GenericChunk } from '../../middleware/schemas'
 import { RequestTransformer, ResponseChunkTransformer, ResponseChunkTransformerContext } from '../types'
 import { OpenAIBaseClient } from './OpenAIBaseClient'
+
+const logger = loggerService.withContext('OpenAIApiClient')
 
 export class OpenAIAPIClient extends OpenAIBaseClient<
   OpenAI | AzureOpenAI,
@@ -115,11 +118,12 @@ export class OpenAIAPIClient extends OpenAIBaseClient<
 
     if (!reasoningEffort) {
       if (model.provider === 'openrouter') {
-        if (
-          isSupportedThinkingTokenGeminiModel(model) &&
-          !GEMINI_FLASH_MODEL_REGEX.test(model.id) &&
-          model.id.includes('grok-4')
-        ) {
+        // Don't disable reasoning for Gemini models that support thinking tokens
+        if (isSupportedThinkingTokenGeminiModel(model) && !GEMINI_FLASH_MODEL_REGEX.test(model.id)) {
+          return {}
+        }
+        // Don't disable reasoning for models that require it
+        if (isGrokReasoningModel(model)) {
           return {}
         }
         return { reasoning: { enabled: false, exclude: true } }
@@ -790,7 +794,7 @@ export class OpenAIAPIClient extends OpenAIBaseClient<
 
             // 处理finish_reason，发送流结束信号
             if ('finish_reason' in choice && choice.finish_reason) {
-              Logger.debug(`[OpenAIApiClient] Stream finished with reason: ${choice.finish_reason}`)
+              logger.debug(`Stream finished with reason: ${choice.finish_reason}`)
               const webSearchData = collectWebSearchData(chunk, contentSource, context)
               if (webSearchData) {
                 controller.enqueue({
@@ -808,7 +812,7 @@ export class OpenAIAPIClient extends OpenAIBaseClient<
       flush(controller) {
         if (isFinished) return
 
-        Logger.debug('[OpenAIApiClient] Stream ended without finish_reason, emitting fallback completion signals')
+        logger.debug('Stream ended without finish_reason, emitting fallback completion signals')
         emitCompletionSignals(controller)
       }
     })
