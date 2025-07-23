@@ -141,7 +141,7 @@ export function hasPath(url: string): boolean {
     const parsedUrl = new URL(url)
     return parsedUrl.pathname !== '/' && parsedUrl.pathname !== ''
   } catch (error) {
-    logger.error('Invalid URL:', error)
+    logger.error('Invalid URL:', error as Error)
     return false
   }
 }
@@ -212,7 +212,7 @@ export function getMcpConfigSampleFromReadme(readme: string): Record<string, any
         }
       }
     } catch (e) {
-      logger.error('getMcpConfigSampleFromReadme', e)
+      logger.error('getMcpConfigSampleFromReadme', e as Error)
     }
   }
   return null
@@ -228,10 +228,10 @@ export function isOpenAIProvider(provider: Provider): boolean {
 }
 
 export * from './api'
-export * from './env'
 export * from './file'
 export * from './image'
 export * from './json'
+export * from './match'
 export * from './naming'
 export * from './sort'
 export * from './style'

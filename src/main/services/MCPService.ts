@@ -7,6 +7,7 @@ import { createInMemoryMCPServer } from '@main/mcpServers/factory'
 import { makeSureDirExists } from '@main/utils'
 import { buildFunctionCallToolName } from '@main/utils/mcp'
 import { getBinaryName, getBinaryPath } from '@main/utils/process'
+import { TraceMethod, withSpanFunc } from '@mcp-trace/trace-core'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { SSEClientTransport, SSEClientTransportOptions } from '@modelcontextprotocol/sdk/client/sse.js'
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
@@ -26,7 +27,7 @@ import {
   ToolListChangedNotificationSchema
 } from '@modelcontextprotocol/sdk/types.js'
 import { nanoid } from '@reduxjs/toolkit'
-import {
+import type {
   GetMCPPromptResponse,
   GetResourceResponse,
   MCPCallToolResponse,
@@ -48,6 +49,8 @@ import getLoginShellEnvironment from './mcp/shell-env'
 
 // Generic type for caching wrapped functions
 type CachedFunction<T extends unknown[], R> = (...args: T) => Promise<R>
+
+type CallToolArgs = { server: MCPServer; name: string; args: any; callId?: string }
 
 const logger = loggerService.withContext('MCPService')
 
@@ -203,7 +206,7 @@ class McpService {
                           headers['Authorization'] = `Bearer ${tokens.access_token}`
                         }
                       } catch (error) {
-                        logger.error('Failed to fetch tokens:', error)
+                        logger.error('Failed to fetch tokens:', error as Error)
                       }
                     }
 
@@ -345,7 +348,7 @@ class McpService {
 
             logger.debug(`Successfully authenticated with server: ${server.name}`)
           } catch (oauthError) {
-            logger.error(`OAuth authentication failed for server ${server.name}:`, oauthError)
+            logger.error(`OAuth authentication failed for server ${server.name}:`, oauthError as Error)
             throw new Error(
               `OAuth authentication failed: ${oauthError instanceof Error ? oauthError.message : String(oauthError)}`
             )
@@ -374,12 +377,6 @@ class McpService {
 
           // Store the new client in the cache
           this.clients.set(serverKey, client)
-
-          // Set up notification handlers
-          this.setupNotificationHandlers(client, server)
-
-          // Clear existing cache to ensure fresh data
-          this.clearServerCache(serverKey)
 
           // Set up notification handlers
           this.setupNotificationHandlers(client, server)
@@ -457,7 +454,7 @@ class McpService {
 
       logger.debug(`Set up notification handlers for server: ${server.name}`)
     } catch (error) {
-      logger.error(`Failed to set up notification handlers for server ${server.name}:`, error)
+      logger.error(`Failed to set up notification handlers for server ${server.name}:`, error as Error)
     }
   }
 
@@ -513,7 +510,7 @@ class McpService {
           logger.debug(`Cleaned up DXT server directory for: ${server.name}`)
         }
       } catch (error) {
-        logger.error(`Failed to cleanup DXT server: ${server.name}`, error)
+        logger.error(`Failed to cleanup DXT server: ${server.name}`, error as Error)
       }
     }
   }
@@ -555,7 +552,7 @@ class McpService {
       logger.debug(`Connectivity check successful for server: ${server.name}`)
       return true
     } catch (error) {
-      logger.error(`Connectivity check failed for server: ${server.name}`, error)
+      logger.error(`Connectivity check failed for server: ${server.name}`, error as Error)
       // Close the client if connectivity check fails to ensure a clean state for the next attempt
       const serverKey = this.getServerKey(server)
       await this.closeClient(serverKey)
@@ -586,17 +583,22 @@ class McpService {
   }
 
   async listTools(_: Electron.IpcMainInvokeEvent, server: MCPServer) {
-    const cachedListTools = withCache<[MCPServer], MCPTool[]>(
-      this.listToolsImpl.bind(this),
-      (server) => {
-        const serverKey = this.getServerKey(server)
-        return `mcp:list_tool:${serverKey}`
-      },
-      5 * 60 * 1000, // 5 minutes TTL
-      `[MCP] Tools from ${server.name}`
-    )
+    const listFunc = (server: MCPServer) => {
+      const cachedListTools = withCache<[MCPServer], MCPTool[]>(
+        this.listToolsImpl.bind(this),
+        (server) => {
+          const serverKey = this.getServerKey(server)
+          return `mcp:list_tool:${serverKey}`
+        },
+        5 * 60 * 1000, // 5 minutes TTL
+        `[MCP] Tools from ${server.name}`
+      )
 
-    return cachedListTools(server)
+      const result = cachedListTools(server)
+      return result
+    }
+
+    return withSpanFunc(`${server.name}.ListTool`, 'MCP', listFunc, [server])
   }
 
   /**
@@ -604,37 +606,41 @@ class McpService {
    */
   public async callTool(
     _: Electron.IpcMainInvokeEvent,
-    { server, name, args, callId }: { server: MCPServer; name: string; args: any; callId?: string }
+    { server, name, args, callId }: CallToolArgs
   ): Promise<MCPCallToolResponse> {
     const toolCallId = callId || uuidv4()
     const abortController = new AbortController()
     this.activeToolCalls.set(toolCallId, abortController)
 
-    try {
-      logger.debug('Calling:', server.name, name, args, 'callId:', toolCallId)
-      if (typeof args === 'string') {
-        try {
-          args = JSON.parse(args)
-        } catch (e) {
-          logger.error('args parse error', args)
+    const callToolFunc = async ({ server, name, args }: CallToolArgs) => {
+      try {
+        logger.debug(`Calling: ${server.name} ${name} ${JSON.stringify(args)} callId: ${toolCallId}`)
+        if (typeof args === 'string') {
+          try {
+            args = JSON.parse(args)
+          } catch (e) {
+            logger.error('args parse error', args)
+          }
         }
+        const client = await this.initClient(server)
+        const result = await client.callTool({ name, arguments: args }, undefined, {
+          onprogress: (process) => {
+            logger.debug(`Progress: ${process.progress / (process.total || 1)}`)
+            window.api.mcp.setProgress(process.progress / (process.total || 1))
+          },
+          timeout: server.timeout ? server.timeout * 1000 : 60000, // Default timeout of 1 minute
+          signal: this.activeToolCalls.get(toolCallId)?.signal
+        })
+        return result as MCPCallToolResponse
+      } catch (error) {
+        logger.error(`Error calling tool ${name} on ${server.name}:`, error as Error)
+        throw error
+      } finally {
+        this.activeToolCalls.delete(toolCallId)
       }
-      const client = await this.initClient(server)
-      const result = await client.callTool({ name, arguments: args }, undefined, {
-        onprogress: (process) => {
-          console.log('[MCP] Progress:', process.progress / (process.total || 1))
-          window.api.mcp.setProgress(process.progress / (process.total || 1))
-        },
-        timeout: server.timeout ? server.timeout * 1000 : 60000, // Default timeout of 1 minute
-        signal: this.activeToolCalls.get(toolCallId)?.signal
-      })
-      return result as MCPCallToolResponse
-    } catch (error) {
-      logger.error(`Error calling tool ${name} on ${server.name}:`, error)
-      throw error
-    } finally {
-      this.activeToolCalls.delete(toolCallId)
     }
+
+    return await withSpanFunc(`${server.name}.${name}`, `MCP`, callToolFunc, [{ server, name, args }])
   }
 
   public async getInstallInfo() {
@@ -701,6 +707,7 @@ class McpService {
   /**
    * Get a specific prompt from an MCP server with caching
    */
+  @TraceMethod({ spanName: 'getPrompt', tag: 'mcp' })
   public async getPrompt(
     _: Electron.IpcMainInvokeEvent,
     { server, name, args }: { server: MCPServer; name: string; args?: Record<string, any> }
@@ -787,6 +794,7 @@ class McpService {
   /**
    * Get a specific resource from an MCP server with caching
    */
+  @TraceMethod({ spanName: 'getResource', tag: 'mcp' })
   public async getResource(
     _: Electron.IpcMainInvokeEvent,
     { server, uri }: { server: MCPServer; uri: string }
@@ -812,7 +820,7 @@ class McpService {
       logger.debug('Successfully fetched login shell environment variables:')
       return loginEnv
     } catch (error) {
-      logger.error('Failed to fetch login shell environment variables:', error)
+      logger.error('Failed to fetch login shell environment variables:', error as Error)
       return {}
     }
   })
