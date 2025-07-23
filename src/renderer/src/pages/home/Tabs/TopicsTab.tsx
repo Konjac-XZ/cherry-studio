@@ -480,7 +480,8 @@ const Topics: FC<Props> = ({ assistant: _assistant, activeTopic, setActiveTopic,
   // Sort topics based on pinned status if pinTopicsToTop is enabled
 
   useEffect(() => {
-    // setDisplayedTopics([])
+    // 避免幻觉
+    setDisplayedTopics([])
     if (isLoading) {
       setIsShowSkeleton(true)
     }
