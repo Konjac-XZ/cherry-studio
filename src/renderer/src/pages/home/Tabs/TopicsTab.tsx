@@ -14,13 +14,14 @@ import { DraggableVirtualList as DraggableList } from '@renderer/components/Drag
 import CopyIcon from '@renderer/components/Icons/CopyIcon'
 import ObsidianExportPopup from '@renderer/components/Popups/ObsidianExportPopup'
 import PromptPopup from '@renderer/components/Popups/PromptPopup'
-import { isMac, SKELETON_MIN_TIME } from '@renderer/config/constant'
+import { isMac, SKELETON_DELAY_TIME, SKELETON_MIN_TIME } from '@renderer/config/constant'
 import { useAssistant, useAssistants } from '@renderer/hooks/useAssistant'
 import { modelGenerating } from '@renderer/hooks/useRuntime'
 import { useSettings } from '@renderer/hooks/useSettings'
 import { finishTopicRenaming, startTopicRenaming, TopicManager } from '@renderer/hooks/useTopic'
 import { fetchMessagesSummary } from '@renderer/services/ApiService'
 import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
+import { loggerService } from '@renderer/services/LoggerService'
 import store from '@renderer/store'
 import { RootState } from '@renderer/store'
 import { newMessagesActions } from '@renderer/store/newMessage'
@@ -54,6 +55,8 @@ interface Props {
   position: 'left' | 'right'
 }
 
+const logger = loggerService.withContext('TopicsTab')
+
 const Topics: FC<Props> = ({ assistant: _assistant, activeTopic, setActiveTopic, position }) => {
   const { assistants } = useAssistants()
   const { assistant, removeTopic, moveTopic, updateTopic, updateTopics } = useAssistant(_assistant.id)
@@ -69,18 +72,60 @@ const Topics: FC<Props> = ({ assistant: _assistant, activeTopic, setActiveTopic,
 
   const [deletingTopicId, setDeletingTopicId] = useState<string | null>(null)
   const deleteTimerRef = useRef<NodeJS.Timeout>(null)
-  const [, startTransition] = useTransition() // React 18+
+  const [isPending, startTransition] = useTransition() // React 18+
+  const [isLoading, setIsLoading] = useState(true)
+  const [isShowSkeleton, setIsShowSkeleton] = useState(false)
+  const [pendingCount, setPendingCount] = useState(0)
+  const [startTime] = useState(Date.now())
   const [displayedTopics, setDisplayedTopics] = useState<Topic[]>([])
-  const [isShowSkeleton, setIsShowSkeleton] = useState(true)
+  const [skeletonTimer, setSkeletonTimer] = useState<NodeJS.Timeout>()
 
   useEffect(() => {
+    // 首次加载时isPending为false并触发该useEffect
+    // 需要在第二次isPending变为false时设置setIsLoading(false)
+    // 将setIsLoading(false)放在isPending变为false之后执行很重要，否则会在数据未加载完成前提前终止skeleton显示
+    if (isLoading) {
+      setPendingCount(pendingCount + 1)
+      if (pendingCount >= 2 && !isPending) {
+        // 准备结束loading，处理skeleton显示逻辑
+        setIsLoading(false)
+        logger.silly('准备结束loading，处理skeleton显示逻辑')
+        const currentTime = Date.now()
+        const elapsed = currentTime - startTime
+        logger.silly(`currentTime ${currentTime}`)
+        logger.silly(`elapsed ${elapsed}`)
+        if (elapsed <= SKELETON_DELAY_TIME) {
+          clearTimeout(skeletonTimer)
+        } else {
+          const remainTime = SKELETON_MIN_TIME + SKELETON_DELAY_TIME - elapsed
+          if (remainTime <= 0) {
+            return
+          }
+          setTimeout(() => {
+            setIsShowSkeleton(false)
+          }, remainTime)
+        }
+      }
+    }
+    // eslint-disable-next-line
+  }, [isPending])
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      // 超过DELAY_TIME后再尝试显示skeleton
+      logger.silly('skeletonTimer triggered')
+      setIsShowSkeleton(true)
+    }, SKELETON_DELAY_TIME)
+    setSkeletonTimer(timer)
+
+    // 防止意外的未关闭skeleton显示
     setTimeout(() => {
       setIsShowSkeleton(false)
-    }, SKELETON_MIN_TIME)
+    }, SKELETON_DELAY_TIME + SKELETON_MIN_TIME)
   }, [])
 
-  const isPending = useCallback((topicId: string) => topicLoadingQuery[topicId], [topicLoadingQuery])
-  const isFulfilled = useCallback((topicId: string) => topicFulfilledQuery[topicId], [topicFulfilledQuery])
+  const isTopicPending = useCallback((topicId: string) => topicLoadingQuery[topicId], [topicLoadingQuery])
+  const isTopicFulfilled = useCallback((topicId: string) => topicFulfilledQuery[topicId], [topicFulfilledQuery])
   const dispatch = useDispatch()
 
   useEffect(() => {
@@ -435,7 +480,11 @@ const Topics: FC<Props> = ({ assistant: _assistant, activeTopic, setActiveTopic,
   // Sort topics based on pinned status if pinTopicsToTop is enabled
 
   useEffect(() => {
-    const updateTopics = () => {
+    // setDisplayedTopics([])
+    if (isLoading) {
+      setIsShowSkeleton(true)
+    }
+    startTransition(() => {
       if (pinTopicsToTop) {
         setDisplayedTopics(
           [...assistant.topics].sort((a, b) => {
@@ -447,12 +496,8 @@ const Topics: FC<Props> = ({ assistant: _assistant, activeTopic, setActiveTopic,
       } else {
         setDisplayedTopics(assistant.topics)
       }
-    }
-
-    startTransition(() => {
-      updateTopics()
     })
-  }, [assistant.topics, pinTopicsToTop])
+  }, [assistant.topics, isLoading, pinTopicsToTop])
 
   const singlealone = topicPosition === 'right' && position === 'right'
 
@@ -493,8 +538,8 @@ const Topics: FC<Props> = ({ assistant: _assistant, activeTopic, setActiveTopic,
               className={classNames(isActive ? 'active' : '', singlealone ? 'singlealone' : '')}
               onClick={() => onSwitchTopic(topic)}
               style={{ borderRadius }}>
-              {isPending(topic.id) && !isActive && <PendingIndicator />}
-              {isFulfilled(topic.id) && !isActive && <FulfilledIndicator />}
+              {isTopicPending(topic.id) && !isActive && <PendingIndicator />}
+              {isTopicFulfilled(topic.id) && !isActive && <FulfilledIndicator />}
               <TopicNameContainer>
                 <TopicName className={getTopicNameClassName()} title={topicName}>
                   {topicName}
