@@ -453,6 +453,7 @@ const Topics: FC<Props> = ({
 
   const singlealone = topicPosition === 'right' && position === 'right'
 
+  const deferredDisplayedTopics = useDeferredValue(displayedTopics)
   const isTransitioning = isPending || willTransition
 
   useEffect(() => {
@@ -464,7 +465,7 @@ const Topics: FC<Props> = ({
   return (
     <DraggableList
       className="topics-tab"
-      list={displayedTopics}
+      list={deferredDisplayedTopics}
       onUpdate={updateTopics}
       style={{ padding: '13px 0 10px 10px', opacity: isTransitioning ? 0.5 : 1 }}
       itemContainerStyle={{ paddingBottom: '8px' }}
