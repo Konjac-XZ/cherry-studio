@@ -14,14 +14,13 @@ import { DraggableVirtualList as DraggableList } from '@renderer/components/Drag
 import CopyIcon from '@renderer/components/Icons/CopyIcon'
 import ObsidianExportPopup from '@renderer/components/Popups/ObsidianExportPopup'
 import PromptPopup from '@renderer/components/Popups/PromptPopup'
-import { isMac, SKELETON_DELAY_TIME, SKELETON_MIN_TIME } from '@renderer/config/constant'
+import { isMac } from '@renderer/config/constant'
 import { useAssistant, useAssistants } from '@renderer/hooks/useAssistant'
 import { modelGenerating } from '@renderer/hooks/useRuntime'
 import { useSettings } from '@renderer/hooks/useSettings'
 import { finishTopicRenaming, startTopicRenaming, TopicManager } from '@renderer/hooks/useTopic'
 import { fetchMessagesSummary } from '@renderer/services/ApiService'
 import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
-import { loggerService } from '@renderer/services/LoggerService'
 import store from '@renderer/store'
 import { RootState } from '@renderer/store'
 import { newMessagesActions } from '@renderer/store/newMessage'
@@ -37,7 +36,7 @@ import {
   exportTopicToNotion,
   topicToMarkdown
 } from '@renderer/utils/export'
-import { Dropdown, MenuProps, Skeleton, Tooltip } from 'antd'
+import { Dropdown, MenuProps, Tooltip } from 'antd'
 import { ItemType, MenuItemType } from 'antd/es/menu/interface'
 import dayjs from 'dayjs'
 import { findIndex } from 'lodash'
@@ -53,11 +52,18 @@ interface Props {
   activeTopic: Topic
   setActiveTopic: (topic: Topic) => void
   position: 'left' | 'right'
+  willTransition: boolean
+  setWillTransition: (value: boolean) => void
 }
 
-const logger = loggerService.withContext('TopicsTab')
-
-const Topics: FC<Props> = ({ assistant: _assistant, activeTopic, setActiveTopic, position }) => {
+const Topics: FC<Props> = ({
+  assistant: _assistant,
+  activeTopic,
+  setActiveTopic,
+  position,
+  willTransition,
+  setWillTransition
+}) => {
   const { assistants } = useAssistants()
   const { assistant, removeTopic, moveTopic, updateTopic, updateTopics } = useAssistant(_assistant.id)
   const { t } = useTranslation()
@@ -73,56 +79,7 @@ const Topics: FC<Props> = ({ assistant: _assistant, activeTopic, setActiveTopic,
   const [deletingTopicId, setDeletingTopicId] = useState<string | null>(null)
   const deleteTimerRef = useRef<NodeJS.Timeout>(null)
   const [isPending, startTransition] = useTransition() // React 18+
-  const [isLoading, setIsLoading] = useState(true)
-  const [isShowSkeleton, setIsShowSkeleton] = useState(false)
-  const [pendingCount, setPendingCount] = useState(0)
-  const [startTime] = useState(Date.now())
   const [displayedTopics, setDisplayedTopics] = useState<Topic[]>([])
-  const [skeletonTimer, setSkeletonTimer] = useState<NodeJS.Timeout>()
-
-  useEffect(() => {
-    // 首次加载时isPending为false并触发该useEffect
-    // 需要在第二次isPending变为false时设置setIsLoading(false)
-    // 将setIsLoading(false)放在isPending变为false之后执行很重要，否则会在数据未加载完成前提前终止skeleton显示
-    if (isLoading) {
-      setPendingCount(pendingCount + 1)
-      if (pendingCount >= 2 && !isPending) {
-        // 准备结束loading，处理skeleton显示逻辑
-        setIsLoading(false)
-        logger.silly('准备结束loading，处理skeleton显示逻辑')
-        const currentTime = Date.now()
-        const elapsed = currentTime - startTime
-        logger.silly(`currentTime ${currentTime}`)
-        logger.silly(`elapsed ${elapsed}`)
-        if (elapsed <= SKELETON_DELAY_TIME) {
-          clearTimeout(skeletonTimer)
-        } else {
-          const remainTime = SKELETON_MIN_TIME + SKELETON_DELAY_TIME - elapsed
-          if (remainTime <= 0) {
-            return
-          }
-          setTimeout(() => {
-            setIsShowSkeleton(false)
-          }, remainTime)
-        }
-      }
-    }
-    // eslint-disable-next-line
-  }, [isPending])
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      // 超过DELAY_TIME后再尝试显示skeleton
-      logger.silly('skeletonTimer triggered')
-      setIsShowSkeleton(true)
-    }, SKELETON_DELAY_TIME)
-    setSkeletonTimer(timer)
-
-    // 防止意外的未关闭skeleton显示
-    setTimeout(() => {
-      setIsShowSkeleton(false)
-    }, SKELETON_DELAY_TIME + SKELETON_MIN_TIME)
-  }, [])
 
   const isTopicPending = useCallback((topicId: string) => topicLoadingQuery[topicId], [topicLoadingQuery])
   const isTopicFulfilled = useCallback((topicId: string) => topicFulfilledQuery[topicId], [topicFulfilledQuery])
@@ -477,16 +434,10 @@ const Topics: FC<Props> = ({ assistant: _assistant, activeTopic, setActiveTopic,
     onDeleteTopic
   ])
 
-  // Sort topics based on pinned status if pinTopicsToTop is enabled
-
   useEffect(() => {
-    // 避免幻觉
-    setDisplayedTopics([])
-    if (isLoading) {
-      setIsShowSkeleton(true)
-    }
     startTransition(() => {
       if (pinTopicsToTop) {
+        // Sort topics based on pinned status if pinTopicsToTop is enabled
         setDisplayedTopics(
           [...assistant.topics].sort((a, b) => {
             if (a.pinned && !b.pinned) return -1
@@ -498,21 +449,24 @@ const Topics: FC<Props> = ({ assistant: _assistant, activeTopic, setActiveTopic,
         setDisplayedTopics(assistant.topics)
       }
     })
-  }, [assistant.topics, isLoading, pinTopicsToTop])
+  }, [assistant.topics, pinTopicsToTop])
 
   const singlealone = topicPosition === 'right' && position === 'right'
 
-  // FIXME: 如果添加其他transition会导致skeleton重新显示
-  if (isShowSkeleton) {
-    return <TopicsSkeleton></TopicsSkeleton>
-  }
+  const isTransitioning = isPending || willTransition
+
+  useEffect(() => {
+    if (!isPending) {
+      setWillTransition(false)
+    }
+  }, [isPending, setWillTransition])
 
   return (
     <DraggableList
       className="topics-tab"
       list={displayedTopics}
       onUpdate={updateTopics}
-      style={{ padding: '13px 0 10px 10px' }}
+      style={{ padding: '13px 0 10px 10px', opacity: isTransitioning ? 0.5 : 1 }}
       itemContainerStyle={{ paddingBottom: '8px' }}
       header={
         <AddTopicButton onClick={() => EventEmitter.emit(EVENT_NAMES.ADD_NEW_TOPIC)}>
@@ -779,36 +733,5 @@ const QuestionIcon = styled(QuestionCircleOutlined)`
   cursor: pointer;
   color: var(--color-text-3);
 `
-
-const SkeletonList = styled.div`
-  padding: 13px 0 10px 10px;
-`
-
-const SkeletonItemContainer = styled.div`
-  padding-bottom: 8px;
-`
-
-const SkeletonItem = styled.div`
-  padding: 7px 12px;
-  box-sizing: content-box;
-  height: 20.8px;
-`
-
-const TopicsSkeleton = () => {
-  const lineLengths = [10, 8, 9, 8, 7, 8, 10, 9]
-  return (
-    <SkeletonList>
-      {lineLengths.map((len, i) => {
-        return (
-          <SkeletonItemContainer key={i}>
-            <SkeletonItem>
-              <Skeleton.Node active style={{ width: `${len * 13}px`, height: `13px` }}></Skeleton.Node>
-            </SkeletonItem>
-          </SkeletonItemContainer>
-        )
-      })}
-    </SkeletonList>
-  )
-}
 
 export default Topics
