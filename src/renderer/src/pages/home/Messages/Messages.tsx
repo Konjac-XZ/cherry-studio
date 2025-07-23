@@ -122,11 +122,11 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
       if (pendingCount >= 2 && !isPending) {
         // 准备结束loading，处理skeleton显示逻辑
         setIsLoading(false)
-        logger.silly('准备结束loading，处理skeleton显示逻辑')
+        // logger.silly('准备结束loading，处理skeleton显示逻辑')
         const currentTime = Date.now()
         const elapsed = currentTime - startTime
-        logger.silly(`currentTime ${currentTime}`)
-        logger.silly(`elapsed ${elapsed}`)
+        // logger.silly(`currentTime ${currentTime}`)
+        // logger.silly(`elapsed ${elapsed}`)
         if (elapsed <= SKELETON_DELAY_TIME) {
           clearTimeout(skeletonTimer)
         } else {
