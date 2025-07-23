@@ -128,15 +128,15 @@ const HomeTabs: FC<Props> = ({
       )}
 
       <TabContent className="home-tabs-content">
-        <TabContainer show={tab === 'assistants'}>
+        {tab === 'assistants' && (
           <Assistants
             activeAssistant={activeAssistant}
             setActiveAssistant={setActiveAssistant}
             onCreateAssistant={onCreateAssistant}
             onCreateDefaultAssistant={onCreateDefaultAssistant}
           />
-        </TabContainer>
-        <TabContainer show={tab === 'topic'}>
+        )}
+        {tab === 'topic' && (
           <Topics
             assistant={activeAssistant}
             activeTopic={activeTopic}
@@ -145,10 +145,8 @@ const HomeTabs: FC<Props> = ({
             willTransition={willTransition}
             setWillTransition={setWillTransition}
           />
-        </TabContainer>
-        <TabContainer show={tab === 'settings'}>
-          <Settings assistant={activeAssistant} />
-        </TabContainer>
+        )}
+        {tab === 'settings' && <Settings assistant={activeAssistant} />}
       </TabContent>
     </Container>
   )
@@ -174,10 +172,6 @@ const Container = styled.div`
 
 const TabContent = styled.div`
   display: flex;
-`
-
-const TabContainer = styled.div<{ show: boolean }>`
-  display: ${(props) => (props.show ? 'flex' : 'none')};
   flex: 1;
   flex-direction: column;
   overflow-y: hidden;
