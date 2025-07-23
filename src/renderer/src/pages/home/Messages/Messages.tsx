@@ -307,18 +307,18 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
     }).then(() => onFirstUpdate?.())
   }, [assistant, messages, onFirstUpdate])
 
-  const loadMoreMessages = useCallback(() => {
+  const loadMoreMessages = useCallback(async () => {
     if (!hasMore || isLoadingMore) return
 
     setIsLoadingMore(true)
-    setTimeout(() => {
+    startTransition(() => {
       const currentLength = displayMessages.length
       const newMessages = computeDisplayMessages(messages, currentLength, LOAD_MORE_COUNT)
 
       setDisplayMessages((prev) => [...prev, ...newMessages])
       setHasMore(currentLength + LOAD_MORE_COUNT < messages.length)
       setIsLoadingMore(false)
-    }, 300)
+    })
   }, [displayMessages.length, hasMore, isLoadingMore, messages])
 
   useShortcut('copy_last_message', () => {
