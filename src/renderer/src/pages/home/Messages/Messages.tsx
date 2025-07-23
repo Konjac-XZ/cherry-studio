@@ -65,7 +65,6 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
   const [hasMore, setHasMore] = useState(false)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [isProcessingContext, setIsProcessingContext] = useState(false)
-  // skeleton显示生命周期：开始加载数据 -> 加载完成 -> 检查加载时间是否小于等于SKELETON_DELAY_TIME；是则直接显示内容；否则
   const [isPending, startTransition] = useTransition()
   const [isLoading, setIsLoading] = useState(true)
   const [isShowSkeleton, setIsShowSkeleton] = useState(false)
@@ -95,7 +94,7 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
   useEffect(() => {
     const timer = setTimeout(() => {
       // 超过DELAY_TIME后再尝试显示skeleton
-      logger.debug('skeletonTimer triggered')
+      logger.silly('skeletonTimer triggered')
       setIsShowSkeleton(true)
     }, SKELETON_DELAY_TIME)
     setSkeletonTimer(timer)
@@ -123,11 +122,11 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
       if (pendingCount >= 2 && !isPending) {
         // 准备结束loading，处理skeleton显示逻辑
         setIsLoading(false)
-        logger.debug('准备结束loading，处理skeleton显示逻辑')
+        logger.silly('准备结束loading，处理skeleton显示逻辑')
         const currentTime = Date.now()
         const elapsed = currentTime - startTime
-        logger.debug('currentTime', currentTime)
-        logger.debug('elapsed', elapsed)
+        logger.silly(`currentTime ${currentTime}`)
+        logger.silly(`elapsed ${elapsed}`)
         if (elapsed <= SKELETON_DELAY_TIME) {
           clearTimeout(skeletonTimer)
         } else {
