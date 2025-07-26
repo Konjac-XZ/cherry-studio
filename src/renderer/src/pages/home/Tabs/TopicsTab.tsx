@@ -226,7 +226,7 @@ const Topics: FC<Props> = ({
         }
       },
       {
-        label: t('chat.topics.prompt'),
+        label: t('chat.topics.prompt.label'),
         key: 'topic-prompt',
         icon: <i className="iconfont icon-ai-model1" style={{ fontSize: '14px' }} />,
         extra: (
@@ -274,7 +274,7 @@ const Topics: FC<Props> = ({
         }
       },
       {
-        label: t('settings.topic.position'),
+        label: t('settings.topic.position.label'),
         key: 'topic-position',
         icon: <MenuOutlined />,
         children: [
@@ -323,7 +323,7 @@ const Topics: FC<Props> = ({
             onClick: () => EventEmitter.emit(EVENT_NAMES.EXPORT_TOPIC_IMAGE, topic)
           },
           exportMenuOptions.markdown && {
-            label: t('chat.topics.export.md'),
+            label: t('chat.topics.export.md.label'),
             key: 'markdown',
             onClick: () => exportTopicAsMarkdown(topic)
           },
@@ -467,7 +467,13 @@ const Topics: FC<Props> = ({
       className="topics-tab"
       list={deferredDisplayedTopics}
       onUpdate={updateTopics}
-      style={{ padding: '13px 0 10px 10px', opacity: isTransitioning ? 0.5 : 1 }}
+      style={{
+        height: '100%',
+        padding: '13px 0 10px 10px',
+        display: 'flex',
+        flexDirection: 'column',
+        opacity: isTransitioning ? 0.5 : 1
+      }}
       itemContainerStyle={{ paddingBottom: '8px' }}
       header={
         <AddTopicButton onClick={() => EventEmitter.emit(EVENT_NAMES.ADD_NEW_TOPIC)}>

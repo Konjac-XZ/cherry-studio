@@ -10,6 +10,7 @@ import useNavBackgroundColor from '@renderer/hooks/useNavBackgroundColor'
 import { modelGenerating, useRuntime } from '@renderer/hooks/useRuntime'
 import { useSettings } from '@renderer/hooks/useSettings'
 import i18n from '@renderer/i18n'
+import { getSidebarIconLabel, getThemeModeLabel } from '@renderer/i18n/label'
 import { ThemeMode } from '@renderer/types'
 import { isEmoji } from '@renderer/utils'
 import { Avatar, Tooltip } from 'antd'
@@ -24,8 +25,7 @@ import {
   Palette,
   Settings,
   Sparkle,
-  Sun,
-  SunMoon
+  Sun
 } from 'lucide-react'
 import { FC } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -44,7 +44,7 @@ const Sidebar: FC = () => {
   const { pathname } = useLocation()
   const navigate = useNavigate()
 
-  const { theme, settedTheme, toggleTheme } = useTheme()
+  const { theme, setTheme } = useTheme()
   const avatar = useAvatar()
   const { t } = useTranslation()
 
@@ -105,17 +105,11 @@ const Sidebar: FC = () => {
           </Icon>
         </Tooltip>
         <Tooltip
-          title={t('settings.theme.title') + ': ' + t(`settings.theme.${settedTheme}`)}
+          title={t('settings.theme.title') + ': ' + getThemeModeLabel(theme)}
           mouseEnterDelay={0.8}
           placement="right">
-          <Icon theme={theme} onClick={() => toggleTheme()}>
-            {settedTheme === ThemeMode.dark ? (
-              <Moon size={20} className="icon" />
-            ) : settedTheme === ThemeMode.light ? (
-              <Sun size={20} className="icon" />
-            ) : (
-              <SunMoon size={20} className="icon" />
-            )}
+          <Icon theme={theme} onClick={() => setTheme(theme === ThemeMode.dark ? ThemeMode.light : ThemeMode.dark)}>
+            {theme === ThemeMode.dark ? <Moon size={20} className="icon" /> : <Sun size={20} className="icon" />}
           </Icon>
         </Tooltip>
         <Tooltip title={t('settings.title')} mouseEnterDelay={0.8} placement="right">
@@ -136,7 +130,6 @@ const Sidebar: FC = () => {
 
 const MainMenus: FC = () => {
   const { hideMinappPopup } = useMinappPopup()
-  const { t } = useTranslation()
   const { pathname } = useLocation()
   const { sidebarIcons, defaultPaintingProvider } = useSettings()
   const { minappShow } = useRuntime()
@@ -171,7 +164,7 @@ const MainMenus: FC = () => {
     const isActive = path === '/' ? isRoute(path) : isRoutes(path)
 
     return (
-      <Tooltip key={icon} title={t(`${icon}.title`)} mouseEnterDelay={0.8} placement="right">
+      <Tooltip key={icon} title={getSidebarIconLabel(icon)} mouseEnterDelay={0.8} placement="right">
         <StyledLink
           onClick={async () => {
             hideMinappPopup()
