@@ -12,11 +12,19 @@ export default function useScrollPosition(key: string) {
     })
   }, 100)
 
+  const triggerScroll = () => {
+    if (containerRef.current) {
+      const scroll = () => containerRef.current?.scrollTo({ top: window.keyv.get(scrollKey) || 0 })
+      scroll()
+      setTimeout(scroll, 50)
+    }
+  }
+
   useEffect(() => {
     const scroll = () => containerRef.current?.scrollTo({ top: window.keyv.get(scrollKey) || 0 })
     scroll()
     setTimeout(scroll, 50)
   }, [scrollKey])
 
-  return { containerRef, handleScroll }
+  return { containerRef, handleScroll, triggerScroll }
 }

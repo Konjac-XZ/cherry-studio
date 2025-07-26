@@ -54,9 +54,11 @@ interface MessagesProps {
 const logger = loggerService.withContext('Messages')
 
 const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, onComponentUpdate, onFirstUpdate }) => {
-  const { containerRef: scrollContainerRef, handleScroll: handleScrollPosition } = useScrollPosition(
-    `topic-${topic.id}`
-  )
+  const {
+    containerRef: scrollContainerRef,
+    handleScroll: handleScrollPosition,
+    triggerScroll
+  } = useScrollPosition(`topic-${topic.id}`)
   const { t } = useTranslation()
   const { showPrompt, messageNavigation } = useSettings()
   const { updateTopic, addTopic } = useAssistant(assistant.id)
@@ -122,16 +124,14 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
       if (pendingCount >= 2 && !isPending) {
         // 准备结束loading，处理skeleton显示逻辑
         setIsLoading(false)
-        // logger.silly('准备结束loading，处理skeleton显示逻辑')
         const currentTime = Date.now()
         const elapsed = currentTime - startTime
-        // logger.silly(`currentTime ${currentTime}`)
-        // logger.silly(`elapsed ${elapsed}`)
         if (elapsed <= SKELETON_DELAY_TIME) {
           clearTimeout(skeletonTimer)
         } else {
           const remainTime = SKELETON_MIN_TIME + SKELETON_DELAY_TIME - elapsed
           if (remainTime <= 0) {
+            setIsShowSkeleton(false)
             return
           }
           setTimeout(() => {
@@ -334,13 +334,8 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
 
   const groupedMessages = useMemo(() => Object.entries(getGroupedMessages(displayMessages)), [displayMessages])
 
-  if (isShowSkeleton) {
-    return (
-      <MessagesSkeletonContainer>
-        <MessageSkeleton />
-        <MessageSkeleton />
-      </MessagesSkeletonContainer>
-    )
+  if (!isShowSkeleton) {
+    triggerScroll()
   }
 
   return (
@@ -350,44 +345,54 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
       ref={scrollContainerRef}
       key={assistant.id}
       onScroll={handleScrollPosition}>
-      <NarrowLayout style={{ display: 'flex', flexDirection: 'column-reverse' }}>
-        <InfiniteScroll
-          dataLength={displayMessages.length}
-          next={loadMoreMessages}
-          hasMore={hasMore}
-          loader={null}
-          scrollableTarget="messages"
-          inverse
-          style={{ overflow: 'visible' }}>
-          <ContextMenu>
-            <ScrollContainer>
-              {groupedMessages.map(([key, groupMessages]) => (
-                <MessageGroup
-                  key={key}
-                  messages={groupMessages}
-                  topic={topic}
-                  registerMessageElement={registerMessageElement}
-                />
-              ))}
-              {isLoadingMore && (
-                <LoaderContainer>
-                  <SvgSpinners180Ring color="var(--color-text-2)" />
-                </LoaderContainer>
-              )}
-            </ScrollContainer>
-          </ContextMenu>
-        </InfiniteScroll>
+      {isShowSkeleton && (
+        <MessagesSkeletonContainer>
+          <MessageSkeleton />
+          <MessageSkeleton />
+        </MessagesSkeletonContainer>
+      )}
+      {!isShowSkeleton && (
+        <>
+          <NarrowLayout style={{ display: 'flex', flexDirection: 'column-reverse' }}>
+            <InfiniteScroll
+              dataLength={displayMessages.length}
+              next={loadMoreMessages}
+              hasMore={hasMore}
+              loader={null}
+              scrollableTarget="messages"
+              inverse
+              style={{ overflow: 'visible' }}>
+              <ContextMenu>
+                <ScrollContainer>
+                  {groupedMessages.map(([key, groupMessages]) => (
+                    <MessageGroup
+                      key={key}
+                      messages={groupMessages}
+                      topic={topic}
+                      registerMessageElement={registerMessageElement}
+                    />
+                  ))}
+                  {isLoadingMore && (
+                    <LoaderContainer>
+                      <SvgSpinners180Ring color="var(--color-text-2)" />
+                    </LoaderContainer>
+                  )}
+                </ScrollContainer>
+              </ContextMenu>
+            </InfiniteScroll>
 
-        {showPrompt && <Prompt assistant={assistant} key={assistant.prompt} topic={topic} />}
-      </NarrowLayout>
-      {messageNavigation === 'anchor' && <MessageAnchorLine messages={displayMessages} />}
-      {messageNavigation === 'buttons' && <ChatNavigation containerId="messages" />}
-      <SelectionBox
-        isMultiSelectMode={isMultiSelectMode}
-        scrollContainerRef={scrollContainerRef}
-        messageElements={messageElements.current}
-        handleSelectMessage={handleSelectMessage}
-      />
+            {showPrompt && <Prompt assistant={assistant} key={assistant.prompt} topic={topic} />}
+          </NarrowLayout>
+          {messageNavigation === 'anchor' && <MessageAnchorLine messages={displayMessages} />}
+          {messageNavigation === 'buttons' && <ChatNavigation containerId="messages" />}
+          <SelectionBox
+            isMultiSelectMode={isMultiSelectMode}
+            scrollContainerRef={scrollContainerRef}
+            messageElements={messageElements.current}
+            handleSelectMessage={handleSelectMessage}
+          />
+        </>
+      )}
     </MessagesContainer>
   )
 }
