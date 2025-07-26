@@ -1,9 +1,11 @@
+import { loggerService } from '@renderer/services/LoggerService'
 import { throttle } from 'lodash'
-import { useEffect, useRef } from 'react'
+import { useRef } from 'react'
 
 export default function useScrollPosition(key: string) {
   const containerRef = useRef<HTMLDivElement>(null)
   const scrollKey = `scroll:${key}`
+  const logger = loggerService.withContext('useScrollPosition')
 
   const handleScroll = throttle(() => {
     const position = containerRef.current?.scrollTop ?? 0
@@ -14,17 +16,17 @@ export default function useScrollPosition(key: string) {
 
   const triggerScroll = () => {
     if (containerRef.current) {
-      const scroll = () => containerRef.current?.scrollTo({ top: window.keyv.get(scrollKey) || 0 })
+      const scroll = () => {
+        const temp = window.keyv.get(scrollKey) || 0
+        logger.silly(`try to scrollTo ${temp} while scrollHeight is ${containerRef.current?.scrollHeight}`)
+        containerRef.current?.scrollTo({ top: window.keyv.get(scrollKey) || 0 })
+      }
       scroll()
-      setTimeout(scroll, 50)
+      setTimeout(() => {
+        scroll()
+      }, 50)
     }
   }
-
-  useEffect(() => {
-    const scroll = () => containerRef.current?.scrollTo({ top: window.keyv.get(scrollKey) || 0 })
-    scroll()
-    setTimeout(scroll, 50)
-  }, [scrollKey])
 
   return { containerRef, handleScroll, triggerScroll }
 }
