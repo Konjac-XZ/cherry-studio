@@ -19,7 +19,7 @@ export default function useScrollPosition(key: string) {
       const scroll = () => {
         const temp = window.keyv.get(scrollKey) || 0
         logger.silly(`try to scrollTo ${temp} while scrollHeight is ${containerRef.current?.scrollHeight}`)
-        containerRef.current?.scrollTo({ top: window.keyv.get(scrollKey) || 0 })
+        containerRef.current?.scrollTo({ top: temp })
       }
       scroll()
       setTimeout(() => {
