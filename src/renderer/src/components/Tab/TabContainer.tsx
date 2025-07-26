@@ -2,6 +2,7 @@ import { PlusOutlined } from '@ant-design/icons'
 import { isLinux, isMac, isWin } from '@renderer/config/constant'
 import { useTheme } from '@renderer/context/ThemeProvider'
 import { useFullscreen } from '@renderer/hooks/useFullscreen'
+import { getTitleLabel } from '@renderer/i18n/label'
 import tabsService from '@renderer/services/TabsService'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
 import type { Tab } from '@renderer/store/tabs'
@@ -20,11 +21,9 @@ import {
   Sparkle,
   SquareTerminal,
   Sun,
-  SunMoon,
   X
 } from 'lucide-react'
 import { useCallback, useEffect } from 'react'
-import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 
@@ -63,14 +62,13 @@ let lastSettingsPath = '/settings/provider'
 const specialTabs = ['launchpad', 'settings']
 
 const TabsContainer: React.FC<TabsContainerProps> = ({ children }) => {
-  const { t } = useTranslation()
   const location = useLocation()
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const tabs = useAppSelector((state) => state.tabs.tabs)
   const activeTabId = useAppSelector((state) => state.tabs.activeTabId)
   const isFullscreen = useFullscreen()
-  const { settedTheme, toggleTheme } = useTheme()
+  const { theme, setTheme } = useTheme()
 
   const getTabId = (path: string): string => {
     if (path === '/') return 'home'
@@ -125,19 +123,6 @@ const TabsContainer: React.FC<TabsContainerProps> = ({ children }) => {
     navigate(lastSettingsPath)
   }
 
-  const getThemeIcon = () => {
-    switch (settedTheme) {
-      case ThemeMode.dark:
-        return <Moon size={16} />
-      case ThemeMode.light:
-        return <Sun size={16} />
-      case ThemeMode.system:
-        return <SunMoon size={16} />
-      default:
-        return <SunMoon size={16} />
-    }
-  }
-
   return (
     <Container>
       <TabsBar $isFullscreen={isFullscreen}>
@@ -148,7 +133,7 @@ const TabsContainer: React.FC<TabsContainerProps> = ({ children }) => {
               <Tab key={tab.id} active={tab.id === activeTabId} onClick={() => navigate(tab.path)}>
                 <TabHeader>
                   {tab.id && <TabIcon>{getTabIcon(tab.id)}</TabIcon>}
-                  <TabTitle>{t(`title.${tab.id}`)}</TabTitle>
+                  <TabTitle>{getTitleLabel(tab.id)}</TabTitle>
                 </TabHeader>
                 {tab.id !== 'home' && (
                   <CloseButton
@@ -168,7 +153,9 @@ const TabsContainer: React.FC<TabsContainerProps> = ({ children }) => {
         </AddTabButton>
         <RightButtonsContainer>
           <TopNavbarOpenedMinappTabs />
-          <ThemeButton onClick={toggleTheme}>{getThemeIcon()}</ThemeButton>
+          <ThemeButton onClick={() => setTheme(theme === ThemeMode.dark ? ThemeMode.light : ThemeMode.dark)}>
+            {theme === ThemeMode.dark ? <Moon size={16} /> : <Sun size={16} />}
+          </ThemeButton>
           <SettingsButton onClick={handleSettingsClick} $active={activeTabId === 'settings'}>
             <Settings size={16} />
           </SettingsButton>

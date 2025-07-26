@@ -202,13 +202,14 @@ const migrateConfig = {
   '8': (state: RootState) => {
     try {
       const fixAssistantName = (assistant: Assistant) => {
+        // 2025/07/25 这俩键早没了，从远古版本迁移包出错的
         if (isEmpty(assistant.name)) {
-          assistant.name = i18n.t(`assistant.${assistant.id}.name`)
+          assistant.name = i18n.t('chat.default.name')
         }
 
         assistant.topics = assistant.topics.map((topic) => {
           if (isEmpty(topic.name)) {
-            topic.name = i18n.t(`assistant.${assistant.id}.topic.name`)
+            topic.name = i18n.t('chat.default.topic.name')
           }
           return topic
         })
@@ -280,7 +281,7 @@ const migrateConfig = {
           defaultAssistant: {
             ...state.assistants.defaultAssistant,
             name: ['Default Assistant', '默认助手'].includes(state.assistants.defaultAssistant.name)
-              ? i18n.t(`assistant.default.name`)
+              ? i18n.t('settings.assistant.label')
               : state.assistants.defaultAssistant.name
           }
         }
@@ -1842,6 +1843,44 @@ const migrateConfig = {
       return state
     } catch (error) {
       logger.error('migrate 122 error', error as Error)
+      return state
+    }
+  },
+  '123': (state: RootState) => {
+    try {
+      state.llm.providers.forEach((provider) => {
+        provider.models.forEach((model) => {
+          if (model.type && Array.isArray(model.type)) {
+            model.capabilities = model.type.map((t) => ({
+              type: t,
+              isUserSelected: true
+            }))
+            delete model.type
+          }
+        })
+      })
+
+      const lanyunProvider = state.llm.providers.find((provider) => provider.id === 'lanyun')
+      if (lanyunProvider && lanyunProvider.models.length === 0) {
+        updateProvider(state, 'lanyun', { models: SYSTEM_MODELS.lanyun })
+      }
+
+      return state
+    } catch (error) {
+      logger.error('migrate 123 error', error as Error)
+      return state
+    }
+  }, // 1.5.4
+  '124': (state: RootState) => {
+    try {
+      state.assistants.assistants.forEach((assistant) => {
+        if (assistant.settings && !assistant.settings.toolUseMode) {
+          assistant.settings.toolUseMode = 'prompt'
+        }
+      })
+      return state
+    } catch (error) {
+      logger.error('migrate 124 error', error as Error)
       return state
     }
   }

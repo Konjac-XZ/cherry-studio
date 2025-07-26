@@ -8,6 +8,7 @@ import NewApiAddModelPopup from '@renderer/components/ModelList/NewApiAddModelPo
 import { PROVIDER_CONFIG } from '@renderer/config/providers'
 import { useAssistants, useDefaultModel } from '@renderer/hooks/useAssistant'
 import { useProvider } from '@renderer/hooks/useProvider'
+import { getProviderLabel } from '@renderer/i18n/label'
 import { SettingHelpLink, SettingHelpText, SettingHelpTextRow, SettingSubtitle } from '@renderer/pages/settings'
 import { useAppDispatch } from '@renderer/store'
 import { setModel } from '@renderer/store/assistants'
@@ -112,12 +113,6 @@ const ModelList: React.FC<ModelListProps> = ({ providerId }) => {
             <CollapsibleSearchBar onSearch={setSearchText} />
           </HStack>
           <HStack>
-            <Tooltip title={t('button.manage')} mouseLeaveDelay={0}>
-              <Button type="text" onClick={onManageModel} icon={<ListCheck size={16} />} disabled={isHealthChecking} />
-            </Tooltip>
-            <Tooltip title={t('button.add')} mouseLeaveDelay={0}>
-              <Button type="text" onClick={onAddModel} icon={<Plus size={16} />} disabled={isHealthChecking} />
-            </Tooltip>
             <Tooltip title={t('settings.models.check.button_caption')} mouseLeaveDelay={0}>
               <Button
                 type="text"
@@ -147,7 +142,7 @@ const ModelList: React.FC<ModelListProps> = ({ providerId }) => {
             <SettingHelpText>{t('settings.provider.docs_check')} </SettingHelpText>
             {docsWebsite && (
               <SettingHelpLink target="_blank" href={docsWebsite}>
-                {t(`provider.${provider.id}`) + ' '}
+                {getProviderLabel(provider.id) + ' '}
                 {t('common.docs')}
               </SettingHelpLink>
             )}
@@ -162,6 +157,14 @@ const ModelList: React.FC<ModelListProps> = ({ providerId }) => {
         ) : (
           <div style={{ height: 5 }} />
         )}
+      </Flex>
+      <Flex gap={10} style={{ marginTop: 10 }}>
+        <Button type="primary" onClick={onManageModel} icon={<ListCheck size={16} />} disabled={isHealthChecking}>
+          {t('button.manage')}
+        </Button>
+        <Button type="default" onClick={onAddModel} icon={<Plus size={16} />} disabled={isHealthChecking}>
+          {t('button.add')}
+        </Button>
       </Flex>
       {models.map((model) => (
         <ModelEditContent
