@@ -5,6 +5,7 @@ export default function useScrollPosition(key: string) {
   const containerRef = useRef<HTMLDivElement>(null)
   const scrollKey = `scroll:${key}`
   // const logger = loggerService.withContext('useScrollPosition')
+  const timerRef = useRef<NodeJS.Timeout>(null)
 
   const handleScroll = throttle(() => {
     const position = containerRef.current?.scrollTop ?? 0
@@ -13,19 +14,24 @@ export default function useScrollPosition(key: string) {
     })
   }, 100)
 
-  useEffect(() => {
+  const triggerScroll = () => {
     if (containerRef.current) {
       const scroll = () => {
         containerRef.current?.scrollTo({ top: window.keyv.get(scrollKey) || 0 })
       }
       scroll()
-      const timer = setTimeout(() => {
+      timerRef.current = setTimeout(() => {
         scroll()
       }, 100)
-      return () => clearTimeout(timer)
     }
     return
-  }, [scrollKey])
+  }
 
-  return { containerRef, handleScroll }
+  useEffect(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current)
+    }
+  }, [])
+
+  return { containerRef, handleScroll, triggerScroll }
 }
