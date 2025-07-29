@@ -7,7 +7,7 @@ import { useAssistantsTabSortType } from '@renderer/hooks/useStore'
 import { useTags } from '@renderer/hooks/useTags'
 import { Assistant, AssistantsSortType } from '@renderer/types'
 import { Tooltip } from 'antd'
-import { FC, useCallback, useDeferredValue, useRef, useState } from 'react'
+import { FC, useCallback, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 
@@ -68,8 +68,6 @@ const Assistants: FC<AssistantsTabProps> = ({
     },
     [assistants, t, updateAssistants]
   )
-
-  const deferredAssistants = useDeferredValue(assistants)
 
   if (assistantsTabSortType === 'tags') {
     return (
@@ -132,7 +130,7 @@ const Assistants: FC<AssistantsTabProps> = ({
   return (
     <Container className="assistants-tab" ref={containerRef}>
       <DraggableList
-        list={deferredAssistants}
+        list={assistants}
         onUpdate={updateAssistants}
         onDragStart={() => setDragging(true)}
         onDragEnd={() => setDragging(false)}>
