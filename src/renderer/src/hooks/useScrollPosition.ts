@@ -17,7 +17,7 @@ export default function useScrollPosition(key: string) {
   const triggerScroll = () => {
     if (containerRef.current) {
       const scroll = () => {
-        containerRef.current?.scrollTo({ top: window.keyv.get(scrollKey) || 0 })
+        containerRef.current?.scrollTo({ top: window.keyv.get(scrollKey) || containerRef.current.scrollHeight })
       }
       scroll()
       timerRef.current = setTimeout(() => {
