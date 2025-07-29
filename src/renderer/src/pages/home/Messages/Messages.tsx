@@ -53,9 +53,11 @@ interface MessagesProps {
 const logger = loggerService.withContext('Messages')
 
 const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, onComponentUpdate, onFirstUpdate }) => {
-  const { containerRef: scrollContainerRef, handleScroll: handleScrollPosition } = useScrollPosition(
-    `topic-${topic.id}`
-  )
+  const {
+    containerRef: scrollContainerRef,
+    handleScroll: handleScrollPosition,
+    triggerScroll
+  } = useScrollPosition(`topic-${topic.id}`)
   const { t } = useTranslation()
   const { showPrompt, messageNavigation } = useSettings()
   const { updateTopic, addTopic } = useAssistant(assistant.id)
@@ -91,6 +93,12 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
       setHasMore(messages.length > displayCount)
     })
   }, [displayCount, messages])
+
+  const groupedMessages = useMemo(() => Object.entries(getGroupedMessages(displayMessages)), [displayMessages])
+
+  useEffect(() => {
+    triggerScroll()
+  }, [groupedMessages, triggerScroll])
 
   // NOTE: 如果设置为平滑滚动会导致滚动条无法跟随生成的新消息保持在底部位置
   const scrollToBottom = useCallback(() => {
@@ -280,8 +288,6 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
   useEffect(() => {
     requestAnimationFrame(() => onComponentUpdate?.())
   }, [onComponentUpdate])
-
-  const groupedMessages = useMemo(() => Object.entries(getGroupedMessages(displayMessages)), [displayMessages])
 
   return (
     <MessagesContainer
