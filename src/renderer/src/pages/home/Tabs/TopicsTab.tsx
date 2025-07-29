@@ -40,7 +40,7 @@ import { Dropdown, MenuProps, Tooltip } from 'antd'
 import { ItemType, MenuItemType } from 'antd/es/menu/interface'
 import dayjs from 'dayjs'
 import { findIndex } from 'lodash'
-import { FC, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, useTransition } from 'react'
+import { FC, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useDispatch, useSelector } from 'react-redux'
 import styled from 'styled-components'
@@ -52,18 +52,11 @@ interface Props {
   activeTopic: Topic
   setActiveTopic: (topic: Topic) => void
   position: 'left' | 'right'
-  willTransition: boolean
-  setWillTransition: (value: boolean) => void
 }
 
-const Topics: FC<Props> = ({
-  assistant: _assistant,
-  activeTopic,
-  setActiveTopic,
-  position,
-  willTransition,
-  setWillTransition
-}) => {
+// const logger = loggerService.withContext('TopicsTab')
+
+const Topics: FC<Props> = ({ assistant: _assistant, activeTopic, setActiveTopic, position }) => {
   const { assistants } = useAssistants()
   const { assistant, removeTopic, moveTopic, updateTopic, updateTopics } = useAssistant(_assistant.id)
   const { t } = useTranslation()
@@ -78,13 +71,39 @@ const Topics: FC<Props> = ({
 
   const [deletingTopicId, setDeletingTopicId] = useState<string | null>(null)
   const deleteTimerRef = useRef<NodeJS.Timeout>(null)
-  const [isPending, startTransition] = useTransition() // React 18+
   const [displayedTopics, setDisplayedTopics] = useState<Topic[]>([])
 
   const isTopicPending = useCallback((topicId: string) => topicLoadingQuery[topicId], [topicLoadingQuery])
   const isTopicFulfilled = useCallback((topicId: string) => topicFulfilledQuery[topicId], [topicFulfilledQuery])
   const dispatch = useDispatch()
 
+  const loadTopics = useCallback(async () => {
+    if (pinTopicsToTop) {
+      // Sort topics based on pinned status if pinTopicsToTop is enabled
+      setDisplayedTopics(
+        [...assistant.topics].sort((a, b) => {
+          if (a.pinned && !b.pinned) return -1
+          if (!a.pinned && b.pinned) return 1
+          return 0
+        })
+      )
+    } else {
+      setDisplayedTopics(assistant.topics)
+    }
+  }, [assistant.topics, pinTopicsToTop])
+
+  // 控制话题载入
+  useEffect(() => {
+    loadTopics()
+    // if (!isLoaded) {
+    //   startTransition(() => {
+    //   })
+    // } else {
+    //   loadTopics()
+    // }
+  }, [loadTopics])
+
+  // 控制 topic indicator
   useEffect(() => {
     dispatch(newMessagesActions.setTopicFulfilled({ topicId: activeTopic.id, fulfilled: false }))
   }, [activeTopic.id, dispatch, topicFulfilledQuery])
@@ -434,45 +453,18 @@ const Topics: FC<Props> = ({
     onDeleteTopic
   ])
 
-  useEffect(() => {
-    startTransition(() => {
-      if (pinTopicsToTop) {
-        // Sort topics based on pinned status if pinTopicsToTop is enabled
-        setDisplayedTopics(
-          [...assistant.topics].sort((a, b) => {
-            if (a.pinned && !b.pinned) return -1
-            if (!a.pinned && b.pinned) return 1
-            return 0
-          })
-        )
-      } else {
-        setDisplayedTopics(assistant.topics)
-      }
-    })
-  }, [assistant.topics, pinTopicsToTop])
-
   const singlealone = topicPosition === 'right' && position === 'right'
-
-  const deferredDisplayedTopics = useDeferredValue(displayedTopics)
-  const isTransitioning = isPending || willTransition
-
-  useEffect(() => {
-    if (!isPending) {
-      setWillTransition(false)
-    }
-  }, [isPending, setWillTransition])
 
   return (
     <DraggableList
       className="topics-tab"
-      list={deferredDisplayedTopics}
+      list={displayedTopics}
       onUpdate={updateTopics}
       style={{
         height: '100%',
         padding: '13px 0 10px 10px',
         display: 'flex',
-        flexDirection: 'column',
-        opacity: isTransitioning ? 0.5 : 1
+        flexDirection: 'column'
       }}
       itemContainerStyle={{ paddingBottom: '8px' }}
       header={
