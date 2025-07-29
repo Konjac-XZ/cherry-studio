@@ -2,7 +2,7 @@ import { loggerService } from '@logger'
 import ContextMenu from '@renderer/components/ContextMenu'
 import SvgSpinners180Ring from '@renderer/components/Icons/SvgSpinners180Ring'
 import Scrollbar from '@renderer/components/Scrollbar'
-import { LOAD_MORE_COUNT } from '@renderer/config/constant'
+import { LOAD_MORE_COUNT, SKELETON_MIN_TIME } from '@renderer/config/constant'
 import { useAssistant } from '@renderer/hooks/useAssistant'
 import { useChatContext } from '@renderer/hooks/useChatContext'
 import { useMessageOperations, useTopicMessages } from '@renderer/hooks/useMessageOperations'
@@ -30,6 +30,7 @@ import {
 import { updateCodeBlock } from '@renderer/utils/markdown'
 import { getMainTextContent } from '@renderer/utils/messageUtils/find'
 import { isTextLikeBlock } from '@renderer/utils/messageUtils/is'
+import { Skeleton, SkeletonProps } from 'antd'
 import { last } from 'lodash'
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -62,21 +63,71 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
   const { showPrompt, messageNavigation } = useSettings()
   const { updateTopic, addTopic } = useAssistant(assistant.id)
   const dispatch = useAppDispatch()
-  const [displayMessages, setDisplayMessages] = useState<Message[]>([])
+  const [displayMessages, setDisplayMessages] = useState<Message[] | undefined>(undefined)
   const [hasMore, setHasMore] = useState(false)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [isProcessingContext, setIsProcessingContext] = useState(false)
+  const [isLoaded, setIsLoaded] = useState(false)
+  const [skeletonTimerChecked, setSkeletonTimerChecked] = useState(false)
+  const skeletonTimer = useRef<NodeJS.Timeout>(null)
 
   const messageElements = useRef<Map<string, HTMLElement>>(new Map())
-  const messages = useTopicMessages(topic.id)
+  const messages: Message[] = useTopicMessages(topic.id)
   const { displayCount, clearTopicMessages, deleteMessage, createTopicBranch } = useMessageOperations(topic)
   const messagesRef = useRef<Message[]>(messages)
+  const displayedMessagesRef = useRef(displayMessages)
+  const isLoadedRef = useRef(isLoaded)
+  const skeletonTimerCheckedRef = useRef(skeletonTimerChecked)
 
   const { isMultiSelectMode, handleSelectMessage } = useChatContext(topic)
 
+  // 更新引用
   useEffect(() => {
     messagesRef.current = messages
   }, [messages])
+
+  useEffect(() => {
+    displayedMessagesRef.current = displayMessages
+  }, [displayMessages])
+
+  useEffect(() => {
+    isLoadedRef.current = isLoaded
+  }, [isLoaded])
+
+  useEffect(() => {
+    skeletonTimerCheckedRef.current = skeletonTimerChecked
+  }, [skeletonTimerChecked])
+
+  // 首次挂载时执行
+  useEffect(() => {
+    // logger.silly('timer set')
+    // 控制加载状态，至少在一段时间后再setIsLoaded(true)，避免闪烁
+    skeletonTimer.current = setTimeout(() => {
+      if (displayedMessagesRef.current) {
+        // logger.silly('since displayedMessagesRef is valid, timer triggerd', {
+        //   msgs: displayedMessagesRef.current
+        // })
+        setIsLoaded(true)
+      } else {
+        // logger.silly('since displayedMessagesRef is invalid, timer do nothing')
+      }
+      setSkeletonTimerChecked(true)
+    }, SKELETON_MIN_TIME)
+
+    return () => {
+      if (skeletonTimer.current) {
+        // logger.silly('since skeletonTimer is valid, clear triggered')
+        clearTimeout(skeletonTimer.current)
+      }
+    }
+  }, [])
+
+  // 控制加载状态，如果在SKELETON_MIN_TIME时刻未加载完毕，就根据displayMessages的变化判断是否加载完毕
+  useEffect(() => {
+    if (!isLoadedRef.current && displayMessages && skeletonTimerCheckedRef.current) {
+      setIsLoaded(true)
+    }
+  }, [displayMessages])
 
   const registerMessageElement = useCallback((id: string, element: HTMLElement | null) => {
     if (element) {
@@ -94,7 +145,7 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
     })
   }, [displayCount, messages])
 
-  const groupedMessages = useMemo(() => Object.entries(getGroupedMessages(displayMessages)), [displayMessages])
+  const groupedMessages = useMemo(() => Object.entries(getGroupedMessages(displayMessages ?? [])), [displayMessages])
 
   useEffect(() => {
     triggerScroll()
@@ -105,7 +156,7 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
     if (scrollContainerRef.current) {
       requestAnimationFrame(() => {
         if (scrollContainerRef.current) {
-          scrollContainerRef.current.scrollTo({ top: 0 })
+          scrollContainerRef.current.scrollTo({ top: scrollContainerRef.current.scrollHeight })
         }
       })
     }
@@ -264,18 +315,24 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
   }, [assistant, messages, onFirstUpdate])
 
   const loadMoreMessages = useCallback(async () => {
-    if (!hasMore || isLoadingMore) return
+    if (!hasMore || isLoadingMore || !displayMessages) return
 
     setIsLoadingMore(true)
     startTransition(() => {
       const currentLength = displayMessages.length
       const newMessages = computeDisplayMessages(messages, currentLength, LOAD_MORE_COUNT)
 
-      setDisplayMessages((prev) => [...prev, ...newMessages])
+      setDisplayMessages((prev) => {
+        if (prev) {
+          return [...prev, ...newMessages]
+        } else {
+          return newMessages
+        }
+      })
       setHasMore(currentLength + LOAD_MORE_COUNT < messages.length)
       setIsLoadingMore(false)
     })
-  }, [displayMessages.length, hasMore, isLoadingMore, messages])
+  }, [displayMessages, hasMore, isLoadingMore, messages])
 
   useShortcut('copy_last_message', () => {
     const lastMessage = last(messages)
@@ -296,37 +353,45 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
       ref={scrollContainerRef}
       key={assistant.id}
       onScroll={handleScrollPosition}>
-      <NarrowLayout style={{ display: 'flex', flexDirection: 'column-reverse' }}>
-        <InfiniteScroll
-          dataLength={displayMessages.length}
-          next={loadMoreMessages}
-          hasMore={hasMore}
-          loader={null}
-          scrollableTarget="messages"
-          inverse
-          style={{ overflow: 'visible' }}>
-          <ContextMenu>
-            <ScrollContainer>
-              {groupedMessages.map(([key, groupMessages]) => (
-                <MessageGroup
-                  key={key}
-                  messages={groupMessages}
-                  topic={topic}
-                  registerMessageElement={registerMessageElement}
-                />
-              ))}
-              {isLoadingMore && (
-                <LoaderContainer>
-                  <SvgSpinners180Ring color="var(--color-text-2)" />
-                </LoaderContainer>
-              )}
-            </ScrollContainer>
-          </ContextMenu>
-        </InfiniteScroll>
+      {!isLoaded && (
+        <MessagesSkeletonContainer>
+          <MessageSkeleton />
+          <MessageSkeleton />
+        </MessagesSkeletonContainer>
+      )}
+      {isLoaded && (
+        <NarrowLayout style={{ display: 'flex' }}>
+          {showPrompt && <Prompt assistant={assistant} key={assistant.prompt} topic={topic} />}
 
-        {showPrompt && <Prompt assistant={assistant} key={assistant.prompt} topic={topic} />}
-      </NarrowLayout>
-      {messageNavigation === 'anchor' && <MessageAnchorLine messages={displayMessages} />}
+          <InfiniteScroll
+            dataLength={displayMessages?.length ?? 0}
+            next={loadMoreMessages}
+            hasMore={hasMore}
+            loader={null}
+            scrollableTarget="messages"
+            inverse
+            style={{ overflow: 'visible' }}>
+            <ContextMenu>
+              <ScrollContainer>
+                {groupedMessages.map(([key, groupMessages]) => (
+                  <MessageGroup
+                    key={key}
+                    messages={groupMessages}
+                    topic={topic}
+                    registerMessageElement={registerMessageElement}
+                  />
+                ))}
+                {isLoadingMore && (
+                  <LoaderContainer>
+                    <SvgSpinners180Ring color="var(--color-text-2)" />
+                  </LoaderContainer>
+                )}
+              </ScrollContainer>
+            </ContextMenu>
+          </InfiniteScroll>
+        </NarrowLayout>
+      )}
+      {messageNavigation === 'anchor' && <MessageAnchorLine messages={displayMessages ?? []} />}
       {messageNavigation === 'buttons' && <ChatNavigation containerId="messages" />}
       <SelectionBox
         isMultiSelectMode={isMultiSelectMode}
@@ -398,10 +463,75 @@ interface ContainerProps {
 
 const MessagesContainer = styled(Scrollbar)<ContainerProps>`
   display: flex;
-  flex-direction: column-reverse;
+  flex-direction: column;
   overflow-x: hidden;
   z-index: 1;
   position: relative;
 `
+
+const MessagesSkeletonContainer = styled.div`
+  width: 100%;
+  height: 100%;
+  padding: 10px 16px 20px;
+  overflow: hidden;
+`
+
+// from MessageHeader.tsx
+const MessageHeaderSkeleton = styled.div`
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+  margin-bottom: 10px;
+`
+
+const MessageHeaderInfoSkeleton = styled.div`
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex: 1;
+`
+
+const MessageContentSkeleton = styled.div`
+  max-width: 100%;
+  padding-left: 45px;
+  margin-top: 5px;
+  overflow-y: auto;
+`
+
+const MessageSkeletonContainer = styled.div`
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  margin-bottom: 2rem;
+`
+
+const MessageSkeleton = () => {
+  return (
+    <MessageSkeletonContainer>
+      <MessageHeaderSkeleton>
+        <Skeleton.Avatar style={{ width: 35 }} />
+        <MessageHeaderInfoSkeleton>
+          <Skeleton.Node active style={{ width: '18ch', height: 16 }}></Skeleton.Node>
+          <Skeleton.Node active style={{ width: '6ch', height: 16 }}></Skeleton.Node>
+        </MessageHeaderInfoSkeleton>
+      </MessageHeaderSkeleton>
+      <MessageContentSkeleton>
+        <ParagraphSkeleton paragraph={{ rows: 1, width: '60%' }} />
+        <ParagraphSkeleton paragraph={{ rows: 1, width: '80%' }} />
+        <ParagraphSkeleton paragraph={{ rows: 1, width: '40%' }} />
+      </MessageContentSkeleton>
+    </MessageSkeletonContainer>
+  )
+}
+
+const ParagraphSkeleton = ({ paragraph }: Pick<SkeletonProps, 'paragraph'>) => {
+  return (
+    <div style={{ marginBottom: '1.3em' }}>
+      <Skeleton active title={false} paragraph={paragraph}></Skeleton>
+    </div>
+  )
+}
 
 export default Messages
