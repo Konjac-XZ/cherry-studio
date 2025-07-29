@@ -25,7 +25,7 @@ const Assistants: FC<AssistantsTabProps> = ({
   onCreateAssistant,
   onCreateDefaultAssistant
 }) => {
-  const { assistants, removeAssistant, addAssistant, updateAssistants } = useAssistants()
+  const { assistants, removeAssistant, copyAssistant, updateAssistants } = useAssistants()
   const [dragging, setDragging] = useState(false)
   const { addAgent } = useAgents()
   const { t } = useTranslation()
@@ -108,7 +108,7 @@ const Assistants: FC<AssistantsTabProps> = ({
                         onSwitch={setActiveAssistant}
                         onDelete={onDelete}
                         addAgent={addAgent}
-                        addAssistant={addAssistant}
+                        copyAssistant={copyAssistant}
                         onCreateDefaultAssistant={onCreateDefaultAssistant}
                         handleSortByChange={handleSortByChange}
                       />
@@ -145,7 +145,7 @@ const Assistants: FC<AssistantsTabProps> = ({
             onSwitch={setActiveAssistant}
             onDelete={onDelete}
             addAgent={addAgent}
-            addAssistant={addAssistant}
+            copyAssistant={copyAssistant}
             onCreateDefaultAssistant={onCreateDefaultAssistant}
             handleSortByChange={handleSortByChange}
           />
