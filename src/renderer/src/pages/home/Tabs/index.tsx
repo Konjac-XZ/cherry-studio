@@ -42,7 +42,6 @@ const HomeTabs: FC<Props> = ({
   const { defaultAssistant } = useDefaultAssistant()
   const { toggleShowTopics } = useShowTopics()
   const { isLeftNavbar } = useNavbarPosition()
-  const [willTransition, setWillTransition] = useState(true)
 
   const { t } = useTranslation()
 
@@ -81,7 +80,6 @@ const HomeTabs: FC<Props> = ({
         showTab && setTab('settings')
       }),
       EventEmitter.on(EVENT_NAMES.SWITCH_TOPIC_SIDEBAR, () => {
-        setWillTransition(true)
         showTab && setTab('topic')
         if (position === 'left' && topicPosition === 'right') {
           toggleShowTopics()
@@ -144,8 +142,6 @@ const HomeTabs: FC<Props> = ({
             activeTopic={activeTopic}
             setActiveTopic={setActiveTopic}
             position={position}
-            willTransition={willTransition}
-            setWillTransition={setWillTransition}
           />
         )}
         {tab === 'settings' && <Settings assistant={activeAssistant} />}
