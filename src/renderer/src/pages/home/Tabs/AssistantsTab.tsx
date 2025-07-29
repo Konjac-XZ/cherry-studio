@@ -7,7 +7,7 @@ import { useAssistantsTabSortType } from '@renderer/hooks/useStore'
 import { useTags } from '@renderer/hooks/useTags'
 import { Assistant, AssistantsSortType } from '@renderer/types'
 import { Tooltip } from 'antd'
-import { FC, useCallback, useRef, useState } from 'react'
+import { FC, startTransition, useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 
@@ -19,6 +19,12 @@ interface AssistantsTabProps {
   onCreateAssistant: () => void
   onCreateDefaultAssistant: () => void
 }
+
+type GroupedAssistant = {
+  tag: string
+  assistants: Assistant[]
+}
+
 const Assistants: FC<AssistantsTabProps> = ({
   activeAssistant,
   setActiveAssistant,
@@ -30,8 +36,33 @@ const Assistants: FC<AssistantsTabProps> = ({
   const { addAgent } = useAgents()
   const { t } = useTranslation()
   const { getGroupedAssistants, collapsedTags, toggleTagCollapse } = useTags()
+  const [displayedAssistants, setDisplayedAssistants] = useState<Assistant[] | GroupedAssistant[]>([])
   const { assistantsTabSortType = 'list', setAssistantsTabSortType } = useAssistantsTabSortType()
+  const [isLoaded, setIsLoaded] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
+  const isLoadedRef = useRef(isLoaded)
+
+  // FIXME: getGroupedAssistants 依赖 assistants，会触发不必要的更新
+  const updateDisplayedAssistants = useCallback(async () => {
+    if (assistantsTabSortType === 'list') {
+      setDisplayedAssistants(assistants)
+    } else if (assistantsTabSortType === 'tags') {
+      setDisplayedAssistants(getGroupedAssistants)
+    }
+  }, [assistants, assistantsTabSortType, getGroupedAssistants])
+
+  useEffect(() => {
+    isLoadedRef.current = isLoaded
+  }, [isLoaded])
+
+  useEffect(() => {
+    if (isLoadedRef.current) {
+      updateDisplayedAssistants()
+    } else {
+      startTransition(updateDisplayedAssistants)
+      setIsLoaded(true)
+    }
+  }, [updateDisplayedAssistants])
 
   const onDelete = useCallback(
     (assistant: Assistant) => {
@@ -73,7 +104,7 @@ const Assistants: FC<AssistantsTabProps> = ({
     return (
       <Container className="assistants-tab" ref={containerRef}>
         <div style={{ marginBottom: '8px' }}>
-          {getGroupedAssistants.map((group) => (
+          {displayedAssistants.map((group) => (
             <TagsContainer key={group.tag}>
               {group.tag !== t('assistants.tags.untagged') && (
                 <GroupTitle onClick={() => toggleTagCollapse(group.tag)}>
@@ -92,6 +123,7 @@ const Assistants: FC<AssistantsTabProps> = ({
               )}
               {!collapsedTags[group.tag] && (
                 <div>
+                  {/* FIXME: 这个DraggableList的虚拟化性能不如tanstack的好，可以考虑换掉 */}
                   <DraggableList
                     list={group.assistants}
                     onUpdate={(newList) => handleGroupReorder(group.tag, newList)}
@@ -130,7 +162,7 @@ const Assistants: FC<AssistantsTabProps> = ({
   return (
     <Container className="assistants-tab" ref={containerRef}>
       <DraggableList
-        list={assistants}
+        list={displayedAssistants}
         onUpdate={updateAssistants}
         onDragStart={() => setDragging(true)}
         onDragEnd={() => setDragging(false)}>
