@@ -124,6 +124,11 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
 
   // 控制加载状态，如果在SKELETON_MIN_TIME时刻未加载完毕，就根据displayMessages的变化判断是否加载完毕
   useEffect(() => {
+    logger.silly('displayMessages change, effect', {
+      isLoaded: isLoadedRef.current,
+      displayMessages,
+      skeletonTimerChecked: skeletonTimerCheckedRef.current
+    })
     if (!isLoadedRef.current && displayMessages && skeletonTimerCheckedRef.current) {
       logger.silly('since timer checked and data is loaded, setIsLoaded(true)')
       setIsLoaded(true)
