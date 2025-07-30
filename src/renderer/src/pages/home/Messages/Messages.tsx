@@ -77,7 +77,6 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
   const messagesRef = useRef<Message[]>(messages)
   const displayedMessagesRef = useRef(displayMessages)
   const isLoadedRef = useRef(isLoaded)
-  const skeletonTimerCheckedRef = useRef(skeletonTimerChecked)
 
   const { isMultiSelectMode, handleSelectMessage } = useChatContext(topic)
 
@@ -94,15 +93,12 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
     isLoadedRef.current = isLoaded
   }, [isLoaded])
 
-  useEffect(() => {
-    skeletonTimerCheckedRef.current = skeletonTimerChecked
-  }, [skeletonTimerChecked])
-
   // 首次挂载时执行
   useEffect(() => {
     logger.silly('timer set')
     // 控制加载状态，至少在一段时间后再setIsLoaded(true)，避免闪烁
     skeletonTimer.current = setTimeout(() => {
+      setSkeletonTimerChecked(true)
       if (displayedMessagesRef.current) {
         logger.silly('since displayedMessagesRef is valid, timer triggerd', {
           msgs: displayedMessagesRef.current
@@ -111,7 +107,6 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
       } else {
         logger.silly('since displayedMessagesRef is invalid, timer do nothing')
       }
-      setSkeletonTimerChecked(true)
     }, SKELETON_MIN_TIME)
 
     return () => {
@@ -127,15 +122,15 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
     logger.silly('displayMessages change, effect', {
       isLoaded: isLoadedRef.current,
       displayMessages,
-      skeletonTimerChecked: skeletonTimerCheckedRef.current
+      skeletonTimerChecked: skeletonTimerChecked
     })
-    if (!isLoadedRef.current && displayMessages && skeletonTimerCheckedRef.current) {
+    if (!isLoadedRef.current && displayMessages && skeletonTimerChecked) {
       logger.silly('since timer checked and data is loaded, setIsLoaded(true)')
       setIsLoaded(true)
     } else {
       logger.silly('since condition is not satisfied, this effect do nothing')
     }
-  }, [displayMessages])
+  }, [displayMessages, skeletonTimerChecked])
 
   const registerMessageElement = useCallback((id: string, element: HTMLElement | null) => {
     if (element) {
