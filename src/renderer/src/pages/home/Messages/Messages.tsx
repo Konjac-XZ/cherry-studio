@@ -149,7 +149,7 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
 
   useEffect(() => {
     triggerScroll()
-  }, [groupedMessages, triggerScroll])
+  }, [groupedMessages, triggerScroll, isLoaded])
 
   // NOTE: 如果设置为平滑滚动会导致滚动条无法跟随生成的新消息保持在底部位置
   const scrollToBottom = useCallback(() => {
