@@ -1,10 +1,11 @@
 import { throttle } from 'lodash'
 import { useEffect, useRef } from 'react'
 
+// const logger = loggerService.withContext('useScrollPosition')
+
 export default function useScrollPosition(key: string) {
   const containerRef = useRef<HTMLDivElement>(null)
   const scrollKey = `scroll:${key}`
-  // const logger = loggerService.withContext('useScrollPosition')
   const timerRef = useRef<NodeJS.Timeout>(null)
 
   const handleScroll = throttle(() => {
