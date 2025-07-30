@@ -156,15 +156,17 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
   const groupedMessages = useMemo(() => Object.entries(getGroupedMessages(displayMessages ?? [])), [displayMessages])
 
   useEffect(() => {
-    triggerScroll()
-  }, [groupedMessages, triggerScroll, isLoaded])
+    if (isLoaded) {
+      triggerScroll()
+    }
+  }, [triggerScroll, isLoaded])
 
   // NOTE: 如果设置为平滑滚动会导致滚动条无法跟随生成的新消息保持在底部位置
   const scrollToBottom = useCallback(() => {
     if (scrollContainerRef.current) {
       requestAnimationFrame(() => {
         if (scrollContainerRef.current) {
-          scrollContainerRef.current.scrollTo({ top: scrollContainerRef.current.scrollHeight })
+          scrollContainerRef.current.scrollTo({ top: 0 })
         }
       })
     }
@@ -369,8 +371,6 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
       )}
       {isLoaded && (
         <NarrowLayout style={{ display: 'flex' }}>
-          {showPrompt && <Prompt assistant={assistant} key={assistant.prompt} topic={topic} />}
-
           <InfiniteScroll
             dataLength={displayMessages?.length ?? 0}
             next={loadMoreMessages}
@@ -397,6 +397,10 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
               </ScrollContainer>
             </ContextMenu>
           </InfiniteScroll>
+          {/* NOTE: 不要修改column-reverse并移动Prompt组件到顶端，否则滚动控制将会失效 */}
+          {/* 因为在column-reverse样式下，消息容器底端scrollTop会保持在0，新消息生成时也能保持滚动位置在底部 */}
+          {/* 如果不是column-reverse，那么容器底端的scrollTop就会在新消息生成时产生变动，导致滚动位置停留在新消息生成前的位置，无法跟随滚动 */}
+          {showPrompt && <Prompt assistant={assistant} key={assistant.prompt} topic={topic} />}
         </NarrowLayout>
       )}
       {messageNavigation === 'anchor' && <MessageAnchorLine messages={displayMessages ?? []} />}
@@ -471,7 +475,7 @@ interface ContainerProps {
 
 const MessagesContainer = styled(Scrollbar)<ContainerProps>`
   display: flex;
-  flex-direction: column;
+  flex-direction: column-reverse;
   overflow-x: hidden;
   z-index: 1;
   position: relative;
