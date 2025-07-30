@@ -100,23 +100,23 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
 
   // 首次挂载时执行
   useEffect(() => {
-    // logger.silly('timer set')
+    logger.silly('timer set')
     // 控制加载状态，至少在一段时间后再setIsLoaded(true)，避免闪烁
     skeletonTimer.current = setTimeout(() => {
       if (displayedMessagesRef.current) {
-        // logger.silly('since displayedMessagesRef is valid, timer triggerd', {
-        //   msgs: displayedMessagesRef.current
-        // })
+        logger.silly('since displayedMessagesRef is valid, timer triggerd', {
+          msgs: displayedMessagesRef.current
+        })
         setIsLoaded(true)
       } else {
-        // logger.silly('since displayedMessagesRef is invalid, timer do nothing')
+        logger.silly('since displayedMessagesRef is invalid, timer do nothing')
       }
       setSkeletonTimerChecked(true)
     }, SKELETON_MIN_TIME)
 
     return () => {
       if (skeletonTimer.current) {
-        // logger.silly('since skeletonTimer is valid, clear triggered')
+        logger.silly('since skeletonTimer is valid, clear triggered')
         clearTimeout(skeletonTimer.current)
       }
     }
@@ -125,7 +125,10 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
   // 控制加载状态，如果在SKELETON_MIN_TIME时刻未加载完毕，就根据displayMessages的变化判断是否加载完毕
   useEffect(() => {
     if (!isLoadedRef.current && displayMessages && skeletonTimerCheckedRef.current) {
+      logger.silly('since timer checked and data is loaded, setIsLoaded(true)')
       setIsLoaded(true)
+    } else {
+      logger.silly('since condition is not satisfied, this effect do nothing')
     }
   }, [displayMessages])
 
