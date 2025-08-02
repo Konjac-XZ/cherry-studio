@@ -10,7 +10,7 @@ import {
   QuestionCircleOutlined,
   UploadOutlined
 } from '@ant-design/icons'
-import { DraggableVirtualList as DraggableList } from '@renderer/components/DraggableList'
+import { DraggableVirtualList } from '@renderer/components/DraggableList'
 import CopyIcon from '@renderer/components/Icons/CopyIcon'
 import ObsidianExportPopup from '@renderer/components/Popups/ObsidianExportPopup'
 import PromptPopup from '@renderer/components/Popups/PromptPopup'
@@ -456,16 +456,11 @@ const Topics: FC<Props> = ({ assistant: _assistant, activeTopic, setActiveTopic,
   const singlealone = topicPosition === 'right' && position === 'right'
 
   return (
-    <DraggableList
+    <DraggableVirtualList
       className="topics-tab"
       list={displayedTopics}
       onUpdate={updateTopics}
-      style={{
-        height: '100%',
-        padding: '13px 0 10px 10px',
-        display: 'flex',
-        flexDirection: 'column'
-      }}
+      style={{ height: '100%', padding: '13px 0 10px 10px' }}
       itemContainerStyle={{ paddingBottom: '8px' }}
       header={
         <AddTopicButton onClick={() => EventEmitter.emit(EVENT_NAMES.ADD_NEW_TOPIC)}>
@@ -544,7 +539,7 @@ const Topics: FC<Props> = ({ assistant: _assistant, activeTopic, setActiveTopic,
           </Dropdown>
         )
       }}
-    </DraggableList>
+    </DraggableVirtualList>
   )
 }
 
