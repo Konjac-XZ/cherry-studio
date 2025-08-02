@@ -7,11 +7,13 @@ import { useAssistantsTabSortType } from '@renderer/hooks/useStore'
 import { useTags } from '@renderer/hooks/useTags'
 import { Assistant, AssistantsSortType } from '@renderer/types'
 import { Tooltip } from 'antd'
-import { FC, startTransition, useCallback, useEffect, useRef, useState } from 'react'
+import { FC, useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 
 import AssistantItem from './components/AssistantItem'
+
+// const logger = loggerService.withContext('AssistantsTab')
 
 interface AssistantsTabProps {
   activeAssistant: Assistant
@@ -41,6 +43,7 @@ const Assistants: FC<AssistantsTabProps> = ({
   const [isLoaded, setIsLoaded] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const isLoadedRef = useRef(isLoaded)
+  const [isPending, startTransition] = useTransition()
 
   // FIXME: getGroupedAssistants 依赖 assistants，会触发不必要的更新
   const updateDisplayedAssistants = useCallback(async () => {
@@ -83,6 +86,14 @@ const Assistants: FC<AssistantsTabProps> = ({
     [setAssistantsTabSortType]
   )
 
+  const handleReorder = useCallback(
+    (newList: Assistant[]) => {
+      setDisplayedAssistants(newList)
+      updateAssistants(newList)
+    },
+    [updateAssistants]
+  )
+
   const handleGroupReorder = useCallback(
     (tag: string, newGroupList: Assistant[]) => {
       let insertIndex = 0
@@ -123,7 +134,6 @@ const Assistants: FC<AssistantsTabProps> = ({
               )}
               {!collapsedTags[group.tag] && (
                 <div>
-                  {/* FIXME: 这个DraggableList的虚拟化性能不如tanstack的好，可以考虑换掉 */}
                   <DraggableList
                     list={group.assistants}
                     onUpdate={(newList) => handleGroupReorder(group.tag, newList)}
@@ -163,7 +173,7 @@ const Assistants: FC<AssistantsTabProps> = ({
     <Container className="assistants-tab" ref={containerRef}>
       <DraggableList
         list={displayedAssistants}
-        onUpdate={updateAssistants}
+        onUpdate={handleReorder}
         onDragStart={() => setDragging(true)}
         onDragEnd={() => setDragging(false)}>
         {(assistant) => (
@@ -181,7 +191,7 @@ const Assistants: FC<AssistantsTabProps> = ({
           />
         )}
       </DraggableList>
-      {!dragging && (
+      {!dragging && !isPending && (
         <AssistantAddItem onClick={onCreateAssistant}>
           <AssistantName>
             <PlusOutlined style={{ color: 'var(--color-text-2)', marginRight: 4 }} />
