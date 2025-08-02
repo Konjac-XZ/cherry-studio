@@ -40,7 +40,7 @@ import { Dropdown, MenuProps, Tooltip } from 'antd'
 import { ItemType, MenuItemType } from 'antd/es/menu/interface'
 import dayjs from 'dayjs'
 import { findIndex } from 'lodash'
-import { FC, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
+import { FC, startTransition, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useDispatch, useSelector } from 'react-redux'
 import styled from 'styled-components'
@@ -71,7 +71,7 @@ const Topics: FC<Props> = ({ assistant: _assistant, activeTopic, setActiveTopic,
 
   const [deletingTopicId, setDeletingTopicId] = useState<string | null>(null)
   const deleteTimerRef = useRef<NodeJS.Timeout>(null)
-  const [displayedTopics, setDisplayedTopics] = useState<Topic[]>([])
+  const [displayedTopics, setDisplayedTopics] = useState<Topic[]>()
 
   const isTopicPending = useCallback((topicId: string) => topicLoadingQuery[topicId], [topicLoadingQuery])
   const isTopicFulfilled = useCallback((topicId: string) => topicFulfilledQuery[topicId], [topicFulfilledQuery])
@@ -92,16 +92,18 @@ const Topics: FC<Props> = ({ assistant: _assistant, activeTopic, setActiveTopic,
     }
   }, [assistant.topics, pinTopicsToTop])
 
+  const isLoaded = useMemo(() => displayedTopics !== undefined, [displayedTopics])
+
   // 控制话题载入
   useEffect(() => {
-    loadTopics()
-    // if (!isLoaded) {
-    //   startTransition(() => {
-    //   })
-    // } else {
-    //   loadTopics()
-    // }
-  }, [loadTopics])
+    if (!isLoaded) {
+      startTransition(() => {
+        loadTopics()
+      })
+    } else {
+      loadTopics()
+    }
+  }, [isLoaded, loadTopics])
 
   // 控制 topic indicator
   useEffect(() => {
@@ -458,7 +460,7 @@ const Topics: FC<Props> = ({ assistant: _assistant, activeTopic, setActiveTopic,
   return (
     <DraggableVirtualList
       className="topics-tab"
-      list={displayedTopics}
+      list={displayedTopics ?? []}
       onUpdate={updateTopics}
       style={{ height: '100%', padding: '13px 0 10px 10px' }}
       itemContainerStyle={{ paddingBottom: '8px' }}
