@@ -365,7 +365,7 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
         </MessagesSkeletonContainer>
       )}
       {isLoaded && (
-        <NarrowLayout style={{ display: 'flex' }}>
+        <NarrowLayout style={{ display: 'flex', flexDirection: 'column-reverse' }}>
           <InfiniteScroll
             dataLength={displayMessages?.length ?? 0}
             next={loadMoreMessages}
