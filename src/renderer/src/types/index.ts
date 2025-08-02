@@ -444,9 +444,9 @@ export interface KnowledgeBase {
   rerankModel?: Model
   // topN?: number
   // preprocessing?: boolean
-  preprocessOrOcrProvider?: {
-    type: 'preprocess' | 'ocr'
-    provider: PreprocessProvider | OcrProvider
+  preprocessProvider?: {
+    type: 'preprocess'
+    provider: PreprocessProvider
   }
 }
 
@@ -467,23 +467,13 @@ export type KnowledgeBaseParams = {
   rerankApiClient?: ApiClient
   documentCount?: number
   // preprocessing?: boolean
-  preprocessOrOcrProvider?: {
-    type: 'preprocess' | 'ocr'
-    provider: PreprocessProvider | OcrProvider
+  preprocessProvider?: {
+    type: 'preprocess'
+    provider: PreprocessProvider
   }
 }
 
 export interface PreprocessProvider {
-  id: string
-  name: string
-  apiKey?: string
-  apiHost?: string
-  model?: string
-  options?: any
-  quota?: number
-}
-
-export interface OcrProvider {
   id: string
   name: string
   apiKey?: string
@@ -842,6 +832,7 @@ export type S3Config = {
 export type { Message } from './newMessage'
 
 export interface ApiServerConfig {
+  enabled: boolean
   host: string
   port: number
   apiKey: string
