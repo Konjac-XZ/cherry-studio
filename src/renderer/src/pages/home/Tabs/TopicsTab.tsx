@@ -1,21 +1,11 @@
-import {
-  ClearOutlined,
-  CloseOutlined,
-  DeleteOutlined,
-  EditOutlined,
-  FolderOutlined,
-  MenuOutlined,
-  PlusOutlined,
-  PushpinOutlined,
-  QuestionCircleOutlined,
-  UploadOutlined
-} from '@ant-design/icons'
 import { DraggableVirtualList } from '@renderer/components/DraggableList'
-import CopyIcon from '@renderer/components/Icons/CopyIcon'
+import { CopyIcon, DeleteIcon, EditIcon } from '@renderer/components/Icons'
 import ObsidianExportPopup from '@renderer/components/Popups/ObsidianExportPopup'
 import PromptPopup from '@renderer/components/Popups/PromptPopup'
+import SaveToKnowledgePopup from '@renderer/components/Popups/SaveToKnowledgePopup'
 import { isMac } from '@renderer/config/constant'
 import { useAssistant, useAssistants } from '@renderer/hooks/useAssistant'
+import { useInPlaceEdit } from '@renderer/hooks/useInPlaceEdit'
 import { modelGenerating } from '@renderer/hooks/useRuntime'
 import { useSettings } from '@renderer/hooks/useSettings'
 import { finishTopicRenaming, startTopicRenaming, TopicManager } from '@renderer/hooks/useTopic'
@@ -40,6 +30,20 @@ import { Dropdown, MenuProps, Tooltip } from 'antd'
 import { ItemType, MenuItemType } from 'antd/es/menu/interface'
 import dayjs from 'dayjs'
 import { findIndex } from 'lodash'
+import {
+  BrushCleaning,
+  FolderOpen,
+  HelpCircle,
+  MenuIcon,
+  PackagePlus,
+  PinIcon,
+  PinOffIcon,
+  PlusIcon,
+  Save,
+  Sparkles,
+  UploadIcon,
+  XIcon
+} from 'lucide-react'
 import { FC, startTransition, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useDispatch, useSelector } from 'react-redux'
@@ -72,6 +76,22 @@ const Topics: FC<Props> = ({ assistant: _assistant, activeTopic, setActiveTopic,
   const [deletingTopicId, setDeletingTopicId] = useState<string | null>(null)
   const deleteTimerRef = useRef<NodeJS.Timeout>(null)
   const [displayedTopics, setDisplayedTopics] = useState<Topic[]>()
+  const [editingTopicId, setEditingTopicId] = useState<string | null>(null)
+
+  const topicEdit = useInPlaceEdit({
+    onSave: (name: string) => {
+      const topic = assistant.topics.find((t) => t.id === editingTopicId)
+      if (topic && name !== topic.name) {
+        const updatedTopic = { ...topic, name, isNameManuallyEdited: true }
+        updateTopic(updatedTopic)
+        window.message.success(t('common.saved'))
+      }
+      setEditingTopicId(null)
+    },
+    onCancel: () => {
+      setEditingTopicId(null)
+    }
+  })
 
   const isTopicPending = useCallback((topicId: string) => topicLoadingQuery[topicId], [topicLoadingQuery])
   const isTopicFulfilled = useCallback((topicId: string) => topicFulfilledQuery[topicId], [topicFulfilledQuery])
@@ -209,7 +229,7 @@ const Topics: FC<Props> = ({ assistant: _assistant, activeTopic, setActiveTopic,
       {
         label: t('chat.topics.auto_rename'),
         key: 'auto-rename',
-        icon: <i className="iconfont icon-business-smart-assistant" style={{ fontSize: '14px' }} />,
+        icon: <Sparkles size={14} />,
         disabled: isRenaming(topic.id),
         async onClick() {
           const messages = await TopicManager.getTopicMessages(topic.id)
@@ -232,27 +252,20 @@ const Topics: FC<Props> = ({ assistant: _assistant, activeTopic, setActiveTopic,
       {
         label: t('chat.topics.edit.title'),
         key: 'rename',
-        icon: <EditOutlined />,
+        icon: <EditIcon size={14} />,
         disabled: isRenaming(topic.id),
-        async onClick() {
-          const name = await PromptPopup.show({
-            title: t('chat.topics.edit.title'),
-            message: '',
-            defaultValue: topic?.name || ''
-          })
-          if (name && topic?.name !== name) {
-            const updatedTopic = { ...topic, name, isNameManuallyEdited: true }
-            updateTopic(updatedTopic)
-          }
+        onClick() {
+          setEditingTopicId(topic.id)
+          topicEdit.startEdit(topic.name)
         }
       },
       {
         label: t('chat.topics.prompt.label'),
         key: 'topic-prompt',
-        icon: <i className="iconfont icon-ai-model1" style={{ fontSize: '14px' }} />,
+        icon: <PackagePlus size={14} />,
         extra: (
           <Tooltip title={t('chat.topics.prompt.tips')}>
-            <QuestionIcon />
+            <HelpCircle size={14} />
           </Tooltip>
         ),
         async onClick() {
@@ -275,9 +288,9 @@ const Topics: FC<Props> = ({ assistant: _assistant, activeTopic, setActiveTopic,
         }
       },
       {
-        label: topic.pinned ? t('chat.topics.unpinned') : t('chat.topics.pinned'),
+        label: topic.pinned ? t('chat.topics.unpin') : t('chat.topics.pin'),
         key: 'pin',
-        icon: <PushpinOutlined />,
+        icon: topic.pinned ? <PinOffIcon size={14} /> : <PinIcon size={14} />,
         onClick() {
           onPinTopic(topic)
         }
@@ -285,7 +298,7 @@ const Topics: FC<Props> = ({ assistant: _assistant, activeTopic, setActiveTopic,
       {
         label: t('chat.topics.clear.title'),
         key: 'clear-messages',
-        icon: <ClearOutlined />,
+        icon: <BrushCleaning size={14} />,
         async onClick() {
           window.modal.confirm({
             title: t('chat.input.clear.content'),
@@ -297,7 +310,7 @@ const Topics: FC<Props> = ({ assistant: _assistant, activeTopic, setActiveTopic,
       {
         label: t('settings.topic.position.label'),
         key: 'topic-position',
-        icon: <MenuOutlined />,
+        icon: <MenuIcon size={14} />,
         children: [
           {
             label: t('settings.topic.position.left'),
@@ -314,7 +327,7 @@ const Topics: FC<Props> = ({ assistant: _assistant, activeTopic, setActiveTopic,
       {
         label: t('chat.topics.copy.title'),
         key: 'copy',
-        icon: <CopyIcon />,
+        icon: <CopyIcon size={14} />,
         children: [
           {
             label: t('chat.topics.copy.image'),
@@ -334,9 +347,30 @@ const Topics: FC<Props> = ({ assistant: _assistant, activeTopic, setActiveTopic,
         ]
       },
       {
+        label: t('chat.save.label'),
+        key: 'save',
+        icon: <Save size={14} />,
+        children: [
+          {
+            label: t('chat.save.topic.knowledge.title'),
+            key: 'knowledge',
+            onClick: async () => {
+              try {
+                const result = await SaveToKnowledgePopup.showForTopic(topic)
+                if (result?.success) {
+                  window.message.success(t('chat.save.topic.knowledge.success', { count: result.savedCount }))
+                }
+              } catch {
+                window.message.error(t('chat.save.topic.knowledge.error.save_failed'))
+              }
+            }
+          }
+        ]
+      },
+      {
         label: t('chat.topics.export.title'),
         key: 'export',
-        icon: <UploadOutlined />,
+        icon: <UploadIcon size={14} />,
         children: [
           exportMenuOptions.image && {
             label: t('chat.topics.export.image'),
@@ -407,7 +441,7 @@ const Topics: FC<Props> = ({ assistant: _assistant, activeTopic, setActiveTopic,
       menus.push({
         label: t('chat.topics.move_to'),
         key: 'move',
-        icon: <FolderOutlined />,
+        icon: <FolderOpen size={14} />,
         children: assistants
           .filter((a) => a.id !== assistant.id)
           .map((a) => ({
@@ -424,7 +458,7 @@ const Topics: FC<Props> = ({ assistant: _assistant, activeTopic, setActiveTopic,
         label: t('common.delete'),
         danger: true,
         key: 'delete',
-        icon: <DeleteOutlined />,
+        icon: <DeleteIcon size={14} className="lucide-custom" />,
         onClick: () => onDeleteTopic(topic)
       })
     }
@@ -446,6 +480,7 @@ const Topics: FC<Props> = ({ assistant: _assistant, activeTopic, setActiveTopic,
     assistants,
     assistant,
     updateTopic,
+    topicEdit,
     activeTopic.id,
     setActiveTopic,
     onPinTopic,
@@ -466,7 +501,7 @@ const Topics: FC<Props> = ({ assistant: _assistant, activeTopic, setActiveTopic,
       itemContainerStyle={{ paddingBottom: '8px' }}
       header={
         <AddTopicButton onClick={() => EventEmitter.emit(EVENT_NAMES.ADD_NEW_TOPIC)}>
-          <PlusOutlined />
+          <PlusIcon size={16} />
           {t('chat.add.topic.title')}
         </AddTopicButton>
       }>
@@ -487,14 +522,27 @@ const Topics: FC<Props> = ({ assistant: _assistant, activeTopic, setActiveTopic,
             <TopicListItem
               onContextMenu={() => setTargetTopic(topic)}
               className={classNames(isActive ? 'active' : '', singlealone ? 'singlealone' : '')}
-              onClick={() => onSwitchTopic(topic)}
-              style={{ borderRadius }}>
+              onClick={editingTopicId === topic.id && topicEdit.isEditing ? undefined : () => onSwitchTopic(topic)}
+              style={{
+                borderRadius,
+                cursor: editingTopicId === topic.id && topicEdit.isEditing ? 'default' : 'pointer'
+              }}>
               {isTopicPending(topic.id) && !isActive && <PendingIndicator />}
               {isTopicFulfilled(topic.id) && !isActive && <FulfilledIndicator />}
               <TopicNameContainer>
-                <TopicName className={getTopicNameClassName()} title={topicName}>
-                  {topicName}
-                </TopicName>
+                {editingTopicId === topic.id && topicEdit.isEditing ? (
+                  <TopicEditInput
+                    ref={topicEdit.inputRef}
+                    value={topicEdit.editValue}
+                    onChange={topicEdit.handleInputChange}
+                    onKeyDown={topicEdit.handleKeyDown}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                ) : (
+                  <TopicName className={getTopicNameClassName()} title={topicName}>
+                    {topicName}
+                  </TopicName>
+                )}
                 {!topic.pinned && (
                   <Tooltip
                     placement="bottom"
@@ -518,16 +566,16 @@ const Topics: FC<Props> = ({ assistant: _assistant, activeTopic, setActiveTopic,
                         }
                       }}>
                       {deletingTopicId === topic.id ? (
-                        <DeleteOutlined style={{ color: 'var(--color-error)' }} />
+                        <DeleteIcon size={14} color="var(--color-error)" />
                       ) : (
-                        <CloseOutlined />
+                        <XIcon size={14} color="var(--color-text-3)" />
                       )}
                     </MenuButton>
                   </Tooltip>
                 )}
                 {topic.pinned && (
                   <MenuButton className="pin">
-                    <PushpinOutlined />
+                    <PinIcon size={14} color="var(--color-text-3)" />
                   </MenuButton>
                 )}
               </TopicNameContainer>
@@ -645,6 +693,23 @@ const TopicName = styled.div`
   }
 `
 
+const TopicEditInput = styled.input`
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  color: var(--color-text-1);
+  font-size: 13px;
+  font-family: inherit;
+  padding: 2px 6px;
+  width: 100%;
+  outline: none;
+
+  &:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px var(--color-primary-alpha);
+  }
+`
+
 const PendingIndicator = styled.div.attrs({
   className: 'animation-pulse'
 })`
@@ -723,11 +788,6 @@ const MenuButton = styled.div`
   .anticon {
     font-size: 12px;
   }
-`
-const QuestionIcon = styled(QuestionCircleOutlined)`
-  font-size: 14px;
-  cursor: pointer;
-  color: var(--color-text-3);
 `
 
 export default Topics
