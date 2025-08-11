@@ -8,8 +8,9 @@ import { isVisionModel } from '@renderer/config/models'
 import { useMessageEditing } from '@renderer/context/MessageEditingContext'
 import { useChatContext } from '@renderer/hooks/useChatContext'
 import { useMessageOperations, useTopicLoading } from '@renderer/hooks/useMessageOperations'
-import { useEnableDeveloperMode, useMessageStyle } from '@renderer/hooks/useSettings'
+import { useEnableDeveloperMode, useMessageStyle, useSettings } from '@renderer/hooks/useSettings'
 import useTranslate from '@renderer/hooks/useTranslate'
+import { UNKNOWN } from '@renderer/config/translate'
 import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import { getMessageTitle } from '@renderer/services/MessagesService'
 import { translateText } from '@renderer/services/TranslateService'
@@ -82,7 +83,8 @@ const MessageMenubar: FC<Props> = (props) => {
   const [isTranslating, setIsTranslating] = useState(false)
   const [showRegenerateTooltip, setShowRegenerateTooltip] = useState(false)
   const [showDeleteTooltip, setShowDeleteTooltip] = useState(false)
-  const { translateLanguages } = useTranslate()
+  const { translateLanguages, getLanguageByLangcode } = useTranslate()
+  const { userNativeLanguage: userNativeLanguageCode } = useSettings()
   // const assistantModel = assistant?.model
   const {
     deleteMessage,
@@ -102,6 +104,13 @@ const MessageMenubar: FC<Props> = (props) => {
 
   const exportMenuOptions = useSelector((state: RootState) => state.settings.exportMenuOptions)
   const dispatch = useAppDispatch()
+
+  // Resolve user's default/native language to TranslateLanguage object
+  const userNativeLanguage = useMemo(() => {
+    if (!userNativeLanguageCode) return undefined
+    const lang = getLanguageByLangcode(userNativeLanguageCode)
+    return lang.langCode === UNKNOWN.langCode ? undefined : lang
+  }, [getLanguageByLangcode, userNativeLanguageCode])
 
   // const processedMessage = useMemo(() => {
   //   if (message.role === 'assistant' && message.model && isReasoningModel(message.model)) {
@@ -196,6 +205,12 @@ const MessageMenubar: FC<Props> = (props) => {
     },
     [isTranslating, message, getTranslationUpdater, mainTextContent, t, dispatch]
   )
+
+  const handleDirectTranslate = useCallback(async () => {
+    if (userNativeLanguage) {
+      await handleTranslate(userNativeLanguage)
+    }
+  }, [userNativeLanguage, handleTranslate])
 
   const handleTraceUserMessage = useCallback(async () => {
     if (message.traceId) {
@@ -500,81 +515,90 @@ const MessageMenubar: FC<Props> = (props) => {
             </ActionButton>
           </Tooltip>
         )}
-        {!isUserMessage && (
-          <Dropdown
-            menu={{
-              style: {
-                maxHeight: 250,
-                overflowY: 'auto',
-                backgroundClip: 'border-box'
-              },
-              items: [
-                ...translateLanguages.map((item) => ({
-                  label: item.emoji + ' ' + item.label(),
-                  key: item.langCode,
-                  onClick: () => handleTranslate(item)
-                })),
-                ...(hasTranslationBlocks
-                  ? [
-                      { type: 'divider' as const },
-                      {
-                        label: '📋 ' + t('common.copy'),
-                        key: 'translate-copy',
-                        onClick: () => {
-                          const translationBlocks = message.blocks
-                            .map((blockId) => blockEntities[blockId])
-                            .filter((block) => block?.type === 'translation')
+        {!isUserMessage &&
+          (userNativeLanguage && !hasTranslationBlocks ? (
+            <Tooltip
+              title={`${t('chat.translate')} (${userNativeLanguage.emoji} ${userNativeLanguage.label()})`}
+              mouseEnterDelay={1.2}>
+              <ActionButton className="message-action-button" onClick={handleDirectTranslate}>
+                <Languages size={16} />
+              </ActionButton>
+            </Tooltip>
+          ) : (
+            <Dropdown
+              menu={{
+                style: {
+                  maxHeight: 250,
+                  overflowY: 'auto',
+                  backgroundClip: 'border-box'
+                },
+                items: [
+                  ...translateLanguages.map((item) => ({
+                    label: item.emoji + ' ' + item.label(),
+                    key: item.langCode,
+                    onClick: () => handleTranslate(item)
+                  })),
+                  ...(hasTranslationBlocks
+                    ? [
+                        { type: 'divider' as const },
+                        {
+                          label: '📋 ' + t('common.copy'),
+                          key: 'translate-copy',
+                          onClick: () => {
+                            const translationBlocks = message.blocks
+                              .map((blockId) => blockEntities[blockId])
+                              .filter((block) => block?.type === 'translation')
 
-                          if (translationBlocks.length > 0) {
-                            const translationContent = translationBlocks
-                              .map((block) => block?.content || '')
-                              .join('\n\n')
-                              .trim()
+                            if (translationBlocks.length > 0) {
+                              const translationContent = translationBlocks
+                                .map((block) => block?.content || '')
+                                .join('\n\n')
+                                .trim()
 
-                            if (translationContent) {
-                              navigator.clipboard.writeText(translationContent)
-                              window.message.success({ content: t('translate.copied'), key: 'translate-copy' })
-                            } else {
-                              window.message.warning({ content: t('translate.empty'), key: 'translate-copy' })
+                              if (translationContent) {
+                                navigator.clipboard.writeText(translationContent)
+                                window.message.success({ content: t('translate.copied'), key: 'translate-copy' })
+                              } else {
+                                window.message.warning({ content: t('translate.empty'), key: 'translate-copy' })
+                              }
+                            }
+                          }
+                        },
+                        {
+                          label: '✖ ' + t('translate.close'),
+                          key: 'translate-close',
+                          onClick: () => {
+                            const translationBlocks = message.blocks
+                              .map((blockId) => blockEntities[blockId])
+                              .filter((block) => block?.type === 'translation')
+                              .map((block) => block?.id)
+
+                            if (translationBlocks.length > 0) {
+                              translationBlocks.forEach((blockId) => {
+                                if (blockId) removeMessageBlock(message.id, blockId)
+                              })
+                              window.message.success({ content: t('translate.closed'), key: 'translate-close' })
                             }
                           }
                         }
-                      },
-                      {
-                        label: '✖ ' + t('translate.close'),
-                        key: 'translate-close',
-                        onClick: () => {
-                          const translationBlocks = message.blocks
-                            .map((blockId) => blockEntities[blockId])
-                            .filter((block) => block?.type === 'translation')
-                            .map((block) => block?.id)
-
-                          if (translationBlocks.length > 0) {
-                            translationBlocks.forEach((blockId) => {
-                              if (blockId) removeMessageBlock(message.id, blockId)
-                            })
-                            window.message.success({ content: t('translate.closed'), key: 'translate-close' })
-                          }
-                        }
-                      }
-                    ]
-                  : [])
-              ],
-              onClick: (e) => e.domEvent.stopPropagation()
-            }}
-            trigger={['click']}
-            placement="top"
-            arrow>
-            <Tooltip title={t('chat.translate')} mouseEnterDelay={1.2}>
-              <ActionButton
-                className="message-action-button"
-                onClick={(e) => e.stopPropagation()}
-                $softHoverBg={softHoverBg}>
-                <Languages size={15} />
-              </ActionButton>
-            </Tooltip>
-          </Dropdown>
-        )}
+                      ]
+                    : [])
+                ],
+                onClick: (e) => e.domEvent.stopPropagation()
+              }}
+              trigger={['click']}
+              placement="top"
+              arrow>
+              <Tooltip title={t('chat.translate')} mouseEnterDelay={1.2}>
+                <ActionButton
+                  className="message-action-button"
+                  onClick={(e) => e.stopPropagation()}
+                  $softHoverBg={softHoverBg}>
+                  <Languages size={15} />
+                </ActionButton>
+              </Tooltip>
+            </Dropdown>
+          ))}
         {isAssistantMessage && isGrouped && (
           <Tooltip title={t('chat.message.useful.label')} mouseEnterDelay={0.8}>
             <ActionButton className="message-action-button" onClick={onUseful} $softHoverBg={softHoverBg}>

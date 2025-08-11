@@ -26,7 +26,7 @@ import styled from 'styled-components'
 import SelectModelSearchBar from './searchbar'
 import { FlatListItem } from './types'
 
-const PAGE_SIZE = 11
+const PAGE_SIZE = 30
 const ITEM_HEIGHT = 36
 
 interface PopupParams {

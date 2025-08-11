@@ -26,7 +26,7 @@ export const CHINESE_TRADITIONAL: TranslateLanguage = {
   value: 'Chinese (Traditional)',
   langCode: 'zh-tw',
   label: () => i18n.t('languages.chinese-traditional'),
-  emoji: '🇭🇰'
+  emoji: '🇹🇼'
 }
 
 export const JAPANESE: TranslateLanguage = {

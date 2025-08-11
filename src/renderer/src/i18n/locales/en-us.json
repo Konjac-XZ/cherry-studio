@@ -2676,6 +2676,8 @@
     "input": {
       "auto_translate_with_space": "Quickly translate with 3 spaces",
       "show_translate_confirm": "Show translation confirmation dialog",
+      "user_native_language": "User Native Language",
+      "user_native_language.unspecified": "Unspecified",
       "target_language": {
         "chinese": "Simplified Chinese",
         "chinese-traditional": "Traditional Chinese",
