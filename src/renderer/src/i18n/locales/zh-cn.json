@@ -2674,6 +2674,8 @@
       "title": "禁用硬件加速"
     },
     "input": {
+      "user_native_language": "用户默认语言",
+      "user_native_language.unspecified": "未指定",
       "auto_translate_with_space": "3 个空格快速翻译",
       "show_translate_confirm": "显示翻译确认对话框",
       "target_language": {

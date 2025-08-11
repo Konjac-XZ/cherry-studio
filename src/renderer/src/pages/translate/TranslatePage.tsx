@@ -12,7 +12,7 @@ import { useDefaultModel } from '@renderer/hooks/useAssistant'
 import useTranslate from '@renderer/hooks/useTranslate'
 import { estimateTextTokens } from '@renderer/services/TokenService'
 import { saveTranslateHistory, translateText } from '@renderer/services/TranslateService'
-import { useAppDispatch, useAppSelector } from '@renderer/store'
+import store, { useAppDispatch, useAppSelector } from '@renderer/store'
 import { setTranslating as setTranslatingAction } from '@renderer/store/runtime'
 import { setTranslatedContent as setTranslatedContentAction } from '@renderer/store/translate'
 import type { Model, TranslateHistory, TranslateLanguage } from '@renderer/types'
@@ -26,7 +26,7 @@ import {
 import { Button, Flex, Popover, Tooltip, Typography } from 'antd'
 import TextArea, { TextAreaRef } from 'antd/es/input/TextArea'
 import { isEmpty, throttle } from 'lodash'
-import { Settings2 } from 'lucide-react'
+import { Columns2, GripVertical, Rows2, Settings2, SpellCheck } from 'lucide-react'
 import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
@@ -40,6 +40,67 @@ const logger = loggerService.withContext('TranslatePage')
 let _text = ''
 let _sourceLanguage: TranslateLanguage | 'auto' = 'auto'
 let _targetLanguage = LanguagesEnum.enUS
+
+const DraggableDivider: FC<{
+  isVertical: boolean
+  onResize: (size: number) => void
+  containerRef: React.RefObject<HTMLDivElement | null>
+}> = ({ isVertical, onResize, containerRef }) => {
+  const dividerRef = useRef<HTMLDivElement>(null)
+  const isDragging = useRef(false)
+
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault()
+      isDragging.current = true
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = isVertical ? 'row-resize' : 'col-resize'
+      document.body.style.userSelect = 'none'
+    },
+    [isVertical]
+  )
+
+  const handleMouseMove = useCallback(
+    (e: MouseEvent) => {
+      if (!isDragging.current) return
+
+      const container = (dividerRef.current?.parentElement as HTMLDivElement | null) || containerRef.current
+      if (!container) return
+      const rect = container.getBoundingClientRect()
+
+      if (isVertical) {
+        const minHeight = 200
+        const maxHeightPercent = Math.max(30, ((rect.height - minHeight) / rect.height) * 100)
+        const newSize = ((e.clientY - rect.top) / rect.height) * 100
+        onResize(Math.max(30, Math.min(maxHeightPercent, newSize)))
+      } else {
+        const availableWidth = rect.width
+        const minWidth = window.innerWidth < 600 ? 250 : window.innerWidth < 800 ? 280 : 320
+        const maxWidthPercent = Math.max(30, ((availableWidth - minWidth) / availableWidth) * 100)
+        const newSize = ((e.clientX - rect.left) / availableWidth) * 100
+        onResize(Math.max(30, Math.min(maxWidthPercent, newSize)))
+      }
+    },
+    [isVertical, onResize, containerRef]
+  )
+
+  const handleMouseUp = useCallback(() => {
+    isDragging.current = false
+    document.removeEventListener('mousemove', handleMouseMove)
+    document.removeEventListener('mouseup', handleMouseUp)
+    document.body.style.cursor = ''
+    document.body.style.userSelect = ''
+  }, [handleMouseMove])
+
+  return (
+    <DividerContainer ref={dividerRef} $isVertical={isVertical} onMouseDown={handleMouseDown}>
+      <DividerHandle $isVertical={isVertical}>
+        <GripVertical size={16} />
+      </DividerHandle>
+    </DividerContainer>
+  )
+}
 
 const TranslatePage: FC = () => {
   // hooks
@@ -81,6 +142,11 @@ const TranslatePage: FC = () => {
   _sourceLanguage = sourceLanguage
   _targetLanguage = targetLanguage
 
+  // Resizable layout states
+  const [panelSize, setPanelSize] = useState<number>(50)
+  const [isVerticalLayout, setIsVerticalLayout] = useState<boolean>(false)
+  const [manualLayoutOverride, setManualLayoutOverride] = useState<'auto' | 'horizontal' | 'vertical'>('auto')
+
   // 控制翻译模型切换
   const handleModelChange = (model: Model) => {
     setTranslateModel(model)
@@ -117,9 +183,8 @@ const TranslatePage: FC = () => {
 
       setTranslating(true)
 
-      let translated
       try {
-        translated = await translateText(text, actualTargetLanguage, throttle(setTranslatedContent, 100))
+        await translateText(text, actualTargetLanguage, throttle(setTranslatedContent, 100))
       } catch (e) {
         logger.error('Failed to translate text', e as Error)
         window.message.error(t('translate.error.failed' + ': ' + (e as Error).message))
@@ -130,7 +195,13 @@ const TranslatePage: FC = () => {
       window.message.success(t('translate.complete'))
 
       try {
-        await saveTranslateHistory(text, translated, actualSourceLanguage.langCode, actualTargetLanguage.langCode)
+        const translatedContent = store.getState().translate.translatedContent
+        await saveTranslateHistory(
+          text,
+          translatedContent,
+          actualSourceLanguage.langCode,
+          actualTargetLanguage.langCode
+        )
       } catch (e) {
         logger.error('Failed to save translate history', e as Error)
         window.message.error(t('translate.history.error.save') + ': ' + (e as Error).message)
@@ -301,8 +372,46 @@ const TranslatePage: FC = () => {
 
       const markdownSetting = await db.settings.get({ id: 'translate:markdown:enabled' })
       setEnableMarkdown(markdownSetting ? markdownSetting.value : false)
+
+      const layoutOverrideSetting = await db.settings.get({ id: 'translate:layout:override' })
+      setManualLayoutOverride(layoutOverrideSetting ? layoutOverrideSetting.value : 'auto')
     })
   }, [getLanguageByLangcode])
+
+  // Load saved panel size
+  useEffect(() => {
+    try {
+      const savedSize = localStorage.getItem('translate-panel-size')
+      if (savedSize) {
+        const num = parseFloat(savedSize)
+        if (!Number.isNaN(num) && num > 0 && num < 100) setPanelSize(num)
+      }
+    } catch {}
+  }, [])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('translate-panel-size', String(panelSize))
+    } catch {}
+  }, [panelSize])
+
+  // Derive layout mode
+  useEffect(() => {
+    const handleResize = () => {
+      if (manualLayoutOverride !== 'auto') {
+        setIsVerticalLayout(manualLayoutOverride === 'vertical')
+        return
+      }
+      const w = window.innerWidth
+      const h = window.innerHeight
+      const aspect = w / h
+      const shouldVertical = w < 900 || aspect < 1 || h > w * 1
+      setIsVerticalLayout(shouldVertical)
+    }
+    handleResize()
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [manualLayoutOverride])
 
   // 控制Enter触发翻译
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -316,6 +425,20 @@ const TranslatePage: FC = () => {
   // 控制双向滚动
   const handleInputScroll = createInputScrollHandler(outputTextRef, isProgrammaticScroll, isScrollSyncEnabled)
   const handleOutputScroll = createOutputScrollHandler(textAreaRef, isProgrammaticScroll, isScrollSyncEnabled)
+
+  // Toggle layout and persist override
+  const toggleLayout = () => {
+    let next: 'auto' | 'vertical' | 'horizontal'
+    if (manualLayoutOverride === 'auto') {
+      next = 'vertical'
+    } else if (manualLayoutOverride === 'vertical') {
+      next = 'horizontal'
+    } else {
+      next = 'auto'
+    }
+    setManualLayoutOverride(next)
+    db.settings.put({ id: 'translate:layout:override', value: next })
+  }
 
   // 获取目标语言显示
   const getLanguageDisplay = () => {
@@ -380,7 +503,7 @@ const TranslatePage: FC = () => {
           onClose={() => setHistoryDrawerVisible(false)}
         />
         <OperationBar>
-          <InnerOperationBar style={{ justifyContent: 'flex-start' }}>
+          <InnerOperationBar style={{ justifyContent: 'flex-start', minWidth: 0 }}>
             <TranslateButton translating={translating} onTranslate={onTranslate} couldTranslate={couldTranslate} />
             <ModelSelectButton
               model={translateModel}
@@ -394,6 +517,32 @@ const TranslatePage: FC = () => {
               onClick={() => setSettingsVisible(true)}
               style={{ color: 'var(--color-text-2)', display: 'flex' }}
             />
+            <Tooltip
+              title={
+                manualLayoutOverride === 'auto'
+                  ? 'Auto Layout'
+                  : manualLayoutOverride === 'vertical'
+                    ? 'Vertical Layout'
+                    : 'Horizontal Layout'
+              }
+              placement="bottom">
+              <Button
+                className="nodrag"
+                color="default"
+                variant="text"
+                type="text"
+                icon={
+                  manualLayoutOverride === 'auto' ? (
+                    <SpellCheck size={16} />
+                  ) : manualLayoutOverride === 'vertical' ? (
+                    <Rows2 size={16} />
+                  ) : (
+                    <Columns2 size={16} />
+                  )
+                }
+                onClick={toggleLayout}
+              />
+            </Tooltip>
             <Button
               className="nodrag"
               color="default"
@@ -403,10 +552,10 @@ const TranslatePage: FC = () => {
               onClick={() => setHistoryDrawerVisible(!historyDrawerVisible)}
             />
           </InnerOperationBar>
-          <InnerOperationBar style={{ justifyContent: 'center' }}>
+          <InnerOperationBar style={{ justifyContent: 'center', overflow: 'visible' }}>
             <LanguageSelect
               showSearch
-              style={{ width: 200 }}
+              style={{ flex: 1, minWidth: 120, maxWidth: '100%' }}
               value={sourceLanguage !== 'auto' ? sourceLanguage.langCode : 'auto'}
               optionFilterProp="label"
               onChange={(value) => {
@@ -426,13 +575,14 @@ const TranslatePage: FC = () => {
             <Tooltip title={t('translate.exchange.label')} placement="bottom">
               <Button
                 icon={<SwapOutlined />}
-                style={{ aspectRatio: '1/1' }}
+                style={{ aspectRatio: '1/1', minWidth: 32 }}
                 onClick={handleExchange}
-                disabled={!couldExchange}></Button>
+                disabled={!couldExchange}
+              />
             </Tooltip>
-            {getLanguageDisplay()}
+            <div style={{ flex: 1, minWidth: 120, maxWidth: '100%' }}>{getLanguageDisplay()}</div>
           </InnerOperationBar>
-          <InnerOperationBar style={{ justifyContent: 'flex-end' }}>
+          <InnerOperationBar style={{ justifyContent: 'flex-end', minWidth: 0 }}>
             <Button
               type="text"
               onClick={onCopy}
@@ -441,7 +591,7 @@ const TranslatePage: FC = () => {
             />
           </InnerOperationBar>
         </OperationBar>
-        <AreaContainer>
+        <TranslateContainer $isVertical={isVerticalLayout} $panelSize={panelSize}>
           <InputContainer>
             <InputAreaContainer>
               <Textarea
@@ -466,6 +616,12 @@ const TranslatePage: FC = () => {
             </InputAreaContainer>
           </InputContainer>
 
+          <DraggableDivider
+            isVertical={isVerticalLayout}
+            onResize={(s) => setPanelSize(s)}
+            containerRef={contentContainerRef}
+          />
+
           <OutputContainer>
             <OutputAreaContainer>
               <OutputText ref={outputTextRef} onScroll={handleOutputScroll} className={'selectable'}>
@@ -481,7 +637,7 @@ const TranslatePage: FC = () => {
               </OutputText>
             </OutputAreaContainer>
           </OutputContainer>
-        </AreaContainer>
+        </TranslateContainer>
       </ContentContainer>
 
       <TranslateSettings
@@ -514,24 +670,135 @@ const ContentContainer = styled.div<{ $historyDrawerVisible: boolean }>`
   flex: 1;
   padding: 15px;
   position: relative;
+  /* Allow nested flex children to manage their own scroll areas */
+  min-height: 0;
+  overflow: hidden;
 `
 
-const AreaContainer = styled.div`
+const TranslateContainer = styled.div<{ $isVertical: boolean; $panelSize: number }>`
   display: flex;
   flex: 1;
-  gap: 8px;
+  gap: 0;
+  position: relative;
+  min-width: 0;
+  /* Important for nested scroll containers in flex layouts */
+  min-height: 0;
+  overflow: hidden;
+  flex-direction: ${({ $isVertical }) => ($isVertical ? 'column' : 'row')};
+
+  ${({ $isVertical, $panelSize }) =>
+    $isVertical
+      ? `
+    & > *:first-child {
+      height: ${$panelSize}%;
+      min-height: 200px;
+    }
+    & > *:last-child {
+      height: ${100 - $panelSize}%;
+      min-height: 200px;
+    }
+  `
+      : `
+    & > *:first-child {
+      width: ${$panelSize}%;
+      min-width: 320px;
+  height: 100%;
+  min-height: 0;
+    }
+    & > *:last-child {
+      width: ${100 - $panelSize}%;
+      min-width: 320px;
+  height: 100%;
+  min-height: 0;
+    }
+  `}
+
+  @media (max-width: 800px) {
+    ${({ $isVertical }) =>
+      !$isVertical &&
+      `
+      & > *:first-child { min-width: 280px; }
+      & > *:last-child { min-width: 280px; }
+    `}
+  }
+
+  @media (max-width: 600px) {
+    ${({ $isVertical }) =>
+      !$isVertical &&
+      `
+      & > *:first-child { min-width: 250px; }
+      & > *:last-child { min-width: 250px; }
+    `}
+  }
+`
+
+const DividerContainer = styled.div<{ $isVertical: boolean }>`
+  ${({ $isVertical }) =>
+    $isVertical
+      ? `
+    height: 6px;
+    width: 100%;
+    cursor: row-resize;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 10;
+
+    &:hover { background-color: var(--color-primary-bg); }
+  `
+      : `
+    width: 6px;
+    height: 100%;
+    cursor: col-resize;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 10;
+
+    &:hover { background-color: var(--color-primary-bg); }
+  `}
+`
+
+const DividerHandle = styled.div<{ $isVertical: boolean }>`
+  ${({ $isVertical }) =>
+    $isVertical
+      ? `
+    width: 40px;
+    height: 4px;
+    background-color: var(--color-border);
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    svg { transform: rotate(90deg); width: 12px; height: 12px; color: var(--color-text-3); }
+  `
+      : `
+    width: 4px;
+    height: 40px;
+    background-color: var(--color-border);
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    svg { width: 12px; height: 12px; color: var(--color-text-3); }
+  `}
 `
 
 const InputContainer = styled.div`
+  min-height: 0;
   position: relative;
   display: flex;
-  flex: 1;
   flex-direction: column;
   padding-bottom: 5px;
   padding-right: 2px;
 `
 
 const InputAreaContainer = styled.div`
+  min-height: 0;
   position: relative;
   display: flex;
   flex: 1;
@@ -540,12 +807,14 @@ const InputAreaContainer = styled.div`
   border-radius: 10px;
   padding-bottom: 5px;
   padding-right: 2px;
+  overflow: hidden;
 `
 
 const Textarea = styled(TextArea)`
   display: flex;
   flex: 1;
   border-radius: 0;
+  font-size: 16px;
   .ant-input {
     resize: none;
     padding: 5px 16px;
@@ -568,7 +837,6 @@ const OutputContainer = styled.div`
   position: relative;
   display: flex;
   flex-direction: column;
-  flex: 1;
   border-radius: 10px;
   padding-bottom: 5px;
   padding-right: 2px;
@@ -584,6 +852,7 @@ const OutputAreaContainer = styled.div`
   border-radius: 10px;
   padding-bottom: 5px;
   padding-right: 2px;
+  overflow: hidden;
 `
 
 const OutputText = styled.div`
@@ -591,7 +860,8 @@ const OutputText = styled.div`
   flex: 1;
   padding: 5px 16px;
   overflow-y: auto;
-
+  overscroll-behavior: contain;
+  font-size: 16px;
   .plain {
     white-space: pre-wrap;
     overflow-wrap: break-word;
@@ -652,11 +922,12 @@ const BidirectionalLanguageDisplay = styled.div`
 
 const OperationBar = styled.div`
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
   justify-content: center;
   gap: 4px;
   padding-bottom: 4px;
+  min-width: 0;
 `
 
 const InnerOperationBar = styled.div`
@@ -665,6 +936,7 @@ const InnerOperationBar = styled.div`
   align-items: center;
   gap: 4px;
   overflow: hidden;
+  min-width: 0;
 `
 
 export default TranslatePage

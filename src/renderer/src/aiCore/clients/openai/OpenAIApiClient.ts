@@ -513,12 +513,19 @@ export class OpenAIAPIClient extends OpenAIBaseClient<
         const extra_body: Record<string, any> = {}
 
         if (isQwenMTModel(model)) {
-          const targetLanguage = (assistant as TranslateAssistant).targetLanguage
-          extra_body.translation_options = {
-            source_lang: 'auto',
-            target_lang: mapLanguageToQwenMTModel(targetLanguage!)
+          let targetLanguage: any | undefined
+          try {
+            targetLanguage = (assistant as TranslateAssistant).targetLanguage
+            if (targetLanguage) {
+              extra_body.translation_options = {
+                source_lang: 'auto',
+                target_lang: mapLanguageToQwenMTModel(targetLanguage)
+              }
+            }
+          } catch (e) {
+            // Ignore if targetLanguage is missing or any error occurs
           }
-          if (!extra_body.translation_options.target_lang) {
+          if (!extra_body.translation_options?.target_lang) {
             throw new Error(t('translate.error.not_supported', { language: targetLanguage?.value }))
           }
         }
@@ -669,14 +676,14 @@ export class OpenAIAPIClient extends OpenAIBaseClient<
 
       // OpenRouter citations
       // @ts-ignore - citations may not be in standard type definitions
-      if (context.provider?.id === 'openrouter' && chunk.citations && chunk.citations.length > 0) {
-        hasBeenCollectedWebSearch = true
-        return {
-          // @ts-ignore - citations may not be in standard type definitions
-          results: chunk.citations,
-          source: WebSearchSource.OPENROUTER
-        }
-      }
+      // if (context.provider?.id === 'openrouter' && chunk.citations && chunk.citations.length > 0) {
+      //   hasBeenCollectedWebSearch = true
+      //   return {
+      //     // @ts-ignore - citations may not be in standard type definitions
+      //     results: chunk.citations,
+      //     source: WebSearchSource.OPENROUTER
+      //   }
+      // }
 
       // Zhipu web search
       // @ts-ignore - web_search may not be in standard type definitions
