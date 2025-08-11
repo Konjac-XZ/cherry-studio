@@ -25,7 +25,7 @@ import {
 import { Button, Flex, Popover, Tooltip, Typography } from 'antd'
 import TextArea, { TextAreaRef } from 'antd/es/input/TextArea'
 import { isEmpty, throttle } from 'lodash'
-import { Columns2, GripVertical, Rows2, Settings2, SpellCheck, CopyIcon, FolderClock} from 'lucide-react'
+import { Columns2, GripVertical, Rows2, Settings2, SpellCheck, CopyIcon, FolderClock } from 'lucide-react'
 import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
@@ -64,9 +64,9 @@ const DraggableDivider: FC<{
     (e: MouseEvent) => {
       if (!isDragging.current) return
 
-      const container = (dividerRef.current?.parentElement as HTMLDivElement | null) || containerRef.current
-      if (!container) return
-      const rect = container.getBoundingClientRect()
+        const container = (dividerRef.current?.parentElement as HTMLDivElement | null) || containerRef.current
+        if (!container) return
+        const rect = container.getBoundingClientRect()
 
       if (isVertical) {
         const minHeight = 200
@@ -496,19 +496,6 @@ const TranslatePage: FC = () => {
         />
         <OperationBar>
           <InnerOperationBar style={{ justifyContent: 'flex-start' }}>
-            <TranslateButton translating={translating} onTranslate={onTranslate} couldTranslate={couldTranslate} />
-            <ModelSelectButton
-              model={translateModel}
-              onSelectModel={handleModelChange}
-              modelFilter={modelPredicate}
-              tooltipProps={{ placement: 'bottom' }}
-            />
-            <Button
-              type="text"
-              icon={<Settings2 size={18} />}
-              onClick={() => setSettingsVisible(true)}
-              style={{ color: 'var(--color-text-2)', display: 'flex' }}
-            />
             <Tooltip
               title={
                 manualLayoutOverride === 'auto'
@@ -543,8 +530,6 @@ const TranslatePage: FC = () => {
               icon={<FolderClock size={18} />}
               onClick={() => setHistoryDrawerVisible(!historyDrawerVisible)}
             />
-          </InnerOperationBar>
-          <InnerOperationBar style={{ justifyContent: 'center', overflow: 'visible' }}>
             <LanguageSelect
               showSearch
               style={{ width: 200 }}
@@ -672,7 +657,6 @@ const ContentContainer = styled.div<{ $historyDrawerVisible: boolean }>`
   [navbar-position='left'] & {
     padding: 12px 16px;
   }
-  /* Allow nested flex children to manage their own scroll areas */
   min-height: 0;
   overflow: hidden;
 `
@@ -683,7 +667,6 @@ const AreaContainer = styled.div<{ $isVertical: boolean; $panelSize: number }>`
   gap: 0;
   position: relative;
   min-width: 0;
-  /* Important for nested scroll containers in flex layouts */
   min-height: 0;
   overflow: hidden;
   flex-direction: ${({ $isVertical }) => ($isVertical ? 'column' : 'row')};
@@ -794,16 +777,12 @@ const InputContainer = styled.div`
   min-height: 0;
   position: relative;
   display: flex;
-  flex: 1;
   flex-direction: column;
   padding: 10px 5px;
   border: 1px solid var(--color-border-soft);
   border-radius: 10px;
-  height: calc(100vh - var(--navbar-height) - 70px);
   overflow: hidden;
 `
-
-
 
 const Textarea = styled(TextArea)`
   display: flex;
@@ -829,14 +808,12 @@ const Footer = styled.div`
 
 const OutputContainer = styled.div`
   display: flex;
-  flex: 1;
   flex-direction: column;
   min-height: 0;
   position: relative;
   background-color: var(--color-background-soft);
   border-radius: 10px;
   padding: 10px 5px;
-  height: calc(100vh - var(--navbar-height) - 70px);
 
   &:hover .copy-button {
     opacity: 1;
