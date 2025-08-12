@@ -394,7 +394,6 @@ const EditorContainer = styled(Space)`
     border-radius: 15px;
     padding: 1em;
     flex: 1;
-    font-family: Ubuntu;
     resize: none !important;
     overflow: auto;
     width: 100%;
