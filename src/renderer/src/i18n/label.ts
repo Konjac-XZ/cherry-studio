@@ -5,6 +5,7 @@
  */
 
 import { loggerService } from '@logger'
+import { ThinkingOption } from '@renderer/types'
 
 import i18n from './index'
 
@@ -110,6 +111,7 @@ export const getProgressLabel = (key: string): string => {
 const titleKeyMap = {
   agents: 'title.agents',
   apps: 'title.apps',
+  code: 'title.code',
   files: 'title.files',
   home: 'title.home',
   knowledge: 'title.knowledge',
@@ -266,13 +268,13 @@ export const getHttpMessageLabel = (key: string): string => {
   return getLabel(key, httpMessageKeyMap)
 }
 
-const reasoningEffortOptionsKeyMap = {
-  auto: 'assistants.settings.reasoning_effort.default',
+const reasoningEffortOptionsKeyMap: Record<ThinkingOption, string> = {
+  off: 'assistants.settings.reasoning_effort.off',
+  minimal: 'assistants.settings.reasoning_effort.minimal',
   high: 'assistants.settings.reasoning_effort.high',
-  label: 'assistants.settings.reasoning_effort.label',
   low: 'assistants.settings.reasoning_effort.low',
   medium: 'assistants.settings.reasoning_effort.medium',
-  off: 'assistants.settings.reasoning_effort.off'
+  auto: 'assistants.settings.reasoning_effort.default'
 } as const
 
 export const getReasoningEffortOptionsLabel = (key: string): string => {
