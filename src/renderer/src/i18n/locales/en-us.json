@@ -2717,6 +2717,17 @@
       "title": "Launch",
       "totray": "Minimize to Tray on Launch"
     },
+    "math": {
+      "engine": {
+        "label": "Math engine",
+        "none": "None"
+      },
+      "single_dollar": {
+        "label": "Enable $...$",
+        "tip": "Render math equations quoted by single dollar signs $...$. Default is enabled."
+      },
+      "title": "Math Settings"
+    },
     "mcp": {
       "actions": "Actions",
       "active": "Active",
@@ -2891,7 +2902,7 @@
       "tagsPlaceholder": "Enter tags",
       "timeout": "Timeout",
       "timeoutTooltip": "Timeout in seconds for requests to this server, default is 60 seconds",
-      "title": "MCP Settings",
+      "title": "MCP",
       "tools": {
         "autoApprove": {
           "label": "Auto Approve",
@@ -2947,10 +2958,6 @@
         "title": "Input Settings"
       },
       "markdown_rendering_input_message": "Markdown render input message",
-      "math_engine": {
-        "label": "Math engine",
-        "none": "None"
-      },
       "metrics": "{{time_first_token_millsec}}ms to first token | {{token_speed}} tok/sec",
       "model": {
         "title": "Model Settings"
@@ -2962,6 +2969,7 @@
         "none": "None"
       },
       "prompt": "Show prompt",
+      "show_message_outline": "Show message outline",
       "title": "Message Settings",
       "use_serif_font": "Use serif font"
     },
@@ -3434,10 +3442,10 @@
     "title": "Settings",
     "tool": {
       "preprocess": {
-        "provider": "Pre Process Provider",
-        "provider_placeholder": "Choose a Pre Process provider",
-        "title": "Pre Process",
-        "tooltip": "In Settings -> Tools, set a document preprocessing service provider. Document preprocessing can effectively improve the retrieval performance of complex format documents and scanned documents."
+        "provider": "Document Processing Provider",
+        "provider_placeholder": "Choose a document processing provider",
+        "title": "Document Processing",
+        "tooltip": "In Settings -> Tools, set a document processing service provider. Document processing can effectively improve the retrieval performance of complex format documents and scanned documents."
       },
       "title": "Other Settings",
       "websearch": {
