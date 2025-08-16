@@ -9,7 +9,8 @@ import styled from 'styled-components'
 const MentionModelsInput: FC<{
   selectedModels: Model[]
   onRemoveModel: (model: Model) => void
-}> = ({ selectedModels, onRemoveModel }) => {
+  isInputExpanded?: boolean
+}> = ({ selectedModels, onRemoveModel, isInputExpanded = false }) => {
   const { providers } = useProviders()
   const scrollContainerRef = useRef<HTMLDivElement | null>(null)
   const [isDragging, setIsDragging] = useState(false)
@@ -22,6 +23,8 @@ const MentionModelsInput: FC<{
   }
 
   const handleMouseDown = (e: React.MouseEvent) => {
+    if (isInputExpanded) return
+
     setIsDragging(true)
     setStartX(e.clientX)
     if (scrollContainerRef.current) {
@@ -46,7 +49,8 @@ const MentionModelsInput: FC<{
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}>
+        onMouseLeave={handleMouseUp}
+        $isExpanded={isInputExpanded}>
         {selectedModels.map((model) => (
           <CustomTag
             icon={<i className="iconfont icon-at" />}
@@ -68,15 +72,28 @@ const Container = styled.div`
   position: relative;
 `
 
-const ScrollContainer = styled.div`
+const ScrollContainer = styled.div<{ $isExpanded: boolean }>`
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: ${(props) => (props.$isExpanded ? 'wrap' : 'nowrap')};
   gap: 4px;
-  overflow-x: auto;
+  overflow-x: ${(props) => (props.$isExpanded ? 'hidden' : 'auto')};
+  overflow-y: auto;
+  max-height: ${(props) => (props.$isExpanded ? '150px' : 'auto')};
   scrollbar-width: none;
-  cursor: grab;
+  cursor: ${(props) => (props.$isExpanded ? 'default' : 'grab')};
   &:active {
-    cursor: grabbing;
+    cursor: ${(props) => (props.$isExpanded ? 'default' : 'grabbing')};
+  }
+
+  /* 显示垂直滚动条，仅在展开状态 */
+  &::-webkit-scrollbar {
+    width: ${(props) => (props.$isExpanded ? '3px' : '0')};
+    height: 0;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
   }
 `
 
