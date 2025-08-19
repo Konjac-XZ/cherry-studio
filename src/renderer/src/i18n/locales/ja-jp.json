@@ -1438,6 +1438,27 @@
     },
     "title": "ミニアプリ"
   },
+  "minapps": {
+    "baichuan": "百小應",
+    "baidu-ai-search": "百度AI検索",
+    "chatglm": "ChatGLM",
+    "dangbei": "当贝AI",
+    "doubao": "豆包",
+    "hailuo": "MINIMAX",
+    "metaso": "Metaso",
+    "nami-ai": "Nami AI",
+    "nami-ai-search": "Nami AI Search",
+    "qwen": "通義千問",
+    "sensechat": "SenseChat",
+    "tencent-yuanbao": "騰訊元宝",
+    "tiangong-ai": "Skywork",
+    "wanzhi": "万知",
+    "wenxin": "ERNIE",
+    "wps-copilot": "WPS Copilot",
+    "xiaoyi": "小藝",
+    "yuewen": "躍問",
+    "zhihu": "知乎直答"
+  },
   "miniwindow": {
     "alert": {
       "google_login": "ヒント：Googleログイン時に「信頼できないブラウザ」というメッセージが表示された場合は、先にミニアプリリストのGoogleミニアプリでアカウントログインを完了してから、他のミニアプリでGoogleログインを使用してください"
@@ -2703,6 +2724,11 @@
     },
     "input": {
       "auto_translate_with_space": "スペースを3回押して翻訳",
+      "clear": {
+        "all": "クリア",
+        "knowledge_base": "選択された知識ベースをクリア",
+        "models": "すべてのモデルをクリア"
+      },
       "show_translate_confirm": "翻訳確認ダイアログを表示",
       "target_language": {
         "chinese": "簡体字中国語",
@@ -2950,7 +2976,6 @@
         "label": "グリッド詳細トリガー"
       },
       "input": {
-        "enable_delete_model": "バックスペースキーでモデル/添付ファイルを削除します。",
         "enable_quick_triggers": "/ と @ を有効にしてクイックメニューを表示します。",
         "paste_long_text_as_file": "長いテキストをファイルとして貼り付け",
         "paste_long_text_threshold": "長いテキストの長さ",
