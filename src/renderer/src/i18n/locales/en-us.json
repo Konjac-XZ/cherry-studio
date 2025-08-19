@@ -1438,6 +1438,27 @@
     },
     "title": "MinApp"
   },
+  "minapps": {
+    "baichuan": "Baichuan",
+    "baidu-ai-search": "Baidu AI Search",
+    "chatglm": "ChatGLM",
+    "dangbei": "Dangbei",
+    "doubao": "Doubao",
+    "hailuo": "MINIMAX",
+    "metaso": "Metaso",
+    "nami-ai": "Nami AI",
+    "nami-ai-search": "Nami AI Search",
+    "qwen": "Qwen",
+    "sensechat": "SenseChat",
+    "tencent-yuanbao": "Yuanbao",
+    "tiangong-ai": "Skywork",
+    "wanzhi": "Wanzhi",
+    "wenxin": "ERNIE",
+    "wps-copilot": "WPS Copilot",
+    "xiaoyi": "Xiaoyi",
+    "yuewen": "Yuewen",
+    "zhihu": "Zhihu"
+  },
   "miniwindow": {
     "alert": {
       "google_login": "Tip: If you see a 'browser not trusted' message when logging into Google, please first login through the Google mini app in the mini app list, then use Google login in other mini apps"
@@ -2703,6 +2724,11 @@
     },
     "input": {
       "auto_translate_with_space": "Quickly translate with 3 spaces",
+      "clear": {
+        "all": "Clear",
+        "knowledge_base": "Clear selected knowledge bases",
+        "models": "Clear all models"
+      },
       "show_translate_confirm": "Show translation confirmation dialog",
       "user_native_language": "User Native Language",
       "user_native_language.unspecified": "Unspecified",
@@ -2952,7 +2978,6 @@
         "label": "Grid detail trigger"
       },
       "input": {
-        "enable_delete_model": "Enable the backspace key to delete models/attachments.",
         "enable_quick_triggers": "Enable / and @ triggers",
         "paste_long_text_as_file": "Paste long text as file",
         "paste_long_text_threshold": "Paste long text length",
