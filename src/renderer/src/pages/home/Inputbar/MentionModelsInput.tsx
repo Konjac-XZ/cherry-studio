@@ -6,7 +6,7 @@ import { getFancyProviderName } from '@renderer/utils'
 import { FC, useRef, useState } from 'react'
 import styled from 'styled-components'
 
-const MentionModelsInput: FC<{
+export const MentionModelsInput: FC<{
   selectedModels: Model[]
   onRemoveModel: (model: Model) => void
   isInputExpanded?: boolean
