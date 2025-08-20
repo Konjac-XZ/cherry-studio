@@ -654,6 +654,8 @@
     "cli_tool": "CLI Tool",
     "cli_tool_placeholder": "Select the CLI tool to use",
     "description": "Quickly launch multiple code CLI tools to improve development efficiency",
+    "env_vars_help": "Enter custom environment variables (one per line, format: KEY=value)",
+    "environment_variables": "Environment Variables",
     "folder_placeholder": "Select working directory",
     "install_bun": "Install Bun",
     "installing_bun": "Installing...",
@@ -1437,6 +1439,27 @@
       }
     },
     "title": "MinApp"
+  },
+  "minapps": {
+    "baichuan": "Baichuan",
+    "baidu-ai-search": "Baidu AI Search",
+    "chatglm": "ChatGLM",
+    "dangbei": "Dangbei",
+    "doubao": "Doubao",
+    "hailuo": "MINIMAX",
+    "metaso": "Metaso",
+    "nami-ai": "Nami AI",
+    "nami-ai-search": "Nami AI Search",
+    "qwen": "Qwen",
+    "sensechat": "SenseChat",
+    "tencent-yuanbao": "Yuanbao",
+    "tiangong-ai": "Skywork",
+    "wanzhi": "Wanzhi",
+    "wenxin": "ERNIE",
+    "wps-copilot": "WPS Copilot",
+    "xiaoyi": "Xiaoyi",
+    "yuewen": "Yuewen",
+    "zhihu": "Zhihu"
   },
   "miniwindow": {
     "alert": {
@@ -2253,8 +2276,8 @@
       },
       "message_title": {
         "use_topic_naming": {
-          "help": "When enabled, use topic naming model to create titles for exported messages. This will also affect all Markdown export methods.",
-          "title": "Use topic naming model to create titles for exported messages"
+          "help": "When enabled, use the quick model to name the title for exported messages. This setting also affects all export methods through Markdown.",
+          "title": "Use the quick model to name the title for the exported message"
         }
       },
       "minute_interval_one": "{{count}} minute",
@@ -2703,6 +2726,11 @@
     },
     "input": {
       "auto_translate_with_space": "Quickly translate with 3 spaces",
+      "clear": {
+        "all": "Clear",
+        "knowledge_base": "Clear selected knowledge bases",
+        "models": "Clear all models"
+      },
       "show_translate_confirm": "Show translation confirmation dialog",
       "target_language": {
         "chinese": "Simplified Chinese",
@@ -2950,7 +2978,6 @@
         "label": "Grid detail trigger"
       },
       "input": {
-        "enable_delete_model": "Enable the backspace key to delete models/attachments.",
         "enable_quick_triggers": "Enable / and @ triggers",
         "paste_long_text_as_file": "Paste long text as file",
         "paste_long_text_threshold": "Paste long text length",
@@ -3088,7 +3115,6 @@
       "default_assistant_model": "Default Assistant Model",
       "default_assistant_model_description": "Model used when creating a new assistant, if the assistant is not set, this model will be used",
       "empty": "No models found",
-      "enable_topic_naming": "Topic Auto Naming",
       "manage": {
         "add_listed": {
           "confirm": "Are you sure you want to add all models to the list?",
@@ -3114,10 +3140,17 @@
       "quick_assistant_default_tag": "Default",
       "quick_assistant_model": "Quick Assistant Model",
       "quick_assistant_selection": "Select Assistant",
-      "topic_naming_model": "Topic Naming Model",
-      "topic_naming_model_description": "Model used when automatically naming a new topic",
-      "topic_naming_model_setting_title": "Topic Naming Model Settings",
-      "topic_naming_prompt": "Topic Naming Prompt",
+      "quick_model": {
+        "description": "Model used for simple tasks such as topic naming and keyword extraction",
+        "label": "Quick Model",
+        "setting_title": "Quick model setup",
+        "tooltip": "It is recommended to choose a lightweight model and not recommended to choose a thinking model."
+      },
+      "topic_naming": {
+        "auto": "Topic Auto Naming",
+        "label": "Topic naming",
+        "prompt": "Topic Naming Prompt"
+      },
       "translate_model": "Translate Model",
       "translate_model_description": "Model used for translation service",
       "translate_model_prompt_message": "Please enter the translate model prompt",
