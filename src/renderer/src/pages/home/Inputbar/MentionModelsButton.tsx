@@ -170,6 +170,7 @@ const MentionModelsButton: FC<Props> = ({
         list: modelItems,
         symbol: '@',
         multiple: true,
+        pageSize: 30,
         triggerInfo: triggerInfo || { type: 'button' },
         afterAction({ item }) {
           item.isSelected = !item.isSelected
