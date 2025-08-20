@@ -4,7 +4,7 @@ import { KnowledgeBase } from '@renderer/types'
 import { FC } from 'react'
 import styled from 'styled-components'
 
-const KnowledgeBaseInput: FC<{
+export const KnowledgeBaseInput: FC<{
   selectedKnowledgeBases: KnowledgeBase[]
   onRemoveKnowledgeBase: (knowledgeBase: KnowledgeBase) => void
 }> = ({ selectedKnowledgeBases, onRemoveKnowledgeBase }) => {
