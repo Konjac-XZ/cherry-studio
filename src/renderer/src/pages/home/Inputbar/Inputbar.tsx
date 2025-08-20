@@ -54,7 +54,7 @@ import { CirclePause, FileSearch, FileText, Upload } from 'lucide-react'
 import React, { CSSProperties, FC, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
-
+import { MentionModelsInput } from './MentionModelsInput'
 import NarrowLayout from '../Messages/NarrowLayout'
 import AttachmentPreview from './AttachmentPreview'
 import InputbarTools, { InputbarToolsRef } from './InputbarTools'
@@ -763,6 +763,10 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
     updateAssistant({ ...assistant, enableGenerateImage: !assistant.enableGenerateImage })
   }
 
+  const handleRemoveModel = (model: Model) => {
+    setMentionedModels(mentionedModels.filter((m) => m.id !== model.id))
+  }
+
   useEffect(() => {
     if (!isWebSearchModel(model) && assistant.enableWebSearch) {
       updateAssistant({ ...assistant, enableWebSearch: false })
@@ -840,17 +844,12 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
           className={classNames('inputbar-container', inputFocus && 'focus', isFileDragging && 'file-dragging')}
           ref={containerRef}>
           {files.length > 0 && <AttachmentPreview files={files} setFiles={setFiles} />}
-          {selectedKnowledgeBases.length > 0 && (
-            <KnowledgeBaseInput
-              selectedKnowledgeBases={selectedKnowledgeBases}
-              onRemoveKnowledgeBase={handleRemoveKnowledgeBase}
-            />
-          )}
+
           {mentionedModels.length > 0 && (
             <MentionModelsInput
               selectedModels={mentionedModels}
               onRemoveModel={handleRemoveModel}
-              isInputExpanded={isExpended || !!textareaHeight}
+              isInputExpanded={isExpanded || !!textareaHeight}
             />
           )}
           <Textarea
