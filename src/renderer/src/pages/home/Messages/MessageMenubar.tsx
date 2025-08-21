@@ -9,6 +9,7 @@ import { useMessageEditing } from '@renderer/context/MessageEditingContext'
 import { useChatContext } from '@renderer/hooks/useChatContext'
 import { useMessageOperations, useTopicLoading } from '@renderer/hooks/useMessageOperations'
 import { useEnableDeveloperMode, useMessageStyle, useSettings } from '@renderer/hooks/useSettings'
+import { useTemporaryValue } from '@renderer/hooks/useTemporaryValue'
 import useTranslate from '@renderer/hooks/useTranslate'
 import { UNKNOWN } from '@renderer/config/translate'
 import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
@@ -79,7 +80,7 @@ const MessageMenubar: FC<Props> = (props) => {
   } = props
   const { t } = useTranslation()
   const { toggleMultiSelectMode } = useChatContext(props.topic)
-  const [copied, setCopied] = useState(false)
+  const [copied, setCopied] = useTemporaryValue(false, 2000)
   const [isTranslating, setIsTranslating] = useState(false)
   const [showRegenerateTooltip, setShowRegenerateTooltip] = useState(false)
   const [showDeleteTooltip, setShowDeleteTooltip] = useState(false)
@@ -145,9 +146,8 @@ const MessageMenubar: FC<Props> = (props) => {
 
       window.message.success({ content: t('message.copied'), key: 'copy-message' })
       setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
     },
-    [message, t] // message is needed for message.id and as a fallback. t is for translation.
+    [message, setCopied, t] // message is needed for message.id and as a fallback. t is for translation.
   )
 
   const onNewBranch = useCallback(async () => {
