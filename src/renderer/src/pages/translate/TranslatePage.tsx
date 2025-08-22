@@ -188,8 +188,6 @@ const TranslatePage: FC = () => {
           return
         }
 
-        setTranslating(true)
-
         let translated: string
         try {
           translated = await translateText(text, actualTargetLanguage, throttle(setTranslatedContent, 100))
@@ -211,8 +209,6 @@ const TranslatePage: FC = () => {
       } catch (e) {
         logger.error('Failed to translate', e as Error)
         window.message.error(t('translate.error.unknown') + ': ' + (e as Error).message)
-      } finally {
-        setTranslating(false)
       }
     },
     [setTranslatedContent, setTranslating, t, translating]
@@ -228,6 +224,8 @@ const TranslatePage: FC = () => {
       })
       return
     }
+
+    setTranslating(true)
 
     try {
       // 确定源语言：如果用户选择了特定语言，使用用户选择的；如果选择'auto'，则自动检测
@@ -268,11 +266,14 @@ const TranslatePage: FC = () => {
         key: 'translate-message'
       })
       return
+    } finally {
+      setTranslating(false)
     }
   }, [
     bidirectionalPair,
     getLanguageByLangcode,
     isBidirectional,
+    setTranslating,
     sourceLanguage,
     t,
     targetLanguage,
