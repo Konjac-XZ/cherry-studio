@@ -750,6 +750,9 @@
     "enabled": "Enabled",
     "error": "error",
     "expand": "Expand",
+    "file": {
+      "not_supported": "Unsupported file type {{type}}"
+    },
     "footnote": "Reference content",
     "footnotes": "References",
     "fullscreen": "Entered fullscreen mode. Press F11 to exit",
@@ -790,6 +793,7 @@
     "success": "Success",
     "swap": "Swap",
     "topics": "Topics",
+    "upload_files": "Upload file",
     "warning": "Warning",
     "you": "You"
   },
@@ -1573,6 +1577,26 @@
       "success": "Successfully added {{type}} to the knowledge base"
     },
     "tip": "If the response is successful, then only messages exceeding 30 seconds will trigger a reminder"
+  },
+  "ocr": {
+    "error": {
+      "provider": {
+        "cannot_remove_builtin": "Cannot delete built-in provider",
+        "existing": "The provider already exists",
+        "not_found": "OCR provider does not exist",
+        "update_failed": "Failed to update configuration"
+      },
+      "unknown": "An error occurred during the OCR process"
+    },
+    "file": {
+      "not_supported": "Unsupported file type {{type}}"
+    },
+    "processing": "OCR processing...",
+    "warning": {
+      "provider": {
+        "fallback": "Reverted to {{name}}, which may cause issues"
+      }
+    }
   },
   "ollama": {
     "keep_alive_time": {
@@ -3500,6 +3524,20 @@
     },
     "title": "Settings",
     "tool": {
+      "ocr": {
+        "image": {
+          "error": {
+            "provider_not_found": "The provider does not exist"
+          },
+          "tesseract": {
+            "langs": "Supported languages",
+            "temp_tooltip": "Currently only Chinese and English are supported"
+          },
+          "title": "Image"
+        },
+        "image_provider": "OCR service provider",
+        "title": "OCR service"
+      },
       "preprocess": {
         "provider": "Document Processing Provider",
         "provider_placeholder": "Choose a document processing provider",
@@ -3739,6 +3777,15 @@
     },
     "exchange": {
       "label": "Swap the source and target languages"
+    },
+    "files": {
+      "drag_text": "Drop here",
+      "error": {
+        "multiple": "Multiple file uploads are not allowed",
+        "too_large": "File too large",
+        "unknown": "Failed to read file content"
+      },
+      "reading": "Reading file content..."
     },
     "history": {
       "clear": "Clear History",
