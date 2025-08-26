@@ -750,6 +750,9 @@
     "enabled": "Ativado",
     "error": "错误",
     "expand": "Expandir",
+    "file": {
+      "not_supported": "Tipo de arquivo não suportado {{type}}"
+    },
     "footnote": "Nota de rodapé",
     "footnotes": "Notas de rodapé",
     "fullscreen": "Entrou no modo de tela cheia, pressione F11 para sair",
@@ -790,6 +793,7 @@
     "success": "Sucesso",
     "swap": "Trocar",
     "topics": "Tópicos",
+    "upload_files": "Carregar arquivo",
     "warning": "Aviso",
     "you": "Você"
   },
@@ -1573,6 +1577,26 @@
       "success": "Adicionado com sucesso {{type}} à base de conhecimento"
     },
     "tip": "Se a resposta for bem-sucedida, lembrete apenas para mensagens que excedam 30 segundos"
+  },
+  "ocr": {
+    "error": {
+      "provider": {
+        "cannot_remove_builtin": "Não é possível excluir o provedor integrado",
+        "existing": "O provedor já existe",
+        "not_found": "O provedor OCR não existe",
+        "update_failed": "Falha ao atualizar a configuração"
+      },
+      "unknown": "O processo OCR apresentou um erro"
+    },
+    "file": {
+      "not_supported": "Tipo de arquivo não suportado {{type}}"
+    },
+    "processing": "Processamento OCR em andamento...",
+    "warning": {
+      "provider": {
+        "fallback": "Revertido para {{name}}, o que pode causar problemas"
+      }
+    }
   },
   "ollama": {
     "keep_alive_time": {
@@ -3498,6 +3522,20 @@
     },
     "title": "Configurações",
     "tool": {
+      "ocr": {
+        "image": {
+          "error": {
+            "provider_not_found": "O provedor não existe"
+          },
+          "tesseract": {
+            "langs": "Idiomas suportados",
+            "temp_tooltip": "No momento, apenas chinês e inglês são suportados."
+          },
+          "title": "Imagem"
+        },
+        "image_provider": "Provedor de serviços OCR",
+        "title": "Serviço OCR"
+      },
       "preprocess": {
         "provider": "prestador de serviços de pré-processamento de documentos",
         "provider_placeholder": "Escolha um fornecedor de pré-processamento de documentos",
@@ -3737,6 +3775,15 @@
     },
     "exchange": {
       "label": "Trocar idioma de origem e idioma de destino"
+    },
+    "files": {
+      "drag_text": "Arraste e solte aqui",
+      "error": {
+        "multiple": "Não é permitido fazer upload de vários arquivos",
+        "too_large": "Arquivo muito grande",
+        "unknown": "Falha ao ler o conteúdo do arquivo"
+      },
+      "reading": "Lendo o conteúdo do arquivo..."
     },
     "history": {
       "clear": "Limpar Histórico",
