@@ -148,9 +148,6 @@
     "edit": {
       "title": "编辑助手"
     },
-    "error": {
-      "add": "添加助手失败"
-    },
     "icon": {
       "type": "助手图标"
     },
@@ -1569,6 +1566,9 @@
     "expand": "伸缩对话框",
     "hide_sidebar": "隐藏侧边栏",
     "show_sidebar": "显示侧边栏"
+  },
+  "navigate": {
+    "provider_settings": "跳转到服务商设置界面"
   },
   "notification": {
     "assistant": "助手响应",
@@ -3854,10 +3854,6 @@
     "title": "更新提示"
   },
   "warning": {
-    "fallback": {
-      "deafult_assistant": "已回退到默认助手，这可能导致问题"
-    },
-    "missing_assistant": "助手不存在",
     "missing_provider": "供应商不存在，已回退到默认供应商 {{provider}}。这可能导致问题。"
   },
   "words": {
