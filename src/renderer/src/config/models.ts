@@ -2465,6 +2465,7 @@ export const SUPPORTED_DISABLE_GENERATION_MODELS = [
 export const GENERATE_IMAGE_MODELS = [
   'gemini-2.0-flash-exp-image-generation',
   'gemini-2.0-flash-preview-image-generation',
+  'gemini-2.5-flash-image-preview',
   'grok-2-image-1212',
   'grok-2-image',
   'grok-2-image-latest',
@@ -3299,6 +3300,11 @@ export const isNotSupportSystemMessageModel = (model: Model): boolean => {
 export const isGPT5SeriesModel = (model: Model) => {
   const modelId = getLowerBaseModelName(model.id)
   return modelId.includes('gpt-5')
+}
+
+export const isGeminiModel = (model: Model) => {
+  const modelId = getLowerBaseModelName(model.id)
+  return modelId.includes('gemini')
 }
 
 export const isOpenAIOpenWeightModel = (model: Model) => {
