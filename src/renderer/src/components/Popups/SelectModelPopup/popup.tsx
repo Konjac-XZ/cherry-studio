@@ -46,7 +46,7 @@ import styled from 'styled-components'
 import SelectModelSearchBar from './searchbar'
 import { FlatListItem, FlatListModel } from './types'
 
-const PAGE_SIZE = 30
+const PAGE_SIZE = 25
 const ITEM_HEIGHT = 36
 
 type ModelPredict = (m: Model) => boolean
@@ -510,7 +510,7 @@ const PopupContainer: React.FC<Props> = ({ model, resolve, modelFilter, userFilt
           overflow: 'hidden',
           paddingBottom: 16,
           // 需要稳定高度避免布局偏移
-          height: userFilterDisabled ? undefined : 530
+          // height: userFilterDisabled ? undefined : 530
         },
         body: {
           maxHeight: 'inherit',
