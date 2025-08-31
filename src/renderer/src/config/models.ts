@@ -143,8 +143,11 @@ import XirangModelLogo from '@renderer/assets/images/models/xirang.png'
 import XirangModelLogoDark from '@renderer/assets/images/models/xirang_dark.png'
 import YiModelLogo from '@renderer/assets/images/models/yi.png'
 import YiModelLogoDark from '@renderer/assets/images/models/yi_dark.png'
+import ZhipuModelLogo from '@renderer/assets/images/models/zhipu.png'
+import ZhipuModelLogoDark from '@renderer/assets/images/models/zhipu_dark.png'
 import YoudaoLogo from '@renderer/assets/images/providers/netease-youdao.svg'
 import NomicLogo from '@renderer/assets/images/providers/nomic.png'
+import ZhipuProviderLogo from '@renderer/assets/images/providers/zhipu.png'
 import { getProviderByModel } from '@renderer/services/AssistantService'
 import {
   isSystemProviderId,
@@ -274,7 +277,8 @@ const FUNCTION_CALLING_EXCLUDED_MODELS = [
   'AIDC-AI/Marco-o1',
   'gemini-1(?:\\.[\\w-]+)?',
   'qwen-mt(?:-[\\w-]+)?',
-  'gpt-5-chat(?:-[\\w-]+)?'
+  'gpt-5-chat(?:-[\\w-]+)?',
+  'glm-4\\.5v'
 ]
 
 export const FUNCTION_CALLING_REGEX = new RegExp(
@@ -509,6 +513,7 @@ export function getModelLogo(modelId: string) {
     xirang: isLight ? XirangModelLogo : XirangModelLogoDark,
     hugging: isLight ? HuggingfaceModelLogo : HuggingfaceModelLogoDark,
     youdao: YoudaoLogo,
+    'embedding-3': ZhipuProviderLogo,
     embedding: isLight ? EmbeddingModelLogo : EmbeddingModelLogoDark,
     perplexity: isLight ? PerplexityModelLogo : PerplexityModelLogoDark,
     sonar: isLight ? PerplexityModelLogo : PerplexityModelLogoDark,
@@ -516,7 +521,9 @@ export function getModelLogo(modelId: string) {
     'voyage-': VoyageModelLogo,
     tokenflux: isLight ? TokenFluxModelLogo : TokenFluxModelLogoDark,
     'nomic-': NomicLogo,
-    'pangu-': PanguModelLogo
+    'pangu-': PanguModelLogo,
+    cogview: isLight ? ZhipuModelLogo : ZhipuModelLogoDark,
+    zhipu: isLight ? ZhipuModelLogo : ZhipuModelLogoDark
   }
 
   for (const key in logoMap) {
@@ -529,35 +536,43 @@ export function getModelLogo(modelId: string) {
   return undefined
 }
 
+export const glm45FlashModel: Model = {
+  id: 'glm-4.5-flash',
+  name: 'GLM-4.5-Flash',
+  provider: 'cherryin',
+  group: 'GLM-4.5'
+}
+
+export const qwen38bModel: Model = {
+  id: 'Qwen/Qwen3-8B',
+  name: 'Qwen3-8B',
+  provider: 'cherryin',
+  group: 'Qwen'
+}
+
 export const SYSTEM_MODELS: Record<SystemProviderId | 'defaultModel', Model[]> = {
   defaultModel: [
+    // Default assistant model
+    glm45FlashModel,
+    // Default topic naming model
+    qwen38bModel,
+    // Default translation model
+    glm45FlashModel,
+    // Default quick assistant model
+    glm45FlashModel
+  ],
+  cherryin: [
     {
-      // 默认助手模型
-      id: 'deepseek-ai/DeepSeek-V3',
-      name: 'deepseek-ai/DeepSeek-V3',
-      provider: 'silicon',
-      group: 'deepseek-ai'
+      id: 'glm-4.5-flash',
+      name: 'GLM-4.5-Flash',
+      provider: 'cherryin',
+      group: 'GLM-4.5'
     },
     {
-      // 默认话题命名模型
       id: 'Qwen/Qwen3-8B',
-      name: 'Qwen/Qwen3-8B',
-      provider: 'silicon',
+      name: 'Qwen3-8B',
+      provider: 'cherryin',
       group: 'Qwen'
-    },
-    {
-      // 默认翻译模型
-      id: 'deepseek-ai/DeepSeek-V3',
-      name: 'deepseek-ai/DeepSeek-V3',
-      provider: 'silicon',
-      group: 'deepseek-ai'
-    },
-    {
-      // 默认快捷助手模型
-      id: 'deepseek-ai/DeepSeek-V3',
-      name: 'deepseek-ai/DeepSeek-V3',
-      provider: 'silicon',
-      group: 'deepseek-ai'
     }
   ],
   vertexai: [],
@@ -1220,112 +1235,34 @@ export const SYSTEM_MODELS: Record<SystemProviderId | 'defaultModel', Model[]> =
   ],
   zhipu: [
     {
-      id: 'glm-4.5',
-      provider: 'zhipu',
-      name: 'GLM-4.5',
-      group: 'GLM-4.5'
-    },
-    {
       id: 'glm-4.5-flash',
       provider: 'zhipu',
       name: 'GLM-4.5-Flash',
       group: 'GLM-4.5'
     },
     {
+      id: 'glm-4.5',
+      provider: 'zhipu',
+      name: 'GLM-4.5',
+      group: 'GLM-4.5'
+    },
+    {
       id: 'glm-4.5-air',
       provider: 'zhipu',
-      name: 'GLM-4.5-AIR',
+      name: 'GLM-4.5-Air',
       group: 'GLM-4.5'
     },
     {
       id: 'glm-4.5-airx',
       provider: 'zhipu',
-      name: 'GLM-4.5-AIRX',
+      name: 'GLM-4.5-AirX',
       group: 'GLM-4.5'
     },
     {
-      id: 'glm-4.5-x',
+      id: 'glm-4.5v',
       provider: 'zhipu',
-      name: 'GLM-4.5-X',
-      group: 'GLM-4.5'
-    },
-    {
-      id: 'glm-z1-air',
-      provider: 'zhipu',
-      name: 'GLM-Z1-AIR',
-      group: 'GLM-Z1'
-    },
-    {
-      id: 'glm-z1-airx',
-      provider: 'zhipu',
-      name: 'GLM-Z1-AIRX',
-      group: 'GLM-Z1'
-    },
-    {
-      id: 'glm-z1-flash',
-      provider: 'zhipu',
-      name: 'GLM-Z1-FLASH',
-      group: 'GLM-Z1'
-    },
-    {
-      id: 'glm-4-long',
-      provider: 'zhipu',
-      name: 'GLM-4-Long',
-      group: 'GLM-4'
-    },
-    {
-      id: 'glm-4-plus',
-      provider: 'zhipu',
-      name: 'GLM-4-Plus',
-      group: 'GLM-4'
-    },
-    {
-      id: 'glm-4-air-250414',
-      provider: 'zhipu',
-      name: 'GLM-4-Air-250414',
-      group: 'GLM-4'
-    },
-    {
-      id: 'glm-4-airx',
-      provider: 'zhipu',
-      name: 'GLM-4-AirX',
-      group: 'GLM-4'
-    },
-    {
-      id: 'glm-4-flash-250414',
-      provider: 'zhipu',
-      name: 'GLM-4-Flash-250414',
-      group: 'GLM-4'
-    },
-    {
-      id: 'glm-4-flashx',
-      provider: 'zhipu',
-      name: 'GLM-4-FlashX',
-      group: 'GLM-4'
-    },
-    {
-      id: 'glm-4v',
-      provider: 'zhipu',
-      name: 'GLM 4V',
-      group: 'GLM-4v'
-    },
-    {
-      id: 'glm-4v-flash',
-      provider: 'zhipu',
-      name: 'GLM-4V-Flash',
-      group: 'GLM-4v'
-    },
-    {
-      id: 'glm-4v-plus-0111',
-      provider: 'zhipu',
-      name: 'GLM-4V-Plus-0111',
-      group: 'GLM-4v'
-    },
-    {
-      id: 'glm-4-alltools',
-      provider: 'zhipu',
-      name: 'GLM-4-AllTools',
-      group: 'GLM-4-AllTools'
+      name: 'GLM-4.5V',
+      group: 'GLM-4.5V'
     },
     {
       id: 'embedding-3',
@@ -2641,7 +2578,7 @@ export function isSupportedThinkingTokenModel(model?: Model): boolean {
 
   // Specifically for DeepSeek V3.1. White list for now
   if (isDeepSeekHybridInferenceModel(model)) {
-    return (['openrouter', 'dashscope', 'doubao', 'silicon', 'nvidia'] satisfies SystemProviderId[]).some(
+    return (['openrouter', 'dashscope', 'doubao', 'silicon', 'nvidia', 'ppio'] satisfies SystemProviderId[]).some(
       (id) => id === model.provider
     )
   }
@@ -2870,7 +2807,7 @@ export const isDeepSeekHybridInferenceModel = (model: Model) => {
   const modelId = getLowerBaseModelName(model.id)
   // deepseek官方使用chat和reasoner做推理控制，其他provider需要单独判断，id可能会有所差别
   // openrouter: deepseek/deepseek-chat-v3.1 不知道会不会有其他provider仿照ds官方分出一个同id的作为非思考模式的模型，这里有风险
-  return /deepseek-v3(?:\.1|-1-\d+)?/.test(modelId) || modelId === 'deepseek-chat-v3.1'
+  return /deepseek-v3(?:\.1|-1-\d+)?/.test(modelId) || modelId.includes('deepseek-chat-v3.1')
 }
 
 export const isSupportedThinkingTokenDeepSeekModel = isDeepSeekHybridInferenceModel
