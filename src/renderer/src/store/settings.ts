@@ -49,7 +49,6 @@ export interface SettingsState {
   userName: string
   userId: string
   showPrompt: boolean
-  showTokens: boolean
   showMessageDivider: boolean
   messageFont: 'system' | 'serif'
   showInputEstimatedTokens: boolean
@@ -234,7 +233,6 @@ export const initialState: SettingsState = {
   userName: '',
   userId: uuid(),
   showPrompt: true,
-  showTokens: true,
   showMessageDivider: true,
   messageFont: 'system',
   showInputEstimatedTokens: false,
@@ -457,9 +455,6 @@ const settingsSlice = createSlice({
     },
     setShowPrompt: (state, action: PayloadAction<boolean>) => {
       state.showPrompt = action.payload
-    },
-    setShowTokens: (state, action: PayloadAction<boolean>) => {
-      state.showTokens = action.payload
     },
     setShowMessageDivider: (state, action: PayloadAction<boolean>) => {
       state.showMessageDivider = action.payload
@@ -871,7 +866,6 @@ export const {
   setProxyBypassRules,
   setUserName,
   setShowPrompt,
-  setShowTokens,
   setShowMessageDivider,
   setMessageFont,
   setShowInputEstimatedTokens,
