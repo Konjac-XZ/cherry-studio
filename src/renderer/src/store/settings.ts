@@ -123,6 +123,9 @@ export interface SettingsState {
   enableTopicNaming: boolean
   customCss: string
   topicNamingPrompt: string
+  // 消息操作确认设置
+  confirmDeleteMessage: boolean
+  confirmRegenerateMessage: boolean
   // Sidebar icons
   sidebarIcons: {
     visible: SidebarIcon[]
@@ -212,7 +215,7 @@ export interface SettingsState {
   navbarPosition: 'left' | 'top'
   // API Server
   apiServer: ApiServerConfig
-  showMessageOutline?: boolean
+  showMessageOutline: boolean
   // Notes Related
   showWorkspace: boolean
 }
@@ -348,6 +351,9 @@ export const initialState: SettingsState = {
   enableSpellCheck: false,
   spellCheckLanguages: [],
   enableQuickPanelTriggers: false,
+  // 消息操作确认设置
+  confirmDeleteMessage: true,
+  confirmRegenerateMessage: true,
   // 硬件加速设置
   disableHardwareAcceleration: false,
   exportMenuOptions: {
@@ -405,7 +411,7 @@ export const initialState: SettingsState = {
     port: 23333,
     apiKey: `cs-sk-${uuid()}`
   },
-  showMessageOutline: undefined,
+  showMessageOutline: false,
   // Notes Related
   showWorkspace: true
 }
@@ -775,6 +781,12 @@ const settingsSlice = createSlice({
     setEnableQuickPanelTriggers: (state, action: PayloadAction<boolean>) => {
       state.enableQuickPanelTriggers = action.payload
     },
+    setConfirmDeleteMessage: (state, action: PayloadAction<boolean>) => {
+      state.confirmDeleteMessage = action.payload
+    },
+    setConfirmRegenerateMessage: (state, action: PayloadAction<boolean>) => {
+      state.confirmRegenerateMessage = action.payload
+    },
     setDisableHardwareAcceleration: (state, action: PayloadAction<boolean>) => {
       state.disableHardwareAcceleration = action.payload
     },
@@ -955,6 +967,8 @@ export const {
   setSpellCheckLanguages,
   setExportMenuOptions,
   setEnableQuickPanelTriggers,
+  setConfirmDeleteMessage,
+  setConfirmRegenerateMessage,
   setDisableHardwareAcceleration,
   setOpenAISummaryText,
   setOpenAIVerbosity,
