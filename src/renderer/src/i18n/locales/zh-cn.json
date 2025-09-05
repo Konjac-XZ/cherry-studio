@@ -392,8 +392,8 @@
       },
       "warning": {
         "gemini_web_search": "Gemini 不支持同时使用原生网络搜索工具与函数调用",
-        "multiple_tools": "存在多个匹配的MCP工具，已选择 {{tool}}",
-        "no_tool": "未匹配到所需的MCP工具 {{tool}}",
+        "multiple_tools": "存在多个匹配的 MCP 工具，已选择 {{tool}}",
+        "no_tool": "未匹配到所需的 MCP 工具 {{tool}}",
         "url_context": "Gemini 不支持同时使用网页上下文与函数调用"
       }
     },
@@ -591,7 +591,7 @@
       "edit": {
         "placeholder": "输入新名称",
         "title": "编辑话题名",
-        "title_tip": "提示: 双击话题名可以直接就地重命名"
+        "title_tip": "提示：双击话题名可以直接就地重命名"
       },
       "export": {
         "image": "导出为图片",
@@ -828,7 +828,7 @@
       },
       "details": "详细信息",
       "mcp": {
-        "invalid": "无效的MCP服务器"
+        "invalid": "无效的 MCP 服务器"
       }
     },
     "cause": "错误原因",
@@ -837,8 +837,8 @@
         "non_json": "返回了无效的数据格式"
       },
       "insufficient_balance": "请前往 <provider>{{provider}}</provider> 充值",
-      "no_api_key": "您未配置 API 密钥，请前往 <provider>{{provider}}</provider> 获取API密钥",
-      "quota_exceeded": "您今日免费配额已用尽，请前往 <provider>{{provider}}</provider> 获取API密钥，配置API密钥后继续使用",
+      "no_api_key": "您未配置 API 密钥，请前往 <provider>{{provider}}</provider> 获取 API 密钥",
+      "quota_exceeded": "您今日免费配额已用尽，请前往 <provider>{{provider}}</provider> 获取 API 密钥，配置 API 密钥后继续使用",
       "response": "出错了，如果没有配置 API 密钥，请前往设置 > 模型提供商中配置密钥"
     },
     "data": "数据",
@@ -1058,7 +1058,7 @@
     "retriever_hybrid_weight": {
       "bm25": "全文",
       "recommended": "推荐",
-      "title": "混合搜索权重调整 (全文/向量)",
+      "title": "混合搜索权重调整 (全文 / 向量)",
       "vector": "向量"
     },
     "retriever_tooltip": "使用不同的检索方式检索知识库",
@@ -1096,7 +1096,7 @@
     "topN_too_large_or_small": "返回结果数量不能大于 30 或小于 1",
     "topN_tooltip": "返回的匹配结果数量，数值越大，匹配结果越多，但消耗的 Token 也越多",
     "url_added": "网址已添加",
-    "url_placeholder": "请输入网址, 多个网址用回车分隔",
+    "url_placeholder": "请输入网址，多个网址用回车分隔",
     "urls": "网址",
     "videos": "视频",
     "videos_file": "视频文件"
@@ -1186,12 +1186,12 @@
     "memory": "条记忆",
     "memory_content": "记忆内容",
     "memory_placeholder": "输入记忆内容...",
-    "new_user_id": "新用户ID",
-    "new_user_id_placeholder": "输入唯一的用户ID",
+    "new_user_id": "新用户 ID",
+    "new_user_id_placeholder": "输入唯一的用户 ID",
     "no_matching_memories": "未找到匹配的记忆",
     "no_memories": "暂无记忆",
     "no_memories_description": "开始添加您的第一条记忆吧",
-    "not_configured_desc": "请在记忆设置中配置嵌入和LLM模型以启用记忆功能。",
+    "not_configured_desc": "请在记忆设置中配置嵌入和 LLM 模型以启用记忆功能。",
     "not_configured_title": "记忆未配置",
     "pagination_total": "第 {{start}}-{{end}} 项，共 {{total}} 项",
     "please_enter_memory": "请输入记忆内容",
@@ -1229,13 +1229,13 @@
     "user_created": "用户 {{user}} 创建并切换成功",
     "user_deleted": "用户 {{user}} 删除成功",
     "user_id": "用户 ID",
-    "user_id_exists": "该用户ID已存在",
-    "user_id_invalid_chars": "用户ID只能包含字母、数字、连字符和下划线",
+    "user_id_exists": "该用户 ID 已存在",
+    "user_id_invalid_chars": "用户 ID 只能包含字母、数字、连字符和下划线",
     "user_id_placeholder": "输入用户 ID（可选）",
-    "user_id_required": "用户ID为必填项",
-    "user_id_reserved": "'default-user' 为保留字，请使用其他ID",
-    "user_id_rules": "用户ID必须唯一，只能包含字母、数字、连字符(-)和下划线(_)",
-    "user_id_too_long": "用户ID不能超过50个字符",
+    "user_id_required": "用户 ID 为必填项",
+    "user_id_reserved": "'default-user' 为保留字，请使用其他 ID",
+    "user_id_rules": "用户 ID 必须唯一，只能包含字母、数字、连字符 (-) 和下划线 (_)",
+    "user_id_too_long": "用户 ID 不能超过 50 个字符",
     "user_management": "用户管理",
     "user_memories_reset": "{{user}} 的所有记忆已重置",
     "user_switch_failed": "切换用户失败",
@@ -1541,28 +1541,28 @@
   },
   "minapps": {
     "baichuan": "百小应",
-    "baidu-ai-search": "百度AI搜索",
+    "baidu-ai-search": "百度 AI 搜索",
     "chatglm": "智谱清言",
-    "dangbei": "当贝AI",
+    "dangbei": "当贝 AI",
     "doubao": "豆包",
     "hailuo": "海螺",
-    "metaso": "秘塔AI搜索",
-    "nami-ai": "纳米AI",
-    "nami-ai-search": "纳米AI搜索",
+    "metaso": "秘塔 AI 搜索",
+    "nami-ai": "纳米 AI",
+    "nami-ai-search": "纳米 AI 搜索",
     "qwen": "通义千问",
     "sensechat": "商量",
     "tencent-yuanbao": "腾讯元宝",
-    "tiangong-ai": "天工AI",
+    "tiangong-ai": "天工 AI",
     "wanzhi": "万知",
     "wenxin": "文心一言",
-    "wps-copilot": "WPS灵犀",
+    "wps-copilot": "WPS 灵犀",
     "xiaoyi": "小艺",
     "yuewen": "跃问",
     "zhihu": "知乎直答"
   },
   "miniwindow": {
     "alert": {
-      "google_login": "提示：如遇到Google登录提示\"不受信任的浏览器\"，请先在小程序列表中的Google小程序中完成账号登录，再在其它小程序使用Google登录"
+      "google_login": "提示：如遇到 Google 登录提示 \"不受信任的浏览器\"，请先在小程序列表中的 Google 小程序中完成账号登录，再在其它小程序使用 Google 登录"
     },
     "clipboard": {
       "empty": "剪贴板为空"
@@ -1664,7 +1664,7 @@
     "content_placeholder": "请输入笔记内容...",
     "copyContent": "复制内容",
     "delete": "删除",
-    "delete_confirm": "确定要删除这个{{type}}吗？",
+    "delete_confirm": "确定要删除这个 {{type}} 吗？",
     "delete_folder_confirm": "确定要删除文件夹 \"{{name}}\" 及其所有内容吗？",
     "delete_note_confirm": "确定要删除笔记 \"{{name}}\" 吗？",
     "drop_markdown_hint": "拖拽 Markdown 文件到此处导入",
@@ -1750,7 +1750,7 @@
       "error": "{{error}}",
       "success": "成功添加 {{type}} 到知识库"
     },
-    "tip": "如果响应成功，则只针对超过30秒的消息进行提醒"
+    "tip": "如果响应成功，则只针对超过 30 秒的消息进行提醒"
   },
   "ocr": {
     "builtin": {
@@ -2218,7 +2218,7 @@
     "math": {
       "placeholder": "输入 LaTeX 公式"
     },
-    "placeholder": "输入'/'调用命令",
+    "placeholder": "输入 '/' 调用命令",
     "plusButton": "点击在下方添加",
     "toolbar": {
       "blockMath": "数学公式块",
@@ -2314,8 +2314,8 @@
             "open_accessibility_settings": "打开辅助功能设置"
           },
           "description": [
-            "划词助手需「<strong>辅助功能权限</strong>」才能正常工作。",
-            "请点击「<strong>去设置</strong>」，并在稍后弹出的权限请求弹窗中点击 「<strong>打开系统设置</strong>」 按钮，然后在之后的应用列表中找到 「<strong>Cherry Studio</strong>」，并打开权限开关。",
+            "划词助手需「<strong> 辅助功能权限 </strong>」才能正常工作。",
+            "请点击「<strong> 去设置 </strong>」，并在稍后弹出的权限请求弹窗中点击 「<strong> 打开系统设置 </strong>」 按钮，然后在之后的应用列表中找到 「<strong>Cherry Studio</strong>」，并打开权限开关。",
             "完成设置后，请再次开启划词助手。"
           ],
           "title": "辅助功能权限"
@@ -2326,8 +2326,8 @@
       "filter_modal": {
         "title": "应用筛选名单",
         "user_tips": {
-          "mac": "请输入应用的Bundle ID，每行一个，不区分大小写，可以模糊匹配。例如：com.google.Chrome、com.apple.mail等",
-          "windows": "请输入应用的执行文件名，每行一个，不区分大小写，可以模糊匹配。例如：chrome.exe、weixin.exe、Cherry Studio.exe等"
+          "mac": "请输入应用的 Bundle ID，每行一个，不区分大小写，可以模糊匹配。例如：com.google.Chrome、com.apple.mail 等",
+          "windows": "请输入应用的执行文件名，每行一个，不区分大小写，可以模糊匹配。例如：chrome.exe、weixin.exe、Cherry Studio.exe 等"
         }
       },
       "search_modal": {
@@ -2364,7 +2364,7 @@
           "description": "划词后，触发取词并显示工具栏的方式",
           "description_note": {
             "mac": "若使用了快捷键或键盘映射工具对 ⌘ 键进行了重映射，可能导致部分应用无法划词。",
-            "windows": "少数应用不支持通过 Ctrl 键划词。若使用了AHK等按键映射工具对 Ctrl 键进行了重映射，可能导致部分应用无法划词。"
+            "windows": "少数应用不支持通过 Ctrl 键划词。若使用了 AHK 等按键映射工具对 Ctrl 键进行了重映射，可能导致部分应用无法划词。"
           },
           "selected": "划词",
           "selected_note": "划词后立即显示工具栏",
@@ -2905,7 +2905,7 @@
           "noSync": "未同步"
         },
         "title": {
-          "help": "与AWS S3 API兼容的对象存储服务, 例如AWS S3, Cloudflare R2, 阿里云OSS, 腾讯云COS等",
+          "help": "与 AWS S3 API 兼容的对象存储服务，例如 AWS S3, Cloudflare R2, 阿里云 OSS, 腾讯云 COS 等",
           "label": "S3 兼容存储",
           "tooltip": "S3 兼容存储配置文档"
         }
@@ -2985,7 +2985,7 @@
           }
         },
         "disableStream": {
-          "help": "开启后，将文件加载到内存中再上传，可解决部分WebDAV服务不兼容chunked上传的问题，但会增加内存占用。",
+          "help": "开启后，将文件加载到内存中再上传，可解决部分 WebDAV 服务不兼容 chunked 上传的问题，但会增加内存占用。",
           "title": "禁用流式上传"
         },
         "host": {
@@ -3021,7 +3021,7 @@
       "yuque": {
         "check": {
           "button": "检测",
-          "empty_repo_url": ".key请先输入知识库 URL",
+          "empty_repo_url": ".key 请先输入知识库 URL",
           "empty_token": "请先输入语雀 Token",
           "fail": "语雀连接验证失败",
           "success": "语雀连接验证成功"
@@ -3153,7 +3153,7 @@
       "clear": {
         "all": "清除",
         "knowledge_base": "清除选中的知识库",
-        "models": "清除@的所有模型"
+        "models": "清除 @的所有模型"
       },
       "show_translate_confirm": "显示翻译确认对话框",
       "target_language": {
@@ -3215,7 +3215,7 @@
       "baseUrlTooltip": "远程 URL 地址",
       "builtinServers": "内置服务器",
       "builtinServersDescriptions": {
-        "brave_search": "一个集成了Brave 搜索 API 的 MCP 服务器实现，提供网页与本地搜索双重功能。需要配置 BRAVE_API_KEY 环境变量",
+        "brave_search": "一个集成了 Brave 搜索 API 的 MCP 服务器实现，提供网页与本地搜索双重功能。需要配置 BRAVE_API_KEY 环境变量",
         "dify_knowledge": "Dify 的 MCP 服务器实现，提供了一个简单的 API 来与 Dify 进行交互。需要配置 Dify Key",
         "fetch": "用于获取 URL 网页内容的 MCP 服务器",
         "filesystem": "实现文件系统操作的模型上下文协议（MCP）的 Node.js 服务器。需要配置允许访问的目录",
@@ -3263,7 +3263,7 @@
       "jsonSaveSuccess": "JSON 配置已保存",
       "logoUrl": "标志网址",
       "longRunning": "长时间运行模式",
-      "longRunningTooltip": "启用后，服务器支持长时间任务，接收到进度通知时会重置超时计时器，并延长最大超时时间至10分钟",
+      "longRunningTooltip": "启用后，服务器支持长时间任务，接收到进度通知时会重置超时计时器，并延长最大超时时间至 10 分钟",
       "missingDependencies": "缺失，请安装它以继续",
       "more": {
         "awesome": "精选的 MCP 服务器列表",
@@ -3275,7 +3275,7 @@
         "official": "官方 MCP 服务器集合",
         "pulsemcp": "Pulse MCP 服务器",
         "smithery": "Smithery MCP 工具",
-        "zhipu": "精选MCP，极速接入"
+        "zhipu": "精选 MCP，极速接入"
       },
       "name": "名称",
       "newServer": "MCP 服务器",
@@ -3365,7 +3365,7 @@
         "autoApprove": {
           "label": "自动批准",
           "tooltip": {
-            "confirm": "是否运行该MCP工具？",
+            "confirm": "是否运行该 MCP 工具？",
             "disabled": "工具运行前需要手动批准",
             "enabled": "工具将自动运行而无需批准",
             "howToEnable": "启用工具后才能使用自动批准"
@@ -3433,7 +3433,7 @@
       "use_serif_font": "使用衬线字体"
     },
     "mineru": {
-      "api_key": "MinerU现在提供每日500页的免费额度，您不需要填写密钥。"
+      "api_key": "MinerU 现在提供每日 500 页的免费额度，您不需要填写密钥。"
     },
     "miniapps": {
       "cache_change_notice": "更改将在打开的小程序增减至设定值后生效",
@@ -3562,8 +3562,8 @@
       "provider_key_add_failed_by_empty_data": "添加服务商 API 密钥失败，数据为空",
       "provider_key_add_failed_by_invalid_data": "添加服务商 API 密钥失败，数据格式错误",
       "provider_key_added": "成功为 {{provider}} 添加 API 密钥",
-      "provider_key_already_exists": "{{provider}} 已存在相同API 密钥，不会重复添加",
-      "provider_key_confirm_title": "为{{provider}}添加 API 密钥",
+      "provider_key_already_exists": "{{provider}} 已存在相同 API 密钥，不会重复添加",
+      "provider_key_confirm_title": "为 {{provider}} 添加 API 密钥",
       "provider_key_no_change": "{{provider}} 的 API 密钥没有变化",
       "provider_key_overridden": "成功更新 {{provider}} 的 API 密钥",
       "provider_key_override_confirm": "{{provider}} 已存在相同 API 密钥，是否覆盖？",
@@ -3677,7 +3677,7 @@
           },
           "label": "API 设置",
           "service_tier": {
-            "help": "该提供商是否支持配置 service_tier 参数。开启后，可在对话页面的服务层级设置中调整该参数。（仅限OpenAI模型）",
+            "help": "该提供商是否支持配置 service_tier 参数。开启后，可在对话页面的服务层级设置中调整该参数。（仅限 OpenAI 模型）",
             "label": "支持 service_tier"
           },
           "stream_options": {
@@ -3951,7 +3951,7 @@
         "apikey": "API 密钥",
         "blacklist": "黑名单",
         "blacklist_description": "在搜索结果中不会出现以下网站的结果",
-        "blacklist_tooltip": "请使用以下格式(换行分隔)\n匹配模式: *://*.example.com/*\n正则表达式: /example\\.(net|org)/",
+        "blacklist_tooltip": "请使用以下格式 (换行分隔)\n匹配模式: *://*.example.com/*\n正则表达式: /example\\.(net|org)/",
         "check": "检测",
         "check_failed": "验证失败",
         "check_success": "验证成功",
@@ -3960,7 +3960,7 @@
             "limit": {
               "label": "截断长度",
               "placeholder": "输入长度",
-              "tooltip": "限制搜索结果的内容长度, 超过限制的内容将被截断（例如 2000 字符）"
+              "tooltip": "限制搜索结果的内容长度，超过限制的内容将被截断（例如 2000 字符）"
             },
             "unit": {
               "char": "字符",
@@ -3988,7 +3988,7 @@
           "title": "搜索结果压缩"
         },
         "content_limit": "内容长度限制",
-        "content_limit_tooltip": "限制搜索结果的内容长度, 超过限制的内容将被截断",
+        "content_limit_tooltip": "限制搜索结果的内容长度，超过限制的内容将被截断",
         "free": "免费",
         "no_provider_selected": "请选择搜索服务商后再检测",
         "overwrite": "覆盖服务商搜索",
@@ -4003,7 +4003,7 @@
         "subscribe": "黑名单订阅",
         "subscribe_add": "添加订阅",
         "subscribe_add_failed": "订阅源添加失败",
-        "subscribe_add_success": "订阅源添加成功!",
+        "subscribe_add_success": "订阅源添加成功！",
         "subscribe_delete": "删除订阅源",
         "subscribe_name": {
           "label": "替代名字",
@@ -4022,8 +4022,8 @@
           "title": "Tavily"
         },
         "title": "网络搜索",
-        "url_invalid": "输入了无效的URL",
-        "url_required": "需要输入URL"
+        "url_invalid": "输入了无效的 URL",
+        "url_required": "需要输入 URL"
       }
     },
     "topic": {
@@ -4059,7 +4059,7 @@
           }
         },
         "langCode": {
-          "help": "[语言+区域]的格式，[2~3位小写字母]-[2~3位小写字母]",
+          "help": "[语言 + 区域] 的格式，[2~3 位小写字母]-[2~3 位小写字母]",
           "label": "语言代码",
           "placeholder": "zh-cn"
         },
@@ -4074,7 +4074,7 @@
           }
         },
         "value": {
-          "help": "1~32个字符",
+          "help": "1~32 个字符",
           "label": "语言名称",
           "placeholder": "中文"
         }
@@ -4114,14 +4114,14 @@
     "inputs": "输入",
     "label": "调用链",
     "name": "节点名称",
-    "noTraceList": "没有找到Trace信息",
+    "noTraceList": "没有找到 Trace 信息",
     "outputs": "输出",
-    "parentId": "上级Id",
-    "spanDetail": "Span详情",
+    "parentId": "上级 Id",
+    "spanDetail": "Span 详情",
     "spendTime": "消耗时间",
     "startTime": "开始时间",
     "tag": "标签",
-    "tokenUsage": "Token使用量",
+    "tokenUsage": "Token 使用量",
     "traceWindow": "调用链窗口"
   },
   "translate": {
@@ -4147,7 +4147,7 @@
       "method": {
         "algo": {
           "label": "算法",
-          "tip": "使用franc进行语言检测"
+          "tip": "使用 franc 进行语言检测"
         },
         "auto": {
           "label": "自动",
@@ -4155,7 +4155,7 @@
         },
         "label": "自动检测方法",
         "llm": {
-          "tip": "使用快速模型进行语言检测，消耗少量token。"
+          "tip": "使用快速模型进行语言检测，消耗少量 token。"
         },
         "placeholder": "选择自动检测方法",
         "tip": "自动检测输入语言时使用的方法"
@@ -4168,7 +4168,7 @@
     "error": {
       "chat_qwen_mt": "Qwen MT 模型不可在对话中使用，请转至翻译页面",
       "detect": {
-        "qwen_mt": "QwenMT模型不能用于语言检测",
+        "qwen_mt": "QwenMT 模型不能用于语言检测",
         "unknown": "检测到未知语言",
         "update_setting": "设置失败"
       },
@@ -4210,7 +4210,7 @@
       "aborted": "翻译中止"
     },
     "input": {
-      "placeholder": "可粘贴或拖入文本、文本文件、图片（支持OCR）"
+      "placeholder": "可粘贴或拖入文本、文本文件、图片（支持 OCR）"
     },
     "language": {
       "not_pair": "源语言与设置的语言不同",
