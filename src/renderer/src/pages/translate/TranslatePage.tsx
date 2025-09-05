@@ -737,9 +737,14 @@ const TranslatePage: FC = () => {
   // 粘贴上传文件
   const onPaste = useCallback(
     async (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      event.preventDefault()
+      if (isProcessing) return
       setIsProcessing(true)
       logger.debug('event', event)
-      if (event.clipboardData?.files && event.clipboardData.files.length > 0) {
+      const text = event.clipboardData.getData('text')
+      if (!isEmpty(text)) {
+        setText(text)
+      } else if (event.clipboardData.files && event.clipboardData.files.length > 0) {
         event.preventDefault()
         const files = event.clipboardData.files
         const file = getSingleFile(files) as File
@@ -784,7 +789,7 @@ const TranslatePage: FC = () => {
       }
       setIsProcessing(false)
     },
-    [getSingleFile, processFile, t]
+    [getSingleFile, isProcessing, processFile, setText, t]
   )
   return (
     <Container
