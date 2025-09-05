@@ -229,6 +229,13 @@ const TranslatePage: FC = () => {
 
         window.message.success(t('translate.complete'))
 
+        // Auto-copy translated text to clipboard (silent, no toggle/notice)
+        try {
+          await navigator.clipboard.writeText(translated)
+        } catch (e) {
+          logger.error('Failed to copy translated text to clipboard', e as Error)
+        }
+
         try {
           await saveTranslateHistory(text, translated, actualSourceLanguage.langCode, actualTargetLanguage.langCode)
         } catch (e) {
