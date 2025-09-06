@@ -42,7 +42,17 @@ import { imageExts, MB, textExts } from '@shared/config/constant'
 import { Button, Flex, FloatButton, Popover, Tooltip, Typography } from 'antd'
 import TextArea, { TextAreaRef } from 'antd/es/input/TextArea'
 import { isEmpty, throttle } from 'lodash'
-import { Columns2, GripVertical, Rows2, Settings2, SpellCheck, Check, CirclePause, FolderClock, UploadIcon } from 'lucide-react'
+import {
+  Columns2,
+  GripVertical,
+  Rows2,
+  Settings2,
+  SpellCheck,
+  Check,
+  CirclePause,
+  FolderClock,
+  UploadIcon
+} from 'lucide-react'
 import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
@@ -80,9 +90,9 @@ const DraggableDivider: FC<{
     (e: MouseEvent) => {
       if (!isDragging.current) return
 
-        const container = (dividerRef.current?.parentElement as HTMLDivElement | null) || containerRef.current
-        if (!container) return
-        const rect = container.getBoundingClientRect()
+      const container = (dividerRef.current?.parentElement as HTMLDivElement | null) || containerRef.current
+      if (!container) return
+      const rect = container.getBoundingClientRect()
 
       if (isVertical) {
         const minHeight = 200
@@ -737,14 +747,9 @@ const TranslatePage: FC = () => {
   // 粘贴上传文件
   const onPaste = useCallback(
     async (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
-      event.preventDefault()
-      if (isProcessing) return
       setIsProcessing(true)
       logger.debug('event', event)
-      const text = event.clipboardData.getData('text')
-      if (!isEmpty(text)) {
-        setText(text)
-      } else if (event.clipboardData.files && event.clipboardData.files.length > 0) {
+      if (event.clipboardData?.files && event.clipboardData.files.length > 0) {
         event.preventDefault()
         const files = event.clipboardData.files
         const file = getSingleFile(files) as File
@@ -789,7 +794,7 @@ const TranslatePage: FC = () => {
       }
       setIsProcessing(false)
     },
-    [getSingleFile, isProcessing, processFile, setText, t]
+    [getSingleFile, processFile, t]
   )
   return (
     <Container
