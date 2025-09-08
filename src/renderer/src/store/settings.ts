@@ -98,6 +98,7 @@ export interface SettingsState {
   codeCollapsible: boolean
   codeWrappable: boolean
   codeImageTools: boolean
+  codeFancyBlock: boolean
   mathEngine: MathEngine
   mathEnableSingleDollar: boolean
   messageStyle: 'plain' | 'bubble'
@@ -284,6 +285,7 @@ export const initialState: SettingsState = {
   codeCollapsible: false,
   codeWrappable: false,
   codeImageTools: false,
+  codeFancyBlock: true,
   mathEngine: 'KaTeX',
   mathEnableSingleDollar: true,
   messageStyle: 'plain',
@@ -616,6 +618,9 @@ const settingsSlice = createSlice({
     setCodeImageTools: (state, action: PayloadAction<boolean>) => {
       state.codeImageTools = action.payload
     },
+    setCodeFancyBlock: (state, action: PayloadAction<boolean>) => {
+      state.codeFancyBlock = action.payload
+    },
     setMathEngine: (state, action: PayloadAction<MathEngine>) => {
       state.mathEngine = action.payload
     },
@@ -906,6 +911,7 @@ export const {
   setCodeCollapsible,
   setCodeWrappable,
   setCodeImageTools,
+  setCodeFancyBlock,
   setMathEngine,
   setMathEnableSingleDollar,
   setFoldDisplayMode,
