@@ -623,7 +623,7 @@ const TranslatePage: FC = () => {
       if (shouldOCR) {
         try {
           const ocrResult = await ocr(file)
-          setText(ocrResult.text)
+          setText(text + ocrResult.text)
         } finally {
           // do nothing when failed. because error should be handled inside
         }
@@ -655,7 +655,7 @@ const TranslatePage: FC = () => {
           } else {
             try {
               const result = await window.api.fs.readText(file.path)
-              setText(result)
+              setText(text + result)
             } catch (e) {
               logger.error('Failed to read text file.', e as Error)
               window.message.error(t('translate.files.error.unknown') + ': ' + formatErrorMessage(e))
@@ -667,7 +667,7 @@ const TranslatePage: FC = () => {
         }
       }
     },
-    [ocr, setText, t]
+    [ocr, setText, t, text]
   )
 
   // 点击上传文件按钮
@@ -767,9 +767,13 @@ const TranslatePage: FC = () => {
   // 粘贴上传文件
   const onPaste = useCallback(
     async (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      if (isProcessing) return
       setIsProcessing(true)
       logger.debug('event', event)
-      if (event.clipboardData?.files && event.clipboardData.files.length > 0) {
+      const clipboardText = event.clipboardData.getData('text')
+      if (!isEmpty(clipboardText)) {
+        // depend default. this branch is only for preventing files when clipboard contains text
+      } else if (event.clipboardData.files && event.clipboardData.files.length > 0) {
         event.preventDefault()
         const files = event.clipboardData.files
         const file = getSingleFile(files) as File
@@ -814,7 +818,7 @@ const TranslatePage: FC = () => {
       }
       setIsProcessing(false)
     },
-    [getSingleFile, processFile, t]
+    [getSingleFile, isProcessing, processFile, t]
   )
   return (
     <Container
