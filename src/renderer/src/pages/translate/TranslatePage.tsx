@@ -209,16 +209,22 @@ const TranslatePage: FC = () => {
   )
 
   // 控制复制行为
-  const onCopy = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(translatedContent)
-      setCopied(true)
-    } catch (error) {
-      logger.error('Failed to copy text to clipboard:', error as Error)
-      // TODO: use toast
-      window.message.error(t('common.copy_failed'))
-    }
-  }, [setCopied, t, translatedContent])
+  // Allow providing fresh text (e.g., right after streaming finishes) to avoid race with throttled state updates
+  const onCopy = useCallback(
+    async (overrideText?: string) => {
+      try {
+        const toCopy = overrideText ?? translatedContent
+        if (!toCopy) return
+        await navigator.clipboard.writeText(toCopy)
+        setCopied(true)
+      } catch (error) {
+        logger.error('Failed to copy text to clipboard:', error as Error)
+        // TODO: use toast
+        window.message.error(t('common.copy_failed'))
+      }
+    },
+    [setCopied, t, translatedContent]
+  )
 
   /**
    * 翻译文本并保存历史记录，包含完整的异常处理，不会抛出异常
@@ -241,8 +247,10 @@ const TranslatePage: FC = () => {
         const abortKey = uuid()
         dispatch(setTranslateAbortKey(abortKey))
 
+        // use a throttled updater for streaming, ensure we flush and set final content afterward
+        const throttledUpdate = throttle(setTranslatedContent, 100)
         try {
-          translated = await translateText(text, actualTargetLanguage, throttle(setTranslatedContent, 100), abortKey)
+          translated = await translateText(text, actualTargetLanguage, throttledUpdate, abortKey)
         } catch (e) {
           if (isAbortError(e)) {
             window.message.info(t('translate.info.aborted'))
@@ -254,22 +262,22 @@ const TranslatePage: FC = () => {
           return
         }
 
+        // Ensure any trailing throttled updates have been applied and state matches final translated result
+        if (typeof (throttledUpdate as any).flush === 'function') {
+          ;(throttledUpdate as any).flush()
+        }
+        setTranslatedContent(translated)
+
         window.message.success(t('translate.complete'))
         if (autoCopy) {
+          // Copy the freshly finished translation immediately (no need to wait for Redux store propagation)
           setTimeoutTimer(
             'auto-copy',
             async () => {
-              await onCopy()
+              await onCopy(translated)
             },
-            100
+            0
           )
-        }
-
-        // Auto-copy translated text to clipboard (silent, no toggle/notice)
-        try {
-          await navigator.clipboard.writeText(translated)
-        } catch (e) {
-          logger.error('Failed to copy translated text to clipboard', e as Error)
         }
 
         try {
@@ -973,7 +981,7 @@ const TranslatePage: FC = () => {
               type="text"
               size="small"
               className="copy-button"
-              onClick={onCopy}
+              onClick={() => onCopy()}
               disabled={!translatedContent}
               icon={copied ? <Check size={16} color="var(--color-primary)" /> : <CopyIcon size={16} />}
             />
