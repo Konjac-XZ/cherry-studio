@@ -394,12 +394,9 @@ const TranslatePage: FC = () => {
   ) => {
     setText(history.sourceText)
     setTranslatedContent(history.targetText)
-    if (history._sourceLanguage === UNKNOWN) {
-      setSourceLanguage('auto')
-    } else {
-      setSourceLanguage(history._sourceLanguage)
-    }
-    setTargetLanguage(history._targetLanguage)
+  // Intentionally DO NOT change current language selections when loading history.
+  // This preserves user's existing source (including 'auto') and target language choices
+  // so they can continue translating new content without re-enabling auto-detect.
     setHistoryDrawerVisible(false)
   }
 
