@@ -3210,8 +3210,6 @@
       "title": "禁用硬件加速"
     },
     "input": {
-      "user_native_language": "用户默认语言",
-      "user_native_language.unspecified": "未指定",
       "auto_translate_with_space": "3 个空格快速翻译",
       "clear": {
         "all": "清除",
@@ -3226,7 +3224,9 @@
         "japanese": "日文",
         "label": "目标语言",
         "russian": "俄文"
-      }
+      },
+      "user_native_language": "用户默认语言",
+      "user_native_language.unspecified": "未指定"
     },
     "launch": {
       "onboot": "开机自动启动",
@@ -3968,6 +3968,7 @@
       "selection_assistant_toggle": "开关划词助手",
       "show_app": "显示 / 隐藏应用",
       "show_settings": "打开设置",
+      "show_translate": "翻译剪贴板",
       "title": "快捷键",
       "toggle_new_context": "清除上下文",
       "toggle_show_assistants": "切换助手显示",

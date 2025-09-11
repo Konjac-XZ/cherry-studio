@@ -3217,8 +3217,6 @@
         "models": "Clear all models"
       },
       "show_translate_confirm": "Show translation confirmation dialog",
-      "user_native_language": "User Native Language",
-      "user_native_language.unspecified": "Unspecified",
       "target_language": {
         "chinese": "Simplified Chinese",
         "chinese-traditional": "Traditional Chinese",
@@ -3226,7 +3224,9 @@
         "japanese": "Japanese",
         "label": "Target language",
         "russian": "Russian"
-      }
+      },
+      "user_native_language": "User Native Language",
+      "user_native_language.unspecified": "Unspecified"
     },
     "launch": {
       "onboot": "Start Automatically on Boot",
@@ -3968,6 +3968,7 @@
       "selection_assistant_toggle": "Toggle Selection Assistant",
       "show_app": "Show/Hide App",
       "show_settings": "Open Settings",
+      "show_translate": "Translate Clipboard",
       "title": "Keyboard Shortcuts",
       "toggle_new_context": "Clear Context",
       "toggle_show_assistants": "Toggle Assistants",

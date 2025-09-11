@@ -193,6 +193,7 @@ const shortcutKeyMap = {
   selection_assistant_toggle: 'settings.shortcuts.selection_assistant_toggle',
   show_app: 'settings.shortcuts.show_app',
   show_settings: 'settings.shortcuts.show_settings',
+  show_translate: 'settings.shortcuts.show_translate',
   title: 'settings.shortcuts.title',
   toggle_new_context: 'settings.shortcuts.toggle_new_context',
   toggle_show_assistants: 'settings.shortcuts.toggle_show_assistants',

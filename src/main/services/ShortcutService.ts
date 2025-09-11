@@ -13,6 +13,7 @@ let showAppAccelerator: string | null = null
 let showMiniWindowAccelerator: string | null = null
 let selectionAssistantToggleAccelerator: string | null = null
 let selectionAssistantSelectTextAccelerator: string | null = null
+let showTranslateAccelerator: string | null = null
 
 //indicate if the shortcuts are registered on app boot time
 let isRegisterOnBoot = true
@@ -35,6 +36,47 @@ function getShortcutHandler(shortcut: Shortcut) {
     case 'mini_window':
       return () => {
         windowService.toggleMiniWindow()
+      }
+    case 'show_translate':
+      return () => {
+        try {
+          // Ensure main window is visible
+          windowService.showMainWindow()
+
+          const mainWindow = windowService.getMainWindow()
+          if (!mainWindow || mainWindow.isDestroyed()) return
+
+          const navigateToTranslate = async () => {
+            try {
+              const hasNavigate = await mainWindow.webContents.executeJavaScript(
+                `typeof window.navigate === 'function'`
+              )
+              if (hasNavigate) {
+                const ts = Date.now()
+                await mainWindow.webContents.executeJavaScript(`window.navigate('/translate?paste=1&_=' + ${ts})`)
+                return true
+              }
+              return false
+            } catch (e) {
+              return false
+            }
+          }
+
+          // try immediately, then retry a couple times if navigate isn't ready yet
+          navigateToTranslate().then((ok) => {
+            if (!ok) {
+              setTimeout(() => {
+                navigateToTranslate().then((ok2) => {
+                  if (!ok2) {
+                    setTimeout(() => void navigateToTranslate(), 800)
+                  }
+                })
+              }, 400)
+            }
+          })
+        } catch (error) {
+          logger.warn('Failed to handle show_translate shortcut')
+        }
       }
     case 'selection_assistant_toggle':
       return () => {
@@ -171,9 +213,13 @@ export function registerShortcuts(window: BrowserWindow) {
         // only register universal shortcuts when needed
         if (
           onlyUniversalShortcuts &&
-          !['show_app', 'mini_window', 'selection_assistant_toggle', 'selection_assistant_select_text'].includes(
-            shortcut.key
-          )
+          ![
+            'show_app',
+            'mini_window',
+            'selection_assistant_toggle',
+            'selection_assistant_select_text',
+            'show_translate'
+          ].includes(shortcut.key)
         ) {
           return
         }
@@ -194,6 +240,10 @@ export function registerShortcuts(window: BrowserWindow) {
               return
             }
             showMiniWindowAccelerator = formatShortcutKey(shortcut.shortcut)
+            break
+
+          case 'show_translate':
+            showTranslateAccelerator = formatShortcutKey(shortcut.shortcut)
             break
 
           case 'selection_assistant_toggle':
@@ -258,6 +308,12 @@ export function registerShortcuts(window: BrowserWindow) {
         const accelerator = convertShortcutFormat(selectionAssistantSelectTextAccelerator)
         handler && globalShortcut.register(accelerator, () => handler(window))
       }
+
+      if (showTranslateAccelerator) {
+        const handler = getShortcutHandler({ key: 'show_translate' } as Shortcut)
+        const accelerator = convertShortcutFormat(showTranslateAccelerator)
+        handler && globalShortcut.register(accelerator, () => handler(window))
+      }
     } catch (error) {
       logger.warn('Failed to unregister shortcuts')
     }
@@ -285,6 +341,7 @@ export function unregisterAllShortcuts() {
     showMiniWindowAccelerator = null
     selectionAssistantToggleAccelerator = null
     selectionAssistantSelectTextAccelerator = null
+    showTranslateAccelerator = null
     windowOnHandlers.forEach((handlers, window) => {
       window.off('focus', handlers.onFocusHandler)
       window.off('blur', handlers.onBlurHandler)
