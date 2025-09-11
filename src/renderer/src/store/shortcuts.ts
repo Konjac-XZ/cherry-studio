@@ -31,6 +31,13 @@ const initialState: ShortcutsState = {
       system: true
     },
     {
+      key: 'show_translate',
+      shortcut: ['CommandOrControl', 'Shift', 'T'],
+      editable: true,
+      enabled: true,
+      system: true
+    },
+    {
       //enable/disable selection assistant
       key: 'selection_assistant_toggle',
       shortcut: [],

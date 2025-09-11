@@ -56,6 +56,7 @@ import {
   UploadIcon
 } from 'lucide-react'
 import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 
@@ -172,6 +173,8 @@ const TranslatePage: FC = () => {
   const isProgrammaticScroll = useRef(false)
 
   const dispatch = useAppDispatch()
+  const location = useLocation()
+  const navigate = useNavigate()
 
   _sourceLanguage = sourceLanguage
   _targetLanguage = targetLanguage
@@ -380,6 +383,50 @@ const TranslatePage: FC = () => {
     }
     abortCompletion(abortKey)
   }
+
+  // Auto paste and translate when navigated with ?paste=1
+  const onTranslateRef = useRef(onTranslate)
+  useEffect(() => {
+    onTranslateRef.current = onTranslate
+  }, [onTranslate])
+
+  useEffect(() => {
+    const triggerFromQuery = async () => {
+      try {
+        const params = new URLSearchParams(location.search || '')
+        const shouldPaste = params.get('paste') === '1'
+        if (!shouldPaste) return
+
+        // prevent duplicate triggers for the same navigation
+        const nonce = params.get('_') || ''
+        const key = `translate:paste:nonce:${nonce}`
+        if (nonce && sessionStorage.getItem(key)) return
+
+        // debounce across rapid consecutive navigations
+        const now = Date.now()
+        const lastTs = Number(sessionStorage.getItem('translate:paste:lastTs') || '0')
+        if (now - lastTs < 1000) return
+
+        const clip = await navigator.clipboard.readText().catch(() => '')
+        if (clip && clip.trim()) {
+          setText(clip)
+          // give state a tick to update
+          setTimeout(() => {
+            onTranslateRef.current()
+          }, 0)
+        }
+
+        if (nonce) sessionStorage.setItem(key, '1')
+        sessionStorage.setItem('translate:paste:lastTs', String(now))
+        // Clear query to avoid re-triggers
+        if (location.search) {
+          navigate('/translate', { replace: true })
+        }
+      } catch {}
+    }
+
+    triggerFromQuery()
+  }, [location.search, setText])
 
   // 控制双向翻译切换
   const toggleBidirectional = (value: boolean) => {
@@ -617,6 +664,36 @@ const TranslatePage: FC = () => {
 
   // 控制token估计
   const tokenCount = useMemo(() => estimateTextTokens(text + prompt), [prompt, text])
+
+  // Auto-paste and translate when navigated with ?paste=1
+  useEffect(() => {
+    let aborted = false
+    const url = new URL(window.location.href)
+    const shouldPaste = url.hash.includes('/translate') && url.hash.includes('paste=1')
+    if (!shouldPaste) return
+
+    const run = async () => {
+      try {
+        const clip = await navigator.clipboard.readText()
+        if (aborted) return
+        if (clip && clip.trim().length > 0) {
+          setText(clip)
+          // wait a tick for state to propagate
+          setTimeout(() => {
+            void onTranslate()
+          }, 0)
+        }
+      } catch (e) {
+        // ignore clipboard errors silently
+      }
+    }
+    run()
+
+    return () => {
+      aborted = true
+    }
+    // trigger when location changes to /translate?paste=1
+  }, [location, onTranslate, setText])
 
   const readFile = useCallback(
     async (file: FileMetadata) => {
