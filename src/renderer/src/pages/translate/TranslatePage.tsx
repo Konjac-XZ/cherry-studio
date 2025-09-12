@@ -171,6 +171,9 @@ const TranslatePage: FC = () => {
   const textAreaRef = useRef<TextAreaRef>(null)
   const outputTextRef = useRef<HTMLDivElement>(null)
   const isProgrammaticScroll = useRef(false)
+  // Ensure settings are loaded before acting on global shortcut triggers
+  const [settingsReady, setSettingsReady] = useState(false)
+  const pendingShortcutRef = useRef<string | null>(null)
 
   const dispatch = useAppDispatch()
   const location = useLocation()
@@ -402,18 +405,31 @@ const TranslatePage: FC = () => {
         const key = `translate:paste:nonce:${nonce}`
         if (nonce && sessionStorage.getItem(key)) return
 
-        // debounce across rapid consecutive navigations
+        // Shared guard to prevent double-triggering with hash-based effect and debounce
+        const running = sessionStorage.getItem('translate:paste:running') === '1'
         const now = Date.now()
         const lastTs = Number(sessionStorage.getItem('translate:paste:lastTs') || '0')
-        if (now - lastTs < 1000) return
+        if (running || now - lastTs < 1000) return
+        sessionStorage.setItem('translate:paste:running', '1')
 
         const clip = await navigator.clipboard.readText().catch(() => '')
         if (clip && clip.trim()) {
-          setText(clip)
-          // give state a tick to update
-          setTimeout(() => {
-            onTranslateRef.current()
-          }, 0)
+          // Force auto-detect for global shortcut flow
+          if (sourceLanguage !== 'auto') {
+            setSourceLanguage('auto')
+            db.settings.put({ id: 'translate:source:language', value: 'auto' })
+          }
+          setDetectedLanguage(null)
+          if (!settingsReady) {
+            // Defer action until settings loaded to ensure bidirectional logic is applied
+            pendingShortcutRef.current = clip
+          } else {
+            setText(clip)
+            // give state a tick to update
+            setTimeout(() => {
+              onTranslateRef.current()
+            }, 0)
+          }
         }
 
         if (nonce) sessionStorage.setItem(key, '1')
@@ -422,11 +438,13 @@ const TranslatePage: FC = () => {
         if (location.search) {
           navigate('/translate', { replace: true })
         }
+        // release guard shortly after
+        setTimeout(() => sessionStorage.removeItem('translate:paste:running'), 500)
       } catch {}
     }
 
     triggerFromQuery()
-  }, [location.search, setText])
+  }, [location.search, setText, sourceLanguage, settingsReady])
 
   // 控制双向翻译切换
   const toggleBidirectional = (value: boolean) => {
@@ -551,8 +569,23 @@ const TranslatePage: FC = () => {
         setAutoDetectionMethod('franc')
         db.settings.put({ id: 'translate:detect:method', value: 'franc' })
       }
+      // Mark settings as ready so that global shortcut flows can proceed with correct bidirectional state
+      setSettingsReady(true)
     })
   }, [getLanguageByLangcode])
+
+  // If a global shortcut arrived before settings were ready, process it now
+  useEffect(() => {
+    if (!settingsReady) return
+    const clip = pendingShortcutRef.current
+    if (clip && clip.trim()) {
+      pendingShortcutRef.current = null
+      setText(clip)
+      setTimeout(() => {
+        onTranslateRef.current()
+      }, 0)
+    }
+  }, [settingsReady, setText])
 
   // Load saved panel size
   useEffect(() => {
@@ -672,19 +705,42 @@ const TranslatePage: FC = () => {
     const shouldPaste = url.hash.includes('/translate') && url.hash.includes('paste=1')
     if (!shouldPaste) return
 
+    if (translating) {
+      if (location.search) {
+        navigate('/translate', { replace: true })
+      }
+      return
+    }
+
     const run = async () => {
       try {
+        // Shared guard to prevent double-triggering with the other effect
+        const running = sessionStorage.getItem('translate:paste:running') === '1'
+        const now = Date.now()
+        const lastTs = Number(sessionStorage.getItem('translate:paste:lastTs') || '0')
+        if (running || now - lastTs < 1000) return
+        sessionStorage.setItem('translate:paste:running', '1')
         const clip = await navigator.clipboard.readText()
         if (aborted) return
         if (clip && clip.trim().length > 0) {
+          // Force auto-detect for global shortcut flow
+          if (sourceLanguage !== 'auto') {
+            setSourceLanguage('auto')
+            db.settings.put({ id: 'translate:source:language', value: 'auto' })
+          }
+          setDetectedLanguage(null)
           setText(clip)
           // wait a tick for state to propagate
           setTimeout(() => {
             void onTranslate()
           }, 0)
+          sessionStorage.setItem('translate:paste:lastTs', String(now))
         }
       } catch (e) {
         // ignore clipboard errors silently
+      } finally {
+        // release guard shortly after
+        setTimeout(() => sessionStorage.removeItem('translate:paste:running'), 500)
       }
     }
     run()
@@ -693,7 +749,7 @@ const TranslatePage: FC = () => {
       aborted = true
     }
     // trigger when location changes to /translate?paste=1
-  }, [location, onTranslate, setText])
+  }, [location, onTranslate, setText, sourceLanguage])
 
   const readFile = useCallback(
     async (file: FileMetadata) => {

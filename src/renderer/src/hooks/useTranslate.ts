@@ -21,7 +21,8 @@ export default function useTranslate() {
   const prompt = useAppSelector((state) => state.settings.translateModelPrompt)
   const settings = useAppSelector((state) => state.translate.settings)
   const [translateLanguages, setTranslateLanguages] = useState<TranslateLanguage[]>(builtinLanguages)
-  const [isLoaded, setIsLoaded] = useState(false)
+  // Mark as loaded initially so builtin languages can be used before async options arrive
+  const [isLoaded, setIsLoaded] = useState(true)
 
   const dispatch = useDispatch()
 
@@ -35,11 +36,7 @@ export default function useTranslate() {
 
   const getLanguageByLangcode = useCallback(
     (langCode: string) => {
-      if (!isLoaded) {
-        logger.verbose('Translate languages are not loaded yet. Return UNKNOWN.')
-        return UNKNOWN
-      }
-
+      if (!langCode) return UNKNOWN
       const result = translateLanguages.find((item) => item.langCode === langCode)
       if (result) {
         return result
