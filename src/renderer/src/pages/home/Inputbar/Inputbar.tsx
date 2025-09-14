@@ -57,7 +57,6 @@ import { CirclePause, FileSearch, FileText, Upload } from 'lucide-react'
 import React, { CSSProperties, FC, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
-import { MentionModelsInput } from './MentionModelsInput'
 import NarrowLayout from '../Messages/NarrowLayout'
 import AttachmentPreview from './AttachmentPreview'
 import InputbarTools, { InputbarToolsRef } from './InputbarTools'
@@ -765,10 +764,6 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
   const handleKnowledgeBaseSelect = (bases?: KnowledgeBase[]) => {
     updateAssistant({ ...assistant, knowledge_bases: bases })
     setSelectedKnowledgeBases(bases ?? [])
-  }
-
-  const handleRemoveModel = (model: Model) => {
-    setMentionedModels(mentionedModels.filter((m) => m.id !== model.id))
   }
 
   const handleRemoveKnowledgeBase = (knowledgeBase: KnowledgeBase) => {
