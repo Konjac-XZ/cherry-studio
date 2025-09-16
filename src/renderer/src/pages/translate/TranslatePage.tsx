@@ -1333,6 +1333,12 @@ const OutputContainer = styled.div`
   background-color: var(--color-background-soft);
   border-radius: 10px;
   padding: 10px 5px;
+  height: calc(100vh - var(--navbar-height) - 70px);
+  overflow: hidden;
+
+  & > div > .markdown > pre {
+    background-color: var(--color-background-mute) !important;
+  }
 
   &:hover .copy-button {
     opacity: 1;
