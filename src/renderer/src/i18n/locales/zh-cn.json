@@ -1064,10 +1064,6 @@
       "error": {
         "failed": "迁移失败"
       },
-      "migrate_to_langchain": {
-        "content": "知识库迁移不会删除旧知识库，而是创建一个副本之后重新处理所有知识库条目，可能消耗大量 tokens，请谨慎操作。",
-        "info": "知识库架构已更新，点击迁移到新架构"
-      },
       "source_dimensions": "源维度",
       "source_model": "源模型",
       "target_dimensions": "目标维度",
