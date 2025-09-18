@@ -70,6 +70,7 @@ interface Props {
 
 let _text = ''
 let _files: FileType[] = []
+let _mentionedModelsCache: Model[] = []
 
 const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) => {
   const [text, setText] = useState(_text)
@@ -102,7 +103,8 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
   const spaceClickTimer = useRef<NodeJS.Timeout>(null)
   const [isTranslating, setIsTranslating] = useState(false)
   const [selectedKnowledgeBases, setSelectedKnowledgeBases] = useState<KnowledgeBase[]>([])
-  const [mentionedModels, setMentionedModels] = useState<Model[]>([])
+  const [mentionedModels, setMentionedModels] = useState<Model[]>(_mentionedModelsCache)
+  const mentionedModelsRef = useRef(mentionedModels)
   const [isDragging, setIsDragging] = useState(false)
   const [isFileDragging, setIsFileDragging] = useState(false)
   const [textareaHeight, setTextareaHeight] = useState<number>()
@@ -112,6 +114,10 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
   const isVisionAssistant = useMemo(() => isVisionModel(model), [model])
   const isGenerateImageAssistant = useMemo(() => isGenerateImageModel(model), [model])
   const { setTimeoutTimer } = useTimer()
+
+  useEffect(() => {
+    mentionedModelsRef.current = mentionedModels
+  }, [mentionedModels])
 
   const isVisionSupported = useMemo(
     () =>
@@ -177,6 +183,13 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
 
   _text = text
   _files = files
+
+  useEffect(() => {
+    // 利用useEffect清理函数在卸载组件时更新状态缓存
+    return () => {
+      _mentionedModelsCache = mentionedModelsRef.current
+    }
+  }, [])
 
   const focusTextarea = useCallback(() => {
     textareaRef.current?.focus()
