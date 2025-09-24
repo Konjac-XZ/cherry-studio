@@ -64,18 +64,8 @@ import {
 } from '@renderer/types'
 
 import { TOKENFLUX_HOST } from './constant'
-import { glm45FlashModel, qwen38bModel, SYSTEM_MODELS } from './models'
+import { SYSTEM_MODELS } from './models'
 
-export const CHERRYAI_PROVIDER: SystemProvider = {
-  id: 'cherryai' as SystemProviderId,
-  name: 'CherryAI',
-  type: 'openai',
-  apiKey: '',
-  apiHost: 'https://api.cherry-ai.com/',
-  models: [glm45FlashModel, qwen38bModel],
-  isSystem: true,
-  enabled: true
-}
 
 export const SYSTEM_PROVIDERS_CONFIG: Record<SystemProviderId, SystemProvider> = {
   cherryin: {
