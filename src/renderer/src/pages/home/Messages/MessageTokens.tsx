@@ -63,16 +63,42 @@ const MessageTokens: React.FC<MessageTokensProps> = ({ message }) => {
   }
 
   if (message.role === 'assistant') {
-    let metrixs = ''
+    let metrixs: string | null = null
     let hasMetrics = false
-    if (message?.metrics?.completion_tokens && message?.metrics?.time_completion_millsec) {
-      hasMetrics = true
-      metrixs = t('settings.messages.metrics', {
-        time_first_token_millsec: message?.metrics?.time_first_token_millsec,
-        token_speed: (message?.metrics?.completion_tokens / (message?.metrics?.time_completion_millsec / 1000)).toFixed(
-          0
-        )
-      })
+
+    const metrics = message.metrics
+    if (metrics) {
+      const completionTokens =
+        typeof metrics.completion_tokens === 'number' && Number.isFinite(metrics.completion_tokens)
+          ? Math.max(0, metrics.completion_tokens)
+          : null
+
+      const completionDurationMs =
+        typeof metrics.time_completion_millsec === 'number' && Number.isFinite(metrics.time_completion_millsec)
+          ? Math.max(0, metrics.time_completion_millsec)
+          : null
+
+      const timeToFirstTokenMs =
+        typeof metrics.time_first_token_millsec === 'number' && Number.isFinite(metrics.time_first_token_millsec)
+          ? Math.max(0, metrics.time_first_token_millsec)
+          : null
+
+      if (completionTokens !== null || completionDurationMs !== null || timeToFirstTokenMs !== null) {
+        hasMetrics = true
+
+        const tokenSpeed =
+          completionTokens !== null && completionDurationMs !== null && completionDurationMs > 0
+            ? completionTokens / (completionDurationMs / 1000)
+            : null
+
+        metrixs = t('settings.messages.metrics', {
+          time_first_token_millsec: timeToFirstTokenMs !== null ? timeToFirstTokenMs : '—',
+          token_speed:
+            tokenSpeed !== null && Number.isFinite(tokenSpeed)
+              ? tokenSpeed.toFixed(0)
+              : '—'
+        })
+      }
     }
 
     const tokensInfo = (
@@ -87,7 +113,7 @@ const MessageTokens: React.FC<MessageTokensProps> = ({ message }) => {
 
     return (
       <MessageMetadata className="message-tokens" onClick={locateMessage}>
-        {hasMetrics ? (
+        {hasMetrics && metrixs ? (
           <Popover content={metrixs} placement="top" trigger="hover" styles={{ root: { fontSize: 11 } }}>
             {tokensInfo}
           </Popover>

@@ -22,6 +22,14 @@ export class AiSdkToChunkAdapter {
   private accumulate: boolean | undefined
   private isFirstChunk = true
   private enableWebSearch: boolean = false
+  private streamStartTimestamp: number | null = null
+  private firstTokenTimestamp: number | null = null
+  private pendingFirstTokenTimestamp: number | null = null
+  private completionEndTimestamp: number | null = null
+  private thinkingStartTimestamp: number | null = null
+  private thinkingEndTimestamp: number | null = null
+  private sawThinking = false
+  private thinkingComplete = false
 
   constructor(
     private onChunk: (chunk: Chunk) => void,
@@ -63,6 +71,8 @@ export class AiSdkToChunkAdapter {
     }
     // Reset link converter state at the start of stream
     this.isFirstChunk = true
+    this.resetStreamState()
+    this.streamStartTimestamp = this.now()
 
     try {
       while (true) {
@@ -137,6 +147,7 @@ export class AiSdkToChunkAdapter {
 
         // Only emit chunk if there's text to send
         if (finalText) {
+          this.trackFirstToken(finalText)
           this.onChunk({
             type: ChunkType.TEXT_DELTA,
             text: this.accumulate ? final.text : finalText
@@ -144,16 +155,26 @@ export class AiSdkToChunkAdapter {
         }
         break
       }
-      case 'text-end':
+      case 'text-end': {
+        const completedText = (chunk.providerMetadata?.text?.value as string) ?? final.text ?? ''
+        if (completedText) {
+          this.trackFirstToken(completedText)
+        }
         this.onChunk({
           type: ChunkType.TEXT_COMPLETE,
-          text: (chunk.providerMetadata?.text?.value as string) ?? final.text ?? ''
+          text: completedText
         })
         final.text = ''
         break
+      }
       case 'reasoning-start':
         // if (final.reasoningId !== chunk.id) {
         final.reasoningId = chunk.id
+        this.sawThinking = true
+        this.thinkingComplete = false
+        if (!this.thinkingStartTimestamp) {
+          this.thinkingStartTimestamp = this.now()
+        }
         this.onChunk({
           type: ChunkType.THINKING_START
         })
@@ -167,13 +188,21 @@ export class AiSdkToChunkAdapter {
           thinking_millsec: (chunk.providerMetadata?.metadata?.thinking_millsec as number) || 0
         })
         break
-      case 'reasoning-end':
+      case 'reasoning-end': {
+        this.thinkingComplete = true
+        const reasoningEndTimestamp = this.now()
+        this.thinkingEndTimestamp = reasoningEndTimestamp
+        if (!this.firstTokenTimestamp && this.pendingFirstTokenTimestamp !== null) {
+          this.firstTokenTimestamp = Math.max(this.pendingFirstTokenTimestamp, reasoningEndTimestamp)
+          this.pendingFirstTokenTimestamp = null
+        }
         this.onChunk({
           type: ChunkType.THINKING_COMPLETE,
           text: (chunk.providerMetadata?.metadata?.thinking_content as string) || final.reasoningContent
         })
         final.reasoningContent = ''
         break
+      }
 
       // === 工具调用相关事件（原始 AI SDK 事件，如果没有被中间件处理） ===
 
@@ -261,7 +290,11 @@ export class AiSdkToChunkAdapter {
         break
       }
 
-      case 'finish':
+      case 'finish': {
+        this.completionEndTimestamp = this.now()
+        this.finalizeFirstToken()
+        const metrics = this.buildMetrics(chunk.totalUsage)
+
         this.onChunk({
           type: ChunkType.BLOCK_COMPLETE,
           response: {
@@ -272,12 +305,7 @@ export class AiSdkToChunkAdapter {
               prompt_tokens: chunk.totalUsage.inputTokens || 0,
               total_tokens: chunk.totalUsage.totalTokens || 0
             },
-            metrics: chunk.totalUsage
-              ? {
-                  completion_tokens: chunk.totalUsage.outputTokens || 0,
-                  time_completion_millsec: 0
-                }
-              : undefined
+            metrics
           }
         })
         this.onChunk({
@@ -290,15 +318,11 @@ export class AiSdkToChunkAdapter {
               prompt_tokens: chunk.totalUsage.inputTokens || 0,
               total_tokens: chunk.totalUsage.totalTokens || 0
             },
-            metrics: chunk.totalUsage
-              ? {
-                  completion_tokens: chunk.totalUsage.outputTokens || 0,
-                  time_completion_millsec: 0
-                }
-              : undefined
+            metrics
           }
         })
         break
+      }
 
       // === 源和文件相关事件 ===
       case 'source':
@@ -333,6 +357,122 @@ export class AiSdkToChunkAdapter {
 
       default:
     }
+  }
+
+  private resetStreamState() {
+    this.streamStartTimestamp = null
+    this.firstTokenTimestamp = null
+    this.pendingFirstTokenTimestamp = null
+    this.completionEndTimestamp = null
+    this.thinkingStartTimestamp = null
+    this.thinkingEndTimestamp = null
+    this.sawThinking = false
+    this.thinkingComplete = false
+  }
+
+  private trackFirstToken(emittedText: string) {
+    if (!emittedText || emittedText.trim().length === 0) {
+      return
+    }
+
+    const now = this.now()
+
+    if (this.sawThinking && !this.thinkingComplete) {
+      if (!this.pendingFirstTokenTimestamp) {
+        this.pendingFirstTokenTimestamp = now
+      }
+      return
+    }
+
+    if (!this.firstTokenTimestamp) {
+      this.firstTokenTimestamp = now
+      this.pendingFirstTokenTimestamp = null
+    }
+  }
+
+  private finalizeFirstToken() {
+    if (!this.firstTokenTimestamp && this.pendingFirstTokenTimestamp) {
+      this.firstTokenTimestamp = this.pendingFirstTokenTimestamp
+      this.pendingFirstTokenTimestamp = null
+    }
+  }
+
+  private buildMetrics(totalUsage?: { outputTokens?: number }) {
+    const completionTokens = totalUsage?.outputTokens ?? 0
+    const timeToFirstToken = this.computeTimeToFirstToken()
+    const timeCompletion = this.computeCompletionDuration()
+    const timeThinking = this.computeThinkingDuration()
+
+    const metrics: {
+      completion_tokens: number
+      time_completion_millsec: number
+      time_first_token_millsec?: number
+      time_thinking_millsec?: number
+    } = {
+      completion_tokens: completionTokens,
+      time_completion_millsec: timeCompletion
+    }
+
+    if (timeToFirstToken !== undefined) {
+      metrics.time_first_token_millsec = timeToFirstToken
+    }
+
+    if (timeThinking !== undefined) {
+      metrics.time_thinking_millsec = timeThinking
+    }
+
+    return metrics
+  }
+
+  private computeTimeToFirstToken(): number | undefined {
+    if (this.streamStartTimestamp === null) {
+      return undefined
+    }
+
+    if (this.firstTokenTimestamp !== null) {
+      return Math.round(Math.max(0, this.firstTokenTimestamp - this.streamStartTimestamp))
+    }
+
+    if (this.pendingFirstTokenTimestamp !== null) {
+      return Math.round(Math.max(0, this.pendingFirstTokenTimestamp - this.streamStartTimestamp))
+    }
+
+    return undefined
+  }
+
+  private computeCompletionDuration(): number {
+    if (this.completionEndTimestamp === null) {
+      return 0
+    }
+
+    if (this.firstTokenTimestamp !== null) {
+      return Math.round(Math.max(0, this.completionEndTimestamp - this.firstTokenTimestamp))
+    }
+
+    if (this.streamStartTimestamp !== null) {
+      return Math.round(Math.max(0, this.completionEndTimestamp - this.streamStartTimestamp))
+    }
+
+    return 0
+  }
+
+  private computeThinkingDuration(): number | undefined {
+    if (this.thinkingStartTimestamp === null || this.thinkingEndTimestamp === null) {
+      return undefined
+    }
+
+    if (this.thinkingEndTimestamp < this.thinkingStartTimestamp) {
+      return undefined
+    }
+
+    return Math.round(Math.max(0, this.thinkingEndTimestamp - this.thinkingStartTimestamp))
+  }
+
+  private now(): number {
+    if (typeof performance !== 'undefined' && typeof performance.now === 'function') {
+      return performance.now()
+    }
+    return Date.now()
   }
 }
 
