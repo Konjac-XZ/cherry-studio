@@ -70,7 +70,7 @@ interface Props {
 
 let _text = ''
 let _files: FileType[] = []
-let _mentionedModelsCache: Model[] = []
+let _mentionedModelsCache: Record<string, Model[]> = {}
 
 const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) => {
   const [text, setText] = useState(_text)
@@ -103,8 +103,12 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
   const spaceClickTimer = useRef<NodeJS.Timeout>(null)
   const [isTranslating, setIsTranslating] = useState(false)
   const [selectedKnowledgeBases, setSelectedKnowledgeBases] = useState<KnowledgeBase[]>([])
-  const [mentionedModels, setMentionedModels] = useState<Model[]>(_mentionedModelsCache)
+  const [mentionedModels, setMentionedModels] = useState<Model[]>(() => {
+    const cached = _mentionedModelsCache[_assistant.id]
+    return cached ? [...cached] : []
+  })
   const mentionedModelsRef = useRef(mentionedModels)
+  const assistantIdRef = useRef(_assistant.id)
   const [isDragging, setIsDragging] = useState(false)
   const [isFileDragging, setIsFileDragging] = useState(false)
   const [textareaHeight, setTextareaHeight] = useState<number>()
@@ -117,7 +121,22 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
 
   useEffect(() => {
     mentionedModelsRef.current = mentionedModels
+    _mentionedModelsCache[assistantIdRef.current] = [...mentionedModels]
   }, [mentionedModels])
+
+  useEffect(() => {
+    const nextAssistantId = assistant.id
+    const prevAssistantId = assistantIdRef.current
+
+    if (!nextAssistantId || nextAssistantId === prevAssistantId) {
+      return
+    }
+
+    _mentionedModelsCache[prevAssistantId] = [...mentionedModelsRef.current]
+    assistantIdRef.current = nextAssistantId
+    const cached = _mentionedModelsCache[nextAssistantId]
+    setMentionedModels(cached ? [...cached] : [])
+  }, [assistant.id])
 
   const isVisionSupported = useMemo(
     () =>
@@ -201,7 +220,7 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
   useEffect(() => {
     // 利用useEffect清理函数在卸载组件时更新状态缓存
     return () => {
-      _mentionedModelsCache = mentionedModelsRef.current
+      _mentionedModelsCache[assistantIdRef.current] = [...mentionedModelsRef.current]
     }
   }, [])
 
