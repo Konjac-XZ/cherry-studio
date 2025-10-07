@@ -22,14 +22,8 @@ export class AiSdkToChunkAdapter {
   private accumulate: boolean | undefined
   private isFirstChunk = true
   private enableWebSearch: boolean = false
-  private streamStartTimestamp: number | null = null
+  private responseStartTimestamp: number | null = null
   private firstTokenTimestamp: number | null = null
-  private pendingFirstTokenTimestamp: number | null = null
-  private completionEndTimestamp: number | null = null
-  private thinkingStartTimestamp: number | null = null
-  private thinkingEndTimestamp: number | null = null
-  private sawThinking = false
-  private thinkingComplete = false
 
   constructor(
     private onChunk: (chunk: Chunk) => void,
@@ -40,6 +34,17 @@ export class AiSdkToChunkAdapter {
     this.toolCallHandler = new ToolCallChunkHandler(onChunk, mcpTools)
     this.accumulate = accumulate
     this.enableWebSearch = enableWebSearch || false
+  }
+
+  private markFirstTokenIfNeeded() {
+    if (this.firstTokenTimestamp === null && this.responseStartTimestamp !== null) {
+      this.firstTokenTimestamp = Date.now()
+    }
+  }
+
+  private resetTimingState() {
+    this.responseStartTimestamp = null
+    this.firstTokenTimestamp = null
   }
 
   /**
@@ -69,6 +74,8 @@ export class AiSdkToChunkAdapter {
       webSearchResults: [],
       reasoningId: ''
     }
+    this.resetTimingState()
+    this.responseStartTimestamp = Date.now()
     // Reset link converter state at the start of stream
     this.isFirstChunk = true
     this.resetStreamState()
@@ -83,6 +90,7 @@ export class AiSdkToChunkAdapter {
           if (this.enableWebSearch) {
             const remainingText = flushLinkConverterBuffer()
             if (remainingText) {
+              this.markFirstTokenIfNeeded()
               this.onChunk({
                 type: ChunkType.TEXT_DELTA,
                 text: remainingText
@@ -97,6 +105,7 @@ export class AiSdkToChunkAdapter {
       }
     } finally {
       reader.releaseLock()
+      this.resetTimingState()
     }
   }
 
@@ -147,7 +156,7 @@ export class AiSdkToChunkAdapter {
 
         // Only emit chunk if there's text to send
         if (finalText) {
-          this.trackFirstToken(finalText)
+          this.markFirstTokenIfNeeded()
           this.onChunk({
             type: ChunkType.TEXT_DELTA,
             text: this.accumulate ? final.text : finalText
@@ -182,6 +191,9 @@ export class AiSdkToChunkAdapter {
         break
       case 'reasoning-delta':
         final.reasoningContent += chunk.text || ''
+        if (chunk.text) {
+          this.markFirstTokenIfNeeded()
+        }
         this.onChunk({
           type: ChunkType.THINKING_DELTA,
           text: final.reasoningContent || ''
@@ -290,36 +302,34 @@ export class AiSdkToChunkAdapter {
       }
 
       case 'finish': {
-        this.completionEndTimestamp = this.now()
-        this.finalizeFirstToken()
+        const usage = {
+          completion_tokens: chunk.totalUsage?.outputTokens || 0,
+          prompt_tokens: chunk.totalUsage?.inputTokens || 0,
+          total_tokens: chunk.totalUsage?.totalTokens || 0
+        }
         const metrics = this.buildMetrics(chunk.totalUsage)
+        const baseResponse = {
+          text: final.text || '',
+          reasoning_content: final.reasoningContent || ''
+        }
 
         this.onChunk({
           type: ChunkType.BLOCK_COMPLETE,
           response: {
-            text: final.text || '',
-            reasoning_content: final.reasoningContent || '',
-            usage: {
-              completion_tokens: chunk.totalUsage.outputTokens || 0,
-              prompt_tokens: chunk.totalUsage.inputTokens || 0,
-              total_tokens: chunk.totalUsage.totalTokens || 0
-            },
-            metrics
+            ...baseResponse,
+            usage: { ...usage },
+            metrics: metrics ? { ...metrics } : undefined
           }
         })
         this.onChunk({
           type: ChunkType.LLM_RESPONSE_COMPLETE,
           response: {
-            text: final.text || '',
-            reasoning_content: final.reasoningContent || '',
-            usage: {
-              completion_tokens: chunk.totalUsage.outputTokens || 0,
-              prompt_tokens: chunk.totalUsage.inputTokens || 0,
-              total_tokens: chunk.totalUsage.totalTokens || 0
-            },
-            metrics
+            ...baseResponse,
+            usage: { ...usage },
+            metrics: metrics ? { ...metrics } : undefined
           }
         })
+        this.resetTimingState()
         break
       }
 
@@ -358,120 +368,32 @@ export class AiSdkToChunkAdapter {
     }
   }
 
-  private resetStreamState() {
-    this.streamStartTimestamp = null
-    this.firstTokenTimestamp = null
-    this.pendingFirstTokenTimestamp = null
-    this.completionEndTimestamp = null
-    this.thinkingStartTimestamp = null
-    this.thinkingEndTimestamp = null
-    this.sawThinking = false
-    this.thinkingComplete = false
-  }
-
-  private trackFirstToken(emittedText: string) {
-    if (!emittedText || emittedText.trim().length === 0) {
-      return
+  private buildMetrics(totalUsage?: {
+    inputTokens?: number | null
+    outputTokens?: number | null
+    totalTokens?: number | null
+  }) {
+    if (!totalUsage) {
+      return undefined
     }
 
-    const now = this.now()
+    const completionTokens = totalUsage.outputTokens ?? 0
+    const now = Date.now()
+    const start = this.responseStartTimestamp ?? now
+    const firstToken = this.firstTokenTimestamp
+    const timeFirstToken = Math.max(firstToken != null ? firstToken - start : 0, 0)
+    const baseForCompletion = firstToken ?? start
+    let timeCompletion = Math.max(now - baseForCompletion, 0)
 
-    if (this.sawThinking && !this.thinkingComplete) {
-      if (!this.pendingFirstTokenTimestamp) {
-        this.pendingFirstTokenTimestamp = now
-      }
-      return
+    if (timeCompletion === 0 && completionTokens > 0) {
+      timeCompletion = 1
     }
 
-    if (!this.firstTokenTimestamp) {
-      this.firstTokenTimestamp = now
-      this.pendingFirstTokenTimestamp = null
-    }
-  }
-
-  private finalizeFirstToken() {
-    if (!this.firstTokenTimestamp && this.pendingFirstTokenTimestamp) {
-      this.firstTokenTimestamp = this.pendingFirstTokenTimestamp
-      this.pendingFirstTokenTimestamp = null
-    }
-  }
-
-  private buildMetrics(totalUsage?: { outputTokens?: number }) {
-    const completionTokens = totalUsage?.outputTokens ?? 0
-    const timeToFirstToken = this.computeTimeToFirstToken()
-    const timeCompletion = this.computeCompletionDuration()
-    const timeThinking = this.computeThinkingDuration()
-
-    const metrics: {
-      completion_tokens: number
-      time_completion_millsec: number
-      time_first_token_millsec?: number
-      time_thinking_millsec?: number
-    } = {
+    return {
       completion_tokens: completionTokens,
+      time_first_token_millsec: timeFirstToken,
       time_completion_millsec: timeCompletion
     }
-
-    if (timeToFirstToken !== undefined) {
-      metrics.time_first_token_millsec = timeToFirstToken
-    }
-
-    if (timeThinking !== undefined) {
-      metrics.time_thinking_millsec = timeThinking
-    }
-
-    return metrics
-  }
-
-  private computeTimeToFirstToken(): number | undefined {
-    if (this.streamStartTimestamp === null) {
-      return undefined
-    }
-
-    if (this.firstTokenTimestamp !== null) {
-      return Math.round(Math.max(0, this.firstTokenTimestamp - this.streamStartTimestamp))
-    }
-
-    if (this.pendingFirstTokenTimestamp !== null) {
-      return Math.round(Math.max(0, this.pendingFirstTokenTimestamp - this.streamStartTimestamp))
-    }
-
-    return undefined
-  }
-
-  private computeCompletionDuration(): number {
-    if (this.completionEndTimestamp === null) {
-      return 0
-    }
-
-    if (this.firstTokenTimestamp !== null) {
-      return Math.round(Math.max(0, this.completionEndTimestamp - this.firstTokenTimestamp))
-    }
-
-    if (this.streamStartTimestamp !== null) {
-      return Math.round(Math.max(0, this.completionEndTimestamp - this.streamStartTimestamp))
-    }
-
-    return 0
-  }
-
-  private computeThinkingDuration(): number | undefined {
-    if (this.thinkingStartTimestamp === null || this.thinkingEndTimestamp === null) {
-      return undefined
-    }
-
-    if (this.thinkingEndTimestamp < this.thinkingStartTimestamp) {
-      return undefined
-    }
-
-    return Math.round(Math.max(0, this.thinkingEndTimestamp - this.thinkingStartTimestamp))
-  }
-
-  private now(): number {
-    if (typeof performance !== 'undefined' && typeof performance.now === 'function') {
-      return performance.now()
-    }
-    return Date.now()
   }
 }
 
