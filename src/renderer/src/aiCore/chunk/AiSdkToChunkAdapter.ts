@@ -78,8 +78,6 @@ export class AiSdkToChunkAdapter {
     this.responseStartTimestamp = Date.now()
     // Reset link converter state at the start of stream
     this.isFirstChunk = true
-    this.resetStreamState()
-    this.streamStartTimestamp = this.now()
 
     try {
       while (true) {
@@ -164,26 +162,16 @@ export class AiSdkToChunkAdapter {
         }
         break
       }
-      case 'text-end': {
-        const completedText = (chunk.providerMetadata?.text?.value as string) ?? final.text ?? ''
-        if (completedText) {
-          this.trackFirstToken(completedText)
-        }
+      case 'text-end':
         this.onChunk({
           type: ChunkType.TEXT_COMPLETE,
-          text: completedText
+          text: (chunk.providerMetadata?.text?.value as string) ?? final.text ?? ''
         })
         final.text = ''
         break
-      }
       case 'reasoning-start':
         // if (final.reasoningId !== chunk.id) {
         final.reasoningId = chunk.id
-        this.sawThinking = true
-        this.thinkingComplete = false
-        if (!this.thinkingStartTimestamp) {
-          this.thinkingStartTimestamp = this.now()
-        }
         this.onChunk({
           type: ChunkType.THINKING_START
         })
@@ -199,21 +187,13 @@ export class AiSdkToChunkAdapter {
           text: final.reasoningContent || ''
         })
         break
-      case 'reasoning-end': {
-        this.thinkingComplete = true
-        const reasoningEndTimestamp = this.now()
-        this.thinkingEndTimestamp = reasoningEndTimestamp
-        if (!this.firstTokenTimestamp && this.pendingFirstTokenTimestamp !== null) {
-          this.firstTokenTimestamp = Math.max(this.pendingFirstTokenTimestamp, reasoningEndTimestamp)
-          this.pendingFirstTokenTimestamp = null
-        }
+      case 'reasoning-end':
         this.onChunk({
           type: ChunkType.THINKING_COMPLETE,
           text: final.reasoningContent || ''
         })
         final.reasoningContent = ''
         break
-      }
 
       // === 工具调用相关事件（原始 AI SDK 事件，如果没有被中间件处理） ===
 
