@@ -355,7 +355,7 @@ const ChatNavigation: FC<ChatNavigationProps> = ({ containerId }) => {
         $isVisible={isVisible}
         onMouseEnter={handleNavigationMouseEnter}
         onMouseLeave={handleNavigationMouseLeave}>
-        <ButtonGroup>
+        <ButtonGroup $isVisible={isVisible}>
           <Tooltip title={t('chat.navigation.close')} placement="left" mouseEnterDelay={0.5}>
             <NavigationButton
               type="text"
@@ -449,15 +449,22 @@ const NavigationContainer = styled.div<NavigationContainerProps>`
   pointer-events: ${(props) => (props.$isVisible ? 'auto' : 'none')};
 `
 
-const ButtonGroup = styled.div`
+interface ButtonGroupProps {
+  $isVisible: boolean
+}
+
+const ButtonGroup = styled.div<ButtonGroupProps>`
   display: flex;
   flex-direction: column;
   background: var(--bg-color);
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   overflow: hidden;
-  backdrop-filter: blur(8px);
+  backdrop-filter: ${(props) => (props.$isVisible ? 'blur(8px)' : 'blur(0px)')};
   border: 1px solid var(--color-border);
+  transition:
+    backdrop-filter 0.25s ease-in-out,
+    background 0.25s ease-in-out;
 `
 
 const NavigationButton = styled(Button)`
