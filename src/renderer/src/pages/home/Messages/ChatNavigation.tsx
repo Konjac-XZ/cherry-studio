@@ -440,7 +440,7 @@ const NavigationContainer = styled.div<NavigationContainerProps>`
   position: fixed;
   right: ${RIGHT_GAP}px;
   top: 50%;
-  transform: translateY(-50%) translateX(${(props) => (props.$isVisible ? 0 : '100%')});
+  transform: translateY(-50%) translateX(${(props) => (props.$isVisible ? '0' : '32px')});
   z-index: 999;
   opacity: ${(props) => (props.$isVisible ? 1 : 0)};
   transition:
