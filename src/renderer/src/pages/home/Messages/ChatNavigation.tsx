@@ -38,54 +38,68 @@ interface ChatNavigationProps {
 const ChatNavigation: FC<ChatNavigationProps> = ({ containerId }) => {
   const { t } = useTranslation()
   const [isVisible, setIsVisible] = useState(false)
-  const [isNearButtons, setIsNearButtons] = useState(false)
   const hideTimerRef = useRef<NodeJS.Timeout>(undefined)
   const [showChatHistory, setShowChatHistory] = useState(false)
   const [manuallyClosedUntil, setManuallyClosedUntil] = useState<number | null>(null)
   const currentTopicId = useSelector((state: RootState) => state.messages.currentTopicId)
   const lastMoveTime = useRef(0)
+  const isHoveringNavigationRef = useRef(false)
+  const isPointerInTriggerAreaRef = useRef(false)
   const { topicPosition, showTopics } = useSettings()
   const showRightTopics = topicPosition === 'right' && showTopics
 
-  // Reset hide timer and make buttons visible
-  const resetHideTimer = useCallback(() => {
-    setIsVisible(true)
+  const clearHideTimer = useCallback(() => {
+    clearTimeout(hideTimerRef.current)
+  }, [])
 
-    // Only set a hide timer if cursor is not near the buttons
-    if (!isNearButtons) {
-      clearTimeout(hideTimerRef.current)
+  const scheduleHide = useCallback(
+    (delay: number) => {
+      clearHideTimer()
       hideTimerRef.current = setTimeout(() => {
         setIsVisible(false)
-      }, 1500)
+      }, delay)
+    },
+    [clearHideTimer]
+  )
+
+  const showNavigation = useCallback(() => {
+    if (manuallyClosedUntil && Date.now() < manuallyClosedUntil) {
+      return false
     }
-  }, [isNearButtons])
+
+    setIsVisible(true)
+    clearHideTimer()
+    return true
+  }, [clearHideTimer, manuallyClosedUntil])
+
+  // Reset hide timer and make buttons visible
+  const resetHideTimer = useCallback(() => {
+    const didShow = showNavigation()
+    if (!didShow) {
+      return
+    }
+
+    if (!isHoveringNavigationRef.current) {
+      scheduleHide(1500)
+    }
+  }, [scheduleHide, showNavigation])
 
   // Handle mouse entering button area
-  const handleMouseEnter = useCallback(() => {
+  const handleNavigationMouseEnter = useCallback(() => {
     if (manuallyClosedUntil && Date.now() < manuallyClosedUntil) {
       return
     }
 
-    setIsNearButtons(true)
-    setIsVisible(true)
-
-    // Clear any existing hide timer
-    clearTimeout(hideTimerRef.current)
-  }, [manuallyClosedUntil])
+    isHoveringNavigationRef.current = true
+    showNavigation()
+  }, [manuallyClosedUntil, showNavigation])
 
   // Handle mouse leaving button area
-  const handleMouseLeave = useCallback(() => {
-    setIsNearButtons(false)
-
-    // Set a timer to hide the buttons
-    hideTimerRef.current = setTimeout(() => {
-      setIsVisible(false)
-    }, 500)
-
-    return () => {
-      clearTimeout(hideTimerRef.current)
-    }
-  }, [])
+  const handleNavigationMouseLeave = useCallback(() => {
+    isHoveringNavigationRef.current = false
+    const delay = isPointerInTriggerAreaRef.current ? 1500 : 500
+    scheduleHide(delay)
+  }, [scheduleHide])
 
   const handleChatHistoryClick = () => {
     setShowChatHistory(true)
@@ -173,6 +187,9 @@ const ChatNavigation: FC<ChatNavigationProps> = ({ containerId }) => {
   // 修改 handleCloseChatNavigation 函数
   const handleCloseChatNavigation = () => {
     setIsVisible(false)
+    isHoveringNavigationRef.current = false
+    isPointerInTriggerAreaRef.current = false
+    clearHideTimer()
     // 设置手动关闭状态，1分钟内不响应鼠标靠近事件
     setManuallyClosedUntil(Date.now() + 60000) // 60000毫秒 = 1分钟
   }
@@ -250,7 +267,7 @@ const ChatNavigation: FC<ChatNavigationProps> = ({ containerId }) => {
     // Handle scroll events on the container
     const handleScroll = () => {
       // Only show buttons when scrolling if cursor is near the button area
-      if (isNearButtons) {
+      if (isPointerInTriggerAreaRef.current || isHoveringNavigationRef.current) {
         resetHideTimer()
       }
     }
@@ -290,49 +307,54 @@ const ChatNavigation: FC<ChatNavigationProps> = ({ containerId }) => {
         e.clientX < rightPosition + triggerWidth + RIGHT_GAP &&
         e.clientY > topPosition &&
         e.clientY < topPosition + height
-
-      // Update state based on mouse position
-      if (isInTriggerArea && !isNearButtons) {
-        handleMouseEnter()
-      } else if (!isInTriggerArea && isNearButtons) {
-        // Only trigger mouse leave when not in the navigation area
-        // This ensures we don't leave when hovering over the actual buttons
-        handleMouseLeave()
+      // Update proximity state based on mouse position
+      if (isInTriggerArea) {
+        if (!isPointerInTriggerAreaRef.current) {
+          isPointerInTriggerAreaRef.current = true
+          showNavigation()
+        }
+      } else if (isPointerInTriggerAreaRef.current) {
+        isPointerInTriggerAreaRef.current = false
+        if (!isHoveringNavigationRef.current) {
+          scheduleHide(500)
+        }
       }
     }
 
     // Use passive: true for better scroll performance
     container.addEventListener('scroll', handleScroll, { passive: true })
 
-    if (messagesContainer) {
-      // Listen to the messages container (but with global coordinates)
-      messagesContainer.addEventListener('mousemove', handleMouseMove)
-    } else {
-      window.addEventListener('mousemove', handleMouseMove)
+    // Track pointer position globally so we still detect exits after leaving the chat area
+    window.addEventListener('mousemove', handleMouseMove)
+    const handleMessagesMouseLeave = () => {
+      if (!isHoveringNavigationRef.current) {
+        isPointerInTriggerAreaRef.current = false
+        scheduleHide(500)
+      }
     }
+    messagesContainer?.addEventListener('mouseleave', handleMessagesMouseLeave)
 
     return () => {
       container.removeEventListener('scroll', handleScroll)
-      if (messagesContainer) {
-        messagesContainer.removeEventListener('mousemove', handleMouseMove)
-      } else {
-        window.removeEventListener('mousemove', handleMouseMove)
-      }
+      window.removeEventListener('mousemove', handleMouseMove)
+      messagesContainer?.removeEventListener('mouseleave', handleMessagesMouseLeave)
       clearTimeout(hideTimerRef.current)
     }
   }, [
     containerId,
     resetHideTimer,
-    isNearButtons,
-    handleMouseEnter,
-    handleMouseLeave,
     showRightTopics,
-    manuallyClosedUntil
+    manuallyClosedUntil,
+    scheduleHide,
+    showNavigation
   ])
 
   return (
     <>
-      <NavigationContainer $isVisible={isVisible} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
+      <NavigationContainer
+        $isVisible={isVisible}
+        onMouseEnter={handleNavigationMouseEnter}
+        onMouseLeave={handleNavigationMouseLeave}>
         <ButtonGroup>
           <Tooltip title={t('chat.navigation.close')} placement="left" mouseEnterDelay={0.5}>
             <NavigationButton
