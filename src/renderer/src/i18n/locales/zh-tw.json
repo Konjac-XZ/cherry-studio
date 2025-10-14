@@ -4267,6 +4267,8 @@
       "toggle_new_context": "清除上下文",
       "toggle_show_assistants": "切換助手顯示",
       "toggle_show_topics": "切換話題顯示",
+      "previous_assistant": "切換到上一個助手",
+      "next_assistant": "切換到下一個助手",
       "zoom_in": "放大介面",
       "zoom_out": "縮小介面",
       "zoom_reset": "重設縮放"
