@@ -1,4 +1,4 @@
-import { useAppDispatch } from '@renderer/store'
+import { useAppDispatch, useAppSelector } from '@renderer/store'
 import { setUnifiedListOrder } from '@renderer/store/assistants'
 import { AgentEntity, Assistant } from '@renderer/types'
 import { useCallback, useMemo } from 'react'
@@ -20,6 +20,8 @@ export const useUnifiedGrouping = (options: UseUnifiedGroupingOptions) => {
   const { unifiedItems, assistants, agents, apiServerEnabled, agentsLoading, agentsError, updateAssistants } = options
   const { t } = useTranslation()
   const dispatch = useAppDispatch()
+  // Read saved tag order from Redux (default to empty array for backward compatibility)
+  const savedTagsOrder = useAppSelector((state) => state.assistants.tagsOrder ?? [])
 
   // Group unified items by tags
   const groupedUnifiedItems = useMemo(() => {
@@ -45,16 +47,33 @@ export const useUnifiedGrouping = (options: UseUnifiedGroupingOptions) => {
       }
     })
 
-    // Sort groups: untagged first, then tagged groups
+    // Sort groups: untagged first, then according to savedTagsOrder, others follow
     const untaggedKey = t('assistants.tags.untagged')
-    const sortedGroups = Array.from(groups.entries()).sort(([tagA], [tagB]) => {
-      if (tagA === untaggedKey) return -1
-      if (tagB === untaggedKey) return 1
-      return 0
-    })
 
-    return sortedGroups.map(([tag, items]) => ({ tag, items }))
-  }, [unifiedItems, t])
+    const entries = Array.from(groups.entries())
+
+    // Move untagged group to the front if present
+    const untaggedIndex = entries.findIndex(([tag]) => tag === untaggedKey)
+    if (untaggedIndex > -1) {
+      const [untagged] = entries.splice(untaggedIndex, 1)
+      entries.unshift(untagged)
+    }
+
+    if (savedTagsOrder.length > 0) {
+      const head = entries.length > 0 && entries[0][0] === untaggedKey ? entries.shift() : null
+      entries.sort(([tagA], [tagB]) => {
+        const indexA = savedTagsOrder.indexOf(tagA)
+        const indexB = savedTagsOrder.indexOf(tagB)
+        if (indexA === -1 && indexB === -1) return 0
+        if (indexA === -1) return 1
+        if (indexB === -1) return -1
+        return indexA - indexB
+      })
+      if (head) entries.unshift(head)
+    }
+
+    return entries.map(([tag, items]) => ({ tag, items }))
+  }, [unifiedItems, t, savedTagsOrder])
 
   const handleUnifiedGroupReorder = useCallback(
     (tag: string, newGroupList: UnifiedItem[]) => {
