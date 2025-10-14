@@ -4270,6 +4270,8 @@
       "toggle_new_context": "Clear Context",
       "toggle_show_assistants": "Toggle Assistants",
       "toggle_show_topics": "Toggle Topics",
+      "previous_assistant": "Previous Assistant",
+      "next_assistant": "Next Assistant",
       "zoom_in": "Zoom In",
       "zoom_out": "Zoom Out",
       "zoom_reset": "Reset Zoom"

@@ -2667,6 +2667,15 @@ const migrateConfig = {
       logger.error('migrate 162 error', error as Error)
       return state
     }
+  },
+  '163': (state: RootState) => {
+    try {
+      addShortcuts(state, ['previous_assistant', 'next_assistant'], 'toggle_show_topics')
+      return state
+    } catch (error) {
+      logger.error('migrate 163 error', error as Error)
+      return state
+    }
   }
 }
 

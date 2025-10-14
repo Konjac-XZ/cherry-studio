@@ -83,6 +83,20 @@ const initialState: ShortcutsState = {
       system: false
     },
     {
+      key: 'previous_assistant',
+      shortcut: ['Ctrl', 'ArrowUp'],
+      editable: true,
+      enabled: true,
+      system: false
+    },
+    {
+      key: 'next_assistant',
+      shortcut: ['Ctrl', 'ArrowDown'],
+      editable: true,
+      enabled: true,
+      system: false
+    },
+    {
       key: 'copy_last_message',
       shortcut: ['CommandOrControl', 'Shift', 'C'],
       editable: true,

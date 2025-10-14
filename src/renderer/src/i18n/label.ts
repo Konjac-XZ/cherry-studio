@@ -207,6 +207,8 @@ const shortcutKeyMap = {
   toggle_new_context: 'settings.shortcuts.toggle_new_context',
   toggle_show_assistants: 'settings.shortcuts.toggle_show_assistants',
   toggle_show_topics: 'settings.shortcuts.toggle_show_topics',
+  previous_assistant: 'settings.shortcuts.previous_assistant',
+  next_assistant: 'settings.shortcuts.next_assistant',
   zoom_in: 'settings.shortcuts.zoom_in',
   zoom_out: 'settings.shortcuts.zoom_out',
   zoom_reset: 'settings.shortcuts.zoom_reset'

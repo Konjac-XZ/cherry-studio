@@ -1,8 +1,11 @@
 import { ErrorBoundary } from '@renderer/components/ErrorBoundary'
 import { useAgentSessionInitializer } from '@renderer/hooks/agents/useAgentSessionInitializer'
 import { useAssistants } from '@renderer/hooks/useAssistant'
+import { useShortcut } from '@renderer/hooks/useShortcuts'
 import { useRuntime } from '@renderer/hooks/useRuntime'
 import { useNavbarPosition, useSettings } from '@renderer/hooks/useSettings'
+import { useAssistantsTabSortType } from '@renderer/hooks/useStore'
+import { useTags } from '@renderer/hooks/useTags'
 import { useActiveTopic } from '@renderer/hooks/useTopic'
 import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import NavigationService from '@renderer/services/NavigationService'
@@ -11,7 +14,7 @@ import { setActiveAgentId, setActiveTopicOrSessionAction } from '@renderer/store
 import { Assistant, Topic } from '@renderer/types'
 import { MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH, SECOND_MIN_WINDOW_WIDTH } from '@shared/config/constant'
 import { AnimatePresence, motion } from 'motion/react'
-import { FC, startTransition, useCallback, useEffect, useState } from 'react'
+import { FC, startTransition, useCallback, useEffect, useMemo, useState } from 'react'
 import { useDispatch } from 'react-redux'
 import { useLocation, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
@@ -36,11 +39,55 @@ const HomePage: FC = () => {
   const [activeAssistant, _setActiveAssistant] = useState(state?.assistant || _activeAssistant || assistants[0])
   const { activeTopic, setActiveTopic: _setActiveTopic } = useActiveTopic(activeAssistant?.id, state?.topic)
   const { showAssistants, showTopics, topicPosition } = useSettings()
+  const { assistantsTabSortType } = useAssistantsTabSortType()
+  const { collapsedTags, getGroupedAssistants: groupedAssistants } = useTags()
   const dispatch = useDispatch()
   const { chat } = useRuntime()
   const { activeTopicOrSession } = chat
 
   _activeAssistant = activeAssistant
+
+  const { orderedAssistantIds, visibleAssistantIds } = useMemo(() => {
+    if (!assistants.length) {
+      return { orderedAssistantIds: [] as string[], visibleAssistantIds: [] as string[] }
+    }
+
+    if (assistantsTabSortType !== 'tags') {
+      const ids = assistants.map((assistant) => assistant.id)
+      return { orderedAssistantIds: ids, visibleAssistantIds: ids }
+    }
+
+    const ordered: string[] = []
+    const visible: string[] = []
+    const seenOrdered = new Set<string>()
+    const seenVisible = new Set<string>()
+
+    groupedAssistants.forEach(({ tag, assistants: groupAssistants }) => {
+      const isCollapsed = !!collapsedTags?.[tag]
+
+      groupAssistants.forEach((assistant) => {
+        if (!seenOrdered.has(assistant.id)) {
+          seenOrdered.add(assistant.id)
+          ordered.push(assistant.id)
+        }
+        if (!isCollapsed && !seenVisible.has(assistant.id)) {
+          seenVisible.add(assistant.id)
+          visible.push(assistant.id)
+        }
+      })
+    })
+
+    if (!ordered.length) {
+      const fallback = assistants.map((assistant) => assistant.id)
+      return { orderedAssistantIds: fallback, visibleAssistantIds: fallback }
+    }
+
+    if (!visible.length) {
+      return { orderedAssistantIds: ordered, visibleAssistantIds: [] }
+    }
+
+    return { orderedAssistantIds: ordered, visibleAssistantIds: visible }
+  }, [assistants, assistantsTabSortType, collapsedTags, groupedAssistants])
 
   const setActiveAssistant = useCallback(
     (newAssistant: Assistant) => {
@@ -65,6 +112,73 @@ const HomePage: FC = () => {
     },
     [_setActiveTopic, dispatch]
   )
+
+  const handleAssistantSwitch = useCallback(
+    (direction: 'previous' | 'next') => {
+      if (!assistants.length || !activeAssistant?.id) {
+        return
+      }
+
+      let order = orderedAssistantIds.length ? orderedAssistantIds : assistants.map((assistant) => assistant.id)
+      if (!order.length) {
+        return
+      }
+
+      const isTagView = assistantsTabSortType === 'tags'
+      const visible = visibleAssistantIds.length || isTagView ? visibleAssistantIds : order
+      const visibleSet = new Set(visible)
+
+      if (visibleSet.size === 0) {
+        return
+      }
+
+      if (visibleSet.size === 1) {
+        const onlyId = visibleSet.values().next().value as string | undefined
+        if (onlyId === undefined || onlyId === activeAssistant.id) {
+          return
+        }
+      }
+
+      let currentIndex = order.indexOf(activeAssistant.id)
+      if (currentIndex === -1) {
+        order = assistants.map((assistant) => assistant.id)
+        if (!order.length) {
+          return
+        }
+        currentIndex = order.indexOf(activeAssistant.id)
+      }
+
+      if (currentIndex === -1) {
+        return
+      }
+
+      const offset = direction === 'next' ? 1 : -1
+      const total = order.length
+      let index = currentIndex
+
+      for (let step = 0; step < total; step++) {
+        index = (index + offset + total) % total
+        const candidateId = order[index]
+
+        if (candidateId === activeAssistant.id) {
+          continue
+        }
+
+        if (visibleSet.has(candidateId)) {
+          const targetAssistant = assistants.find((assistant) => assistant.id === candidateId)
+
+          if (targetAssistant) {
+            setActiveAssistant(targetAssistant)
+          }
+          break
+        }
+      }
+    },
+    [activeAssistant?.id, assistants, assistantsTabSortType, orderedAssistantIds, setActiveAssistant, visibleAssistantIds]
+  )
+
+  useShortcut('previous_assistant', () => handleAssistantSwitch('previous'))
+  useShortcut('next_assistant', () => handleAssistantSwitch('next'))
 
   useEffect(() => {
     NavigationService.setNavigate(navigate)
