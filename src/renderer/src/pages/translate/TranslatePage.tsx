@@ -45,19 +45,19 @@ import { Button, Flex, FloatButton, Popover, Tooltip, Typography } from 'antd'
 import TextArea, { TextAreaRef } from 'antd/es/input/TextArea'
 import { isEmpty, throttle } from 'lodash'
 import {
+  Check,
+  CirclePause,
   Columns2,
+  FolderClock,
   GripVertical,
   Rows2,
   Settings2,
   SpellCheck,
-  Check,
-  CirclePause,
-  FolderClock,
   UploadIcon
 } from 'lucide-react'
 import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { useLocation, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 
 import TranslateHistoryList from './TranslateHistory'
@@ -440,7 +440,9 @@ const TranslatePage: FC = () => {
         }
         // release guard shortly after
         setTimeout(() => sessionStorage.removeItem('translate:paste:running'), 500)
-      } catch {}
+      } catch {
+        // Ignore errors from URL parameter parsing
+      }
     }
 
     triggerFromQuery()
@@ -595,13 +597,17 @@ const TranslatePage: FC = () => {
         const num = parseFloat(savedSize)
         if (!Number.isNaN(num) && num > 0 && num < 100) setPanelSize(num)
       }
-    } catch {}
+    } catch {
+      // Ignore errors from localStorage access
+    }
   }, [])
 
   useEffect(() => {
     try {
       localStorage.setItem('translate-panel-size', String(panelSize))
-    } catch {}
+    } catch {
+      // Ignore errors from localStorage access
+    }
   }, [panelSize])
 
   // Derive layout mode
