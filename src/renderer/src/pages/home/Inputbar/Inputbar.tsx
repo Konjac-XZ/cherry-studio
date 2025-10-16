@@ -52,6 +52,7 @@ import { CirclePause } from 'lucide-react'
 import React, { CSSProperties, FC, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
+
 import NarrowLayout from '../Messages/NarrowLayout'
 import AttachmentPreview from './AttachmentPreview'
 import InputbarTools, { InputbarToolsRef } from './InputbarTools'
@@ -70,7 +71,7 @@ interface Props {
 
 let _text = ''
 let _files: FileType[] = []
-let _mentionedModelsCache: Record<string, Model[]> = {}
+const _mentionedModelsCache: Record<string, Model[]> = {}
 
 const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) => {
   const [text, setText] = useState(_text)
