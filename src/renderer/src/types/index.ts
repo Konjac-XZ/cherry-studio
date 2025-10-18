@@ -17,6 +17,7 @@ import type { BaseTool, MCPTool } from './tool'
 
 export * from './agent'
 export * from './apiModels'
+export * from './apiServer'
 export * from './knowledge'
 export * from './mcp'
 export * from './notification'
@@ -272,6 +273,8 @@ export type PaintingParams = {
   id: string
   urls: string[]
   files: FileMetadata[]
+  // provider that this painting belongs to (for new-api family separation)
+  providerId?: string
 }
 
 export type PaintingProvider = 'zhipu' | 'aihubmix' | 'silicon' | 'dmxapi' | 'new-api'
@@ -688,7 +691,8 @@ export const BuiltinMCPServerNames = {
   fetch: '@cherry/fetch',
   filesystem: '@cherry/filesystem',
   difyKnowledge: '@cherry/dify-knowledge',
-  python: '@cherry/python'
+  python: '@cherry/python',
+  didiMCP: '@cherry/didi-mcp'
 } as const
 
 export type BuiltinMCPServerName = (typeof BuiltinMCPServerNames)[keyof typeof BuiltinMCPServerNames]
@@ -848,13 +852,6 @@ export type S3Config = {
 }
 
 export type { Message } from './newMessage'
-
-export interface ApiServerConfig {
-  enabled: boolean
-  host: string
-  port: number
-  apiKey: string
-}
 export * from './tool'
 
 // Memory Service Types
