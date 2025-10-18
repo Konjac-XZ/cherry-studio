@@ -183,7 +183,7 @@ const Title = styled.span`
   font-weight: bold;
   color: var(--color-text-1);
   line-height: 1.4;
-  font-family: 'Ubuntu';
+  font-family: -apple-system, system-ui, Arial, sans-serif;
   display: -webkit-box;
   -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;

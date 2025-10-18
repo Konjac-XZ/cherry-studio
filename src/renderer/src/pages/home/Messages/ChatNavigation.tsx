@@ -64,32 +64,17 @@ const ChatNavigation: FC<ChatNavigationProps> = ({ containerId }) => {
 
   const showNavigation = useCallback(() => {
     if (manuallyClosedUntil && Date.now() < manuallyClosedUntil) {
-      return false
-    }
-
-    setIsVisible(true)
-    clearHideTimer()
-    return true
-  }, [clearHideTimer, manuallyClosedUntil])
-
-  // Reset hide timer and make buttons visible
-  const resetHideTimer = useCallback(() => {
-    const didShow = showNavigation()
-    if (!didShow) {
       return
     }
-
-    if (!isHoveringNavigationRef.current) {
-      scheduleHide(1500)
-    }
-  }, [scheduleHide, showNavigation])
+    setIsVisible(true)
+    clearHideTimer()
+  }, [clearHideTimer, manuallyClosedUntil])
 
   // Handle mouse entering button area
   const handleNavigationMouseEnter = useCallback(() => {
     if (manuallyClosedUntil && Date.now() < manuallyClosedUntil) {
       return
     }
-
     isHoveringNavigationRef.current = true
     showNavigation()
   }, [manuallyClosedUntil, showNavigation])
@@ -97,13 +82,12 @@ const ChatNavigation: FC<ChatNavigationProps> = ({ containerId }) => {
   // Handle mouse leaving button area
   const handleNavigationMouseLeave = useCallback(() => {
     isHoveringNavigationRef.current = false
-    const delay = isPointerInTriggerAreaRef.current ? 1500 : 500
-    scheduleHide(delay)
+    scheduleHide(500)
   }, [scheduleHide])
 
   const handleChatHistoryClick = () => {
     setShowChatHistory(true)
-    resetHideTimer()
+    showNavigation()
   }
 
   const handleDrawerClose = () => {
@@ -195,17 +179,17 @@ const ChatNavigation: FC<ChatNavigationProps> = ({ containerId }) => {
   }
 
   const handleScrollToTop = () => {
-    resetHideTimer()
+    showNavigation()
     scrollToTop()
   }
 
   const handleScrollToBottom = () => {
-    resetHideTimer()
+    showNavigation()
     scrollToBottom()
   }
 
   const handleNextMessage = () => {
-    resetHideTimer()
+    showNavigation()
     const userMessages = findUserMessages()
     const assistantMessages = findAssistantMessages()
 
@@ -232,7 +216,7 @@ const ChatNavigation: FC<ChatNavigationProps> = ({ containerId }) => {
   }
 
   const handlePrevMessage = () => {
-    resetHideTimer()
+    showNavigation()
     const userMessages = findUserMessages()
     const assistantMessages = findAssistantMessages()
     if (userMessages.length === 0 && assistantMessages.length === 0) {
@@ -266,9 +250,9 @@ const ChatNavigation: FC<ChatNavigationProps> = ({ containerId }) => {
 
     // Handle scroll events on the container
     const handleScroll = () => {
-      // Only show buttons when scrolling if cursor is near the button area
+      // Only show buttons when scrolling if cursor is in trigger area or hovering navigation
       if (isPointerInTriggerAreaRef.current || isHoveringNavigationRef.current) {
-        resetHideTimer()
+        showNavigation()
       }
     }
 
@@ -340,14 +324,7 @@ const ChatNavigation: FC<ChatNavigationProps> = ({ containerId }) => {
       messagesContainer?.removeEventListener('mouseleave', handleMessagesMouseLeave)
       clearTimeout(hideTimerRef.current)
     }
-  }, [
-    containerId,
-    resetHideTimer,
-    showRightTopics,
-    manuallyClosedUntil,
-    scheduleHide,
-    showNavigation
-  ])
+  }, [containerId, showRightTopics, manuallyClosedUntil, scheduleHide, showNavigation])
 
   return (
     <>
