@@ -1,0 +1,538 @@
+// electron.vite.config.ts
+import react from "@vitejs/plugin-react-swc";
+import { CodeInspectorPlugin } from "code-inspector-plugin";
+import { defineConfig, externalizeDepsPlugin } from "electron-vite";
+import { resolve } from "path";
+import { visualizer } from "rollup-plugin-visualizer";
+
+// package.json
+var package_default = {
+  name: "CherryStudio",
+  version: "1.7.0-beta.1",
+  private: true,
+  description: "A powerful AI assistant for producer.",
+  main: "./out/main/index.js",
+  author: "support@cherry-ai.com",
+  homepage: "https://github.com/CherryHQ/cherry-studio",
+  engines: {
+    node: ">=22.0.0"
+  },
+  workspaces: {
+    packages: [
+      "local",
+      "packages/*"
+    ],
+    installConfig: {
+      hoistingLimits: [
+        "packages/database",
+        "packages/mcp-trace/trace-core",
+        "packages/mcp-trace/trace-node",
+        "packages/mcp-trace/trace-web",
+        "packages/extension-table-plus"
+      ]
+    }
+  },
+  scripts: {
+    start: "electron-vite preview",
+    dev: "dotenv electron-vite dev",
+    debug: "electron-vite -- --inspect --sourcemap --remote-debugging-port=9222",
+    build: "npm run typecheck && electron-vite build",
+    "build:check": "yarn lint && yarn test",
+    "build:unpack": "dotenv npm run build && electron-builder --dir",
+    "build:win": "dotenv npm run build && electron-builder --win --x64 --arm64",
+    "build:win:x64": "dotenv npm run build && electron-builder --win --x64",
+    "build:win:arm64": "dotenv npm run build && electron-builder --win --arm64",
+    "build:mac": "dotenv npm run build && electron-builder --mac --arm64 --x64",
+    "build:mac:arm64": "dotenv npm run build && electron-builder --mac --arm64",
+    "build:mac:x64": "dotenv npm run build && electron-builder --mac --x64",
+    "build:linux": "dotenv npm run build && electron-builder --linux --x64 --arm64",
+    "build:linux:arm64": "dotenv npm run build && electron-builder --linux --arm64",
+    "build:linux:x64": "dotenv npm run build && electron-builder --linux --x64",
+    release: "node scripts/version.js",
+    publish: "yarn build:check && yarn release patch push",
+    "pulish:artifacts": "cd packages/artifacts && npm publish && cd -",
+    "agents:generate": "NODE_ENV='development' drizzle-kit generate --config src/main/services/agents/drizzle.config.ts",
+    "agents:push": "NODE_ENV='development' drizzle-kit push --config src/main/services/agents/drizzle.config.ts",
+    "agents:studio": "NODE_ENV='development' drizzle-kit studio --config src/main/services/agents/drizzle.config.ts",
+    "agents:drop": "NODE_ENV='development' drizzle-kit drop --config src/main/services/agents/drizzle.config.ts",
+    "generate:icons": "electron-icon-builder --input=./build/logo.png --output=build",
+    "analyze:renderer": "VISUALIZER_RENDERER=true yarn build",
+    "analyze:main": "VISUALIZER_MAIN=true yarn build",
+    typecheck: 'concurrently -n "node,web" -c "cyan,magenta" "npm run typecheck:node" "npm run typecheck:web"',
+    "typecheck:node": "tsgo --noEmit -p tsconfig.node.json --composite false",
+    "typecheck:web": "tsgo --noEmit -p tsconfig.web.json --composite false",
+    "check:i18n": "dotenv -e .env -- tsx scripts/check-i18n.ts",
+    "sync:i18n": "dotenv -e .env -- tsx scripts/sync-i18n.ts",
+    "update:i18n": "dotenv -e .env -- tsx scripts/update-i18n.ts",
+    "auto:i18n": "dotenv -e .env -- tsx scripts/auto-translate-i18n.ts",
+    "update:languages": "tsx scripts/update-languages.ts",
+    test: "vitest run --silent",
+    "test:main": "vitest run --project main",
+    "test:renderer": "vitest run --project renderer",
+    "test:update": "yarn test:renderer --update",
+    "test:coverage": "vitest run --coverage --silent",
+    "test:ui": "vitest --ui",
+    "test:watch": "vitest",
+    "test:e2e": "yarn playwright test",
+    "test:lint": "oxlint --deny-warnings && eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --cache",
+    "test:scripts": "vitest scripts",
+    lint: "oxlint --fix && eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --cache && yarn typecheck && yarn check:i18n && yarn format:check",
+    format: "biome format --write && biome lint --write",
+    "format:check": "biome format && biome lint",
+    prepare: "git config blame.ignoreRevsFile .git-blame-ignore-revs && husky",
+    claude: "dotenv -e .env -- claude",
+    "release:aicore:alpha": "yarn workspace @cherrystudio/ai-core version prerelease --immediate && yarn workspace @cherrystudio/ai-core npm publish --tag alpha --access public",
+    "release:aicore:beta": "yarn workspace @cherrystudio/ai-core version prerelease --immediate && yarn workspace @cherrystudio/ai-core npm publish --tag beta --access public",
+    "release:aicore": "yarn workspace @cherrystudio/ai-core version patch --immediate && yarn workspace @cherrystudio/ai-core npm publish --access public"
+  },
+  dependencies: {
+    "@anthropic-ai/claude-agent-sdk": "patch:@anthropic-ai/claude-agent-sdk@npm%3A0.1.1#~/.yarn/patches/@anthropic-ai-claude-agent-sdk-npm-0.1.1-d937b73fed.patch",
+    "@libsql/client": "0.14.0",
+    "@libsql/win32-x64-msvc": "^0.4.7",
+    "@napi-rs/system-ocr": "patch:@napi-rs/system-ocr@npm%3A1.0.2#~/.yarn/patches/@napi-rs-system-ocr-npm-1.0.2-59e7a78e8b.patch",
+    "@strongtz/win32-arm64-msvc": "^0.4.7",
+    express: "^5.1.0",
+    "font-list": "^2.0.0",
+    "graceful-fs": "^4.2.11",
+    jsdom: "26.1.0",
+    "node-stream-zip": "^1.15.0",
+    officeparser: "^4.2.0",
+    "os-proxy-config": "^1.1.2",
+    "selection-hook": "^1.0.12",
+    sharp: "^0.34.3",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
+    "tesseract.js": "patch:tesseract.js@npm%3A6.0.1#~/.yarn/patches/tesseract.js-npm-6.0.1-2562a7e46d.patch",
+    turndown: "7.2.0"
+  },
+  devDependencies: {
+    "@agentic/exa": "^7.3.3",
+    "@agentic/searxng": "^7.3.3",
+    "@agentic/tavily": "^7.3.3",
+    "@ai-sdk/amazon-bedrock": "^3.0.35",
+    "@ai-sdk/google-vertex": "^3.0.40",
+    "@ai-sdk/mistral": "^2.0.19",
+    "@ai-sdk/perplexity": "^2.0.13",
+    "@ant-design/v5-patch-for-react-19": "^1.0.3",
+    "@anthropic-ai/sdk": "^0.41.0",
+    "@anthropic-ai/vertex-sdk": "patch:@anthropic-ai/vertex-sdk@npm%3A0.11.4#~/.yarn/patches/@anthropic-ai-vertex-sdk-npm-0.11.4-c19cb41edb.patch",
+    "@aws-sdk/client-bedrock": "^3.840.0",
+    "@aws-sdk/client-bedrock-runtime": "^3.840.0",
+    "@aws-sdk/client-s3": "^3.840.0",
+    "@biomejs/biome": "2.2.4",
+    "@cherrystudio/ai-core": "workspace:^1.0.0-alpha.18",
+    "@cherrystudio/embedjs": "^0.1.31",
+    "@cherrystudio/embedjs-libsql": "^0.1.31",
+    "@cherrystudio/embedjs-loader-csv": "^0.1.31",
+    "@cherrystudio/embedjs-loader-image": "^0.1.31",
+    "@cherrystudio/embedjs-loader-markdown": "^0.1.31",
+    "@cherrystudio/embedjs-loader-msoffice": "^0.1.31",
+    "@cherrystudio/embedjs-loader-pdf": "^0.1.31",
+    "@cherrystudio/embedjs-loader-sitemap": "^0.1.31",
+    "@cherrystudio/embedjs-loader-web": "^0.1.31",
+    "@cherrystudio/embedjs-loader-xml": "^0.1.31",
+    "@cherrystudio/embedjs-ollama": "^0.1.31",
+    "@cherrystudio/embedjs-openai": "^0.1.31",
+    "@cherrystudio/extension-table-plus": "workspace:^",
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/modifiers": "^9.0.0",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "@electron-toolkit/eslint-config-ts": "^3.0.0",
+    "@electron-toolkit/preload": "^3.0.0",
+    "@electron-toolkit/tsconfig": "^1.0.1",
+    "@electron-toolkit/utils": "^3.0.0",
+    "@electron/notarize": "^2.5.0",
+    "@emotion/is-prop-valid": "^1.3.1",
+    "@eslint-react/eslint-plugin": "^1.36.1",
+    "@eslint/js": "^9.22.0",
+    "@google/genai": "patch:@google/genai@npm%3A1.0.1#~/.yarn/patches/@google-genai-npm-1.0.1-e26f0f9af7.patch",
+    "@hello-pangea/dnd": "^18.0.1",
+    "@heroui/react": "^2.8.3",
+    "@kangfenmao/keyv-storage": "^0.1.0",
+    "@langchain/community": "^0.3.50",
+    "@mistralai/mistralai": "^1.7.5",
+    "@modelcontextprotocol/sdk": "^1.17.5",
+    "@mozilla/readability": "^0.6.0",
+    "@notionhq/client": "^2.2.15",
+    "@openrouter/ai-sdk-provider": "^1.1.2",
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/core": "2.0.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.200.0",
+    "@opentelemetry/sdk-trace-base": "^2.0.0",
+    "@opentelemetry/sdk-trace-node": "^2.0.0",
+    "@opentelemetry/sdk-trace-web": "^2.0.0",
+    "@opeoginni/github-copilot-openai-compatible": "patch:@opeoginni/github-copilot-openai-compatible@npm%3A0.1.18#~/.yarn/patches/@opeoginni-github-copilot-openai-compatible-npm-0.1.18-3f65760532.patch",
+    "@playwright/test": "^1.52.0",
+    "@radix-ui/react-context-menu": "^2.2.16",
+    "@reduxjs/toolkit": "^2.2.5",
+    "@shikijs/markdown-it": "^3.12.0",
+    "@swc/plugin-styled-components": "^8.0.4",
+    "@tailwindcss/vite": "^4.1.13",
+    "@tanstack/react-query": "^5.85.5",
+    "@tanstack/react-virtual": "^3.13.12",
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@tiptap/extension-collaboration": "^3.2.0",
+    "@tiptap/extension-drag-handle": "patch:@tiptap/extension-drag-handle@npm%3A3.2.0#~/.yarn/patches/@tiptap-extension-drag-handle-npm-3.2.0-5a9ebff7c9.patch",
+    "@tiptap/extension-drag-handle-react": "^3.2.0",
+    "@tiptap/extension-image": "^3.2.0",
+    "@tiptap/extension-list": "^3.2.0",
+    "@tiptap/extension-mathematics": "^3.2.0",
+    "@tiptap/extension-mention": "^3.2.0",
+    "@tiptap/extension-node-range": "^3.2.0",
+    "@tiptap/extension-table-of-contents": "^3.2.0",
+    "@tiptap/extension-typography": "^3.2.0",
+    "@tiptap/extension-underline": "^3.2.0",
+    "@tiptap/pm": "^3.2.0",
+    "@tiptap/react": "^3.2.0",
+    "@tiptap/starter-kit": "^3.2.0",
+    "@tiptap/suggestion": "^3.2.0",
+    "@tiptap/y-tiptap": "^3.0.0",
+    "@truto/turndown-plugin-gfm": "^1.0.2",
+    "@tryfabric/martian": "^1.2.4",
+    "@types/cli-progress": "^3",
+    "@types/content-type": "^1.1.9",
+    "@types/cors": "^2.8.19",
+    "@types/diff": "^7",
+    "@types/express": "^5",
+    "@types/fs-extra": "^11",
+    "@types/he": "^1",
+    "@types/html-to-text": "^9",
+    "@types/lodash": "^4.17.5",
+    "@types/markdown-it": "^14",
+    "@types/md5": "^2.3.5",
+    "@types/mime-types": "^3",
+    "@types/node": "^22.17.1",
+    "@types/pako": "^1.0.2",
+    "@types/react": "^19.0.12",
+    "@types/react-dom": "^19.0.4",
+    "@types/react-infinite-scroll-component": "^5.0.0",
+    "@types/react-transition-group": "^4.4.12",
+    "@types/react-window": "^1",
+    "@types/swagger-jsdoc": "^6",
+    "@types/swagger-ui-express": "^4.1.8",
+    "@types/tinycolor2": "^1",
+    "@types/turndown": "^5.0.5",
+    "@types/uuid": "^10.0.0",
+    "@types/word-extractor": "^1",
+    "@typescript/native-preview": "latest",
+    "@uiw/codemirror-extensions-langs": "^4.25.1",
+    "@uiw/codemirror-themes-all": "^4.25.1",
+    "@uiw/react-codemirror": "^4.25.1",
+    "@vitejs/plugin-react-swc": "^3.9.0",
+    "@vitest/browser": "^3.2.4",
+    "@vitest/coverage-v8": "^3.2.4",
+    "@vitest/ui": "^3.2.4",
+    "@vitest/web-worker": "^3.2.4",
+    "@viz-js/lang-dot": "^1.0.5",
+    "@viz-js/viz": "^3.14.0",
+    "@xyflow/react": "^12.4.4",
+    ai: "^5.0.68",
+    antd: "patch:antd@npm%3A5.27.0#~/.yarn/patches/antd-npm-5.27.0-aa91c36546.patch",
+    archiver: "^7.0.1",
+    "async-mutex": "^0.5.0",
+    axios: "^1.7.3",
+    "browser-image-compression": "^2.0.2",
+    chardet: "^2.1.0",
+    "check-disk-space": "3.4.0",
+    cheerio: "^1.1.2",
+    chokidar: "^4.0.3",
+    "cli-progress": "^3.12.0",
+    clsx: "^2.1.1",
+    "code-inspector-plugin": "^0.20.14",
+    color: "^5.0.0",
+    concurrently: "^9.2.1",
+    "country-flag-emoji-polyfill": "0.1.8",
+    dayjs: "^1.11.11",
+    dexie: "^4.0.8",
+    "dexie-react-hooks": "^1.1.7",
+    diff: "^8.0.2",
+    docx: "^9.0.2",
+    dompurify: "^3.2.6",
+    "dotenv-cli": "^7.4.2",
+    "drizzle-kit": "^0.31.4",
+    "drizzle-orm": "^0.44.5",
+    electron: "37.6.0",
+    "electron-builder": "26.0.15",
+    "electron-devtools-installer": "^3.2.0",
+    "electron-reload": "^2.0.0-alpha.1",
+    "electron-store": "^8.2.0",
+    "electron-updater": "6.6.4",
+    "electron-vite": "4.0.0",
+    "electron-window-state": "^5.0.3",
+    emittery: "^1.0.3",
+    "emoji-picker-element": "^1.22.1",
+    epub: "patch:epub@npm%3A1.3.0#~/.yarn/patches/epub-npm-1.3.0-8325494ffe.patch",
+    eslint: "^9.22.0",
+    "eslint-plugin-import-zod": "^1.2.0",
+    "eslint-plugin-oxlint": "^1.15.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-simple-import-sort": "^12.1.1",
+    "eslint-plugin-unused-imports": "^4.1.4",
+    "express-validator": "^7.2.1",
+    "fast-diff": "^1.3.0",
+    "fast-xml-parser": "^5.2.0",
+    "fetch-socks": "1.3.2",
+    "framer-motion": "^12.23.12",
+    "franc-min": "^6.2.0",
+    "fs-extra": "^11.2.0",
+    "google-auth-library": "^9.15.1",
+    he: "^1.2.0",
+    "html-tags": "^5.1.0",
+    "html-to-image": "^1.11.13",
+    "html-to-text": "^9.0.5",
+    htmlparser2: "^10.0.0",
+    husky: "^9.1.7",
+    i18next: "^23.11.5",
+    "iconv-lite": "^0.6.3",
+    isbinaryfile: "5.0.4",
+    jaison: "^2.0.2",
+    "jest-styled-components": "^7.2.0",
+    "linguist-languages": "^8.1.0",
+    "lint-staged": "^15.5.0",
+    lodash: "^4.17.21",
+    "lru-cache": "^11.1.0",
+    "lucide-react": "^0.525.0",
+    "macos-release": "^3.4.0",
+    "markdown-it": "^14.1.0",
+    mermaid: "^11.10.1",
+    mime: "^4.0.4",
+    "mime-types": "^3.0.1",
+    motion: "^12.10.5",
+    "notion-helper": "^1.3.22",
+    "npx-scope-finder": "^1.2.0",
+    openai: "patch:openai@npm%3A5.12.2#~/.yarn/patches/openai-npm-5.12.2-30b075401c.patch",
+    oxlint: "^1.22.0",
+    "oxlint-tsgolint": "^0.2.0",
+    "p-queue": "^8.1.0",
+    "pdf-lib": "^1.17.1",
+    "pdf-parse": "^1.1.1",
+    playwright: "^1.52.0",
+    "proxy-agent": "^6.5.0",
+    react: "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-error-boundary": "^6.0.0",
+    "react-hotkeys-hook": "^4.6.1",
+    "react-i18next": "^14.1.2",
+    "react-infinite-scroll-component": "^6.1.0",
+    "react-json-view": "^1.21.3",
+    "react-markdown": "^10.1.0",
+    "react-player": "^3.3.1",
+    "react-redux": "^9.1.2",
+    "react-router": "6",
+    "react-router-dom": "6",
+    "react-spinners": "^0.14.1",
+    "react-transition-group": "^4.4.5",
+    redux: "^5.0.1",
+    "redux-persist": "^6.0.0",
+    "reflect-metadata": "0.2.2",
+    "rehype-katex": "^7.0.1",
+    "rehype-mathjax": "^7.1.0",
+    "rehype-parse": "^9.0.1",
+    "rehype-raw": "^7.0.0",
+    "rehype-stringify": "^10.0.1",
+    "remark-cjk-friendly": "^1.2.0",
+    "remark-gfm": "^4.0.1",
+    "remark-github-blockquote-alert": "^2.0.0",
+    "remark-math": "^6.0.0",
+    "remove-markdown": "^0.6.2",
+    "rollup-plugin-visualizer": "^5.12.0",
+    shiki: "^3.12.0",
+    "strict-url-sanitise": "^0.0.1",
+    "string-width": "^7.2.0",
+    striptags: "^3.2.0",
+    "styled-components": "^6.1.11",
+    swr: "^2.3.6",
+    tailwindcss: "^4.1.13",
+    tar: "^7.4.3",
+    "tiny-pinyin": "^1.3.2",
+    tokenx: "^1.1.0",
+    tsx: "^4.20.3",
+    "turndown-plugin-gfm": "^1.0.2",
+    "tw-animate-css": "^1.3.8",
+    typescript: "~5.8.2",
+    undici: "6.21.2",
+    unified: "^11.0.5",
+    uuid: "^13.0.0",
+    vite: "npm:rolldown-vite@latest",
+    vitest: "^3.2.4",
+    webdav: "^5.8.0",
+    winston: "^3.17.0",
+    "winston-daily-rotate-file": "^5.0.0",
+    "word-extractor": "^1.0.4",
+    "y-protocols": "^1.0.6",
+    yaml: "^2.8.1",
+    yjs: "^13.6.27",
+    "youtubei.js": "^15.0.1",
+    zipread: "^1.3.3",
+    zod: "^4.1.5"
+  },
+  resolutions: {
+    "@codemirror/language": "6.11.3",
+    "@codemirror/lint": "6.8.5",
+    "@codemirror/view": "6.38.1",
+    "@langchain/core@npm:^0.3.26": "patch:@langchain/core@npm%3A0.3.44#~/.yarn/patches/@langchain-core-npm-0.3.44-41d5c3cb0a.patch",
+    "@langchain/openai@npm:^0.3.16": "patch:@langchain/openai@npm%3A0.3.16#~/.yarn/patches/@langchain-openai-npm-0.3.16-e525b59526.patch",
+    "@langchain/openai@npm:>=0.1.0 <0.4.0": "patch:@langchain/openai@npm%3A0.3.16#~/.yarn/patches/@langchain-openai-npm-0.3.16-e525b59526.patch",
+    "app-builder-lib@npm:26.0.13": "patch:app-builder-lib@npm%3A26.0.13#~/.yarn/patches/app-builder-lib-npm-26.0.13-a064c9e1d0.patch",
+    "app-builder-lib@npm:26.0.15": "patch:app-builder-lib@npm%3A26.0.15#~/.yarn/patches/app-builder-lib-npm-26.0.15-360e5b0476.patch",
+    "atomically@npm:^1.7.0": "patch:atomically@npm%3A1.7.0#~/.yarn/patches/atomically-npm-1.7.0-e742e5293b.patch",
+    esbuild: "^0.25.0",
+    "file-stream-rotator@npm:^0.6.1": "patch:file-stream-rotator@npm%3A0.6.1#~/.yarn/patches/file-stream-rotator-npm-0.6.1-eab45fb13d.patch",
+    "libsql@npm:^0.4.4": "patch:libsql@npm%3A0.4.7#~/.yarn/patches/libsql-npm-0.4.7-444e260fb1.patch",
+    "node-abi": "4.12.0",
+    "openai@npm:^4.77.0": "patch:openai@npm%3A5.12.2#~/.yarn/patches/openai-npm-5.12.2-30b075401c.patch",
+    "openai@npm:^4.87.3": "patch:openai@npm%3A5.12.2#~/.yarn/patches/openai-npm-5.12.2-30b075401c.patch",
+    "pdf-parse@npm:1.1.1": "patch:pdf-parse@npm%3A1.1.1#~/.yarn/patches/pdf-parse-npm-1.1.1-04a6109b2a.patch",
+    "pkce-challenge@npm:^4.1.0": "patch:pkce-challenge@npm%3A4.1.0#~/.yarn/patches/pkce-challenge-npm-4.1.0-fbc51695a3.patch",
+    "tar-fs": "^2.1.4",
+    undici: "6.21.2",
+    vite: "npm:rolldown-vite@latest",
+    "tesseract.js@npm:*": "patch:tesseract.js@npm%3A6.0.1#~/.yarn/patches/tesseract.js-npm-6.0.1-2562a7e46d.patch",
+    "@ai-sdk/google@npm:2.0.20": "patch:@ai-sdk/google@npm%3A2.0.20#~/.yarn/patches/@ai-sdk-google-npm-2.0.20-b9102f9d54.patch"
+  },
+  packageManager: "yarn@4.9.1",
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,cjs,mjs,cts,mts}": [
+      "biome format --write --no-errors-on-unmatched",
+      "eslint --fix"
+    ],
+    "*.{json,yml,yaml,css,html}": [
+      "biome format --write --no-errors-on-unmatched"
+    ]
+  }
+};
+
+// electron.vite.config.ts
+var __electron_vite_injected_dirname = "D:\\GitHub\\cherry-studio";
+var visualizerPlugin = (type) => {
+  return process.env[`VISUALIZER_${type.toUpperCase()}`] ? [visualizer({ open: true })] : [];
+};
+var isDev = process.env.NODE_ENV === "development";
+var isProd = process.env.NODE_ENV === "production";
+var electron_vite_config_default = defineConfig({
+  main: {
+    plugins: [externalizeDepsPlugin(), ...visualizerPlugin("main")],
+    resolve: {
+      alias: {
+        "@main": resolve("src/main"),
+        "@types": resolve("src/renderer/src/types"),
+        "@shared": resolve("packages/shared"),
+        "@logger": resolve("src/main/services/LoggerService"),
+        "@mcp-trace/trace-core": resolve("packages/mcp-trace/trace-core"),
+        "@mcp-trace/trace-node": resolve("packages/mcp-trace/trace-node")
+      }
+    },
+    build: {
+      rollupOptions: {
+        external: ["bufferutil", "utf-8-validate", "electron", ...Object.keys(package_default.dependencies)],
+        output: {
+          manualChunks: void 0,
+          // 彻底禁用代码分割 - 返回 null 强制单文件打包
+          inlineDynamicImports: true
+          // 内联所有动态导入，这是关键配置
+        },
+        onwarn(warning, warn) {
+          if (warning.code === "COMMONJS_VARIABLE_IN_ESM") return;
+          warn(warning);
+        }
+      },
+      sourcemap: isDev
+    },
+    esbuild: isProd ? { legalComments: "none" } : {},
+    optimizeDeps: {
+      noDiscovery: isDev
+    }
+  },
+  preload: {
+    plugins: [
+      react({
+        tsDecorators: true
+      }),
+      externalizeDepsPlugin()
+    ],
+    resolve: {
+      alias: {
+        "@shared": resolve("packages/shared"),
+        "@mcp-trace/trace-core": resolve("packages/mcp-trace/trace-core")
+      }
+    },
+    build: {
+      sourcemap: isDev
+    }
+  },
+  renderer: {
+    plugins: [
+      (async () => (await import("@tailwindcss/vite")).default())(),
+      react({
+        tsDecorators: true,
+        plugins: [
+          [
+            "@swc/plugin-styled-components",
+            {
+              displayName: true,
+              // 开发环境下启用组件名称
+              fileName: false,
+              // 不在类名中包含文件名
+              pure: true,
+              // 优化性能
+              ssr: false
+              // 不需要服务端渲染
+            }
+          ]
+        ]
+      }),
+      ...isDev ? [CodeInspectorPlugin({ bundler: "vite" })] : [],
+      // 只在开发环境下启用 CodeInspectorPlugin
+      ...visualizerPlugin("renderer")
+    ],
+    resolve: {
+      alias: {
+        "@renderer": resolve("src/renderer/src"),
+        "@shared": resolve("packages/shared"),
+        "@types": resolve("src/renderer/src/types"),
+        "@logger": resolve("src/renderer/src/services/LoggerService"),
+        "@mcp-trace/trace-core": resolve("packages/mcp-trace/trace-core"),
+        "@mcp-trace/trace-web": resolve("packages/mcp-trace/trace-web"),
+        "@cherrystudio/ai-core/provider": resolve("packages/aiCore/src/core/providers"),
+        "@cherrystudio/ai-core/built-in/plugins": resolve("packages/aiCore/src/core/plugins/built-in"),
+        "@cherrystudio/ai-core": resolve("packages/aiCore/src"),
+        "@cherrystudio/extension-table-plus": resolve("packages/extension-table-plus/src")
+      }
+    },
+    optimizeDeps: {
+      exclude: ["pyodide"],
+      esbuildOptions: {
+        target: "esnext"
+        // for dev
+      }
+    },
+    worker: {
+      format: "es"
+    },
+    build: {
+      target: "esnext",
+      // for build
+      rollupOptions: {
+        input: {
+          index: resolve(__electron_vite_injected_dirname, "src/renderer/index.html"),
+          miniWindow: resolve(__electron_vite_injected_dirname, "src/renderer/miniWindow.html"),
+          selectionToolbar: resolve(__electron_vite_injected_dirname, "src/renderer/selectionToolbar.html"),
+          selectionAction: resolve(__electron_vite_injected_dirname, "src/renderer/selectionAction.html"),
+          traceWindow: resolve(__electron_vite_injected_dirname, "src/renderer/traceWindow.html")
+        },
+        onwarn(warning, warn) {
+          if (warning.code === "COMMONJS_VARIABLE_IN_ESM") return;
+          warn(warning);
+        }
+      }
+    },
+    esbuild: isProd ? { legalComments: "none" } : {}
+  }
+});
+export {
+  electron_vite_config_default as default
+};
