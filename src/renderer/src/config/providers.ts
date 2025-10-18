@@ -58,7 +58,6 @@ import ZhipuProviderLogo from '@renderer/assets/images/providers/zhipu.png'
 import {
   AtLeast,
   isSystemProvider,
-  Model,
   OpenAIServiceTiers,
   Provider,
   ProviderType,
@@ -88,6 +87,7 @@ export const SYSTEM_PROVIDERS_CONFIG: Record<SystemProviderId, SystemProvider> =
     type: 'openai',
     apiKey: '',
     apiHost: 'https://open.cherryin.net',
+    anthropicApiHost: 'https://open.cherryin.net',
     models: [],
     isSystem: true,
     enabled: true
@@ -109,7 +109,6 @@ export const SYSTEM_PROVIDERS_CONFIG: Record<SystemProviderId, SystemProvider> =
     apiKey: '',
     apiHost: 'https://aihubmix.com',
     anthropicApiHost: 'https://aihubmix.com/anthropic',
-    isAnthropicModel: (m: Model) => m.id.includes('claude'),
     models: SYSTEM_MODELS.aihubmix,
     isSystem: true,
     enabled: false
@@ -289,7 +288,7 @@ export const SYSTEM_PROVIDERS_CONFIG: Record<SystemProviderId, SystemProvider> =
   'new-api': {
     id: 'new-api',
     name: 'New API',
-    type: 'openai',
+    type: 'new-api',
     apiKey: '',
     apiHost: 'http://localhost:3000',
     anthropicApiHost: 'http://localhost:3000',
@@ -1432,5 +1431,5 @@ export const isGeminiWebSearchProvider = (provider: Provider) => {
 }
 
 export const isNewApiProvider = (provider: Provider) => {
-  return ['new-api', 'cherryin'].includes(provider.id)
+  return ['new-api', 'cherryin'].includes(provider.id) || provider.type === 'new-api'
 }
