@@ -231,7 +231,7 @@ const HomePage: FC = () => {
         type: 'chat'
       })
     } else if (activeTopicOrSession === 'topic') {
-      dispatch(setActiveAgentId('fake'))
+      dispatch(setActiveAgentId(null))
     }
   }, [activeTopicOrSession, dispatch, setActiveAssistant])
 
@@ -244,6 +244,7 @@ const HomePage: FC = () => {
           setActiveTopic={setActiveTopic}
           setActiveAssistant={setActiveAssistant}
           position="left"
+          activeTopicOrSession={activeTopicOrSession}
         />
       )}
       <ContentContainer id={isLeftNavbar ? 'content-container' : undefined}>

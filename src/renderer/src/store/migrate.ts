@@ -2670,7 +2670,12 @@ const migrateConfig = {
   },
   '163': (state: RootState) => {
     try {
-      addShortcuts(state, ['previous_assistant', 'next_assistant'], 'toggle_show_topics')
+      addOcrProvider(state, BUILTIN_OCR_PROVIDERS_MAP.ovocr)
+      state.llm.providers.forEach((provider) => {
+        if (provider.id === 'cherryin') {
+          provider.anthropicApiHost = 'https://open.cherryin.net'
+        }
+      })
       return state
     } catch (error) {
       logger.error('migrate 163 error', error as Error)
