@@ -40,6 +40,7 @@ import {
   detectLanguage,
   determineTargetLanguage
 } from '@renderer/utils/translate'
+import { htmlToMarkdown } from '@renderer/utils/markdownConverter'
 import { imageExts, MB, textExts } from '@shared/config/constant'
 import { Button, Flex, FloatButton, Popover, Tooltip, Typography } from 'antd'
 import TextArea, { TextAreaRef } from 'antd/es/input/TextArea'
@@ -909,8 +910,47 @@ const TranslatePage: FC = () => {
     async (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
       if (isProcessing) return
       setIsProcessing(true)
-      // logger.debug('event', event)
+
+      // Try to get HTML content from clipboard
+      const clipboardHtml = event.clipboardData.getData('text/html')
       const clipboardText = event.clipboardData.getData('text')
+
+      // If we have HTML content (formatted text), convert it to Markdown
+      if (!isEmpty(clipboardHtml)) {
+        event.preventDefault()
+        try {
+          const markdown = htmlToMarkdown(clipboardHtml)
+          if (markdown && markdown.trim()) {
+            // Insert the markdown at current cursor position
+            const textarea = textAreaRef.current?.resizableTextArea?.textArea
+            if (textarea) {
+              const start = textarea.selectionStart || 0
+              const end = textarea.selectionEnd || 0
+              const beforeText = text.substring(0, start)
+              const afterText = text.substring(end)
+              setText(beforeText + markdown + afterText)
+
+              // Set cursor position after the inserted markdown
+              setTimeout(() => {
+                textarea.setSelectionRange(start + markdown.length, start + markdown.length)
+                textarea.focus()
+              }, 0)
+            } else {
+              // Fallback: just append to the end
+              setText(text + markdown)
+            }
+          }
+        } catch (e) {
+          logger.error('Failed to convert HTML to Markdown', e as Error)
+          // Fall back to plain text if conversion fails
+          if (!isEmpty(clipboardText)) {
+            // Let default behavior handle it
+          }
+        }
+        setIsProcessing(false)
+        return
+      }
+
       if (!isEmpty(clipboardText)) {
         // depend default. this branch is only for preventing files when clipboard contains text
       } else if (event.clipboardData.files && event.clipboardData.files.length > 0) {
