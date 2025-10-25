@@ -39,18 +39,7 @@ import {
   Paperclip,
   Zap
 } from 'lucide-react'
-import {
-  Dispatch,
-  ReactNode,
-  SetStateAction,
-  useCallback,
-  useDeferredValue,
-  useEffect,
-  useImperativeHandle,
-  useMemo,
-  useRef,
-  useState
-} from 'react'
+import { Dispatch, ReactNode, SetStateAction, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
@@ -145,8 +134,6 @@ const InputbarTools = ({
   const isCollapse = useAppSelector((state) => state.inputTools.isCollapsed)
 
   const [targetTool, setTargetTool] = useState<ToolButtonConfig | null>(null)
-  const [visibleTools, setVisibleTools] = useState<ToolButtonConfig[]>([])
-  const deferredVisibleTools = useDeferredValue(visibleTools)
 
   const showThinkingButton = useMemo(
     () => isSupportedThinkingTokenModel(model) || isSupportedReasoningEffortModel(model),
@@ -526,12 +513,11 @@ const InputbarTools = ({
     t
   ])
 
-  useEffect(() => {
-    const tools = toolOrder.visible.map((v) => ({
+  const visibleTools = useMemo(() => {
+    return toolOrder.visible.map((v) => ({
       ...toolButtons.find((tool) => tool.key === v),
       visible: true
     })) as ToolButtonConfig[]
-    setVisibleTools(tools)
   }, [toolButtons, toolOrder])
 
   const hiddenTools = useMemo(() => {
@@ -597,7 +583,7 @@ const InputbarTools = ({
           <Droppable droppableId="inputbar-tools-visible" direction="horizontal">
             {(provided) => (
               <VisibleTools ref={provided.innerRef} {...provided.droppableProps}>
-                {deferredVisibleTools.map(
+                {visibleTools.map(
                   (tool, index) =>
                     (tool.condition ?? true) && (
                       <Draggable key={tool.key} draggableId={tool.key} index={index}>
