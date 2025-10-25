@@ -2695,10 +2695,7 @@ const migrateConfig = {
   },
   '165': (state: RootState) => {
     try {
-      // Enable knowledgeRecognition for all assistants
-      state.assistants.assistants.forEach((assistant) => {
-        assistant.knowledgeRecognition = 'on'
-      })
+      addMiniApp(state, 'huggingchat')
       return state
     } catch (error) {
       logger.error('migrate 165 error', error as Error)
