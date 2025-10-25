@@ -63,7 +63,7 @@ const computeModeDefaults = (mode: PermissionMode, tools: Tool[]): string[] => {
 const unique = (values: string[]) => Array.from(new Set(values))
 
 export const ToolingSettings: FC<AgentToolingSettingsProps> = ({ agentBase, update }) => {
-  const { containerRef, handleScroll } = useScrollPosition('AgentToolingSettings')
+  const { containerRef, handleScroll } = useScrollPosition('AgentToolingSettings', 100)
   const { t } = useTranslation()
   const client = useAgentClient()
   const { mcpServers: allServers } = useMCPServers()

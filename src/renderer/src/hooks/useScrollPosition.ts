@@ -1,38 +1,32 @@
 import { throttle } from 'lodash'
 import { useEffect, useRef } from 'react'
 
-// const logger = loggerService.withContext('useScrollPosition')
+import { useTimer } from './useTimer'
 
-export default function useScrollPosition(key: string) {
+/**
+ * A custom hook that manages scroll position persistence for a container element
+ * @param key - A unique identifier used to store/retrieve the scroll position
+ * @returns An object containing:
+ *  - containerRef: React ref for the scrollable container
+ *  - handleScroll: Throttled scroll event handler that saves scroll position
+ */
+export default function useScrollPosition(key: string, throttleWait?: number) {
   const containerRef = useRef<HTMLDivElement>(null)
   const scrollKey = `scroll:${key}`
-  const timerRef = useRef<NodeJS.Timeout>(null)
+  const { setTimeoutTimer } = useTimer()
 
   const handleScroll = throttle(() => {
     const position = containerRef.current?.scrollTop ?? 0
     window.requestAnimationFrame(() => {
       window.keyv.set(scrollKey, position)
     })
-  }, 100)
-
-  const triggerScroll = () => {
-    if (containerRef.current) {
-      const scroll = () => {
-        containerRef.current?.scrollTo({ top: window.keyv.get(scrollKey) || containerRef.current.scrollHeight })
-      }
-      scroll()
-      timerRef.current = setTimeout(() => {
-        scroll()
-      }, 100)
-    }
-    return
-  }
+  }, throttleWait ?? 100)
 
   useEffect(() => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current)
-    }
-  }, [])
+    const scroll = () => containerRef.current?.scrollTo({ top: window.keyv.get(scrollKey) || 0 })
+    scroll()
+    setTimeoutTimer('scrollEffect', scroll, 50)
+  }, [scrollKey, setTimeoutTimer])
 
-  return { containerRef, handleScroll, triggerScroll }
+  return { containerRef, handleScroll }
 }

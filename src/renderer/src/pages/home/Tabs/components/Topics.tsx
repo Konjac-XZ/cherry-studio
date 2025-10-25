@@ -46,7 +46,7 @@ import {
   UploadIcon,
   XIcon
 } from 'lucide-react'
-import { startTransition, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useDispatch, useSelector } from 'react-redux'
 import styled from 'styled-components'
@@ -76,7 +76,6 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
 
   const [deletingTopicId, setDeletingTopicId] = useState<string | null>(null)
   const deleteTimerRef = useRef<NodeJS.Timeout>(null)
-  const [displayedTopics, setDisplayedTopics] = useState<Topic[] | undefined>(undefined)
   const [editingTopicId, setEditingTopicId] = useState<string | null>(null)
 
   const topicEdit = useInPlaceEdit({
@@ -97,34 +96,6 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
   const isPending = useCallback((topicId: string) => topicLoadingQuery[topicId], [topicLoadingQuery])
   const isFulfilled = useCallback((topicId: string) => topicFulfilledQuery[topicId], [topicFulfilledQuery])
   const dispatch = useDispatch()
-
-  const loadTopics = useCallback(async () => {
-    if (pinTopicsToTop) {
-      // Sort topics based on pinned status if pinTopicsToTop is enabled
-      setDisplayedTopics(
-        [...assistant.topics].sort((a, b) => {
-          if (a.pinned && !b.pinned) return -1
-          if (!a.pinned && b.pinned) return 1
-          return 0
-        })
-      )
-    } else {
-      setDisplayedTopics(assistant.topics)
-    }
-  }, [assistant.topics, pinTopicsToTop])
-
-  const isLoaded = useMemo(() => displayedTopics !== undefined, [displayedTopics])
-
-  // 控制话题载入
-  useEffect(() => {
-    if (!isLoaded) {
-      startTransition(() => {
-        loadTopics()
-      })
-    } else {
-      loadTopics()
-    }
-  }, [isLoaded, loadTopics])
 
   useEffect(() => {
     dispatch(newMessagesActions.setTopicFulfilled({ topicId: activeTopic.id, fulfilled: false }))
@@ -502,12 +473,24 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
     onDeleteTopic
   ])
 
+  // Sort topics based on pinned status if pinTopicsToTop is enabled
+  const sortedTopics = useMemo(() => {
+    if (pinTopicsToTop) {
+      return [...assistant.topics].sort((a, b) => {
+        if (a.pinned && !b.pinned) return -1
+        if (!a.pinned && b.pinned) return 1
+        return 0
+      })
+    }
+    return assistant.topics
+  }, [assistant.topics, pinTopicsToTop])
+
   const singlealone = topicPosition === 'right' && position === 'right'
 
   return (
     <DraggableVirtualList
       className="topics-tab"
-      list={displayedTopics ?? []}
+      list={sortedTopics}
       onUpdate={updateTopics}
       style={{ height: '100%', padding: '11px 0 10px 10px' }}
       itemContainerStyle={{ paddingBottom: '8px' }}

@@ -40,19 +40,3 @@ initKeyv()
 initAutoSync()
 initStoreSync()
 initWebTrace()
-
-// Ensure global shortcuts are registered in main on startup
-try {
-  const { shortcuts } = store.getState().shortcuts || { shortcuts: shortcutsInitialState.shortcuts }
-  window.api?.shortcuts?.update?.(
-    (shortcuts || shortcutsInitialState.shortcuts).map((s) => ({
-      key: s.key,
-      shortcut: [...s.shortcut],
-      enabled: s.enabled,
-      system: s.system,
-      editable: s.editable
-    }))
-  )
-} catch (e) {
-  loggerService.withContext('init').warn('Failed to push shortcuts to main on startup')
-}
