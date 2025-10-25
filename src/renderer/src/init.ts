@@ -6,7 +6,6 @@ import { startNutstoreAutoSync } from './services/NutstoreService'
 import storeSyncService from './services/StoreSyncService'
 import { webTraceService } from './services/WebTraceService'
 import store from './store'
-import { initialState as shortcutsInitialState } from './store/shortcuts'
 
 loggerService.initWindowSource('mainWindow')
 

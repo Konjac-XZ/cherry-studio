@@ -2692,6 +2692,18 @@ const migrateConfig = {
       logger.error('migrate 164 error', error as Error)
       return state
     }
+  },
+  '165': (state: RootState) => {
+    try {
+      // Enable knowledgeRecognition for all assistants
+      state.assistants.assistants.forEach((assistant) => {
+        assistant.knowledgeRecognition = 'on'
+      })
+      return state
+    } catch (error) {
+      logger.error('migrate 165 error', error as Error)
+      return state
+    }
   }
 }
 
