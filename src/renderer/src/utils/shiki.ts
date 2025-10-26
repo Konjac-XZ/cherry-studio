@@ -135,10 +135,14 @@ export function getReactStyleFromToken(token: ThemedToken): Record<string, strin
  */
 const mdInitializer = new AsyncInitializer(async () => {
   const md = await import('markdown-it')
-  return md.default({
+  const cjkFriendly = await import('markdown-it-cjk-friendly')
+  const instance = md.default({
     linkify: true, // 自动转换 URL 为链接
     typographer: true // 启用印刷格式优化
   })
+  // 使用 CJK 友好插件，改善中日韩文字的换行处理
+  instance.use(cjkFriendly.default)
+  return instance
 })
 
 /**
