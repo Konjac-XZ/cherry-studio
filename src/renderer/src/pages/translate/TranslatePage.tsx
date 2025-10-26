@@ -43,7 +43,7 @@ import {
   detectLanguage,
   determineTargetLanguage
 } from '@renderer/utils/translate'
-import { htmlToMarkdown } from '@renderer/utils/markdownConverter'
+import { filterBasicMarkdownFormatting, htmlToMarkdown } from '@renderer/utils/markdownConverter'
 import { processLatexBrackets } from '@renderer/utils/markdown'
 import { imageExts, MB, textExts } from '@shared/config/constant'
 import { Button, Flex, FloatButton, Popover, Tooltip, Typography } from 'antd'
@@ -198,6 +198,72 @@ const TranslatePage: FC = () => {
     setTranslateModel(model)
     db.settings.put({ id: 'translate:model', value: model.id })
   }
+
+  const readClipboardForTranslate = useCallback(async (): Promise<string> => {
+    if (typeof navigator === 'undefined' || !navigator.clipboard) {
+      return ''
+    }
+
+    const sanitizeMarkdown = (value: string) => filterBasicMarkdownFormatting(value)
+    const convertHtml = (html: string) => sanitizeMarkdown(htmlToMarkdown(html))
+
+    const tryRichClipboard = async (): Promise<string> => {
+      const read = (navigator.clipboard as Clipboard & { read?: () => Promise<ClipboardItem[]> }).read
+      if (typeof read !== 'function') {
+        return ''
+      }
+
+      try {
+        const items = await read.call(navigator.clipboard)
+
+        for (const item of items) {
+          if (item.types.includes('text/html')) {
+            const blob = await item.getType('text/html')
+            const html = await blob.text()
+            if (html && html.trim()) {
+              const converted = convertHtml(html)
+              if (converted.trim()) {
+                return converted
+              }
+            }
+          }
+        }
+
+        for (const item of items) {
+          if (item.types.includes('text/plain')) {
+            const blob = await item.getType('text/plain')
+            const text = await blob.text()
+            if (text && text.trim()) {
+              const sanitized = sanitizeMarkdown(text)
+              if (sanitized.trim()) {
+                return sanitized
+              }
+            }
+          }
+        }
+      } catch (error) {
+        logger.debug('Rich clipboard read failed', error as Error)
+      }
+
+      return ''
+    }
+
+    const richContent = await tryRichClipboard()
+    if (richContent && richContent.trim()) {
+      return richContent
+    }
+
+    try {
+      const plain = await navigator.clipboard.readText()
+      if (plain && plain.trim()) {
+        return sanitizeMarkdown(plain)
+      }
+    } catch (error) {
+      logger.debug('Plain clipboard read failed', error as Error)
+    }
+
+    return ''
+  }, [])
 
   // 控制翻译状态
   const setText = useCallback(
@@ -420,7 +486,7 @@ const TranslatePage: FC = () => {
         if (running || now - lastTs < 1000) return
         sessionStorage.setItem('translate:paste:running', '1')
 
-        const clip = await navigator.clipboard.readText().catch(() => '')
+        const clip = await readClipboardForTranslate()
         if (clip && clip.trim()) {
           // Force auto-detect for global shortcut flow
           if (sourceLanguage !== 'auto') {
@@ -454,7 +520,7 @@ const TranslatePage: FC = () => {
     }
 
     triggerFromQuery()
-  }, [location.search, setText, sourceLanguage, settingsReady])
+  }, [location.search, readClipboardForTranslate, setText, sourceLanguage, settingsReady])
 
   // 控制双向翻译切换
   const toggleBidirectional = (value: boolean) => {
@@ -755,7 +821,7 @@ const TranslatePage: FC = () => {
         const lastTs = Number(sessionStorage.getItem('translate:paste:lastTs') || '0')
         if (running || now - lastTs < 1000) return
         sessionStorage.setItem('translate:paste:running', '1')
-        const clip = await navigator.clipboard.readText()
+        const clip = await readClipboardForTranslate()
         if (aborted) return
         if (clip && clip.trim().length > 0) {
           // Force auto-detect for global shortcut flow
@@ -784,7 +850,7 @@ const TranslatePage: FC = () => {
       aborted = true
     }
     // trigger when location changes to /translate?paste=1
-  }, [location, onTranslate, setText, sourceLanguage])
+  }, [location, onTranslate, readClipboardForTranslate, setText, sourceLanguage])
 
   const readFile = useCallback(
     async (file: FileMetadata) => {
@@ -946,7 +1012,8 @@ const TranslatePage: FC = () => {
         event.preventDefault()
         try {
           const markdown = htmlToMarkdown(clipboardHtml)
-          if (markdown && markdown.trim()) {
+          const sanitizedMarkdown = filterBasicMarkdownFormatting(markdown)
+          if (sanitizedMarkdown && sanitizedMarkdown.trim()) {
             // Insert the markdown at current cursor position
             const textarea = textAreaRef.current?.resizableTextArea?.textArea
             if (textarea) {
@@ -954,16 +1021,16 @@ const TranslatePage: FC = () => {
               const end = textarea.selectionEnd || 0
               const beforeText = text.substring(0, start)
               const afterText = text.substring(end)
-              setText(beforeText + markdown + afterText)
+              setText(beforeText + sanitizedMarkdown + afterText)
 
               // Set cursor position after the inserted markdown
               setTimeout(() => {
-                textarea.setSelectionRange(start + markdown.length, start + markdown.length)
+                textarea.setSelectionRange(start + sanitizedMarkdown.length, start + sanitizedMarkdown.length)
                 textarea.focus()
               }, 0)
             } else {
               // Fallback: just append to the end
-              setText(text + markdown)
+              setText(text + sanitizedMarkdown)
             }
           }
         } catch (e) {

@@ -840,6 +840,66 @@ export const htmlToMarkdown = (html: string | null | undefined): string => {
   }
 }
 
+const MARKDOWN_LINK_REGEX = /\[([^\]]+)\]\(([^)]+)\)/g
+const MARKDOWN_IMAGE_REGEX = /!\[([^\]]*)\]\(([^)]+)\)/g
+const MARKDOWN_REFERENCE_LINK_REGEX = /\[([^\]]+)\]\[[^\]]*\]/g
+const MARKDOWN_REFERENCE_DEFINITION_REGEX = /^\s*\[[^\]]+\]:\s+\S+.*$/gm
+const MARKDOWN_AUTOLINK_REGEX = /<((?:https?|ftp):\/\/[^>]+)>/gi
+const MARKDOWN_MAILTO_AUTOLINK_REGEX = /<mailto:([^>]+)>/gi
+const HTML_COMMENT_REGEX = /<!--[\s\S]*?-->/g
+const HTML_LINE_BREAK_REGEX = /<br\s*\/?>(\r?\n)?/gi
+const INLINE_HTML_REGEX = /<[^>]+>/g
+
+/**
+ * Filters Markdown content so only basic formatting (bold, italic, lists) remains.
+ * Hyperlinks, inline HTML, and reference definitions are stripped out to avoid
+ * carrying complex formatting into simple text inputs (e.g., translate textbox).
+ */
+export const filterBasicMarkdownFormatting = (markdown: string | null | undefined): string => {
+  if (!markdown || typeof markdown !== 'string') {
+    return ''
+  }
+
+  let result = he.decode(markdown)
+
+  result = result.replace(HTML_COMMENT_REGEX, '')
+  result = result.replace(HTML_LINE_BREAK_REGEX, '\n')
+  result = result.replace(INLINE_HTML_REGEX, (match, offset: number, original: string) => {
+    const prevChar = offset > 0 ? original[offset - 1] : ''
+    const nextChar = original[offset + match.length] ?? ''
+    const prevIsWhitespace = !prevChar || /\s/.test(prevChar)
+    const nextIsWhitespace = !nextChar || /\s/.test(nextChar)
+    return prevIsWhitespace || nextIsWhitespace ? '' : ' '
+  })
+
+  // Remove Markdown links/images while keeping their visible labels/text
+  result = result.replace(MARKDOWN_IMAGE_REGEX, '$1')
+  result = result.replace(MARKDOWN_LINK_REGEX, '$1')
+  result = result.replace(MARKDOWN_AUTOLINK_REGEX, '$1')
+  result = result.replace(MARKDOWN_MAILTO_AUTOLINK_REGEX, '$1')
+  result = result.replace(MARKDOWN_REFERENCE_LINK_REGEX, '$1')
+  result = result.replace(MARKDOWN_REFERENCE_DEFINITION_REGEX, '')
+
+  // Normalize whitespace so removed content does not leave artifacts
+  result = result.replace(/[ \t]+\n/g, '\n')
+  result = result.replace(/\n{3,}/g, '\n\n')
+
+  result = result
+    .split('\n')
+    .map((line) => {
+      if (!line.trim()) {
+        return ''
+      }
+      const leadingWhitespaceMatch = line.match(/^\s*/)
+      const leadingWhitespace = leadingWhitespaceMatch ? leadingWhitespaceMatch[0] : ''
+      const content = line.slice(leadingWhitespace.length).replace(/ {2,}/g, ' ')
+      return leadingWhitespace + content
+    })
+    .join('\n')
+
+  return result.trimEnd()
+}
+
 /**
  * Converts Markdown content to HTML
  * @param markdown - Markdown string to convert
