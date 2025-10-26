@@ -1,3 +1,5 @@
+import 'katex/dist/katex.min.css'
+
 import { PlusOutlined, SendOutlined, SwapOutlined } from '@ant-design/icons'
 import { loggerService } from '@logger'
 import { Navbar, NavbarCenter } from '@renderer/components/app/Navbar'
@@ -13,6 +15,7 @@ import { useDrag } from '@renderer/hooks/useDrag'
 import { useFiles } from '@renderer/hooks/useFiles'
 import { useOcr } from '@renderer/hooks/useOcr'
 import { useTemporaryValue } from '@renderer/hooks/useTemporaryValue'
+import { useSettings } from '@renderer/hooks/useSettings'
 import { useTimer } from '@renderer/hooks/useTimer'
 import useTranslate from '@renderer/hooks/useTranslate'
 import { estimateTextTokens } from '@renderer/services/TokenService'
@@ -41,6 +44,7 @@ import {
   determineTargetLanguage
 } from '@renderer/utils/translate'
 import { htmlToMarkdown } from '@renderer/utils/markdownConverter'
+import { processLatexBrackets } from '@renderer/utils/markdown'
 import { imageExts, MB, textExts } from '@shared/config/constant'
 import { Button, Flex, FloatButton, Popover, Tooltip, Typography } from 'antd'
 import TextArea, { TextAreaRef } from 'antd/es/input/TextArea'
@@ -138,6 +142,7 @@ const TranslatePage: FC = () => {
   const { prompt, getLanguageByLangcode, settings } = useTranslate()
   const { autoCopy } = settings
   const { shikiMarkdownIt } = useCodeStyle()
+  const { mathEngine, mathEnableSingleDollar } = useSettings()
   const { onSelectFile, selecting, clearFiles } = useFiles({ extensions: [...imageExts, ...textExts] })
   const { ocr } = useOcr()
   const { setTimeoutTimer } = useTimer()
@@ -505,21 +510,42 @@ const TranslatePage: FC = () => {
   // Render markdown content when result or enableMarkdown changes
   // 控制Markdown渲染
   useEffect(() => {
-    if (enableMarkdown && translatedContent) {
-      let isMounted = true
-      shikiMarkdownIt(translatedContent).then((rendered) => {
-        if (isMounted) {
+    if (!enableMarkdown || !translatedContent) {
+      setRenderedMarkdown('')
+      return
+    }
+
+    let disposed = false
+    const shouldRenderMath = mathEngine === 'KaTeX'
+    const markdownSource = shouldRenderMath ? processLatexBrackets(translatedContent) : translatedContent
+
+    const renderOptions = shouldRenderMath
+      ? { math: { engine: 'katex' as const, allowSingleDollar: mathEnableSingleDollar } }
+      : undefined
+
+    shikiMarkdownIt(markdownSource, renderOptions)
+      .then((rendered) => {
+        if (!disposed) {
           setRenderedMarkdown(rendered)
         }
       })
-      return () => {
-        isMounted = false
-      }
-    } else {
-      setRenderedMarkdown('')
-      return undefined
+      .catch((error) => {
+        logger.error('Failed to render markdown', error as Error)
+        if (!disposed) {
+          const fallback = markdownSource
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;')
+          setRenderedMarkdown(fallback)
+        }
+      })
+
+    return () => {
+      disposed = true
     }
-  }, [enableMarkdown, shikiMarkdownIt, translatedContent])
+  }, [enableMarkdown, mathEnableSingleDollar, mathEngine, shikiMarkdownIt, translatedContent])
 
   // 控制设置加载
   useEffect(() => {
