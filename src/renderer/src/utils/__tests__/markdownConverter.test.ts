@@ -1,7 +1,7 @@
 import { MARKDOWN_SOURCE_LINE_ATTR } from '@renderer/components/RichEditor/constants'
 import { describe, expect, it } from 'vitest'
 
-import { htmlToMarkdown, markdownToHtml } from '../markdownConverter'
+import { filterBasicMarkdownFormatting, htmlToMarkdown, markdownToHtml } from '../markdownConverter'
 
 /**
  * Strip markdown line number attributes for testing HTML structure
@@ -109,6 +109,28 @@ describe('markdownConverter', () => {
         '<table><tbody><tr><th ><p>f</p></th><th ><p></p></th><th ><p></p></th></tr><tr><td ><p></p></td><td ><p>f</p></td><td ><p></p></td></tr><tr><td ><p></p></td><td ><p></p></td><td ><p>f</p></td></tr></tbody></table><p></p>'
       const result = htmlToMarkdown(html)
       expect(result).toBe('| f   |     |     |\n| --- | --- | --- |\n|     | f   |     |\n|     |     | f   |')
+    })
+  })
+
+  describe('filterBasicMarkdownFormatting', () => {
+    it('should remove markdown links but keep link text', () => {
+      const markdown = 'Intro [Link Text](https://example.com) outro'
+      expect(filterBasicMarkdownFormatting(markdown)).toBe('Intro Link Text outro')
+    })
+
+    it('should strip inline HTML and comments', () => {
+      const markdown = 'Text <span style="color:red">red</span><!-- comment --><custom-tag>value</custom-tag>'
+      expect(filterBasicMarkdownFormatting(markdown)).toBe('Text red value')
+    })
+
+    it('should normalize <br> to newlines', () => {
+      const markdown = 'Line 1<br>Line 2<br />Line 3'
+      expect(filterBasicMarkdownFormatting(markdown)).toBe('Line 1\nLine 2\nLine 3')
+    })
+
+    it('should drop reference-style links', () => {
+      const markdown = 'Read [docs][ref]\n\n[ref]: https://example.com'
+      expect(filterBasicMarkdownFormatting(markdown)).toBe('Read docs')
     })
   })
 
