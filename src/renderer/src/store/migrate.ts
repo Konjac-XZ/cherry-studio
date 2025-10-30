@@ -20,6 +20,7 @@ import { DEFAULT_SIDEBAR_ICONS } from '@renderer/config/sidebar'
 import db from '@renderer/databases'
 import i18n from '@renderer/i18n'
 import { DEFAULT_ASSISTANT_SETTINGS } from '@renderer/services/AssistantService'
+import { defaultPreprocessProviders } from '@renderer/store/preprocess'
 import {
   Assistant,
   BuiltinOcrProvider,
@@ -197,6 +198,18 @@ function addShortcuts(state: RootState, ids: string[], afterId: string) {
     } else {
       // 如果找不到指定的快捷键，则添加到最后
       state.shortcuts.shortcuts.push(...newShortcuts)
+    }
+  }
+}
+
+// add preprocess provider
+function addPreprocessProviders(state: RootState, id: string) {
+  if (state.preprocess && state.preprocess.providers) {
+    if (!state.preprocess.providers.find((p) => p.id === id)) {
+      const provider = defaultPreprocessProviders.find((p) => p.id === id)
+      if (provider) {
+        state.preprocess.providers.push({ ...provider })
+      }
     }
   }
 }
@@ -2703,7 +2716,6 @@ const migrateConfig = {
     }
   },
   '166': (state: RootState) => {
-    // added after 1.6.5 and 1.7.0-beta.2
     try {
       if (state.assistants.presets === undefined) {
         state.assistants.presets = []
@@ -2713,6 +2725,23 @@ const migrateConfig = {
           preset.settings = DEFAULT_ASSISTANT_SETTINGS
         } else if (!preset.settings.toolUseMode) {
           preset.settings.toolUseMode = DEFAULT_ASSISTANT_SETTINGS.toolUseMode
+        }
+      })
+      // 更新阿里云百炼的 Anthropic API 地址
+      const dashscopeProvider = state.llm.providers.find((provider) => provider.id === 'dashscope')
+      if (dashscopeProvider) {
+        dashscopeProvider.anthropicApiHost = 'https://dashscope.aliyuncs.com/apps/anthropic'
+      }
+
+      state.llm.providers.forEach((provider) => {
+        if (provider.id === SystemProviderIds['new-api'] && provider.type !== 'new-api') {
+          provider.type = 'new-api'
+        }
+        if (provider.id === SystemProviderIds.longcat) {
+          // https://longcat.chat/platform/docs/zh/#anthropic-api-%E6%A0%BC%E5%BC%8F
+          if (!provider.anthropicApiHost) {
+            provider.anthropicApiHost = 'https://api.longcat.chat/anthropic'
+          }
         }
       })
       return state
@@ -2727,6 +2756,15 @@ const migrateConfig = {
       return state
     } catch (error) {
       logger.error('migrate 167 error', error as Error)
+      return state
+    }
+  },
+  '168': (state: RootState) => {
+    try {
+      addPreprocessProviders(state, 'open-mineru')
+      return state
+    } catch (error) {
+      logger.error('migrate 168 error', error as Error)
       return state
     }
   }
