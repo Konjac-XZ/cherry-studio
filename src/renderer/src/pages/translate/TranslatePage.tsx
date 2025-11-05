@@ -23,12 +23,11 @@ import { saveTranslateHistory, translateText } from '@renderer/services/Translat
 import { useAppDispatch, useAppSelector } from '@renderer/store'
 import { setTranslateAbortKey, setTranslating as setTranslatingAction } from '@renderer/store/runtime'
 import { setTranslatedContent as setTranslatedContentAction, setTranslateInput } from '@renderer/store/translate'
+import type { FileMetadata, SupportedOcrFile } from '@renderer/types'
 import {
   type AutoDetectionMethod,
-  FileMetadata,
   isSupportedOcrFile,
   type Model,
-  SupportedOcrFile,
   type TranslateHistory,
   type TranslateLanguage
 } from '@renderer/types'
@@ -47,7 +46,8 @@ import { filterBasicMarkdownFormatting, htmlToMarkdown } from '@renderer/utils/m
 import { processLatexBrackets } from '@renderer/utils/markdown'
 import { imageExts, MB, textExts } from '@shared/config/constant'
 import { Button, Flex, FloatButton, Popover, Tooltip, Typography } from 'antd'
-import TextArea, { TextAreaRef } from 'antd/es/input/TextArea'
+import type { TextAreaRef } from 'antd/es/input/TextArea'
+import TextArea from 'antd/es/input/TextArea'
 import { isEmpty, throttle } from 'lodash'
 import {
   Check,

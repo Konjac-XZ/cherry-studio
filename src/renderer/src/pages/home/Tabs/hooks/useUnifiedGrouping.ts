@@ -1,10 +1,12 @@
+import { createSelector } from '@reduxjs/toolkit'
+import type { RootState } from '@renderer/store'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
 import { setUnifiedListOrder } from '@renderer/store/assistants'
-import { AgentEntity, Assistant } from '@renderer/types'
+import type { AgentEntity, Assistant } from '@renderer/types'
 import { useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { UnifiedItem } from './useUnifiedItems'
+import type { UnifiedItem } from './useUnifiedItems'
 
 interface UseUnifiedGroupingOptions {
   unifiedItems: UnifiedItem[]
@@ -20,8 +22,13 @@ export const useUnifiedGrouping = (options: UseUnifiedGroupingOptions) => {
   const { unifiedItems, assistants, agents, apiServerEnabled, agentsLoading, agentsError, updateAssistants } = options
   const { t } = useTranslation()
   const dispatch = useAppDispatch()
-  // Read saved tag order from Redux (default to empty array for backward compatibility)
-  const savedTagsOrder = useAppSelector((state) => state.assistants.tagsOrder ?? [])
+
+  // Selector to get tagsOrder from Redux store
+  const selectTagsOrder = useMemo(
+    () => createSelector([(state: RootState) => state.assistants], (assistants) => assistants.tagsOrder ?? []),
+    []
+  )
+  const savedTagsOrder = useAppSelector(selectTagsOrder)
 
   // Group unified items by tags
   const groupedUnifiedItems = useMemo(() => {
