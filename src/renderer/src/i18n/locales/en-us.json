@@ -3865,6 +3865,12 @@
         "usage": "Usage",
         "version": "Version"
       },
+      "oauth": {
+        "callback": {
+          "message": "You can close this page and return to Cherry Studio",
+          "title": "Authentication Successful"
+        }
+      },
       "prompts": {
         "arguments": "Arguments",
         "availablePrompts": "Available Prompts",
