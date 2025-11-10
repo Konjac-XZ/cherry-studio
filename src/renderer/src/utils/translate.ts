@@ -18,13 +18,49 @@ import { sliceByTokens } from 'tokenx'
 
 const logger = loggerService.withContext('Utils:translate')
 
+type DetectLanguageOptions = {
+  candidates?: TranslateLanguageCode[]
+}
+
+const ISO3_TO_TRANSLATE_LANGUAGE: Record<string, TranslateLanguage> = {
+  cmn: LanguagesEnum.zhCN,
+  jpn: LanguagesEnum.jaJP,
+  kor: LanguagesEnum.koKR,
+  rus: LanguagesEnum.ruRU,
+  ara: LanguagesEnum.arAR,
+  spa: LanguagesEnum.esES,
+  fra: LanguagesEnum.frFR,
+  deu: LanguagesEnum.deDE,
+  ita: LanguagesEnum.itIT,
+  por: LanguagesEnum.ptPT,
+  eng: LanguagesEnum.enUS,
+  pol: LanguagesEnum.plPL,
+  tur: LanguagesEnum.trTR,
+  tha: LanguagesEnum.thTH,
+  vie: LanguagesEnum.viVN,
+  ind: LanguagesEnum.idID,
+  urd: LanguagesEnum.urPK,
+  zsm: LanguagesEnum.msMY,
+  ukr: LanguagesEnum.ukUA
+}
+
+const LANGUAGE_CODE_TO_ISO3 = Object.entries(ISO3_TO_TRANSLATE_LANGUAGE).reduce<
+  Partial<Record<TranslateLanguageCode, string>>
+>((acc, [iso3, language]) => {
+  acc[language.langCode] = iso3
+  return acc
+}, {})
+
 /**
  * 检测输入文本的语言
  * @param inputText 需要检测语言的文本
  * @returns 检测到的语言
  * @throws {Error}
  */
-export const detectLanguage = async (inputText: string): Promise<TranslateLanguageCode> => {
+export const detectLanguage = async (
+  inputText: string,
+  options: DetectLanguageOptions = {}
+): Promise<TranslateLanguageCode> => {
   const text = inputText.trim()
   if (!text) return LanguagesEnum.zhCN.langCode
 
@@ -37,20 +73,20 @@ export const detectLanguage = async (inputText: string): Promise<TranslateLangua
     case 'auto':
       // hard encoded threshold
       if (estimateTextTokens(text) < 100) {
-        result = await detectLanguageByLLM(text)
+        result = await detectLanguageByLLM(text, options)
       } else {
-        result = detectLanguageByFranc(text)
+        result = detectLanguageByFranc(text, options)
         // fallback to llm when franc fails
         if (result === UNKNOWN.langCode) {
-          result = await detectLanguageByLLM(text)
+          result = await detectLanguageByLLM(text, options)
         }
       }
       break
     case 'franc':
-      result = detectLanguageByFranc(text)
+      result = detectLanguageByFranc(text, options)
       break
     case 'llm':
-      result = await detectLanguageByLLM(text)
+      result = await detectLanguageByLLM(text, options)
       break
     default:
       throw new Error('Invalid detection method.')
@@ -59,13 +95,23 @@ export const detectLanguage = async (inputText: string): Promise<TranslateLangua
   return result.trim()
 }
 
-const detectLanguageByLLM = async (inputText: string): Promise<TranslateLanguageCode> => {
+const detectLanguageByLLM = async (
+  inputText: string,
+  options: DetectLanguageOptions = {}
+): Promise<TranslateLanguageCode> => {
   logger.info('Detect language by llm')
   let detectedLang = ''
   const text = sliceByTokens(inputText, 0, 100)
 
   const translateLanguageOptions = await getTranslateOptions()
-  const listLang = translateLanguageOptions.map((item) => item.langCode)
+  const filteredLanguageOptions =
+    options.candidates && options.candidates.length > 0
+      ? translateLanguageOptions.filter((item) => options.candidates?.includes(item.langCode))
+      : translateLanguageOptions
+
+  const effectiveLanguageOptions =
+    filteredLanguageOptions.length > 0 ? filteredLanguageOptions : translateLanguageOptions
+  const listLang = effectiveLanguageOptions.map((item) => item.langCode)
   const listLangText = JSON.stringify(listLang)
 
   const model = getQuickModel() || getDefaultModel()
@@ -99,32 +145,31 @@ const detectLanguageByLLM = async (inputText: string): Promise<TranslateLanguage
   return detectedLang.trim()
 }
 
-const detectLanguageByFranc = (inputText: string): TranslateLanguageCode => {
+const detectLanguageByFranc = (
+  inputText: string,
+  options: DetectLanguageOptions = {}
+): TranslateLanguageCode => {
   logger.info('Detect language by franc')
-  const iso3 = franc(inputText)
+  const candidateIsoList = options.candidates
+    ? options.candidates
+        .map((langCode) => LANGUAGE_CODE_TO_ISO3[langCode])
+        .filter((isoCode): isoCode is string => Boolean(isoCode))
+    : undefined
 
-  const isoMap: Record<string, TranslateLanguage> = {
-    cmn: LanguagesEnum.zhCN,
-    jpn: LanguagesEnum.jaJP,
-    kor: LanguagesEnum.koKR,
-    rus: LanguagesEnum.ruRU,
-    ara: LanguagesEnum.arAR,
-    spa: LanguagesEnum.esES,
-    fra: LanguagesEnum.frFR,
-    deu: LanguagesEnum.deDE,
-    ita: LanguagesEnum.itIT,
-    por: LanguagesEnum.ptPT,
-    eng: LanguagesEnum.enUS,
-    pol: LanguagesEnum.plPL,
-    tur: LanguagesEnum.trTR,
-    tha: LanguagesEnum.thTH,
-    vie: LanguagesEnum.viVN,
-    ind: LanguagesEnum.idID,
-    urd: LanguagesEnum.urPK,
-    zsm: LanguagesEnum.msMY
+  const uniqueCandidateIsoList = candidateIsoList ? Array.from(new Set(candidateIsoList)) : undefined
+
+  if (options.candidates && options.candidates.length > 0 && (!uniqueCandidateIsoList || uniqueCandidateIsoList.length === 0)) {
+    logger.warn('No valid ISO3 mappings found for candidates. Falling back to full detection set.', {
+      candidates: options.candidates
+    })
   }
 
-  return isoMap[iso3]?.langCode ?? UNKNOWN.langCode
+  const iso3 =
+    uniqueCandidateIsoList && uniqueCandidateIsoList.length > 0
+      ? franc(inputText, { only: uniqueCandidateIsoList })
+      : franc(inputText)
+
+  return ISO3_TO_TRANSLATE_LANGUAGE[iso3]?.langCode ?? UNKNOWN.langCode
 }
 
 /**

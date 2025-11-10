@@ -406,9 +406,41 @@ const TranslatePage: FC = () => {
       // 确定源语言：如果用户选择了特定语言，使用用户选择的；如果选择'auto'，则自动检测
       let actualSourceLanguage: TranslateLanguage
       if (sourceLanguage === 'auto') {
-        actualSourceLanguage = getLanguageByLangcode(await detectLanguage(text))
+        const candidateLangCodes = isBidirectional
+          ? Array.from(
+              new Set(
+                bidirectionalPair
+                  .map((lang) => lang.langCode)
+                  .filter((langCode) => langCode !== UNKNOWN.langCode)
+              )
+            )
+          : undefined
+        const detectionOptions = candidateLangCodes && candidateLangCodes.length > 0 ? { candidates: candidateLangCodes } : undefined
+
+        logger.debug('Detecting source language for translate flow', {
+          hasCandidates: Boolean(detectionOptions?.candidates?.length),
+          candidateLangCodes
+        })
+
+        const detectedLangCode = await detectLanguage(text, detectionOptions)
+        logger.debug('detectLanguage returned', {
+          detectedLangCode,
+          candidateLangCodes
+        })
+
+        actualSourceLanguage = getLanguageByLangcode(detectedLangCode)
+        if (actualSourceLanguage.langCode === UNKNOWN.langCode) {
+          logger.warn('Detected language code could not be resolved', {
+            detectedLangCode,
+            candidateLangCodes,
+            textPreview: text.slice(0, 120)
+          })
+        }
         setDetectedLanguage(actualSourceLanguage)
       } else {
+        if (sourceLanguage.langCode === UNKNOWN.langCode) {
+          logger.warn('User-selected source language is UNKNOWN, continuing with UNKNOWN fallback')
+        }
         actualSourceLanguage = sourceLanguage
       }
 

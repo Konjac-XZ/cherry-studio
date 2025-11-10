@@ -30,6 +30,10 @@ export default function useTranslate() {
     runAsyncFunction(async () => {
       const options = await getTranslateOptions()
       setTranslateLanguages(options)
+      logger.debug('Translate language options loaded', {
+        optionCount: options.length,
+        sampleLangCodes: options.slice(0, 5).map((lang) => lang.langCode)
+      })
       setIsLoaded(true)
     })
   }, [])
@@ -41,11 +45,22 @@ export default function useTranslate() {
         return UNKNOWN
       }
 
+      if (langCode === UNKNOWN.langCode) {
+        logger.debug('Explicit UNKNOWN langCode requested. Returning placeholder without lookup.')
+        return UNKNOWN
+      }
+
       const result = translateLanguages.find((item) => item.langCode === langCode)
       if (result) {
         return result
       } else {
-        logger.warn(`Unknown language ${langCode}`)
+        const stackLines = new Error().stack?.split('\n').slice(2, 8).map((line) => line.trim())
+        logger.warn('Unknown language lookup', {
+          requestedLangCode: langCode,
+          availableLangCodes: translateLanguages.map((item) => item.langCode),
+          isLoaded,
+          stack: stackLines
+        })
         return UNKNOWN
       }
     },
