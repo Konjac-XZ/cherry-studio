@@ -1,6 +1,8 @@
 import { DeleteOutlined, StarFilled, StarOutlined } from '@ant-design/icons'
+import { loggerService } from '@logger'
 import { HStack } from '@renderer/components/Layout'
 import { DynamicVirtualList } from '@renderer/components/VirtualList'
+import { UNKNOWN } from '@renderer/config/translate'
 import db from '@renderer/databases'
 import useTranslate from '@renderer/hooks/useTranslate'
 import { clearHistory, deleteHistory, updateTranslateHistory } from '@renderer/services/TranslateService'
@@ -11,7 +13,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { isEmpty } from 'lodash'
 import { SearchIcon } from 'lucide-react'
 import type { FC } from 'react'
-import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react'
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 
@@ -26,7 +28,7 @@ type TranslateHistoryProps = {
   onClose: () => void
 }
 
-// const logger = loggerService.withContext('TranslateHistory')
+const logger = loggerService.withContext('TranslateHistory')
 
 // px
 const ITEM_HEIGHT = 160
@@ -38,6 +40,7 @@ const TranslateHistoryList: FC<TranslateHistoryProps> = ({ isOpen, onHistoryItem
   const [search, setSearch] = useState('')
   const [displayedHistory, setDisplayedHistory] = useState<DisplayedTranslateHistoryItem[]>([])
   const [showStared, setShowStared] = useState<boolean>(false)
+  const loggedHistoryIdsRef = useRef<Set<string>>(new Set())
 
   const translateHistory: DisplayedTranslateHistoryItem[] = useMemo(() => {
     if (!_translateHistory) return []
@@ -49,6 +52,29 @@ const TranslateHistoryList: FC<TranslateHistoryProps> = ({ isOpen, onHistoryItem
       createdAt: dayjs(item.createdAt).format('MM/DD HH:mm')
     }))
   }, [_translateHistory, getLanguageByLangcode])
+
+  useEffect(() => {
+    if (!translateHistory.length) return
+
+    const loggedHistoryIds = loggedHistoryIdsRef.current
+
+    translateHistory.forEach((item) => {
+      if (!loggedHistoryIds.has(item.id) && item._sourceLanguage.langCode === UNKNOWN.langCode) {
+        logger.warn('History entry source language is UNKNOWN', {
+          historyId: item.id,
+          storedSourceLanguage: item.sourceLanguage
+        })
+        loggedHistoryIds.add(item.id)
+      }
+      if (!loggedHistoryIds.has(`${item.id}:target`) && item._targetLanguage.langCode === UNKNOWN.langCode) {
+        logger.warn('History entry target language is UNKNOWN', {
+          historyId: item.id,
+          storedTargetLanguage: item.targetLanguage
+        })
+        loggedHistoryIds.add(`${item.id}:target`)
+      }
+    })
+  }, [translateHistory])
 
   const searchFilter = useCallback(
     (item: DisplayedTranslateHistoryItem) => {

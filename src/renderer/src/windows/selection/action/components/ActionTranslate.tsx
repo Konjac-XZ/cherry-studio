@@ -118,7 +118,15 @@ const ActionTranslate: FC<Props> = ({ action, scrollToBottom }) => {
     let sourceLanguageCode: TranslateLanguageCode
 
     try {
-      sourceLanguageCode = await detectLanguage(action.selectedText)
+      const candidateLangCodes = Array.from(
+        new Set(
+          [targetLanguage.langCode, alterLanguage.langCode].filter((langCode) => langCode !== UNKNOWN.langCode)
+        )
+      )
+
+      const detectionOptions = candidateLangCodes.length > 0 ? { candidates: candidateLangCodes } : undefined
+
+      sourceLanguageCode = await detectLanguage(action.selectedText, detectionOptions)
     } catch (err) {
       onError(err instanceof Error ? err : new Error('An error occurred'))
       logger.error('Error detecting language:', err as Error)
