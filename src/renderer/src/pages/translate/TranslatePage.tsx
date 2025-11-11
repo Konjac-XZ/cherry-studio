@@ -200,69 +200,99 @@ const TranslatePage: FC = () => {
   }
 
   const readClipboardForTranslate = useCallback(async (): Promise<string> => {
-    if (typeof navigator === 'undefined' || !navigator.clipboard) {
-      return ''
-    }
-
     const sanitizeMarkdown = (value: string) => filterBasicMarkdownFormatting(value)
     const convertHtml = (html: string) => sanitizeMarkdown(htmlToMarkdown(html))
 
-    const tryRichClipboard = async (): Promise<string> => {
-      const read = (navigator.clipboard as Clipboard & { read?: () => Promise<ClipboardItem[]> }).read
-      if (typeof read !== 'function') {
+    const readFromNativeClipboard = (): string => {
+      const clipboardApi = window.api?.clipboard
+      if (!clipboardApi) {
         return ''
       }
 
       try {
-        const items = await read.call(navigator.clipboard)
-
-        for (const item of items) {
-          if (item.types.includes('text/html')) {
-            const blob = await item.getType('text/html')
-            const html = await blob.text()
-            if (html && html.trim()) {
-              const converted = convertHtml(html)
-              if (converted.trim()) {
-                return converted
-              }
-            }
-          }
-        }
-
-        for (const item of items) {
-          if (item.types.includes('text/plain')) {
-            const blob = await item.getType('text/plain')
-            const text = await blob.text()
-            if (text && text.trim()) {
-              const sanitized = sanitizeMarkdown(text)
-              if (sanitized.trim()) {
-                return sanitized
-              }
-            }
+        const html = clipboardApi.readHtml?.()
+        if (html && html.trim()) {
+          const converted = convertHtml(html)
+          if (converted.trim()) {
+            return converted
           }
         }
       } catch (error) {
-        logger.debug('Rich clipboard read failed', error as Error)
+        logger.debug('Native clipboard HTML read failed', error as Error)
+      }
+
+      try {
+        const plain = clipboardApi.readText?.()
+        if (plain && plain.trim()) {
+          return sanitizeMarkdown(plain)
+        }
+      } catch (error) {
+        logger.debug('Native clipboard text read failed', error as Error)
       }
 
       return ''
     }
 
-    const richContent = await tryRichClipboard()
-    if (richContent && richContent.trim()) {
-      return richContent
-    }
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      const tryRichClipboard = async (): Promise<string> => {
+        const read = (navigator.clipboard as Clipboard & { read?: () => Promise<ClipboardItem[]> }).read
+        if (typeof read !== 'function') {
+          return ''
+        }
 
-    try {
-      const plain = await navigator.clipboard.readText()
-      if (plain && plain.trim()) {
-        return sanitizeMarkdown(plain)
+        try {
+          const items = await read.call(navigator.clipboard)
+
+          for (const item of items) {
+            if (item.types.includes('text/html')) {
+              const blob = await item.getType('text/html')
+              const html = await blob.text()
+              if (html && html.trim()) {
+                const converted = convertHtml(html)
+                if (converted.trim()) {
+                  return converted
+                }
+              }
+            }
+          }
+
+          for (const item of items) {
+            if (item.types.includes('text/plain')) {
+              const blob = await item.getType('text/plain')
+              const text = await blob.text()
+              if (text && text.trim()) {
+                const sanitized = sanitizeMarkdown(text)
+                if (sanitized.trim()) {
+                  return sanitized
+                }
+              }
+            }
+          }
+        } catch (error) {
+          logger.debug('Rich clipboard read failed', error as Error)
+        }
+
+        return ''
       }
-    } catch (error) {
-      logger.debug('Plain clipboard read failed', error as Error)
+
+      const richContent = await tryRichClipboard()
+      if (richContent && richContent.trim()) {
+        return richContent
+      }
+
+      try {
+        const plain = await navigator.clipboard.readText()
+        if (plain && plain.trim()) {
+          return sanitizeMarkdown(plain)
+        }
+      } catch (error) {
+        logger.debug('Plain clipboard read failed', error as Error)
+      }
+    } else {
+      logger.debug('Navigator clipboard unavailable, using native clipboard fallback')
     }
 
-    return ''
+    return readFromNativeClipboard()
   }, [])
 
   // 控制翻译状态
@@ -290,8 +320,36 @@ const TranslatePage: FC = () => {
   // 控制复制行为
   const copy = useCallback(
     async (text: string) => {
-      await navigator.clipboard.writeText(text)
-      setCopied(true)
+      let lastError: unknown
+
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        try {
+          await navigator.clipboard.writeText(text)
+          setCopied(true)
+          return
+        } catch (error) {
+          lastError = error
+          logger.debug('Navigator clipboard write failed', error as Error)
+        }
+      }
+
+      try {
+        const fallbackWrite = window.api?.clipboard?.writeText
+        if (fallbackWrite) {
+          fallbackWrite(text)
+          setCopied(true)
+          return
+        }
+      } catch (error) {
+        lastError = error
+        logger.error('Native clipboard write failed', error as Error)
+      }
+
+      if (lastError) {
+        throw lastError
+      }
+
+      throw new Error('Clipboard write is not available in this environment.')
     },
     [setCopied]
   )
