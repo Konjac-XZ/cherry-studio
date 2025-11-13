@@ -36,6 +36,8 @@ export type Assistant = {
   description?: string
   model?: Model
   defaultModel?: Model
+  /** Persisted multi-model selection scoped per assistant */
+  persistedMentionedModels?: Model[]
   // This field should be considered as not Partial and not optional in v2
   settings?: Partial<AssistantSettings>
   messages?: AssistantMessage[]
