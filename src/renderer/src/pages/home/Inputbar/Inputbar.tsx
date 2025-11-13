@@ -37,7 +37,7 @@ import type { MessageInputBaseParams } from '@renderer/types/newMessage'
 import { delay } from '@renderer/utils'
 import { getSendMessageShortcutLabel } from '@renderer/utils/input'
 import { documentExts, imageExts, textExts } from '@shared/config/constant'
-import { debounce } from 'lodash'
+import { debounce, isEqual } from 'lodash'
 import type { FC } from 'react'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -83,13 +83,13 @@ const Inputbar: FC<Props> = ({ assistant: initialAssistant, setActiveTopic, topi
   const initialState = useMemo(
     () => ({
       files: [] as FileType[],
-      mentionedModels: [] as Model[],
+      mentionedModels: initialAssistant.persistedMentionedModels ?? [],
       selectedKnowledgeBases: initialAssistant.knowledge_bases ?? [],
       isExpanded: false,
       couldAddImageFile: false,
       extensions: [] as string[]
     }),
-    [initialAssistant.knowledge_bases]
+    [initialAssistant.knowledge_bases, initialAssistant.persistedMentionedModels]
   )
 
   return (
@@ -135,6 +135,7 @@ const InputbarInner: FC<InputbarInnerProps> = ({ assistant: initialAssistant, se
 
   const showKnowledgeIcon = useSidebarIconShow('knowledge')
   const { assistant, addTopic, model, setModel, updateAssistant } = useAssistant(initialAssistant.id)
+  const skipPersistedMentionsRef = useRef(false)
   const { sendMessageShortcut, showInputEstimatedTokens, enableQuickPanelTriggers } = useSettings()
   const [estimateTokenCount, setEstimateTokenCount] = useState(0)
   const [contextCount, setContextCount] = useState({ current: 0, max: 0 })
@@ -189,6 +190,33 @@ const InputbarInner: FC<InputbarInnerProps> = ({ assistant: initialAssistant, se
   useEffect(() => {
     setCouldAddImageFile(canAddImageFile)
   }, [canAddImageFile, setCouldAddImageFile])
+
+  useEffect(() => {
+    const persistedModels = assistant.persistedMentionedModels ?? []
+    setMentionedModels((current) => {
+      if (isEqual(current, persistedModels)) {
+        return current
+      }
+      skipPersistedMentionsRef.current = true
+      return persistedModels
+    })
+  }, [assistant.persistedMentionedModels, setMentionedModels])
+
+  useEffect(() => {
+    if (skipPersistedMentionsRef.current) {
+      skipPersistedMentionsRef.current = false
+      return
+    }
+
+    const persistedModels = assistant.persistedMentionedModels ?? []
+    if (isEqual(persistedModels, mentionedModels)) {
+      return
+    }
+
+    updateAssistant({
+      persistedMentionedModels: mentionedModels.length > 0 ? mentionedModels : undefined
+    })
+  }, [assistant.persistedMentionedModels, mentionedModels, updateAssistant])
 
   const placeholderText = enableQuickPanelTriggers
     ? t('chat.input.placeholder', { key: getSendMessageShortcutLabel(sendMessageShortcut) })

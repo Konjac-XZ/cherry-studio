@@ -49,7 +49,8 @@ export function getDefaultAssistant(): Assistant {
     messages: [],
     type: 'assistant',
     regularPhrases: [], // Added regularPhrases
-    settings: DEFAULT_ASSISTANT_SETTINGS
+    settings: DEFAULT_ASSISTANT_SETTINGS,
+    persistedMentionedModels: []
   }
 }
 
