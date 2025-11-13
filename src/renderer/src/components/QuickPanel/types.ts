@@ -58,7 +58,7 @@ export type QuickPanelOpenOptions = {
   list: QuickPanelListItem[]
   /** default: 0 */
   defaultIndex?: number
-  /** default: 7 */
+  /** default: 14 */
   pageSize?: number
   /** 是否支持按住cmd/ctrl键多选，default: false */
   multiple?: boolean
