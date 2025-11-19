@@ -199,6 +199,21 @@ const TranslatePage: FC = () => {
     db.settings.put({ id: 'translate:model', value: model.id })
   }
 
+  const notifyHtmlConversion = useCallback(() => {
+    window.toast.success(t('translate.info.html_conversion'))
+  }, [t])
+
+  const convertHtmlToMarkdownWithNotification = useCallback(
+    (html: string) => {
+      const converted = htmlToMarkdown(html)
+      if (converted && converted.trim()) {
+        notifyHtmlConversion()
+      }
+      return converted
+    },
+    [notifyHtmlConversion]
+  )
+
   const readClipboardForTranslate = useCallback(async (): Promise<string> => {
     const readFromNativeClipboard = (): string => {
       const clipboardApi = window.api?.clipboard
@@ -209,7 +224,7 @@ const TranslatePage: FC = () => {
       try {
         const html = clipboardApi.readHtml?.()
         if (html && html.trim()) {
-          const converted = htmlToMarkdown(html)
+          const converted = convertHtmlToMarkdownWithNotification(html)
           if (converted.trim()) {
             return converted
           }
@@ -245,7 +260,7 @@ const TranslatePage: FC = () => {
               const blob = await item.getType('text/html')
               const html = await blob.text()
               if (html && html.trim()) {
-                const converted = htmlToMarkdown(html)
+                const converted = convertHtmlToMarkdownWithNotification(html)
                 if (converted.trim()) {
                   return converted
                 }
@@ -289,7 +304,7 @@ const TranslatePage: FC = () => {
     }
 
     return readFromNativeClipboard()
-  }, [])
+  }, [convertHtmlToMarkdownWithNotification])
 
   // 控制翻译状态
   const setText = useCallback(
@@ -1097,7 +1112,7 @@ const TranslatePage: FC = () => {
       if (!isEmpty(clipboardHtml)) {
         event.preventDefault()
         try {
-          const markdown = htmlToMarkdown(clipboardHtml)
+          const markdown = convertHtmlToMarkdownWithNotification(clipboardHtml)
           if (markdown && markdown.trim()) {
             // Insert the markdown at current cursor position
             const textarea = textAreaRef.current?.resizableTextArea?.textArea
@@ -1170,7 +1185,7 @@ const TranslatePage: FC = () => {
       }
       setIsProcessing(false)
     },
-    [getSingleFile, isProcessing, processFile, t]
+    [convertHtmlToMarkdownWithNotification, getSingleFile, isProcessing, processFile, t]
   )
   return (
     <Container
