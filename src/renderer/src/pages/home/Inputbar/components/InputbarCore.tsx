@@ -314,7 +314,7 @@ export const InputbarCore: FC<InputbarCoreProps> = ({
 
       const isEnterPressed = event.key === 'Enter' && !event.nativeEvent.isComposing
       if (isEnterPressed) {
-        if (isSendMessageKeyPressed(event, sendMessageShortcut)) {
+        if (isSendMessageKeyPressed(event, sendMessageShortcut) && !cannotSend) {
           handleSendMessage()
           event.preventDefault()
           return
@@ -360,6 +360,7 @@ export const InputbarCore: FC<InputbarCoreProps> = ({
       translate,
       handleToggleExpanded,
       sendMessageShortcut,
+      cannotSend,
       handleSendMessage,
       setText,
       setTimeoutTimer,
