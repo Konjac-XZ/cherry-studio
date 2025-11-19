@@ -33,9 +33,7 @@ import {
   MODEL_SUPPORTED_REASONING_EFFORT
 } from '@renderer/config/models'
 import { isSupportEnableThinkingProvider } from '@renderer/config/providers'
-import { getStoreSetting } from '@renderer/hooks/useSettings'
 import { getAssistantSettings, getProviderByModel } from '@renderer/services/AssistantService'
-import type { SettingsState } from '@renderer/store/settings'
 import type { Assistant, Model } from '@renderer/types'
 import { EFFORT_RATIO, isSystemProvider, SystemProviderIds } from '@renderer/types'
 import type { ReasoningEffortOptionalParams } from '@renderer/types/sdk'
@@ -362,17 +360,6 @@ export function getOpenAIReasoningParams(assistant: Assistant, model: Model): Re
     }
   }
 
-  const openAI = getStoreSetting('openAI') as SettingsState['openAI']
-  const summaryText = openAI?.summaryText || 'off'
-
-  let reasoningSummary: string | undefined = undefined
-
-  if (summaryText === 'off' || model.id.includes('o1-pro')) {
-    reasoningSummary = undefined
-  } else {
-    reasoningSummary = summaryText
-  }
-
   if (isOpenAIDeepResearchModel(model)) {
     reasoningEffort = 'medium'
   }
@@ -380,8 +367,8 @@ export function getOpenAIReasoningParams(assistant: Assistant, model: Model): Re
   // OpenAI 推理参数
   if (isSupportedReasoningEffortOpenAIModel(model)) {
     return {
-      reasoningEffort,
-      reasoningSummary
+      reasoningEffort: reasoningEffort,
+      reasoningSummary: 'auto'
     }
   }
 
