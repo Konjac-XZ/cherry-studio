@@ -42,7 +42,7 @@ import {
   detectLanguage,
   determineTargetLanguage
 } from '@renderer/utils/translate'
-import { filterBasicMarkdownFormatting, htmlToMarkdown } from '@renderer/utils/markdownConverter'
+import { htmlToMarkdown } from '@renderer/utils/markdownConverter'
 import { processLatexBrackets } from '@renderer/utils/markdown'
 import { imageExts, MB, textExts } from '@shared/config/constant'
 import { Button, Flex, FloatButton, Popover, Tooltip, Typography } from 'antd'
@@ -200,9 +200,6 @@ const TranslatePage: FC = () => {
   }
 
   const readClipboardForTranslate = useCallback(async (): Promise<string> => {
-    const sanitizeMarkdown = (value: string) => filterBasicMarkdownFormatting(value)
-    const convertHtml = (html: string) => sanitizeMarkdown(htmlToMarkdown(html))
-
     const readFromNativeClipboard = (): string => {
       const clipboardApi = window.api?.clipboard
       if (!clipboardApi) {
@@ -212,7 +209,7 @@ const TranslatePage: FC = () => {
       try {
         const html = clipboardApi.readHtml?.()
         if (html && html.trim()) {
-          const converted = convertHtml(html)
+          const converted = htmlToMarkdown(html)
           if (converted.trim()) {
             return converted
           }
@@ -224,7 +221,7 @@ const TranslatePage: FC = () => {
       try {
         const plain = clipboardApi.readText?.()
         if (plain && plain.trim()) {
-          return sanitizeMarkdown(plain)
+          return plain
         }
       } catch (error) {
         logger.debug('Native clipboard text read failed', error as Error)
@@ -248,7 +245,7 @@ const TranslatePage: FC = () => {
               const blob = await item.getType('text/html')
               const html = await blob.text()
               if (html && html.trim()) {
-                const converted = convertHtml(html)
+                const converted = htmlToMarkdown(html)
                 if (converted.trim()) {
                   return converted
                 }
@@ -261,9 +258,8 @@ const TranslatePage: FC = () => {
               const blob = await item.getType('text/plain')
               const text = await blob.text()
               if (text && text.trim()) {
-                const sanitized = sanitizeMarkdown(text)
-                if (sanitized.trim()) {
-                  return sanitized
+                if (text.trim()) {
+                  return text
                 }
               }
             }
@@ -283,7 +279,7 @@ const TranslatePage: FC = () => {
       try {
         const plain = await navigator.clipboard.readText()
         if (plain && plain.trim()) {
-          return sanitizeMarkdown(plain)
+          return plain
         }
       } catch (error) {
         logger.debug('Plain clipboard read failed', error as Error)
@@ -1102,8 +1098,7 @@ const TranslatePage: FC = () => {
         event.preventDefault()
         try {
           const markdown = htmlToMarkdown(clipboardHtml)
-          const sanitizedMarkdown = filterBasicMarkdownFormatting(markdown)
-          if (sanitizedMarkdown && sanitizedMarkdown.trim()) {
+          if (markdown && markdown.trim()) {
             // Insert the markdown at current cursor position
             const textarea = textAreaRef.current?.resizableTextArea?.textArea
             if (textarea) {
@@ -1111,16 +1106,16 @@ const TranslatePage: FC = () => {
               const end = textarea.selectionEnd || 0
               const beforeText = text.substring(0, start)
               const afterText = text.substring(end)
-              setText(beforeText + sanitizedMarkdown + afterText)
+              setText(beforeText + markdown + afterText)
 
               // Set cursor position after the inserted markdown
               setTimeout(() => {
-                textarea.setSelectionRange(start + sanitizedMarkdown.length, start + sanitizedMarkdown.length)
+                textarea.setSelectionRange(start + markdown.length, start + markdown.length)
                 textarea.focus()
               }, 0)
             } else {
               // Fallback: just append to the end
-              setText(text + sanitizedMarkdown)
+              setText(text + markdown)
             }
           }
         } catch (e) {
