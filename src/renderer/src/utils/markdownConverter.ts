@@ -565,13 +565,15 @@ turndownService.addRule('strikethrough', {
 
 turndownService.addRule('underline', {
   filter: ['u'],
-  replacement: (content) => `<u>${content}</u>`
+  // Underline is not standard markdown; map to bold to keep it conventional
+  replacement: (content) => (content ? `__${content}__` : '')
 })
 
 // Custom rule to preserve <br> tags as literal text
 turndownService.addRule('br', {
   filter: 'br',
-  replacement: () => '<br>'
+  // Use a standard markdown line break (two spaces + newline)
+  replacement: () => '  \n'
 })
 
 // Custom rule to preserve YAML front matter
@@ -833,7 +835,7 @@ export const htmlToMarkdown = (html: string | null | undefined): string => {
       finalResult = finalResult.replace(placeholder, linkPlaceholders[i])
     }
 
-    return finalResult
+    return sanitizeConventionalMarkdown(finalResult)
   } catch (error) {
     logger.error('Error converting HTML to Markdown:', error as Error)
     return ''
@@ -849,6 +851,45 @@ const MARKDOWN_MAILTO_AUTOLINK_REGEX = /<mailto:([^>]+)>/gi
 const HTML_COMMENT_REGEX = /<!--[\s\S]*?-->/g
 const HTML_LINE_BREAK_REGEX = /<br\s*\/?>(\r?\n)?/gi
 const INLINE_HTML_REGEX = /<[^>]+>/g
+
+/**
+ * Strip any remaining HTML-ish constructs so the result only uses conventional Markdown.
+ * - Drops HTML comments
+ * - Converts <br> to Markdown line breaks
+ * - Normalizes autolinks to bare text
+ * - Removes all other tags while keeping their inner text via htmlparser2
+ */
+function sanitizeConventionalMarkdown(markdown: string): string {
+  let normalized = markdown.replace(HTML_LINE_BREAK_REGEX, '\n')
+  normalized = normalized.replace(MARKDOWN_AUTOLINK_REGEX, '$1')
+  normalized = normalized.replace(MARKDOWN_MAILTO_AUTOLINK_REGEX, '$1')
+
+  let stripped = ''
+
+  const parser = new htmlparser2.Parser(
+    {
+      ontext(text) {
+        stripped += text
+      },
+      // Comments and tags are ignored entirely so only text content remains
+      oncomment() {
+        // noop
+      }
+    },
+    {
+      decodeEntities: false,
+      recognizeSelfClosing: true
+    }
+  )
+
+  parser.write(normalized)
+  parser.end()
+
+  // Normalize excessive blank lines introduced by stripping
+  stripped = stripped.replace(/\n{3,}/g, '\n\n')
+
+  return stripped.trimEnd()
+}
 
 /**
  * Filters Markdown content so only basic formatting (bold, italic, lists) remains.
