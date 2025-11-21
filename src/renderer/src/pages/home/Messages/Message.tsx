@@ -12,9 +12,13 @@ import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import { getMessageModelId } from '@renderer/services/MessagesService'
 import { getModelUniqId } from '@renderer/services/ModelService'
 import { estimateMessageUsage } from '@renderer/services/TokenService'
-import type { Assistant, Topic } from '@renderer/types'
+import type { Assistant, Model, Topic } from '@renderer/types'
 import type { Message, MessageBlock } from '@renderer/types/newMessage'
+import { AssistantMessageStatus } from '@renderer/types/newMessage'
+import store from '@renderer/store'
 import { classNames, cn } from '@renderer/utils'
+import { removeTrailingDoubleSpaces } from '@renderer/utils/markdown'
+import { getMainTextContent } from '@renderer/utils/messageUtils/find'
 import { isMessageProcessing } from '@renderer/utils/messageUtils/is'
 import { Divider } from 'antd'
 import type { Dispatch, FC, SetStateAction } from 'react'
@@ -46,6 +50,71 @@ interface Props {
 
 const logger = loggerService.withContext('MessageItem')
 
+type StoreState = ReturnType<typeof store.getState>
+
+const buildModelKey = (model?: Pick<Model, 'id' | 'provider'> | null, fallbackId?: string) => {
+  const id = model?.id ?? fallbackId ?? ''
+  const provider = model?.provider ?? ''
+  return `${provider}:${id}`
+}
+
+const getAssistantMessagesForAsk = (state: StoreState, topicId: string, askId: string): Message[] => {
+  const topicMessageIds = state.messages.messageIdsByTopic[topicId] || []
+  const related = topicMessageIds
+    .map((id) => state.messages.entities[id])
+    .filter((msg): msg is Message => !!msg && msg.role === 'assistant' && msg.askId === askId)
+
+  return related.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+}
+
+const isHighestPriorityMessage = (currentMessage: Message, relatedMessages: Message[], userMessage?: Message) => {
+  const mentions = userMessage?.mentions
+  if (!mentions || mentions.length === 0) {
+    return true
+  }
+
+  const mentionKeys = mentions.map((model) => buildModelKey(model))
+  for (const key of mentionKeys) {
+    const candidate = relatedMessages.find((msg) => buildModelKey(msg.model, msg.modelId) === key)
+    if (candidate) {
+      return candidate.id === currentMessage.id
+    }
+  }
+
+  return true
+}
+
+const copyTextWithFallback = async (text: string) => {
+  let lastError: unknown
+
+  if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text)
+      return
+    } catch (error) {
+      lastError = error
+      logger.debug('Navigator clipboard write failed', error as Error)
+    }
+  }
+
+  try {
+    const fallbackWrite = window.api?.clipboard?.writeText
+    if (fallbackWrite) {
+      fallbackWrite(text)
+      return
+    }
+  } catch (error) {
+    lastError = error
+    logger.error('Native clipboard write failed', error as Error)
+  }
+
+  if (lastError) {
+    throw lastError
+  }
+
+  throw new Error('Clipboard write is not available in this environment.')
+}
+
 const WrapperContainer = ({
   isMultiSelectMode,
   children
@@ -73,8 +142,10 @@ const MessageItem: FC<Props> = ({
   const { messageFont, fontSize, messageStyle, showMessageOutline } = useSettings()
   const { editMessageBlocks, resendUserMessageWithEdit, editMessage } = useMessageOperations(topic)
   const messageContainerRef = useRef<HTMLDivElement>(null)
+  const prevStatusRef = useRef(message.status)
   const { editingMessageId, startEditing, stopEditing } = useMessageEditing()
   const { setTimeoutTimer } = useTimer()
+  const autoCopyEnabled = assistant?.settings?.autoCopy ?? false
   const isEditing = editingMessageId === message.id
 
   useEffect(() => {
@@ -85,6 +156,41 @@ const MessageItem: FC<Props> = ({
       })
     }
   }, [isEditing])
+
+  useEffect(() => {
+    const previousStatus = prevStatusRef.current
+    prevStatusRef.current = message.status
+
+    if (!autoCopyEnabled || message.role !== 'assistant') {
+      return
+    }
+
+    if (previousStatus === AssistantMessageStatus.SUCCESS || message.status !== AssistantMessageStatus.SUCCESS) {
+      return
+    }
+
+    const state = store.getState()
+    if (message.askId) {
+      const userMessage = state.messages.entities[message.askId]
+      if (userMessage?.mentions?.length) {
+        const relatedMessages = getAssistantMessagesForAsk(state, message.topicId, message.askId)
+        if (!isHighestPriorityMessage(message, relatedMessages, userMessage)) {
+          return
+        }
+      }
+    }
+
+    const latestMessage = state.messages.entities[message.id] ?? message
+    const text = removeTrailingDoubleSpaces(getMainTextContent(latestMessage as Message).trimStart())
+    if (!text) {
+      return
+    }
+
+    void copyTextWithFallback(text).catch((error) => {
+      logger.error('Failed to auto copy assistant message:', error as Error)
+      window.toast.error(t('common.copy_failed'))
+    })
+  }, [autoCopyEnabled, message.askId, message.id, message.role, message.status, message.topicId, t])
 
   const handleEditSave = useCallback(
     async (blocks: MessageBlock[]) => {

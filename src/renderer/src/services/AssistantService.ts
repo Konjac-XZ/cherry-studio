@@ -35,6 +35,7 @@ export const DEFAULT_ASSISTANT_SETTINGS: AssistantSettings = {
   streamOutput: true,
   topP: 1,
   enableTopP: false,
+  autoCopy: false,
   // It would gracefully fallback to prompt if not supported by model.
   toolUseMode: 'function',
   customParameters: []
@@ -177,6 +178,7 @@ export const getAssistantSettings = (assistant: Assistant): AssistantSettings =>
     enableMaxTokens: assistant?.settings?.enableMaxTokens ?? false,
     maxTokens: getAssistantMaxTokens(),
     streamOutput: assistant?.settings?.streamOutput ?? true,
+    autoCopy: assistant?.settings?.autoCopy ?? false,
     toolUseMode: assistant?.settings?.toolUseMode ?? 'function',
     defaultModel: assistant?.defaultModel ?? undefined,
     reasoning_effort: assistant?.settings?.reasoning_effort ?? undefined,

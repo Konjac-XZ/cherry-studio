@@ -133,6 +133,7 @@ export type AssistantSettings = {
   enableTopP?: boolean
   contextCount: number
   streamOutput: boolean
+  autoCopy?: boolean
   defaultModel?: Model
   customParameters?: AssistantSettingCustomParameters[]
   reasoning_effort?: ReasoningEffortOption

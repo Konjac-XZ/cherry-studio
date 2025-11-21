@@ -501,6 +501,7 @@
         "title": "MCP 服务器"
       },
       "model": "模型设置",
+      "auto_copy": "自动复制助手回复",
       "more": "助手设置",
       "prompt": "提示词设置",
       "reasoning_effort": {
