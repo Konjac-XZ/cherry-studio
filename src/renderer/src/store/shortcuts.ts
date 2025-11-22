@@ -39,6 +39,13 @@ const initialState: ShortcutsState = {
       system: true
     },
     {
+      key: 'go_home',
+      shortcut: ['Ctrl', 'H'],
+      editable: true,
+      enabled: true,
+      system: false
+    },
+    {
       //enable/disable selection assistant
       key: 'selection_assistant_toggle',
       shortcut: [],

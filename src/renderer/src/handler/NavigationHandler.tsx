@@ -1,3 +1,5 @@
+import { useMinappPopup } from '@renderer/hooks/useMinappPopup'
+import { useShortcut } from '@renderer/hooks/useShortcuts'
 import { useAppSelector } from '@renderer/store'
 import { IpcChannel } from '@shared/IpcChannel'
 import { useEffect } from 'react'
@@ -7,6 +9,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 const NavigationHandler: React.FC = () => {
   const location = useLocation()
   const navigate = useNavigate()
+  const { hideMinappPopup } = useMinappPopup()
   const showSettingsShortcutEnabled = useAppSelector(
     (state) => state.shortcuts.shortcuts.find((s) => s.key === 'show_settings')?.enabled
   )
@@ -26,6 +29,11 @@ const NavigationHandler: React.FC = () => {
       enabled: showSettingsShortcutEnabled
     }
   )
+
+  useShortcut('go_home', () => {
+    hideMinappPopup()
+    navigate('/')
+  })
 
   // Listen for navigate to About page event from macOS menu
   useEffect(() => {

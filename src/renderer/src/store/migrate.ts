@@ -2856,6 +2856,15 @@ const migrateConfig = {
       logger.error('migrate 176 error', error as Error)
       return state
     }
+  },
+  '177': (state: RootState) => {
+    try {
+      addShortcuts(state, ['go_home'], 'show_translate')
+      return state
+    } catch (error) {
+      logger.error('migrate 177 error', error as Error)
+      return state
+    }
   }
 }
 
