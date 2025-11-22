@@ -212,6 +212,7 @@ const shortcutKeyMap = {
   search_message_in_chat: 'settings.shortcuts.search_message_in_chat',
   selection_assistant_select_text: 'settings.shortcuts.selection_assistant_select_text',
   selection_assistant_toggle: 'settings.shortcuts.selection_assistant_toggle',
+  go_home: 'settings.shortcuts.go_home',
   show_app: 'settings.shortcuts.show_app',
   show_settings: 'settings.shortcuts.show_settings',
   show_translate: 'settings.shortcuts.show_translate',
