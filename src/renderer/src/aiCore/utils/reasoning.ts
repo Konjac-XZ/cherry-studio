@@ -1,6 +1,7 @@
 import type { BedrockProviderOptions } from '@ai-sdk/amazon-bedrock'
 import type { AnthropicProviderOptions } from '@ai-sdk/anthropic'
 import type { GoogleGenerativeAIProviderOptions } from '@ai-sdk/google'
+import type { OpenAIResponsesProviderOptions } from '@ai-sdk/openai'
 import type { XaiProviderOptions } from '@ai-sdk/xai'
 import { loggerService } from '@logger'
 import { DEFAULT_MAX_TOKENS } from '@renderer/config/constant'
@@ -11,6 +12,7 @@ import {
   isDeepSeekHybridInferenceModel,
   isDoubaoSeedAfter251015,
   isDoubaoThinkingAutoModel,
+  isGemini3Model,
   isGPT51SeriesModel,
   isGrok4FastReasoningModel,
   isGrokReasoningModel,
@@ -32,11 +34,14 @@ import {
   isSupportedThinkingTokenZhipuModel,
   MODEL_SUPPORTED_REASONING_EFFORT
 } from '@renderer/config/models'
-import { isSupportEnableThinkingProvider } from '@renderer/config/providers'
+import { getStoreSetting } from '@renderer/hooks/useSettings'
+
 import { getAssistantSettings, getProviderByModel } from '@renderer/services/AssistantService'
-import type { Assistant, Model } from '@renderer/types'
+import type { Assistant, Model, ReasoningEffortOption } from '@renderer/types'
 import { EFFORT_RATIO, isSystemProvider, SystemProviderIds } from '@renderer/types'
+import type { OpenAISummaryText } from '@renderer/types/aiCoreTypes'
 import type { ReasoningEffortOptionalParams } from '@renderer/types/sdk'
+import { isSupportEnableThinkingProvider } from '@renderer/utils/provider'
 import { toInteger } from 'lodash'
 
 const logger = loggerService.withContext('reasoning')
@@ -128,7 +133,7 @@ export function getReasoningEffort(assistant: Assistant, model: Model): Reasonin
     }
 
     // Specially for GPT-5.1. Suppose this is a OpenAI Compatible provider
-    if (isGPT51SeriesModel(model) && reasoningEffort === 'none') {
+    if (isGPT51SeriesModel(model)) {
       return {
         reasoningEffort: 'none'
       }
@@ -276,6 +281,12 @@ export function getReasoningEffort(assistant: Assistant, model: Model): Reasonin
 
   // gemini series, openai compatible api
   if (isSupportedThinkingTokenGeminiModel(model)) {
+    // https://ai.google.dev/gemini-api/docs/gemini-3?thinking=high#openai_compatibility
+    if (isGemini3Model(model)) {
+      return {
+        reasoning_effort: reasoningEffort
+      }
+    }
     if (reasoningEffort === 'auto') {
       return {
         extra_body: {
@@ -339,10 +350,14 @@ export function getReasoningEffort(assistant: Assistant, model: Model): Reasonin
 }
 
 /**
- * 获取 OpenAI 推理参数
- * 从 OpenAIResponseAPIClient 和 OpenAIAPIClient 中提取的逻辑
+ * Get OpenAI reasoning parameters
+ * Extracted from OpenAIResponseAPIClient and OpenAIAPIClient logic
+ * For official OpenAI provider only
  */
-export function getOpenAIReasoningParams(assistant: Assistant, model: Model): Record<string, any> {
+export function getOpenAIReasoningParams(
+  assistant: Assistant,
+  model: Model
+): Pick<OpenAIResponsesProviderOptions, 'reasoningEffort' | 'reasoningSummary'> {
   if (!isReasoningModel(model)) {
     return {}
   }
@@ -353,6 +368,10 @@ export function getOpenAIReasoningParams(assistant: Assistant, model: Model): Re
     return {}
   }
 
+  if (isOpenAIDeepResearchModel(model) || reasoningEffort === 'auto') {
+    reasoningEffort = 'medium'
+  }
+
   // 非OpenAI模型，但是Provider类型是responses/azure openai的情况
   if (!isOpenAIModel(model)) {
     return {
@@ -360,34 +379,48 @@ export function getOpenAIReasoningParams(assistant: Assistant, model: Model): Re
     }
   }
 
-  if (isOpenAIDeepResearchModel(model)) {
-    reasoningEffort = 'medium'
+  const openAI = getStoreSetting('openAI')
+  const summaryText = openAI.summaryText
+
+  let reasoningSummary: OpenAISummaryText = undefined
+
+  if (model.id.includes('o1-pro')) {
+    reasoningSummary = undefined
+  } else {
+    reasoningSummary = summaryText
   }
 
   // OpenAI 推理参数
   if (isSupportedReasoningEffortOpenAIModel(model)) {
     return {
-      reasoningEffort: reasoningEffort,
-      reasoningSummary: 'auto'
+      reasoningEffort,
+      reasoningSummary
     }
   }
 
   return {}
 }
 
-export function getAnthropicThinkingBudget(assistant: Assistant, model: Model): number {
-  const { maxTokens, reasoning_effort: reasoningEffort } = getAssistantSettings(assistant)
+export function getAnthropicThinkingBudget(
+  maxTokens: number | undefined,
+  reasoningEffort: string | undefined,
+  modelId: string
+): number | undefined {
   if (reasoningEffort === undefined || reasoningEffort === 'none') {
-    return 0
+    return undefined
   }
   const effortRatio = EFFORT_RATIO[reasoningEffort]
+
+  const tokenLimit = findTokenLimit(modelId)
+  if (!tokenLimit) {
+    return undefined
+  }
 
   const budgetTokens = Math.max(
     1024,
     Math.floor(
       Math.min(
-        (findTokenLimit(model.id)?.max! - findTokenLimit(model.id)?.min!) * effortRatio +
-          findTokenLimit(model.id)?.min!,
+        (tokenLimit.max - tokenLimit.min) * effortRatio + tokenLimit.min,
         (maxTokens || DEFAULT_MAX_TOKENS) * effortRatio
       )
     )
@@ -419,7 +452,8 @@ export function getAnthropicReasoningParams(
 
   // Claude 推理参数
   if (isSupportedThinkingTokenClaudeModel(model)) {
-    const budgetTokens = getAnthropicThinkingBudget(assistant, model)
+    const { maxTokens } = getAssistantSettings(assistant)
+    const budgetTokens = getAnthropicThinkingBudget(maxTokens, reasoningEffort, model.id)
 
     return {
       thinking: {
@@ -430,6 +464,21 @@ export function getAnthropicReasoningParams(
   }
 
   return {}
+}
+
+type GoogelThinkingLevel = NonNullable<GoogleGenerativeAIProviderOptions['thinkingConfig']>['thinkingLevel']
+
+function mapToGeminiThinkingLevel(reasoningEffort: ReasoningEffortOption): GoogelThinkingLevel {
+  switch (reasoningEffort) {
+    case 'low':
+      return 'low'
+    case 'medium':
+      return 'medium'
+    case 'high':
+      return 'high'
+    default:
+      return 'medium'
+  }
 }
 
 /**
@@ -455,6 +504,15 @@ export function getGeminiReasoningParams(
         thinkingConfig: {
           includeThoughts: false,
           ...(GEMINI_FLASH_MODEL_REGEX.test(model.id) ? { thinkingBudget: 0 } : {})
+        }
+      }
+    }
+
+    // https://ai.google.dev/gemini-api/docs/gemini-3?thinking=high#new_api_features_in_gemini_3
+    if (isGemini3Model(model)) {
+      return {
+        thinkingConfig: {
+          thinkingLevel: mapToGeminiThinkingLevel(reasoningEffort)
         }
       }
     }
@@ -542,7 +600,8 @@ export function getBedrockReasoningParams(
     return {}
   }
 
-  const budgetTokens = getAnthropicThinkingBudget(assistant, model)
+  const { maxTokens } = getAssistantSettings(assistant)
+  const budgetTokens = getAnthropicThinkingBudget(maxTokens, reasoningEffort, model.id)
   return {
     reasoningConfig: {
       type: 'enabled',
