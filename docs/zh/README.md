@@ -34,7 +34,7 @@
   </a>
 </h1>
 <p align="center">
-  <a href="https://github.com/CherryHQ/cherry-studio">English</a> | 中文 | <a href="https://cherry-ai.com">官方网站</a> | <a href="https://docs.cherry-ai.com/cherry-studio-wen-dang/zh-cn">文档</a> | <a href="./dev.md">开发</a> | <a href="https://github.com/CherryHQ/cherry-studio/issues">反馈</a><br>
+  <a href="https://github.com/CherryHQ/cherry-studio">English</a> | 中文 | <a href="https://cherry-ai.com">官方网站</a> | <a href="https://docs.cherry-ai.com/cherry-studio-wen-dang/zh-cn">文档</a> | <a href="./guides/development.md">开发</a> | <a href="https://github.com/CherryHQ/cherry-studio/issues">反馈</a><br>
 </p>
 
 <!-- 题头徽章组合 -->
@@ -70,7 +70,7 @@ Cherry Studio 是一款支持多个大语言模型（LLM）服务商的桌面客
 
 👏 欢迎加入 [Telegram 群组](https://t.me/CherryStudioAI)｜[Discord](https://discord.gg/wez8HtpxqQ) | [QQ群(575014769)](https://qm.qq.com/q/lo0D4qVZKi)
 
-❤️ 喜欢 Cherry Studio? 点亮小星星 🌟 或 [赞助开发者](sponsor.md)! ❤️
+❤️ 喜欢 Cherry Studio? 点亮小星星 🌟 或 [赞助开发者](./guides/sponsor.md)! ❤️
 
 # 📖 使用教程
 
@@ -181,7 +181,7 @@ https://docs.cherry-ai.com
 6. **社区参与**：加入讨论并帮助用户
 7. **推广使用**：宣传 Cherry Studio
 
-参考[分支策略](branching-strategy-zh.md)了解贡献指南
+参考[分支策略](./guides/branching-strategy.md)了解贡献指南
 
 ## 入门
 
@@ -190,7 +190,7 @@ https://docs.cherry-ai.com
 3. **提交更改**：提交并推送您的更改
 4. **打开 Pull Request**：描述您的更改和原因
 
-有关更详细的指南，请参阅我们的 [贡献指南](CONTRIBUTING.zh.md)
+有关更详细的指南，请参阅我们的 [贡献指南](./guides/contributing.md)
 
 感谢您的支持和贡献！
 
