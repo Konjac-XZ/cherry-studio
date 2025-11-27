@@ -4899,7 +4899,7 @@
     },
     "info": {
       "aborted": "翻譯中止",
-      "html_conversion": "偵測到 HTML 格式，已觸發轉換，請檢查結果。"
+      "html_conversion": "偵測到 HTML 格式，已觸發轉換，請留意核對"
     },
     "input": {
       "placeholder": "可粘貼或拖入文字、文字檔案、圖片（支援OCR）"
