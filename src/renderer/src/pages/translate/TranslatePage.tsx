@@ -32,7 +32,7 @@ import {
   type TranslateLanguage
 } from '@renderer/types'
 import { getFileExtension, isTextFile, runAsyncFunction, uuid } from '@renderer/utils'
-import { abortCompletion } from '@renderer/utils/abortController'
+import { abortCompletion, readyToAbort, removeAbortController } from '@renderer/utils/abortController'
 import { isAbortError } from '@renderer/utils/error'
 import { formatErrorMessage } from '@renderer/utils/error'
 import { getFilesFromDropEvent, getTextFromDropEvent } from '@renderer/utils/input'
@@ -200,7 +200,7 @@ const TranslatePage: FC = () => {
   }
 
   const notifyHtmlConversion = useCallback(() => {
-    window.toast.success(t('translate.info.html_conversion'))
+    window.toast.info(t('translate.info.html_conversion'))
   }, [t])
 
   const turndownService = useMemo(() => {
@@ -397,7 +397,8 @@ const TranslatePage: FC = () => {
     async (
       text: string,
       actualSourceLanguage: TranslateLanguage,
-      actualTargetLanguage: TranslateLanguage
+      actualTargetLanguage: TranslateLanguage,
+      abortKey: string
     ): Promise<void> => {
       try {
         if (translating) {
@@ -405,7 +406,6 @@ const TranslatePage: FC = () => {
         }
 
         let translated: string
-        const abortKey = uuid()
         dispatch(setTranslateAbortKey(abortKey))
 
         // use a throttled updater for streaming, ensure we flush and set final content afterward
@@ -456,9 +456,11 @@ const TranslatePage: FC = () => {
       } catch (e) {
         logger.error('Failed to translate', e as Error)
         window.toast.error(t('translate.error.unknown') + ': ' + formatErrorMessage(e))
+      } finally {
+        removeAbortController(abortKey)
       }
     },
-    [autoCopy, copy, dispatch, setTimeoutTimer, setTranslatedContent, setTranslating, t, translating]
+    [autoCopy, copy, dispatch, removeAbortController, setTimeoutTimer, setTranslatedContent, setTranslating, t, translating]
   )
 
   // 控制翻译按钮是否可用
@@ -482,6 +484,12 @@ const TranslatePage: FC = () => {
       return
     }
 
+    const abortKey = uuid()
+    dispatch(setTranslateAbortKey(abortKey))
+
+    // Prepare abort signal early so Stop works during language detection as well
+    const abortSignal = readyToAbort(abortKey)
+
     setTranslating(true)
 
     try {
@@ -504,7 +512,8 @@ const TranslatePage: FC = () => {
           candidateLangCodes
         })
 
-        const detectedLangCode = await detectLanguage(text, detectionOptions)
+        const detectionParams = detectionOptions ? { ...detectionOptions, signal: abortSignal } : { signal: abortSignal }
+        const detectedLangCode = await detectLanguage(text, detectionParams)
         logger.debug('detectLanguage returned', {
           detectedLangCode,
           candidateLangCodes
@@ -544,19 +553,27 @@ const TranslatePage: FC = () => {
         setTargetLanguage(actualTargetLanguage)
       }
 
-      await translate(text, actualSourceLanguage, actualTargetLanguage)
+      await translate(text, actualSourceLanguage, actualTargetLanguage, abortKey)
     } catch (error) {
-      logger.error('Translation error:', error as Error)
-      window.toast.error(t('translate.error.failed') + ': ' + formatErrorMessage(error))
+      if (isAbortError(error)) {
+        logger.info('Translation aborted by user during detection or translation')
+      } else {
+        logger.error('Translation error:', error as Error)
+        window.toast.error(t('translate.error.failed') + ': ' + formatErrorMessage(error))
+      }
       return
     } finally {
       setTranslating(false)
+      removeAbortController(abortKey)
     }
   }, [
     bidirectionalPair,
     couldTranslate,
+    dispatch,
     getLanguageByLangcode,
     isBidirectional,
+    readyToAbort,
+    removeAbortController,
     setTranslating,
     sourceLanguage,
     t,

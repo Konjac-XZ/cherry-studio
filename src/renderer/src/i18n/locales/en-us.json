@@ -4902,7 +4902,7 @@
     },
     "info": {
       "aborted": "Translation aborted",
-      "html_conversion": "HTML format detected, conversion triggered. Please review the results."
+      "html_conversion": "HTML format detected, conversion triggered. Please review the results"
     },
     "input": {
       "placeholder": "Text, text files, or images (with OCR support) can be pasted or dragged in"

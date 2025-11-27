@@ -4916,7 +4916,7 @@
     },
     "info": {
       "aborted": "翻译中止",
-      "html_conversion": "检测到 HTML 格式，已触发转换，请检查结果。"
+      "html_conversion": "检测到 HTML 格式，已触发转换，请注意检查"
     },
     "input": {
       "placeholder": "可粘贴或拖入文本、文本文件、图片（支持 OCR）"

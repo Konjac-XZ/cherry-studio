@@ -20,6 +20,7 @@ const logger = loggerService.withContext('Utils:translate')
 
 type DetectLanguageOptions = {
   candidates?: TranslateLanguageCode[]
+  signal?: AbortSignal
 }
 
 const ISO3_TO_TRANSLATE_LANGUAGE: Record<string, TranslateLanguage> = {
@@ -141,7 +142,12 @@ const detectLanguageByLLM = async (
     }
   }
 
-  await fetchChatCompletion({ prompt: 'follow system prompt', assistant, onChunkReceived: onChunk })
+  await fetchChatCompletion({
+    prompt: 'follow system prompt',
+    assistant,
+    onChunkReceived: onChunk,
+    requestOptions: options.signal ? { signal: options.signal } : undefined
+  })
   return detectedLang.trim()
 }
 
