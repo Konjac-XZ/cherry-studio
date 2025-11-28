@@ -4830,6 +4830,7 @@
       "language": "任意語言"
     },
     "button": {
+      "flip": "翻轉",
       "translate": "翻譯"
     },
     "close": "關閉",
@@ -4881,6 +4882,10 @@
     },
     "exchange": {
       "label": "交換源語言與目標語言"
+    },
+    "flip": {
+      "label": "翻轉識別的語言並重新翻譯",
+      "success": "語言已翻轉"
     },
     "files": {
       "drag_text": "拖放到此处",
