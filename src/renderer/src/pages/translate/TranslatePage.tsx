@@ -54,6 +54,7 @@ import {
   Columns2,
   FolderClock,
   GripVertical,
+  RefreshCw,
   Rows2,
   Settings2,
   SpellCheck,
@@ -682,6 +683,16 @@ const TranslatePage: FC = () => {
 
   const couldExchange = useMemo(() => couldExchangeAuto && !isBidirectional, [couldExchangeAuto, isBidirectional])
 
+  // Check if flip button should be visible
+  // Show button when: auto-detect is on, not bidirectional, and has translated content or is translating
+  const couldFlip = useMemo(
+    () =>
+      sourceLanguage === 'auto' &&
+      !isBidirectional &&
+      (translating || (detectedLanguage !== null && detectedLanguage.langCode !== UNKNOWN.langCode)),
+    [detectedLanguage, isBidirectional, sourceLanguage, translating]
+  )
+
   const handleExchange = useCallback(() => {
     if (sourceLanguage === 'auto' && !couldExchangeAuto) {
       return
@@ -699,6 +710,66 @@ const TranslatePage: FC = () => {
     setSourceLanguage(target)
     setTargetLanguage(source)
   }, [couldExchangeAuto, detectedLanguage, sourceLanguage, t, targetLanguage])
+
+  // Handle flip detected language and trigger translation
+  const handleFlipLanguage = useCallback(async () => {
+    // If currently translating, abort first
+    if (translating && abortKey) {
+      abortCompletion(abortKey)
+      setTranslating(false)
+      // Wait a bit for abort to complete
+      await new Promise((resolve) => setTimeout(resolve, 100))
+    }
+
+    if (!text.trim()) {
+      return
+    }
+
+    if (!translateModel) {
+      window.toast.error(t('translate.error.not_configured'))
+      return
+    }
+
+    // If we have a detected language, flip it with target
+    if (detectedLanguage && detectedLanguage.langCode !== UNKNOWN.langCode) {
+      const newSourceLanguage = targetLanguage
+      const newTargetLanguage = detectedLanguage
+
+      // Update UI state - keep sourceLanguage as 'auto' but update detectedLanguage
+      // This keeps the dropdown showing "Auto Detect (Language)" instead of switching to the language option
+      setDetectedLanguage(newSourceLanguage)
+      setTargetLanguage(newTargetLanguage)
+
+      window.toast.success(t('translate.flip.success'))
+
+      // Create new abort key
+      const newAbortKey = uuid()
+      dispatch(setTranslateAbortKey(newAbortKey))
+      readyToAbort(newAbortKey)
+
+      setTranslating(true)
+
+      // Call translate directly with flipped languages, bypassing detection
+      await translate(text, newSourceLanguage, newTargetLanguage, newAbortKey)
+
+      setTranslating(false)
+    } else {
+      // No detected language yet, cannot flip
+      window.toast.warning(t('translate.error.invalid_source'))
+    }
+  }, [
+    abortKey,
+    detectedLanguage,
+    dispatch,
+    readyToAbort,
+    setTranslating,
+    t,
+    targetLanguage,
+    text,
+    translate,
+    translateModel,
+    translating
+  ])
 
   useEffect(() => {
     isEmpty(text) && setTranslatedContent('')
@@ -1304,6 +1375,7 @@ const TranslatePage: FC = () => {
               couldTranslate={couldTranslate}
               onAbort={onAbort}
             />
+            <FlipButton translating={translating} onFlip={handleFlipLanguage} couldTranslate={couldTranslate} />
           </InnerOperationBar>
           <InnerOperationBar style={{ justifyContent: 'flex-end' }}>
             <ModelSelectButton
@@ -1685,6 +1757,29 @@ const TranslateButton = ({
           {t('common.stop')}
         </Button>
       )}
+    </Tooltip>
+  )
+}
+
+const FlipButton = ({
+  translating,
+  onFlip,
+  couldTranslate
+}: {
+  translating: boolean
+  onFlip: () => void
+  couldTranslate: boolean
+}) => {
+  const { t } = useTranslation()
+  return (
+    <Tooltip title={t('translate.flip.label')} placement="bottom">
+      <Button
+        type="primary"
+        variant="outlined"
+        onClick={onFlip}
+        disabled={!couldTranslate || translating}
+        icon={<RefreshCw size={14} />}
+      />
     </Tooltip>
   )
 }

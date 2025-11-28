@@ -4833,6 +4833,7 @@
       "language": "Any language"
     },
     "button": {
+      "flip": "Flip",
       "translate": "Translate"
     },
     "close": "Close",
@@ -4884,6 +4885,10 @@
     },
     "exchange": {
       "label": "Swap the source and target languages"
+    },
+    "flip": {
+      "label": "Flip the detected language and translate again",
+      "success": "Language flipped"
     },
     "files": {
       "drag_text": "Drop here",
