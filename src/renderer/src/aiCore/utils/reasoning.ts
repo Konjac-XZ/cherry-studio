@@ -8,14 +8,13 @@ import { DEFAULT_MAX_TOKENS } from '@renderer/config/constant'
 import {
   findTokenLimit,
   GEMINI_FLASH_MODEL_REGEX,
-  getThinkModelType,
+  getModelSupportedReasoningEffortOptions,
   isDeepSeekHybridInferenceModel,
   isDoubaoSeedAfter251015,
   isDoubaoThinkingAutoModel,
-  isGemini3Model,
+  isGemini3ThinkingTokenModel,
   isGPT51SeriesModel,
   isGrok4FastReasoningModel,
-  isGrokReasoningModel,
   isOpenAIDeepResearchModel,
   isOpenAIModel,
   isOpenAIReasoningModel,
@@ -31,15 +30,14 @@ import {
   isSupportedThinkingTokenHunyuanModel,
   isSupportedThinkingTokenModel,
   isSupportedThinkingTokenQwenModel,
-  isSupportedThinkingTokenZhipuModel,
-  MODEL_SUPPORTED_REASONING_EFFORT
+  isSupportedThinkingTokenZhipuModel
 } from '@renderer/config/models'
 import { getStoreSetting } from '@renderer/hooks/useSettings'
 
 import { getAssistantSettings, getProviderByModel } from '@renderer/services/AssistantService'
-import type { Assistant, Model, ReasoningEffortOption } from '@renderer/types'
+import type { Assistant, Model } from '@renderer/types'
 import { EFFORT_RATIO, isSystemProvider, SystemProviderIds } from '@renderer/types'
-import type { OpenAISummaryText } from '@renderer/types/aiCoreTypes'
+import type { OpenAIReasoningSummary } from '@renderer/types/aiCoreTypes'
 import type { ReasoningEffortOptionalParams } from '@renderer/types/sdk'
 import { isSupportEnableThinkingProvider } from '@renderer/utils/provider'
 import { toInteger } from 'lodash'
@@ -64,29 +62,21 @@ export function getReasoningEffort(assistant: Assistant, model: Model): Reasonin
   }
   const reasoningEffort = assistant?.settings?.reasoning_effort
 
-  // Handle undefined and 'none' reasoningEffort.
-  // TODO: They should be separated.
-  if (!reasoningEffort || reasoningEffort === 'none') {
+  // reasoningEffort is not set, no extra reasoning setting
+  // Generally, for every model which supports reasoning control, the reasoning effort won't be undefined.
+  // It's for some reasoning models that don't support reasoning control, such as deepseek reasoner.
+  if (!reasoningEffort) {
+    return {}
+  }
+
+  // Handle 'none' reasoningEffort. It's explicitly off.
+  if (reasoningEffort === 'none') {
     // openrouter: use reasoning
     if (model.provider === SystemProviderIds.openrouter) {
-      // Don't disable reasoning for Gemini models that support thinking tokens
-      if (isSupportedThinkingTokenGeminiModel(model) && !GEMINI_FLASH_MODEL_REGEX.test(model.id)) {
-        return {}
-      }
       // 'none' is not an available value for effort for now.
       // I think they should resolve this issue soon, so I'll just go ahead and use this value.
       if (isGPT51SeriesModel(model) && reasoningEffort === 'none') {
         return { reasoning: { effort: 'none' } }
-      }
-      // Don't disable reasoning for models that require it
-      if (
-        isGrokReasoningModel(model) ||
-        isOpenAIReasoningModel(model) ||
-        isQwenAlwaysThinkModel(model) ||
-        model.id.includes('seed-oss') ||
-        model.id.includes('minimax-m2')
-      ) {
-        return {}
       }
       return { reasoning: { enabled: false, exclude: true } }
     }
@@ -101,11 +91,6 @@ export function getReasoningEffort(assistant: Assistant, model: Model): Reasonin
       return { enable_thinking: false }
     }
 
-    // claude
-    if (isSupportedThinkingTokenClaudeModel(model)) {
-      return {}
-    }
-
     // gemini
     if (isSupportedThinkingTokenGeminiModel(model)) {
       if (GEMINI_FLASH_MODEL_REGEX.test(model.id)) {
@@ -118,8 +103,10 @@ export function getReasoningEffort(assistant: Assistant, model: Model): Reasonin
             }
           }
         }
+      } else {
+        logger.warn(`Model ${model.id} cannot disable reasoning. Fallback to empty reasoning param.`)
+        return {}
       }
-      return {}
     }
 
     // use thinking, doubao, zhipu, etc.
@@ -139,10 +126,73 @@ export function getReasoningEffort(assistant: Assistant, model: Model): Reasonin
       }
     }
 
+    logger.warn(`Model ${model.id} doesn't match any disable reasoning behavior. Fallback to empty reasoning param.`)
     return {}
   }
 
   // reasoningEffort有效的情况
+  // https://creator.poe.com/docs/external-applications/openai-compatible-api#additional-considerations
+  // Poe provider - supports custom bot parameters via extra_body
+  if (provider.id === SystemProviderIds.poe) {
+    if (isOpenAIReasoningModel(model)) {
+      return {
+        extra_body: {
+          reasoning_effort: reasoningEffort === 'auto' ? 'medium' : reasoningEffort
+        }
+      }
+    }
+
+    // Claude models use thinking_budget parameter in extra_body
+    if (isSupportedThinkingTokenClaudeModel(model)) {
+      const effortRatio = EFFORT_RATIO[reasoningEffort]
+      const tokenLimit = findTokenLimit(model.id)
+      const maxTokens = assistant.settings?.maxTokens
+
+      if (!tokenLimit) {
+        logger.warn(
+          `No token limit configuration found for Claude model "${model.id}" on Poe provider. ` +
+            `Reasoning effort setting "${reasoningEffort}" will not be applied.`
+        )
+        return {}
+      }
+
+      let budgetTokens = Math.floor((tokenLimit.max - tokenLimit.min) * effortRatio + tokenLimit.min)
+      budgetTokens = Math.floor(Math.max(1024, Math.min(budgetTokens, (maxTokens || DEFAULT_MAX_TOKENS) * effortRatio)))
+
+      return {
+        extra_body: {
+          thinking_budget: budgetTokens
+        }
+      }
+    }
+
+    // Gemini models use thinking_budget parameter in extra_body
+    if (isSupportedThinkingTokenGeminiModel(model)) {
+      const effortRatio = EFFORT_RATIO[reasoningEffort]
+      const tokenLimit = findTokenLimit(model.id)
+      let budgetTokens: number | undefined
+      if (tokenLimit && reasoningEffort !== 'auto') {
+        budgetTokens = Math.floor((tokenLimit.max - tokenLimit.min) * effortRatio + tokenLimit.min)
+      } else if (!tokenLimit && reasoningEffort !== 'auto') {
+        logger.warn(
+          `No token limit configuration found for Gemini model "${model.id}" on Poe provider. ` +
+            `Using auto (-1) instead of requested effort "${reasoningEffort}".`
+        )
+      }
+      return {
+        extra_body: {
+          thinking_budget: budgetTokens ?? -1
+        }
+      }
+    }
+
+    // Poe reasoning model not in known categories (GPT-5, Claude, Gemini)
+    logger.warn(
+      `Poe provider reasoning model "${model.id}" does not match known categories ` +
+        `(GPT-5, Claude, Gemini). Reasoning effort setting "${reasoningEffort}" will not be applied.`
+    )
+    return {}
+  }
 
   // OpenRouter models
   if (model.provider === SystemProviderIds.openrouter) {
@@ -199,9 +249,25 @@ export function getReasoningEffort(assistant: Assistant, model: Model): Reasonin
             enable_thinking: true,
             incremental_output: true
           }
+        // TODO: 支持 new-api类型
+        case SystemProviderIds['new-api']:
+        case SystemProviderIds.cherryin: {
+          return {
+            extra_body: {
+              thinking: {
+                type: 'enabled' // auto is invalid
+              }
+            }
+          }
+        }
         case SystemProviderIds.hunyuan:
         case SystemProviderIds['tencent-cloud-ti']:
         case SystemProviderIds.doubao:
+        case SystemProviderIds.deepseek:
+        case SystemProviderIds.aihubmix:
+        case SystemProviderIds.sophnet:
+        case SystemProviderIds.ppio:
+        case SystemProviderIds.dmxapi:
           return {
             thinking: {
               type: 'enabled' // auto is invalid
@@ -223,13 +289,12 @@ export function getReasoningEffort(assistant: Assistant, model: Model): Reasonin
           logger.warn(
             `Skipping thinking options for provider ${provider.name} as DeepSeek v3.1 thinking control method is unknown`
           )
-        case SystemProviderIds.silicon:
-        // specially handled before
       }
     }
   }
 
   // OpenRouter models, use reasoning
+  // FIXME: duplicated openrouter handling. remove one
   if (model.provider === SystemProviderIds.openrouter) {
     if (isSupportedReasoningEffortModel(model) || isSupportedThinkingTokenModel(model)) {
       return {
@@ -265,16 +330,15 @@ export function getReasoningEffort(assistant: Assistant, model: Model): Reasonin
   // Grok models/Perplexity models/OpenAI models, use reasoning_effort
   if (isSupportedReasoningEffortModel(model)) {
     // 检查模型是否支持所选选项
-    const modelType = getThinkModelType(model)
-    const supportedOptions = MODEL_SUPPORTED_REASONING_EFFORT[modelType]
-    if (supportedOptions.includes(reasoningEffort)) {
+    const supportedOptions = getModelSupportedReasoningEffortOptions(model)
+    if (supportedOptions?.includes(reasoningEffort)) {
       return {
         reasoningEffort
       }
     } else {
       // 如果不支持，fallback到第一个支持的值
       return {
-        reasoningEffort: supportedOptions[0]
+        reasoningEffort: supportedOptions?.[0]
       }
     }
   }
@@ -282,7 +346,7 @@ export function getReasoningEffort(assistant: Assistant, model: Model): Reasonin
   // gemini series, openai compatible api
   if (isSupportedThinkingTokenGeminiModel(model)) {
     // https://ai.google.dev/gemini-api/docs/gemini-3?thinking=high#openai_compatibility
-    if (isGemini3Model(model)) {
+    if (isGemini3ThinkingTokenModel(model)) {
       return {
         reasoning_effort: reasoningEffort
       }
@@ -382,7 +446,7 @@ export function getOpenAIReasoningParams(
   const openAI = getStoreSetting('openAI')
   const summaryText = openAI.summaryText
 
-  let reasoningSummary: OpenAISummaryText = undefined
+  let reasoningSummary: OpenAIReasoningSummary = undefined
 
   if (model.id.includes('o1-pro')) {
     reasoningSummary = undefined
@@ -466,20 +530,20 @@ export function getAnthropicReasoningParams(
   return {}
 }
 
-type GoogelThinkingLevel = NonNullable<GoogleGenerativeAIProviderOptions['thinkingConfig']>['thinkingLevel']
+// type GoogleThinkingLevel = NonNullable<GoogleGenerativeAIProviderOptions['thinkingConfig']>['thinkingLevel']
 
-function mapToGeminiThinkingLevel(reasoningEffort: ReasoningEffortOption): GoogelThinkingLevel {
-  switch (reasoningEffort) {
-    case 'low':
-      return 'low'
-    case 'medium':
-      return 'medium'
-    case 'high':
-      return 'high'
-    default:
-      return 'medium'
-  }
-}
+// function mapToGeminiThinkingLevel(reasoningEffort: ReasoningEffortOption): GoogelThinkingLevel {
+//   switch (reasoningEffort) {
+//     case 'low':
+//       return 'low'
+//     case 'medium':
+//       return 'medium'
+//     case 'high':
+//       return 'high'
+//     default:
+//       return 'medium'
+//   }
+// }
 
 /**
  * 获取 Gemini 推理参数
@@ -508,20 +572,22 @@ export function getGeminiReasoningParams(
       }
     }
 
+    // TODO: 很多中转还不支持
     // https://ai.google.dev/gemini-api/docs/gemini-3?thinking=high#new_api_features_in_gemini_3
-    if (isGemini3Model(model)) {
-      return {
-        thinkingConfig: {
-          thinkingLevel: mapToGeminiThinkingLevel(reasoningEffort)
-        }
-      }
-    }
+    // if (isGemini3ThinkingTokenModel(model)) {
+    //   return {
+    //     thinkingConfig: {
+    //       thinkingLevel: mapToGeminiThinkingLevel(reasoningEffort)
+    //     }
+    //   }
+    // }
 
     const effortRatio = EFFORT_RATIO[reasoningEffort]
 
     if (effortRatio > 1) {
       return {
         thinkingConfig: {
+          thinkingBudget: -1,
           includeThoughts: true
         }
       }
@@ -567,6 +633,8 @@ export function getXAIReasoningParams(assistant: Assistant, model: Model): Pick<
     case 'low':
     case 'high':
       return { reasoningEffort }
+    case 'xhigh':
+      return { reasoningEffort: 'high' }
   }
 }
 
@@ -620,6 +688,10 @@ export function getCustomParameters(assistant: Assistant): Record<string, any> {
       if (!param.name?.trim()) {
         return acc
       }
+      // Parse JSON type parameters
+      // Related: src/renderer/src/pages/settings/AssistantSettings/AssistantModelSettings.tsx:133-148
+      // The UI stores JSON type params as strings (e.g., '{"key":"value"}')
+      // This function parses them into objects before sending to the API
       if (param.type === 'json') {
         const value = param.value as string
         if (value === 'undefined') {

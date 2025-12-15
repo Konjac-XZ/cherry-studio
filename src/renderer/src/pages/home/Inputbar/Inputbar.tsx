@@ -14,7 +14,6 @@ import { useInputText } from '@renderer/hooks/useInputText'
 import { useMessageOperations, useTopicLoading } from '@renderer/hooks/useMessageOperations'
 import { useSettings } from '@renderer/hooks/useSettings'
 import { useShortcut } from '@renderer/hooks/useShortcuts'
-import { useSidebarIconShow } from '@renderer/hooks/useSidebarIcon'
 import { useTextareaResize } from '@renderer/hooks/useTextareaResize'
 import { useTimer } from '@renderer/hooks/useTimer'
 import {
@@ -24,6 +23,7 @@ import {
   useInputbarToolsState
 } from '@renderer/pages/home/Inputbar/context/InputbarToolsProvider'
 import { getDefaultTopic } from '@renderer/services/AssistantService'
+import { CacheService } from '@renderer/services/CacheService'
 import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import FileManager from '@renderer/services/FileManager'
 import { checkRateLimit, getUserMessage } from '@renderer/services/MessagesService'
@@ -37,7 +37,7 @@ import type { MessageInputBaseParams } from '@renderer/types/newMessage'
 import { delay } from '@renderer/utils'
 import { getSendMessageShortcutLabel } from '@renderer/utils/input'
 import { documentExts, imageExts, textExts } from '@shared/config/constant'
-import { debounce, isEqual } from 'lodash'
+import { debounce } from 'lodash'
 import type { FC } from 'react'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -50,6 +50,17 @@ import { getInputbarConfig } from './registry'
 import TokenCount from './TokenCount'
 
 const logger = loggerService.withContext('Inputbar')
+
+const INPUTBAR_DRAFT_CACHE_KEY = 'inputbar-draft'
+const DRAFT_CACHE_TTL = 24 * 60 * 60 * 1000 // 24 hours
+
+const getMentionedModelsCacheKey = (assistantId: string) => `inputbar-mentioned-models-${assistantId}`
+
+const getValidatedCachedModels = (assistantId: string): Model[] => {
+  const cached = CacheService.get<Model[]>(getMentionedModelsCacheKey(assistantId))
+  if (!Array.isArray(cached)) return []
+  return cached.filter((model) => model?.id && model?.name)
+}
 
 interface Props {
   assistant: Assistant
@@ -83,13 +94,13 @@ const Inputbar: FC<Props> = ({ assistant: initialAssistant, setActiveTopic, topi
   const initialState = useMemo(
     () => ({
       files: [] as FileType[],
-      mentionedModels: initialAssistant.persistedMentionedModels ?? [],
+      mentionedModels: getValidatedCachedModels(initialAssistant.id),
       selectedKnowledgeBases: initialAssistant.knowledge_bases ?? [],
       isExpanded: false,
       couldAddImageFile: false,
       extensions: [] as string[]
     }),
-    [initialAssistant.knowledge_bases, initialAssistant.persistedMentionedModels]
+    [initialAssistant.knowledge_bases]
   )
 
   return (
@@ -121,21 +132,24 @@ const InputbarInner: FC<InputbarInnerProps> = ({ assistant: initialAssistant, se
   const { setFiles, setMentionedModels, setSelectedKnowledgeBases } = useInputbarToolsDispatch()
   const { setCouldAddImageFile } = useInputbarToolsInternalDispatch()
 
-  const { text, setText } = useInputText()
+  const { text, setText } = useInputText({
+    initialValue: CacheService.get<string>(INPUTBAR_DRAFT_CACHE_KEY) ?? '',
+    onChange: (value) => CacheService.set(INPUTBAR_DRAFT_CACHE_KEY, value, DRAFT_CACHE_TTL)
+  })
   const {
     textareaRef,
     resize: resizeTextArea,
     focus: focusTextarea,
     setExpanded,
-    isExpanded: textareaIsExpanded
+    isExpanded: textareaIsExpanded,
+    customHeight,
+    setCustomHeight
   } = useTextareaResize({
-    maxHeight: 400,
+    maxHeight: 500,
     minHeight: 30
   })
 
-  const showKnowledgeIcon = useSidebarIconShow('knowledge')
   const { assistant, addTopic, model, setModel, updateAssistant } = useAssistant(initialAssistant.id)
-  const skipPersistedMentionsRef = useRef(false)
   const { sendMessageShortcut, showInputEstimatedTokens, enableQuickPanelTriggers } = useSettings()
   const [estimateTokenCount, setEstimateTokenCount] = useState(0)
   const [contextCount, setContextCount] = useState({ current: 0, max: 0 })
@@ -191,33 +205,6 @@ const InputbarInner: FC<InputbarInnerProps> = ({ assistant: initialAssistant, se
     setCouldAddImageFile(canAddImageFile)
   }, [canAddImageFile, setCouldAddImageFile])
 
-  useEffect(() => {
-    const persistedModels = assistant.persistedMentionedModels ?? []
-    setMentionedModels((current) => {
-      if (isEqual(current, persistedModels)) {
-        return current
-      }
-      skipPersistedMentionsRef.current = true
-      return persistedModels
-    })
-  }, [assistant.persistedMentionedModels, setMentionedModels])
-
-  useEffect(() => {
-    if (skipPersistedMentionsRef.current) {
-      skipPersistedMentionsRef.current = false
-      return
-    }
-
-    const persistedModels = assistant.persistedMentionedModels ?? []
-    if (isEqual(persistedModels, mentionedModels)) {
-      return
-    }
-
-    updateAssistant({
-      persistedMentionedModels: mentionedModels.length > 0 ? mentionedModels : undefined
-    })
-  }, [assistant.persistedMentionedModels, mentionedModels, updateAssistant])
-
   const placeholderText = enableQuickPanelTriggers
     ? t('chat.input.placeholder', { key: getSendMessageShortcutLabel(sendMessageShortcut) })
     : t('chat.input.placeholder_without_triggers', {
@@ -261,7 +248,7 @@ const InputbarInner: FC<InputbarInnerProps> = ({ assistant: initialAssistant, se
       setText('')
       setFiles([])
       setTimeoutTimer('sendMessage_1', () => setText(''), 500)
-      setTimeoutTimer('sendMessage_2', () => resizeTextArea(true), 0)
+      setTimeoutTimer('sendMessage_2', () => resizeTextArea(), 0)
     } catch (error) {
       logger.warn('Failed to send message:', error as Error)
       parent?.recordException(error as Error)
@@ -409,9 +396,10 @@ const InputbarInner: FC<InputbarInnerProps> = ({ assistant: initialAssistant, se
     focusTextarea
   ])
 
+  // TODO: Just use assistant.knowledge_bases as selectedKnowledgeBases. context state is overdesigned.
   useEffect(() => {
-    setSelectedKnowledgeBases(showKnowledgeIcon ? (assistant.knowledge_bases ?? []) : [])
-  }, [assistant.knowledge_bases, setSelectedKnowledgeBases, showKnowledgeIcon])
+    setSelectedKnowledgeBases(assistant.knowledge_bases ?? [])
+  }, [assistant.knowledge_bases, setSelectedKnowledgeBases])
 
   useEffect(() => {
     // Disable web search if model doesn't support it
@@ -481,6 +469,8 @@ const InputbarInner: FC<InputbarInnerProps> = ({ assistant: initialAssistant, se
       text={text}
       onTextChange={setText}
       textareaRef={textareaRef}
+      height={customHeight}
+      onHeightChange={setCustomHeight}
       resizeTextArea={resizeTextArea}
       focusTextarea={focusTextarea}
       isLoading={loading}

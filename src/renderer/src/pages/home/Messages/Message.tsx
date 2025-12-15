@@ -19,6 +19,7 @@ import store from '@renderer/store'
 import { classNames, cn } from '@renderer/utils'
 import { removeTrailingDoubleSpaces } from '@renderer/utils/markdown'
 import { getMainTextContent } from '@renderer/utils/messageUtils/find'
+import { scrollIntoView } from '@renderer/utils/dom'
 import { isMessageProcessing } from '@renderer/utils/messageUtils/is'
 import { Divider } from 'antd'
 import type { Dispatch, FC, SetStateAction } from 'react'
@@ -150,9 +151,10 @@ const MessageItem: FC<Props> = ({
 
   useEffect(() => {
     if (isEditing && messageContainerRef.current) {
-      messageContainerRef.current.scrollIntoView({
+      scrollIntoView(messageContainerRef.current, {
         behavior: 'smooth',
-        block: 'center'
+        block: 'center',
+        container: 'nearest'
       })
     }
   }, [isEditing])
@@ -230,7 +232,7 @@ const MessageItem: FC<Props> = ({
   const messageHighlightHandler = useCallback(
     (highlight: boolean = true) => {
       if (messageContainerRef.current) {
-        messageContainerRef.current.scrollIntoView({ behavior: 'smooth' })
+        scrollIntoView(messageContainerRef.current, { behavior: 'smooth', block: 'center', container: 'nearest' })
         if (highlight) {
           setTimeoutTimer(
             'messageHighlightHandler',

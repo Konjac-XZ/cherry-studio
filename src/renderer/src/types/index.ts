@@ -7,6 +7,8 @@ import type { CSSProperties } from 'react'
 export * from './file'
 export * from './note'
 
+import * as z from 'zod'
+
 import type { StreamTextParams } from './aiCoreTypes'
 import type { Chunk } from './chunk'
 import type { FileMetadata } from './file'
@@ -88,7 +90,10 @@ const ThinkModelTypes = [
   'gpt5_1',
   'gpt5_codex',
   'gpt5_1_codex',
+  'gpt5_1_codex_max',
+  'gpt5_2',
   'gpt5pro',
+  'gpt52pro',
   'grok',
   'grok4_fast',
   'gemini',
@@ -105,7 +110,8 @@ const ThinkModelTypes = [
   'deepseek_hybrid'
 ] as const
 
-export type ReasoningEffortOption = NonNullable<OpenAI.ReasoningEffort> | 'auto'
+// Extend OpenAI reasoning effort with an extra "xhigh" level for UI controls
+export type ReasoningEffortOption = NonNullable<OpenAI.ReasoningEffort> | 'auto' | 'xhigh'
 export type ThinkingOption = ReasoningEffortOption
 export type ThinkingModelType = (typeof ThinkModelTypes)[number]
 export type ThinkingOptionConfig = Record<ThinkingModelType, ThinkingOption[]>
@@ -122,6 +128,7 @@ export const EFFORT_RATIO: EffortRatio = {
   low: 0.05,
   medium: 0.5,
   high: 0.8,
+  xhigh: 0.9,
   auto: 2
 }
 
@@ -242,7 +249,16 @@ export type ModelType = 'text' | 'vision' | 'embedding' | 'reasoning' | 'functio
 
 export type ModelTag = Exclude<ModelType, 'text'> | 'free'
 
-export type EndpointType = 'openai' | 'openai-response' | 'anthropic' | 'gemini' | 'image-generation' | 'jina-rerank'
+// "image-generation" is also openai endpoint, but specifically for image generation.
+export const EndPointTypeSchema = z.enum([
+  'openai',
+  'openai-response',
+  'anthropic',
+  'gemini',
+  'image-generation',
+  'jina-rerank'
+])
+export type EndpointType = z.infer<typeof EndPointTypeSchema>
 
 export type ModelPricing = {
   input_per_million_tokens: number
@@ -323,6 +339,7 @@ export interface GeneratePainting extends PaintingParams {
   safetyTolerance?: number
   width?: number
   height?: number
+  imageSize?: string
 }
 
 export interface EditPainting extends PaintingParams {
@@ -430,6 +447,7 @@ export type MinAppType = {
   name: string
   logo?: string
   url: string
+  // FIXME: It should be `bordered`
   bodered?: boolean
   background?: string
   style?: CSSProperties

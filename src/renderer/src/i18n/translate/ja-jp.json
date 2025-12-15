@@ -6,6 +6,9 @@
         "failed": "エージェントの追加に失敗しました",
         "invalid_agent": "無効なエージェント"
       },
+      "model": {
+        "tooltip": "現在、エージェント機能では、Anthropicエンドポイントをサポートするモデルのみが利用可能です。"
+      },
       "title": "エージェントを追加",
       "type": {
         "placeholder": "エージェントタイプを選択"
@@ -28,12 +31,26 @@
       }
     },
     "gitBash": {
+      "autoDetected": "[to be translated]:Using auto-detected Git Bash",
+      "clear": {
+        "button": "[to be translated]:Clear custom path"
+      },
+      "customPath": "[to be translated]:Using custom path: {{path}}",
       "error": {
         "description": "Windowsでエージェントを実行するにはGit Bashが必要です。これがないとエージェントは動作しません。以下からGit for Windowsをインストールしてください。",
         "recheck": "Git Bashのインストールを再確認してください",
         "title": "Git Bashが必要です"
       },
+      "found": {
+        "title": "[to be translated]:Git Bash configured"
+      },
       "notFound": "Git Bash が見つかりません。先にインストールしてください。",
+      "pick": {
+        "button": "[to be translated]:Select Git Bash Path",
+        "failed": "[to be translated]:Failed to set Git Bash path",
+        "invalidPath": "[to be translated]:Selected file is not a valid Git Bash executable (bash.exe).",
+        "title": "[to be translated]:Select Git Bash executable"
+      },
       "success": "Git Bashが正常に検出されました！"
     },
     "input": {
@@ -280,6 +297,7 @@
         "denied": "ツールリクエストは拒否されました。",
         "timeout": "ツールリクエストは承認を受ける前にタイムアウトしました。"
       },
+      "toolPendingFallback": "ツール",
       "waiting": "ツールの許可決定を待っています..."
     },
     "type": {
@@ -467,6 +485,14 @@
         "url_placeholder": "JSON URLを入力"
       },
       "manage": {
+        "batch_delete": {
+          "button": "バッチ削除",
+          "confirm": "選択した{{count}}件のアシスタントを削除してもよろしいですか？"
+        },
+        "mode": {
+          "delete": "削除",
+          "sort": "並べ替え"
+        },
         "title": "アシスタントを管理"
       },
       "my_agents": "マイアシスタント",
@@ -520,7 +546,8 @@
         "low": "少しの思考",
         "medium": "普通の思考",
         "minimal": "最小限の思考",
-        "off": "オフ"
+        "off": "オフ",
+        "xhigh": "[to be translated]:Extra High"
       },
       "regular_phrases": {
         "add": "プロンプトを追加",
@@ -893,7 +920,7 @@
         "title": "コード実行"
       },
       "code_fancy_block": {
-        "label": "<translate_input>\n装飾的なコードブロック\n</translate_input>",
+        "label": "装飾的なコードブロック",
         "tip": "より見栄えの良いコードブロックスタイルを使用する、例えばHTMLカード"
       },
       "code_image_tools": {
@@ -1148,6 +1175,7 @@
     "fullscreen": "全画面モードに入りました。F11キーで終了します",
     "go_to_settings": "設定に移動",
     "i_know": "わかりました",
+    "ignore": "無視",
     "inspect": "検査",
     "invalid_value": "無効な値",
     "knowledge_base": "ナレッジベース",
@@ -1160,6 +1188,7 @@
     "no_results": "検索結果なし",
     "none": "無",
     "off": "オフ",
+    "on": "オン",
     "open": "開く",
     "paste": "貼り付け",
     "placeholders": {
@@ -1179,6 +1208,7 @@
     "saved": "保存されました",
     "search": "検索",
     "select": "選択",
+    "select_all": "すべて選択",
     "selected": "選択済み",
     "selectedItems": "{{count}}件の項目を選択しました",
     "selectedMessages": "{{count}}件のメッセージを選択しました",
@@ -1207,7 +1237,7 @@
   "endpoint_type": {
     "anthropic": "Anthropic",
     "gemini": "Gemini",
-    "image-generation": "画像生成",
+    "image-generation": "画像生成 (OpenAI)",
     "jina-rerank": "Jina Rerank",
     "openai": "OpenAI",
     "openai-response": "OpenAI-Response"
@@ -1296,7 +1326,7 @@
     "statusCode": "ステータスコード",
     "statusText": "状態テキスト",
     "text": "テキスト",
-    "toolInput": "<translate_input>\nツール入力\n</translate_input>",
+    "toolInput": "ツール入力",
     "toolName": "ツール名",
     "unknown": "不明なエラー",
     "usage": "用量",
@@ -1504,6 +1534,7 @@
     "notes_placeholder": "このナレッジベースの追加情報やコンテキストを入力...",
     "provider_not_found": "プロバイダーが見つかりません",
     "quota": "{{name}} 残りクォータ: {{quota}}",
+    "quota_empty": "本日の{{name}}クォータが不足しています。公式サイトで申請してください",
     "quota_infinity": "{{name}} クォータ: 無制限",
     "rename": "名前を変更",
     "search": "ナレッジベースを検索",
@@ -2216,7 +2247,10 @@
     "untitled_folder": "新ファイル夹",
     "untitled_note": "無題のメモ",
     "upload_failed": "ノートのアップロードに失敗しました",
-    "upload_success": "ノートのアップロードが成功しました"
+    "upload_files": "ファイルをアップロード",
+    "upload_folder": "アップロードフォルダ",
+    "upload_success": "ノートのアップロードが成功しました",
+    "uploading_files": "{{count}} 個のファイルをアップロード中..."
   },
   "notification": {
     "assistant": "助手回應",
@@ -2507,7 +2541,8 @@
   },
   "preview": {
     "copy": {
-      "image": "画像としてコピー"
+      "image": "画像としてコピー",
+      "src": "画像ソースをコピー"
     },
     "dialog": "ダイアログを開く",
     "label": "プレビュー",
@@ -3771,6 +3806,9 @@
       },
       "view_webdav_settings": "WebDAV設定を表示"
     },
+    "groq": {
+      "title": "Groq設定"
+    },
     "hardware_acceleration": {
       "confirm": {
         "content": "ハードウェアアクセラレーションを無効にするには、アプリを再起動する必要があります。再起動しますか？",
@@ -3898,6 +3936,7 @@
       "jsonSaveError": "JSON設定の保存に失敗しました",
       "jsonSaveSuccess": "JSON設定が保存されました。",
       "logoUrl": "ロゴURL",
+      "logs": "ログ",
       "longRunning": "長時間運行モード",
       "longRunningTooltip": "このオプションを有効にすると、サーバーは長時間のタスクをサポートします。進行状況通知を受信すると、タイムアウトがリセットされ、最大実行時間が10分に延長されます。",
       "marketplaces": "マーケットプレイス",
@@ -3917,6 +3956,7 @@
       "name": "名前",
       "newServer": "MCP サーバー",
       "noDescriptionAvailable": "説明がありません",
+      "noLogs": "ログはまだありません",
       "noServers": "サーバーが設定されていません",
       "not_support": "モデルはサポートされていません",
       "npx_list": {
@@ -4265,6 +4305,12 @@
         "tip": "リクエスト処理に使用するレイテンシティアを指定します",
         "title": "サービスティア"
       },
+      "stream_options": {
+        "include_usage": {
+          "tip": "トークン使用量が含まれるかどうか (OpenAI Chat Completions APIのみに適用)",
+          "title": "使用法を含める"
+        }
+      },
       "summary_text_mode": {
         "auto": "自動",
         "concise": "簡潔",
@@ -4357,12 +4403,16 @@
           "stream_options": {
             "help": "このプロバイダーは stream_options パラメータをサポートしていますか",
             "label": "stream_options をサポート"
+          },
+          "verbosity": {
+            "help": "プロバイダーが冗長度パラメータをサポートしているかどうか",
+            "label": "冗長性のサポート"
           }
         },
         "url": {
           "preview": "プレビュー: {{url}}",
           "reset": "リセット",
-          "tip": "#で終わる場合、入力されたアドレスを強制的に使用します"
+          "tip": "自動的に付加されるAPIバージョンを無効にするには、末尾に#を追加します。"
         }
       },
       "api_host": "APIホスト",

@@ -134,66 +134,60 @@ artifactBuildCompleted: scripts/artifact-build-completed.js
 releaseInfo:
   releaseNotes: |
     <!--LANG:en-->
-    What's New in v1.7.0-rc.2
+    Cherry Studio 1.7.3 - Feature & Stability Update
 
-    ✨ New Features:
-    - AI Models: Added support for Gemini 3, Gemini 3 Pro with image preview, and GPT-5.1
-    - Import: ChatGPT conversation import feature
-    - Agent: Git Bash detection and requirement check for Windows agents
-    - Search: Native language emoji search with CLDR data format
-    - Provider: Endpoint type support for cherryin provider
-    - Debug: Local crash mini dump file for better diagnostics
+    This release brings new features, UI improvements, and important bug fixes.
 
-    🐛 Important Bug Fixes:
-    - Error Handling: Improved error display in AiSdkToChunkAdapter
-    - Database: Optimized DatabaseManager and fixed libsql crash issues
-    - Memory: Fixed EventEmitter memory leak in useApiServer hook
-    - Messages: Fixed adjacent user messages appearing when assistant message contains error only
-    - Tools: Fixed missing execution state for approved tool permissions
-    - File Processing: Fixed "no such file" error for non-English filenames in open-mineru
-    - PDF: Fixed mineru PDF validation and 403 errors
-    - Images: Fixed base64 image save issues
-    - Search: Fixed URL context and web search capability
-    - Models: Added verbosity parameter support for GPT-5 models
-    - UI: Improved todo tool status icon visibility and colors
-    - Providers: Fixed api-host for vercel ai-gateway and gitcode update config
+    ✨ New Features
+    - Add MCP server log viewer for better debugging
+    - Support custom Git Bash path configuration
+    - Add print to PDF and save as HTML for mini program webviews
+    - Add CherryIN API host selection settings
+    - Enhance assistant presets with sort and batch delete modes
+    - Open URL directly for SelectionAssistant search action
+    - Enhance web search tool switching with provider-specific context
 
-    ⚡ Improvements:
-    - SDK: Updated Google and OpenAI SDKs with new features
-    - UI: Simplified knowledge base creation modal and agent creation form
-    - Tools: Replaced renderToolContent function with ToolContent component
-    - Architecture: Namespace tool call IDs with session ID to prevent conflicts
-    - Config: AI SDK configuration refactoring
+    🔧 Improvements
+    - Remove Intel Ultra limit for OVMS
+    - Improve settings tab and assistant item UI
+
+    🐛 Bug Fixes
+    - Fix stack overflow with base64 images
+    - Fix infinite loop in knowledge queue processing
+    - Fix quick panel closing in multiple selection mode
+    - Fix thinking timer not stopping when reply is aborted
+    - Fix ThinkingButton icon display for fixed reasoning mode
+    - Fix knowledge query prioritization and intent prompt
+    - Fix OpenRouter embeddings support
+    - Fix SelectionAction window resize on Windows
+    - Add gpustack provider support for qwen3 thinking mode
 
     <!--LANG:zh-CN-->
-    v1.7.0-rc.2 新特性
+    Cherry Studio 1.7.3 - 功能与稳定性更新
 
-    ✨ 新功能:
-    - AI 模型：新增 Gemini 3、Gemini 3 Pro 图像预览支持，以及 GPT-5.1
-    - 导入：ChatGPT 对话导入功能
-    - Agent：Windows Agent 的 Git Bash 检测和要求检查
-    - 搜索：支持本地语言 emoji 搜索（CLDR 数据格式）
-    - 提供商：cherryin provider 的端点类型支持
-    - 调试：启用本地崩溃 mini dump 文件，方便诊断
+    本次更新带来新功能、界面改进和重要的问题修复。
 
-    🐛 重要修复:
-    - 错误处理：改进 AiSdkToChunkAdapter 的错误显示
-    - 数据库：优化 DatabaseManager 并修复 libsql 崩溃问题
-    - 内存：修复 useApiServer hook 中的 EventEmitter 内存泄漏
-    - 消息：修复当助手消息仅包含错误时相邻用户消息出现的问题
-    - 工具：修复批准工具权限缺少执行状态的问题
-    - 文件处理：修复 open-mineru 处理非英文文件名时的"无此文件"错误
-    - PDF：修复 mineru PDF 验证和 403 错误
-    - 图片：修复 base64 图片保存问题
-    - 搜索：修复 URL 上下文和网络搜索功能
-    - 模型：为 GPT-5 模型添加 verbosity 参数支持
-    - UI：改进 todo 工具状态图标可见性和颜色
-    - 提供商：修复 vercel ai-gateway 和 gitcode 更新配置的 api-host
+    ✨ 新功能
+    - 新增 MCP 服务器日志查看器，便于调试
+    - 支持自定义 Git Bash 路径配置
+    - 小程序 webview 支持打印 PDF 和保存为 HTML
+    - 新增 CherryIN API 主机选择设置
+    - 助手预设增强：支持排序和批量删除模式
+    - 划词助手搜索操作直接打开 URL
+    - 增强网页搜索工具切换逻辑，支持服务商特定上下文
 
-    ⚡ 改进:
-    - SDK：更新 Google 和 OpenAI SDK，新增功能和修复
-    - UI：简化知识库创建模态框和 agent 创建表单
-    - 工具：用 ToolContent 组件替换 renderToolContent 函数，提升可读性
-    - 架构：用会话 ID 命名工具调用 ID 以防止冲突
-    - 配置：AI SDK 配置重构
+    🔧 功能改进
+    - 移除 OVMS 的 Intel Ultra 限制
+    - 优化设置标签页和助手项目 UI
+
+    🐛 问题修复
+    - 修复 base64 图片导致的栈溢出问题
+    - 修复知识库队列处理的无限循环问题
+    - 修复多选模式下快捷面板意外关闭的问题
+    - 修复回复中止时思考计时器未停止的问题
+    - 修复固定推理模式下思考按钮图标显示问题
+    - 修复知识库查询优先级和意图提示
+    - 修复 OpenRouter 嵌入模型支持
+    - 修复 Windows 上划词助手窗口大小调整问题
+    - 为 gpustack 服务商添加 qwen3 思考模式支持
     <!--LANG:END-->
