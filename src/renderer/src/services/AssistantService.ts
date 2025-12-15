@@ -6,6 +6,7 @@ import {
   MAX_CONTEXT_COUNT,
   UNLIMITED_CONTEXT_COUNT
 } from '@renderer/config/constant'
+import { getModelSupportedReasoningEffortOptions } from '@renderer/config/models'
 import { isQwenMTModel } from '@renderer/config/models/qwen'
 import { UNKNOWN } from '@renderer/config/translate'
 import { getStoreProviders } from '@renderer/hooks/useStore'
@@ -26,7 +27,7 @@ import { uuid } from '@renderer/utils'
 
 const logger = loggerService.withContext('AssistantService')
 
-export const DEFAULT_ASSISTANT_SETTINGS: AssistantSettings = {
+export const DEFAULT_ASSISTANT_SETTINGS = {
   temperature: DEFAULT_TEMPERATURE,
   enableTemperature: true,
   contextCount: DEFAULT_CONTEXTCOUNT,
@@ -39,7 +40,7 @@ export const DEFAULT_ASSISTANT_SETTINGS: AssistantSettings = {
   // It would gracefully fallback to prompt if not supported by model.
   toolUseMode: 'function',
   customParameters: []
-} as const
+} as const satisfies AssistantSettings
 
 export function getDefaultAssistant(): Assistant {
   return {
@@ -56,7 +57,11 @@ export function getDefaultAssistant(): Assistant {
   }
 }
 
-export function getDefaultTranslateAssistant(targetLanguage: TranslateLanguage, text: string): TranslateAssistant {
+export function getDefaultTranslateAssistant(
+  targetLanguage: TranslateLanguage,
+  text: string,
+  _settings?: Partial<AssistantSettings>
+): TranslateAssistant {
   const model = getTranslateModel()
   const assistant: Assistant = getDefaultAssistant()
 
@@ -70,9 +75,12 @@ export function getDefaultTranslateAssistant(targetLanguage: TranslateLanguage, 
     throw new Error('Unknown target language')
   }
 
+  const reasoningEffort = getModelSupportedReasoningEffortOptions(model)?.[0]
   const settings = {
-    temperature: 0.7
-  }
+    temperature: 0.7,
+    reasoning_effort: reasoningEffort,
+    ..._settings
+  } satisfies Partial<AssistantSettings>
 
   const getTranslateContent = (model: Model, text: string, targetLanguage: TranslateLanguage): string => {
     if (isQwenMTModel(model)) {

@@ -56,12 +56,17 @@ function tryResolveProviderId(identifier: string): ProviderId | null {
 /**
  * 获取AI SDK Provider ID
  * 简化版：减少重复逻辑，利用通用解析函数
+ * TODO: 整理函数逻辑
  */
 export function getAiSdkProviderId(provider: Provider): string {
   // 1. 尝试解析provider.id
   const resolvedFromId = tryResolveProviderId(provider.id)
-  if (isAzureOpenAIProvider(provider) && isAzureResponsesEndpoint(provider)) {
-    return 'azure-responses'
+  if (isAzureOpenAIProvider(provider)) {
+    if (isAzureResponsesEndpoint(provider)) {
+      return 'azure-responses'
+    } else {
+      return 'azure'
+    }
   }
   if (resolvedFromId) {
     return resolvedFromId

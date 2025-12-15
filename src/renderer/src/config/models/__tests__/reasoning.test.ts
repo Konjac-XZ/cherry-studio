@@ -5,6 +5,7 @@ import { isEmbeddingModel, isRerankModel } from '../embedding'
 import { isOpenAIReasoningModel, isSupportedReasoningEffortOpenAIModel } from '../openai'
 import {
   findTokenLimit,
+  getModelSupportedReasoningEffortOptions,
   getThinkModelType,
   isClaude4SeriesModel,
   isClaude45ReasoningModel,
@@ -12,6 +13,7 @@ import {
   isDeepSeekHybridInferenceModel,
   isDoubaoSeedAfter251015,
   isDoubaoThinkingAutoModel,
+  isFixedReasoningModel,
   isGeminiReasoningModel,
   isGrok4FastReasoningModel,
   isHunyuanReasoningModel,
@@ -33,6 +35,7 @@ import {
   MODEL_SUPPORTED_OPTIONS,
   MODEL_SUPPORTED_REASONING_EFFORT
 } from '../reasoning'
+import { isGemini3ThinkingTokenModel } from '../utils'
 import { isTextToImageModel } from '../vision'
 
 vi.mock('@renderer/store', () => ({
@@ -308,11 +311,14 @@ describe('Ling Models', () => {
 describe('Claude & regional providers', () => {
   it('identifies claude 4.5 variants', () => {
     expect(isClaude45ReasoningModel(createModel({ id: 'claude-sonnet-4.5-preview' }))).toBe(true)
+    expect(isClaude4SeriesModel(createModel({ id: 'claude-sonnet-4-5@20250929' }))).toBe(true)
     expect(isClaude45ReasoningModel(createModel({ id: 'claude-3-sonnet' }))).toBe(false)
   })
 
   it('identifies claude 4 variants', () => {
     expect(isClaude4SeriesModel(createModel({ id: 'claude-opus-4' }))).toBe(true)
+    expect(isClaude4SeriesModel(createModel({ id: 'claude-sonnet-4@20250514' }))).toBe(true)
+    expect(isClaude4SeriesModel(createModel({ id: 'anthropic.claude-sonnet-4-20250514-v1:0' }))).toBe(true)
     expect(isClaude4SeriesModel(createModel({ id: 'claude-4.2-sonnet-variant' }))).toBe(false)
     expect(isClaude4SeriesModel(createModel({ id: 'claude-3-haiku' }))).toBe(false)
   })
@@ -352,12 +358,47 @@ describe('DeepSeek & Thinking Tokens', () => {
       )
     ).toBe(true)
     expect(isDeepSeekHybridInferenceModel(createModel({ id: 'deepseek-v2' }))).toBe(false)
+    expect(isDeepSeekHybridInferenceModel(createModel({ id: 'deepseek-v3.2' }))).toBe(true)
+    expect(isDeepSeekHybridInferenceModel(createModel({ id: 'agent/deepseek-v3.2' }))).toBe(true)
+    expect(isDeepSeekHybridInferenceModel(createModel({ id: 'deepseek-chat' }))).toBe(true)
+    expect(isDeepSeekHybridInferenceModel(createModel({ id: 'deepseek-v3.2-speciale' }))).toBe(false)
 
     const allowed = createModel({ id: 'deepseek-v3.1', provider: 'doubao' })
     expect(isSupportedThinkingTokenModel(allowed)).toBe(true)
 
     const disallowed = createModel({ id: 'deepseek-v3.1', provider: 'unknown' })
     expect(isSupportedThinkingTokenModel(disallowed)).toBe(false)
+  })
+
+  it('supports DeepSeek v3.1+ models from newly added providers', () => {
+    // Test newly added providers for DeepSeek thinking token support
+    const newProviders = ['deepseek', 'cherryin', 'new-api', 'aihubmix', 'sophnet', 'dmxapi']
+
+    newProviders.forEach((provider) => {
+      const model = createModel({ id: 'deepseek-v3.1', provider })
+      expect(
+        isSupportedThinkingTokenModel(model),
+        `Provider ${provider} should support thinking tokens for deepseek-v3.1`
+      ).toBe(true)
+    })
+  })
+
+  it('tests various prefix patterns for isDeepSeekHybridInferenceModel', () => {
+    // Test with custom prefixes
+    expect(isDeepSeekHybridInferenceModel(createModel({ id: 'custom-deepseek-v3.2' }))).toBe(true)
+    expect(isDeepSeekHybridInferenceModel(createModel({ id: 'prefix-deepseek-v3.1' }))).toBe(true)
+    expect(isDeepSeekHybridInferenceModel(createModel({ id: 'agent/deepseek-v3.2' }))).toBe(true)
+
+    // Test that speciale is properly excluded
+    expect(isDeepSeekHybridInferenceModel(createModel({ id: 'custom-deepseek-v3.2-speciale' }))).toBe(false)
+    expect(isDeepSeekHybridInferenceModel(createModel({ id: 'agent/deepseek-v3.2-speciale' }))).toBe(false)
+
+    // Test basic deepseek-chat
+    expect(isDeepSeekHybridInferenceModel(createModel({ id: 'deepseek-chat' }))).toBe(true)
+
+    // Test version variations
+    expect(isDeepSeekHybridInferenceModel(createModel({ id: 'deepseek-v3.1.2' }))).toBe(true)
+    expect(isDeepSeekHybridInferenceModel(createModel({ id: 'deepseek-v3-1' }))).toBe(true)
   })
 
   it('supports Gemini thinking models while filtering image variants', () => {
@@ -530,6 +571,41 @@ describe('isReasoningModel', () => {
 
     const magistral = createModel({ id: 'magistral-reasoning' })
     expect(isReasoningModel(magistral)).toBe(true)
+  })
+
+  it('identifies fixed reasoning models', () => {
+    const models = [
+      'deepseek-reasoner',
+      'o1-preview',
+      'o1-mini',
+      'qwq-32b-preview',
+      'step-3-minimax',
+      'generic-reasoning-model',
+      'some-random-model-thinking',
+      'some-random-model-think',
+      'deepseek-v3.2-speciale'
+    ]
+
+    models.forEach((id) => {
+      const model = createModel({ id })
+      expect(isFixedReasoningModel(model), `Model ${id} should be reasoning`).toBe(true)
+    })
+  })
+
+  it('excludes non-fixed reasoning models from isFixedReasoningModel', () => {
+    // Models that support thinking tokens or reasoning effort should NOT be fixed reasoning models
+    const nonFixedModels = [
+      { id: 'deepseek-v3.2', provider: 'deepseek' }, // Supports thinking tokens
+      { id: 'deepseek-chat', provider: 'deepseek' }, // Supports thinking tokens
+      { id: 'claude-3-opus-20240229', provider: 'anthropic' }, // Supports thinking tokens via extended_thinking
+      { id: 'gpt-4o', provider: 'openai' }, // Not a reasoning model at all
+      { id: 'gpt-4', provider: 'openai' } // Not a reasoning model at all
+    ]
+
+    nonFixedModels.forEach(({ id, provider }) => {
+      const model = createModel({ id, provider })
+      expect(isFixedReasoningModel(model), `Model ${id} should NOT be fixed reasoning`).toBe(false)
+    })
   })
 })
 
@@ -799,20 +875,6 @@ describe('getThinkModelType - Comprehensive Coverage', () => {
   })
 })
 
-describe('Token limit lookup', () => {
-  it.each([
-    ['gemini-2.5-flash-lite-latest', { min: 512, max: 24576 }],
-    ['qwen-plus-2025-07-14', { min: 0, max: 38912 }],
-    ['claude-haiku-4', { min: 1024, max: 64000 }]
-  ])('returns configured min/max pairs for %s', (id, expected) => {
-    expect(findTokenLimit(id)).toEqual(expected)
-  })
-
-  it('returns undefined when regex misses', () => {
-    expect(findTokenLimit('unknown-model')).toBeUndefined()
-  })
-})
-
 describe('Gemini Models', () => {
   describe('isSupportedThinkingTokenGeminiModel', () => {
     it('should return true for gemini 2.5 models', () => {
@@ -963,7 +1025,7 @@ describe('Gemini Models', () => {
           provider: '',
           group: ''
         })
-      ).toBe(true)
+      ).toBe(false)
       expect(
         isSupportedThinkingTokenGeminiModel({
           id: 'gemini-3.5-pro-image-preview',
@@ -971,7 +1033,7 @@ describe('Gemini Models', () => {
           provider: '',
           group: ''
         })
-      ).toBe(true)
+      ).toBe(false)
     })
 
     it('should return false for gemini-2.x image models', () => {
@@ -1171,7 +1233,7 @@ describe('Gemini Models', () => {
           provider: '',
           group: ''
         })
-      ).toBe(true)
+      ).toBe(false)
     })
 
     it('should return false for older gemini models without thinking', () => {
@@ -1200,6 +1262,19 @@ describe('Gemini Models', () => {
 })
 
 describe('findTokenLimit', () => {
+  describe('General token limit lookup', () => {
+    it.each([
+      ['gemini-2.5-flash-lite-latest', { min: 512, max: 24576 }],
+      ['qwen-plus-2025-07-14', { min: 0, max: 38912 }]
+    ])('returns configured min/max pairs for %s', (id, expected) => {
+      expect(findTokenLimit(id)).toEqual(expected)
+    })
+
+    it('returns undefined when regex misses', () => {
+      expect(findTokenLimit('unknown-model')).toBeUndefined()
+    })
+  })
+
   const cases: Array<{ modelId: string; expected: { min: number; max: number } }> = [
     { modelId: 'gemini-2.5-flash-lite-exp', expected: { min: 512, max: 24_576 } },
     { modelId: 'gemini-1.5-flash', expected: { min: 0, max: 24_576 } },
@@ -1215,11 +1290,7 @@ describe('findTokenLimit', () => {
     { modelId: 'qwen-plus-ultra', expected: { min: 0, max: 81_920 } },
     { modelId: 'qwen-turbo-pro', expected: { min: 0, max: 38_912 } },
     { modelId: 'qwen-flash-lite', expected: { min: 0, max: 81_920 } },
-    { modelId: 'qwen3-7b', expected: { min: 1_024, max: 38_912 } },
-    { modelId: 'claude-3.7-sonnet-extended', expected: { min: 1_024, max: 64_000 } },
-    { modelId: 'claude-sonnet-4.1', expected: { min: 1_024, max: 64_000 } },
-    { modelId: 'claude-sonnet-4-5-20250929', expected: { min: 1_024, max: 64_000 } },
-    { modelId: 'claude-opus-4-1-extended', expected: { min: 1_024, max: 32_000 } }
+    { modelId: 'qwen3-7b', expected: { min: 1_024, max: 38_912 } }
   ]
 
   it.each(cases)('returns correct limits for $modelId', ({ modelId, expected }) => {
@@ -1228,5 +1299,708 @@ describe('findTokenLimit', () => {
 
   it('returns undefined for unknown models', () => {
     expect(findTokenLimit('unknown-model')).toBeUndefined()
+  })
+
+  describe('Claude models', () => {
+    describe('Claude 3.7 Sonnet models', () => {
+      it.each([
+        'claude-3.7-sonnet',
+        'claude-3-7-sonnet',
+        'claude-3.7-sonnet-latest',
+        'claude-3-7-sonnet-latest',
+        'claude-3.7-sonnet-20250201',
+        'claude-3-7-sonnet-20250201',
+        // Official Claude API IDs
+        'claude-3-7-sonnet-20250219',
+        // AWS Bedrock format
+        'anthropic.claude-3-7-sonnet-20250219-v1:0',
+        // GCP Vertex AI format
+        'claude-3-7-sonnet@20250219'
+      ])('should return { min: 1024, max: 64000 } for %s', (modelId) => {
+        expect(findTokenLimit(modelId)).toEqual({ min: 1024, max: 64_000 })
+      })
+
+      it.each(['CLAUDE-3.7-SONNET', 'Claude-3-7-Sonnet-Latest'])('should be case insensitive for %s', (modelId) => {
+        expect(findTokenLimit(modelId)).toEqual({ min: 1024, max: 64_000 })
+      })
+    })
+
+    describe('Claude 4.0 series models', () => {
+      it.each([
+        'claude-sonnet-4',
+        'claude-sonnet-4.0',
+        'claude-sonnet-4-0',
+        'claude-sonnet-4-preview',
+        'claude-sonnet-4.0-preview',
+        'claude-sonnet-4-20250101',
+        // Official Claude API IDs
+        'claude-sonnet-4-20250514',
+        // AWS Bedrock format
+        'anthropic.claude-sonnet-4-20250514-v1:0',
+        // GCP Vertex AI format
+        'claude-sonnet-4@20250514'
+      ])('should return { min: 1024, max: 64000 } for Sonnet variant %s', (modelId) => {
+        expect(findTokenLimit(modelId)).toEqual({ min: 1024, max: 64_000 })
+      })
+
+      it.each([
+        'claude-opus-4',
+        'claude-opus-4.0',
+        'claude-opus-4-0',
+        'claude-opus-4-preview',
+        'claude-opus-4.0-preview',
+        'claude-opus-4-20250101',
+        // Official Claude API IDs
+        'claude-opus-4-20250514',
+        // AWS Bedrock format
+        'anthropic.claude-opus-4-20250514-v1:0',
+        // GCP Vertex AI format
+        'claude-opus-4@20250514'
+      ])('should return { min: 1024, max: 32000 } for Opus variant %s', (modelId) => {
+        expect(findTokenLimit(modelId)).toEqual({ min: 1024, max: 32_000 })
+      })
+
+      it.each(['CLAUDE-SONNET-4', 'Claude-Opus-4-Preview'])('should be case insensitive for %s', (modelId) => {
+        const expectedSonnet = { min: 1024, max: 64_000 }
+        const expectedOpus = { min: 1024, max: 32_000 }
+        const result = findTokenLimit(modelId)
+        expect(result).toBeDefined()
+        expect([expectedSonnet, expectedOpus]).toContainEqual(result)
+      })
+    })
+
+    describe('Claude Opus 4.1 models', () => {
+      it.each([
+        'claude-opus-4.1',
+        'claude-opus-4-1',
+        'claude-opus-4.1-preview',
+        'claude-opus-4-1-preview',
+        'claude-opus-4.1-20250120',
+        'claude-opus-4-1-20250120',
+        // Official Claude API IDs
+        'claude-opus-4-1-20250805',
+        // AWS Bedrock format
+        'anthropic.claude-opus-4-1-20250805-v1:0',
+        // GCP Vertex AI format
+        'claude-opus-4-1@20250805'
+      ])('should return { min: 1024, max: 32000 } for %s', (modelId) => {
+        expect(findTokenLimit(modelId)).toEqual({ min: 1024, max: 32_000 })
+      })
+
+      it.each(['CLAUDE-OPUS-4.1', 'Claude-Opus-4-1-Preview'])('should be case insensitive for %s', (modelId) => {
+        expect(findTokenLimit(modelId)).toEqual({ min: 1024, max: 32_000 })
+      })
+    })
+
+    describe('Claude 4.5 series models (Haiku, Sonnet, Opus)', () => {
+      it.each([
+        'claude-haiku-4.5',
+        'claude-haiku-4-5',
+        'claude-haiku-4.5-preview',
+        'claude-haiku-4-5-preview',
+        'claude-haiku-4.5-20250929',
+        'claude-haiku-4-5-20250929',
+        // Official Claude API IDs
+        'claude-haiku-4-5-20251001',
+        // AWS Bedrock format
+        'anthropic.claude-haiku-4-5-20251001-v1:0',
+        // GCP Vertex AI format
+        'claude-haiku-4-5@20251001'
+      ])('should return { min: 1024, max: 64000 } for Haiku variant %s', (modelId) => {
+        expect(findTokenLimit(modelId)).toEqual({ min: 1024, max: 64_000 })
+      })
+
+      it.each([
+        'claude-sonnet-4.5',
+        'claude-sonnet-4-5',
+        'claude-sonnet-4.5-preview',
+        'claude-sonnet-4-5-preview',
+        'claude-sonnet-4.5-20250929',
+        'claude-sonnet-4-5-20250929',
+        // Official Claude API IDs
+        'claude-sonnet-4-5-20250929',
+        // AWS Bedrock format
+        'anthropic.claude-sonnet-4-5-20250929-v1:0',
+        // GCP Vertex AI format
+        'claude-sonnet-4-5@20250929'
+      ])('should return { min: 1024, max: 64000 } for Sonnet variant %s', (modelId) => {
+        expect(findTokenLimit(modelId)).toEqual({ min: 1024, max: 64_000 })
+      })
+
+      it.each([
+        'claude-opus-4.5',
+        'claude-opus-4-5',
+        'claude-opus-4.5-preview',
+        'claude-opus-4-5-preview',
+        'claude-opus-4.5-20250929',
+        'claude-opus-4-5-20250929',
+        // Official Claude API IDs
+        'claude-opus-4-5-20251101',
+        // AWS Bedrock format
+        'anthropic.claude-opus-4-5-20251101-v1:0',
+        // GCP Vertex AI format
+        'claude-opus-4-5@20251101'
+      ])('should return { min: 1024, max: 64000 } for Opus variant %s', (modelId) => {
+        expect(findTokenLimit(modelId)).toEqual({ min: 1024, max: 64_000 })
+      })
+
+      it.each(['CLAUDE-HAIKU-4.5', 'Claude-Sonnet-4-5-Preview', 'CLAUDE-OPUS-4.5-20250929'])(
+        'should be case insensitive for %s',
+        (modelId) => {
+          expect(findTokenLimit(modelId)).toEqual({ min: 1024, max: 64_000 })
+        }
+      )
+    })
+
+    describe('Claude models that should NOT match', () => {
+      it.each([
+        'claude-3-opus',
+        'claude-3-sonnet',
+        'claude-3-haiku',
+        'claude-3.5-sonnet',
+        'claude-3-5-sonnet',
+        'claude-2.1',
+        'claude-instant',
+        'claude-haiku-4',
+        'claude-haiku-4.0',
+        'claude-haiku-4-0',
+        'claude-opus-4.2',
+        'claude-opus-4-2',
+        'claude-sonnet-4.2',
+        'claude-sonnet-4-2',
+        // Old Haiku models (no Extended thinking support)
+        'claude-3-5-haiku-20241022',
+        'claude-3-5-haiku-latest',
+        'anthropic.claude-3-5-haiku-20241022-v1:0',
+        'claude-3-5-haiku@20241022',
+        'claude-3-haiku-20240307',
+        'anthropic.claude-3-haiku-20240307-v1:0',
+        'claude-3-haiku@20240307'
+      ])('should return undefined for older/unsupported model %s', (modelId) => {
+        expect(findTokenLimit(modelId)).toBeUndefined()
+      })
+    })
+
+    describe('Edge cases', () => {
+      it('should handle models with custom suffixes', () => {
+        expect(findTokenLimit('claude-3.7-sonnet-custom-variant')).toEqual({ min: 1024, max: 64_000 })
+        expect(findTokenLimit('claude-opus-4.1-custom')).toEqual({ min: 1024, max: 32_000 })
+        expect(findTokenLimit('claude-sonnet-4.5-custom-variant')).toEqual({ min: 1024, max: 64_000 })
+      })
+
+      it('should NOT match non-existent Claude 4.1 variants (only Opus 4.1 exists)', () => {
+        // Claude Sonnet 4.1 and Haiku 4.1 do not exist
+        expect(findTokenLimit('claude-sonnet-4.1')).toBeUndefined()
+        expect(findTokenLimit('claude-haiku-4.1')).toBeUndefined()
+      })
+
+      it('should not match partial model names', () => {
+        expect(findTokenLimit('claude-3.7')).toBeUndefined()
+        expect(findTokenLimit('claude-opus')).toBeUndefined()
+        expect(findTokenLimit('claude-4.5')).toBeUndefined()
+      })
+    })
+  })
+})
+
+describe('isGemini3ThinkingTokenModel', () => {
+  it('should return true for Gemini 3 non-image models', () => {
+    expect(
+      isGemini3ThinkingTokenModel({
+        id: 'gemini-3-flash',
+        name: '',
+        provider: '',
+        group: ''
+      })
+    ).toBe(true)
+    expect(
+      isGemini3ThinkingTokenModel({
+        id: 'gemini-3-pro',
+        name: '',
+        provider: '',
+        group: ''
+      })
+    ).toBe(true)
+    expect(
+      isGemini3ThinkingTokenModel({
+        id: 'gemini-3-pro-preview',
+        name: '',
+        provider: '',
+        group: ''
+      })
+    ).toBe(true)
+    expect(
+      isGemini3ThinkingTokenModel({
+        id: 'google/gemini-3-flash',
+        name: '',
+        provider: '',
+        group: ''
+      })
+    ).toBe(true)
+    expect(
+      isGemini3ThinkingTokenModel({
+        id: 'gemini-3.0-flash',
+        name: '',
+        provider: '',
+        group: ''
+      })
+    ).toBe(true)
+    expect(
+      isGemini3ThinkingTokenModel({
+        id: 'gemini-3.5-pro-preview',
+        name: '',
+        provider: '',
+        group: ''
+      })
+    ).toBe(true)
+  })
+
+  it('should return false for Gemini 3 image models', () => {
+    expect(
+      isGemini3ThinkingTokenModel({
+        id: 'gemini-3-flash-image',
+        name: '',
+        provider: '',
+        group: ''
+      })
+    ).toBe(false)
+    expect(
+      isGemini3ThinkingTokenModel({
+        id: 'gemini-3-pro-image-preview',
+        name: '',
+        provider: '',
+        group: ''
+      })
+    ).toBe(false)
+    expect(
+      isGemini3ThinkingTokenModel({
+        id: 'gemini-3.0-flash-image-preview',
+        name: '',
+        provider: '',
+        group: ''
+      })
+    ).toBe(false)
+    expect(
+      isGemini3ThinkingTokenModel({
+        id: 'gemini-3.5-pro-image-preview',
+        name: '',
+        provider: '',
+        group: ''
+      })
+    ).toBe(false)
+  })
+
+  it('should return false for non-Gemini 3 models', () => {
+    expect(
+      isGemini3ThinkingTokenModel({
+        id: 'gemini-2.5-flash',
+        name: '',
+        provider: '',
+        group: ''
+      })
+    ).toBe(false)
+    expect(
+      isGemini3ThinkingTokenModel({
+        id: 'gemini-1.5-pro',
+        name: '',
+        provider: '',
+        group: ''
+      })
+    ).toBe(false)
+    expect(
+      isGemini3ThinkingTokenModel({
+        id: 'gpt-4',
+        name: '',
+        provider: '',
+        group: ''
+      })
+    ).toBe(false)
+    expect(
+      isGemini3ThinkingTokenModel({
+        id: 'claude-3-opus',
+        name: '',
+        provider: '',
+        group: ''
+      })
+    ).toBe(false)
+  })
+
+  it('should handle case insensitivity', () => {
+    expect(
+      isGemini3ThinkingTokenModel({
+        id: 'Gemini-3-Flash',
+        name: '',
+        provider: '',
+        group: ''
+      })
+    ).toBe(true)
+    expect(
+      isGemini3ThinkingTokenModel({
+        id: 'GEMINI-3-PRO',
+        name: '',
+        provider: '',
+        group: ''
+      })
+    ).toBe(true)
+    expect(
+      isGemini3ThinkingTokenModel({
+        id: 'Gemini-3-Pro-Image',
+        name: '',
+        provider: '',
+        group: ''
+      })
+    ).toBe(false)
+  })
+})
+
+describe('getModelSupportedReasoningEffortOptions', () => {
+  describe('Edge cases', () => {
+    it('should return undefined for undefined model', () => {
+      expect(getModelSupportedReasoningEffortOptions(undefined)).toBeUndefined()
+    })
+
+    it('should return undefined for null model', () => {
+      expect(getModelSupportedReasoningEffortOptions(null)).toBeUndefined()
+    })
+
+    it('should return undefined for non-reasoning models', () => {
+      expect(getModelSupportedReasoningEffortOptions(createModel({ id: 'gpt-4o' }))).toBeUndefined()
+      expect(getModelSupportedReasoningEffortOptions(createModel({ id: 'claude-3-opus' }))).toBeUndefined()
+      expect(getModelSupportedReasoningEffortOptions(createModel({ id: 'random-model' }))).toBeUndefined()
+    })
+  })
+
+  describe('OpenAI models', () => {
+    it('should return correct options for o-series models', () => {
+      expect(getModelSupportedReasoningEffortOptions(createModel({ id: 'o3' }))).toEqual(['low', 'medium', 'high'])
+      expect(getModelSupportedReasoningEffortOptions(createModel({ id: 'o3-mini' }))).toEqual(['low', 'medium', 'high'])
+      expect(getModelSupportedReasoningEffortOptions(createModel({ id: 'o4' }))).toEqual(['low', 'medium', 'high'])
+      expect(getModelSupportedReasoningEffortOptions(createModel({ id: 'gpt-oss-reasoning' }))).toEqual([
+        'low',
+        'medium',
+        'high'
+      ])
+    })
+
+    it('should return correct options for deep research models', () => {
+      // Note: Deep research models need to be actual OpenAI reasoning models to be detected
+      // 'sonar-deep-research' from Perplexity is the primary deep research model
+      expect(getModelSupportedReasoningEffortOptions(createModel({ id: 'sonar-deep-research' }))).toEqual(['medium'])
+    })
+
+    it('should return correct options for GPT-5 models', () => {
+      expect(getModelSupportedReasoningEffortOptions(createModel({ id: 'gpt-5' }))).toEqual([
+        'minimal',
+        'low',
+        'medium',
+        'high'
+      ])
+      expect(getModelSupportedReasoningEffortOptions(createModel({ id: 'gpt-5-preview' }))).toEqual([
+        'minimal',
+        'low',
+        'medium',
+        'high'
+      ])
+    })
+
+    it('should return correct options for GPT-5 Pro models', () => {
+      expect(getModelSupportedReasoningEffortOptions(createModel({ id: 'gpt-5-pro' }))).toEqual(['high'])
+      expect(getModelSupportedReasoningEffortOptions(createModel({ id: 'gpt-5-pro-preview' }))).toEqual(['high'])
+    })
+
+    it('should return correct options for GPT-5 Codex models', () => {
+      expect(getModelSupportedReasoningEffortOptions(createModel({ id: 'gpt-5-codex' }))).toEqual([
+        'low',
+        'medium',
+        'high'
+      ])
+      expect(getModelSupportedReasoningEffortOptions(createModel({ id: 'gpt-5-codex-mini' }))).toEqual([
+        'low',
+        'medium',
+        'high'
+      ])
+    })
+
+    it('should return correct options for GPT-5.1 models', () => {
+      expect(getModelSupportedReasoningEffortOptions(createModel({ id: 'gpt-5.1' }))).toEqual([
+        'none',
+        'low',
+        'medium',
+        'high'
+      ])
+      expect(getModelSupportedReasoningEffortOptions(createModel({ id: 'gpt-5.1-preview' }))).toEqual([
+        'none',
+        'low',
+        'medium',
+        'high'
+      ])
+      expect(getModelSupportedReasoningEffortOptions(createModel({ id: 'gpt-5.1-mini' }))).toEqual([
+        'none',
+        'low',
+        'medium',
+        'high'
+      ])
+    })
+
+    it('should return correct options for GPT-5.1 Codex models', () => {
+      expect(getModelSupportedReasoningEffortOptions(createModel({ id: 'gpt-5.1-codex' }))).toEqual([
+        'none',
+        'medium',
+        'high'
+      ])
+      expect(getModelSupportedReasoningEffortOptions(createModel({ id: 'gpt-5.1-codex-mini' }))).toEqual([
+        'none',
+        'medium',
+        'high'
+      ])
+    })
+  })
+
+  describe('Grok models', () => {
+    it('should return correct options for Grok 3 mini', () => {
+      expect(getModelSupportedReasoningEffortOptions(createModel({ id: 'grok-3-mini' }))).toEqual(['low', 'high'])
+    })
+
+    it('should return correct options for Grok 4 Fast', () => {
+      expect(
+        getModelSupportedReasoningEffortOptions(createModel({ id: 'grok-4-fast', provider: 'openrouter' }))
+      ).toEqual(['none', 'auto'])
+    })
+  })
+
+  describe('Gemini models', () => {
+    it('should return correct options for Gemini Flash models', () => {
+      expect(getModelSupportedReasoningEffortOptions(createModel({ id: 'gemini-2.5-flash-latest' }))).toEqual([
+        'none',
+        'low',
+        'medium',
+        'high',
+        'auto'
+      ])
+      expect(getModelSupportedReasoningEffortOptions(createModel({ id: 'gemini-flash-latest' }))).toEqual([
+        'none',
+        'low',
+        'medium',
+        'high',
+        'auto'
+      ])
+    })
+
+    it('should return correct options for Gemini Pro models', () => {
+      expect(getModelSupportedReasoningEffortOptions(createModel({ id: 'gemini-2.5-pro-latest' }))).toEqual([
+        'low',
+        'medium',
+        'high',
+        'auto'
+      ])
+      expect(getModelSupportedReasoningEffortOptions(createModel({ id: 'gemini-pro-latest' }))).toEqual([
+        'low',
+        'medium',
+        'high',
+        'auto'
+      ])
+    })
+
+    it('should return correct options for Gemini 3 models', () => {
+      expect(getModelSupportedReasoningEffortOptions(createModel({ id: 'gemini-3-flash' }))).toEqual([
+        'low',
+        'medium',
+        'high'
+      ])
+      expect(getModelSupportedReasoningEffortOptions(createModel({ id: 'gemini-3-pro-preview' }))).toEqual([
+        'low',
+        'medium',
+        'high'
+      ])
+    })
+  })
+
+  describe('Qwen models', () => {
+    it('should return correct options for controllable Qwen models', () => {
+      expect(getModelSupportedReasoningEffortOptions(createModel({ id: 'qwen-plus' }))).toEqual([
+        'none',
+        'low',
+        'medium',
+        'high'
+      ])
+      expect(getModelSupportedReasoningEffortOptions(createModel({ id: 'qwen-turbo' }))).toEqual([
+        'none',
+        'low',
+        'medium',
+        'high'
+      ])
+      expect(getModelSupportedReasoningEffortOptions(createModel({ id: 'qwen-flash' }))).toEqual([
+        'none',
+        'low',
+        'medium',
+        'high'
+      ])
+      expect(getModelSupportedReasoningEffortOptions(createModel({ id: 'qwen3-8b' }))).toEqual([
+        'none',
+        'low',
+        'medium',
+        'high'
+      ])
+    })
+
+    it('should return undefined for always-thinking Qwen models', () => {
+      // These models always think and don't support thinking token control
+      expect(getModelSupportedReasoningEffortOptions(createModel({ id: 'qwen3-thinking' }))).toBeUndefined()
+      expect(getModelSupportedReasoningEffortOptions(createModel({ id: 'qwen3-vl-235b-thinking' }))).toBeUndefined()
+    })
+  })
+
+  describe('Doubao models', () => {
+    it('should return correct options for auto-thinking Doubao models', () => {
+      expect(getModelSupportedReasoningEffortOptions(createModel({ id: 'doubao-seed-1.6' }))).toEqual([
+        'none',
+        'auto',
+        'high'
+      ])
+      expect(getModelSupportedReasoningEffortOptions(createModel({ id: 'doubao-1-5-thinking-pro-m' }))).toEqual([
+        'none',
+        'auto',
+        'high'
+      ])
+    })
+
+    it('should return correct options for Doubao models after 251015', () => {
+      expect(getModelSupportedReasoningEffortOptions(createModel({ id: 'doubao-seed-1-6-251015' }))).toEqual([
+        'minimal',
+        'low',
+        'medium',
+        'high'
+      ])
+      expect(getModelSupportedReasoningEffortOptions(createModel({ id: 'doubao-seed-1-6-lite-251015' }))).toEqual([
+        'minimal',
+        'low',
+        'medium',
+        'high'
+      ])
+    })
+
+    it('should return correct options for other Doubao thinking models', () => {
+      expect(getModelSupportedReasoningEffortOptions(createModel({ id: 'doubao-1.5-thinking-vision-pro' }))).toEqual([
+        'none',
+        'high'
+      ])
+    })
+  })
+
+  describe('Other providers', () => {
+    it('should return correct options for Hunyuan models', () => {
+      expect(getModelSupportedReasoningEffortOptions(createModel({ id: 'hunyuan-a13b' }))).toEqual(['none', 'auto'])
+    })
+
+    it('should return correct options for Zhipu models', () => {
+      expect(getModelSupportedReasoningEffortOptions(createModel({ id: 'glm-4.5' }))).toEqual(['none', 'auto'])
+      expect(getModelSupportedReasoningEffortOptions(createModel({ id: 'glm-4.6' }))).toEqual(['none', 'auto'])
+    })
+
+    it('should return correct options for Perplexity models', () => {
+      expect(getModelSupportedReasoningEffortOptions(createModel({ id: 'sonar-deep-research' }))).toEqual(['medium'])
+    })
+
+    it('should return correct options for DeepSeek hybrid models', () => {
+      expect(
+        getModelSupportedReasoningEffortOptions(createModel({ id: 'deepseek-v3.1', provider: 'deepseek' }))
+      ).toEqual(['none', 'auto'])
+      expect(
+        getModelSupportedReasoningEffortOptions(createModel({ id: 'deepseek-v3.2', provider: 'openrouter' }))
+      ).toEqual(['none', 'auto'])
+      expect(
+        getModelSupportedReasoningEffortOptions(createModel({ id: 'deepseek-chat', provider: 'deepseek' }))
+      ).toEqual(['none', 'auto'])
+    })
+  })
+
+  describe('Name-based fallback', () => {
+    it('should fall back to name when id does not match', () => {
+      // Grok 4 Fast requires openrouter provider to be recognized
+      expect(
+        getModelSupportedReasoningEffortOptions(
+          createModel({
+            id: 'custom-id',
+            name: 'grok-4-fast',
+            provider: 'openrouter'
+          })
+        )
+      ).toEqual(['none', 'auto'])
+
+      expect(
+        getModelSupportedReasoningEffortOptions(
+          createModel({
+            id: 'custom-id',
+            name: 'gpt-5.1'
+          })
+        )
+      ).toEqual(['none', 'low', 'medium', 'high'])
+
+      // Qwen models work well for name-based fallback
+      expect(
+        getModelSupportedReasoningEffortOptions(
+          createModel({
+            id: 'custom-id',
+            name: 'qwen-plus'
+          })
+        )
+      ).toEqual(['none', 'low', 'medium', 'high'])
+    })
+
+    it('should use id result when id matches', () => {
+      expect(
+        getModelSupportedReasoningEffortOptions(
+          createModel({
+            id: 'gpt-5.1',
+            name: 'Different Name'
+          })
+        )
+      ).toEqual(['none', 'low', 'medium', 'high'])
+
+      expect(
+        getModelSupportedReasoningEffortOptions(
+          createModel({
+            id: 'o3-mini',
+            name: 'Some other name'
+          })
+        )
+      ).toEqual(['low', 'medium', 'high'])
+    })
+  })
+
+  describe('Case sensitivity', () => {
+    it('should handle case insensitive model IDs', () => {
+      expect(getModelSupportedReasoningEffortOptions(createModel({ id: 'GPT-5.1' }))).toEqual([
+        'none',
+        'low',
+        'medium',
+        'high'
+      ])
+      expect(getModelSupportedReasoningEffortOptions(createModel({ id: 'O3-MINI' }))).toEqual(['low', 'medium', 'high'])
+      expect(getModelSupportedReasoningEffortOptions(createModel({ id: 'Gemini-2.5-Flash-Latest' }))).toEqual([
+        'none',
+        'low',
+        'medium',
+        'high',
+        'auto'
+      ])
+    })
+  })
+
+  describe('Integration with MODEL_SUPPORTED_OPTIONS', () => {
+    it('should return values that match MODEL_SUPPORTED_OPTIONS configuration', () => {
+      // Verify that returned values match the configuration
+      const model = createModel({ id: 'o3' })
+      const result = getModelSupportedReasoningEffortOptions(model)
+      expect(result).toEqual(MODEL_SUPPORTED_OPTIONS.o)
+
+      const gpt5Model = createModel({ id: 'gpt-5' })
+      const gpt5Result = getModelSupportedReasoningEffortOptions(gpt5Model)
+      expect(gpt5Result).toEqual(MODEL_SUPPORTED_OPTIONS.gpt5)
+
+      const geminiModel = createModel({ id: 'gemini-2.5-flash-latest' })
+      const geminiResult = getModelSupportedReasoningEffortOptions(geminiModel)
+      expect(geminiResult).toEqual(MODEL_SUPPORTED_OPTIONS.gemini)
+    })
   })
 })

@@ -19,7 +19,8 @@ import {
   isSupportEnableThinkingProvider,
   isSupportServiceTierProvider,
   isSupportStreamOptionsProvider,
-  isSupportUrlContextProvider
+  isSupportUrlContextProvider,
+  isSupportVerbosityProvider
 } from '../provider'
 
 vi.mock('@renderer/store/settings', () => ({
@@ -104,6 +105,35 @@ describe('provider utils', () => {
     expect(isSupportServiceTierProvider(createSystemProvider({ id: SystemProviderIds.github }))).toBe(false)
   })
 
+  it('determines verbosity support', () => {
+    // Custom providers with explicit flag
+    expect(isSupportVerbosityProvider(createProvider({ apiOptions: { isNotSupportVerbosity: false } }))).toBe(true)
+    expect(isSupportVerbosityProvider(createProvider({ apiOptions: { isNotSupportVerbosity: true } }))).toBe(false)
+
+    // Custom providers without apiOptions (should support by default)
+    expect(isSupportVerbosityProvider(createProvider())).toBe(true)
+    expect(isSupportVerbosityProvider(createProvider({ apiOptions: {} }))).toBe(true)
+
+    // System providers that support verbosity (default behavior)
+    expect(isSupportVerbosityProvider(createSystemProvider())).toBe(true)
+    expect(isSupportVerbosityProvider(createSystemProvider({ id: SystemProviderIds.openai }))).toBe(true)
+
+    // System providers in the NOT_SUPPORT_VERBOSITY_PROVIDERS list (cannot be overridden by apiOptions)
+    expect(isSupportVerbosityProvider(createSystemProvider({ id: SystemProviderIds.groq }))).toBe(false)
+    expect(
+      isSupportVerbosityProvider(
+        createSystemProvider({ id: SystemProviderIds.groq, apiOptions: { isNotSupportVerbosity: false } })
+      )
+    ).toBe(false)
+
+    // apiOptions can disable verbosity for any provider
+    expect(
+      isSupportVerbosityProvider(
+        createSystemProvider({ id: SystemProviderIds.openai, apiOptions: { isNotSupportVerbosity: true } })
+      )
+    ).toBe(false)
+  })
+
   it('detects URL context capable providers', () => {
     expect(isSupportUrlContextProvider(createProvider({ type: 'gemini' }))).toBe(true)
     expect(
@@ -159,7 +189,7 @@ describe('provider utils', () => {
 
     expect(isAnthropicProvider(createProvider({ type: 'anthropic' }))).toBe(true)
     expect(isGeminiProvider(createProvider({ type: 'gemini' }))).toBe(true)
-    expect(isAIGatewayProvider(createProvider({ type: 'ai-gateway' }))).toBe(true)
+    expect(isAIGatewayProvider(createProvider({ type: 'gateway' }))).toBe(true)
   })
 
   it('computes API version support', () => {
