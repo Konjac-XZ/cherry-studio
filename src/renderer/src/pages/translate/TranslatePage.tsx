@@ -688,7 +688,7 @@ const TranslatePage: FC = () => {
   const couldFlip = useMemo(
     () =>
       sourceLanguage === 'auto' &&
-      !isBidirectional &&
+      isBidirectional &&
       (translating || (detectedLanguage !== null && detectedLanguage.langCode !== UNKNOWN.langCode)),
     [detectedLanguage, isBidirectional, sourceLanguage, translating]
   )
@@ -1375,7 +1375,9 @@ const TranslatePage: FC = () => {
               couldTranslate={couldTranslate}
               onAbort={onAbort}
             />
-            <FlipButton translating={translating} onFlip={handleFlipLanguage} couldTranslate={couldTranslate} />
+            {couldFlip && (
+              <FlipButton translating={translating} onFlip={handleFlipLanguage} couldTranslate={couldTranslate} />
+            )}
           </InnerOperationBar>
           <InnerOperationBar style={{ justifyContent: 'flex-end' }}>
             <ModelSelectButton
