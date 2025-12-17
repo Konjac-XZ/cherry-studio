@@ -6,6 +6,9 @@
         "failed": "Failed to add a agent",
         "invalid_agent": "Invalid Agent"
       },
+      "model": {
+        "tooltip": "Currently, only models that support Anthropic endpoints are available for the Agent feature."
+      },
       "title": "Add Agent",
       "type": {
         "placeholder": "Select an agent type"
@@ -28,12 +31,26 @@
       }
     },
     "gitBash": {
+      "autoDetected": "Using auto-detected Git Bash",
+      "clear": {
+        "button": "Clear custom path"
+      },
+      "customPath": "Using custom path: {{path}}",
       "error": {
         "description": "Git Bash is required to run agents on Windows. The agent cannot function without it. Please install Git for Windows from",
         "recheck": "Recheck Git Bash Installation",
         "title": "Git Bash Required"
       },
+      "found": {
+        "title": "Git Bash configured"
+      },
       "notFound": "Git Bash not found. Please install it first.",
+      "pick": {
+        "button": "Select Git Bash Path",
+        "failed": "Failed to set Git Bash path",
+        "invalidPath": "Selected file is not a valid Git Bash executable (bash.exe).",
+        "title": "Select Git Bash executable"
+      },
       "success": "Git Bash detected successfully!"
     },
     "input": {
@@ -280,6 +297,7 @@
         "denied": "Tool request was denied.",
         "timeout": "Tool request timed out before receiving approval."
       },
+      "toolPendingFallback": "Tool",
       "waiting": "Waiting for tool permission decision..."
     },
     "type": {
@@ -467,6 +485,14 @@
         "url_placeholder": "Enter JSON URL"
       },
       "manage": {
+        "batch_delete": {
+          "button": "Batch Delete",
+          "confirm": "Are you sure you want to delete the selected {{count}} assistants?"
+        },
+        "mode": {
+          "delete": "Delete",
+          "sort": "Sort"
+        },
         "title": "Manage Assistants"
       },
       "my_agents": "My Assistants",
@@ -521,7 +547,8 @@
         "low": "Low",
         "medium": "Medium",
         "minimal": "Minimal",
-        "off": "Off"
+        "off": "Off",
+        "xhigh": "Extra High"
       },
       "regular_phrases": {
         "add": "Add Phrase",
@@ -1162,6 +1189,7 @@
     "no_results": "No results",
     "none": "None",
     "off": "Off",
+    "on": "On",
     "open": "Open",
     "paste": "Paste",
     "placeholders": {
@@ -1181,6 +1209,7 @@
     "saved": "Saved",
     "search": "Search",
     "select": "Select",
+    "select_all": "Select All",
     "selected": "Selected",
     "selectedItems": "Selected {{count}} items",
     "selectedMessages": "Selected {{count}} messages",
@@ -1209,7 +1238,7 @@
   "endpoint_type": {
     "anthropic": "Anthropic",
     "gemini": "Gemini",
-    "image-generation": "Image Generation",
+    "image-generation": "Image Generation (OpenAI)",
     "jina-rerank": "Jina Rerank",
     "openai": "OpenAI",
     "openai-response": "OpenAI-Response"
@@ -2219,7 +2248,10 @@
     "untitled_folder": "New Folder",
     "untitled_note": "Untitled Note",
     "upload_failed": "Note upload failed",
-    "upload_success": "Note uploaded success"
+    "upload_files": "Upload Files",
+    "upload_folder": "Upload Folder",
+    "upload_success": "Note uploaded success",
+    "uploading_files": "Uploading {{count}} files..."
   },
   "notification": {
     "assistant": "Assistant Response",
@@ -2296,7 +2328,7 @@
     "failed": {
       "install": "Install OVMS failed:",
       "install_code_100": "Unknown Error",
-      "install_code_101": "Only supports Intel(R) Core(TM) Ultra CPU",
+      "install_code_101": "Only supports Intel(R) CPU",
       "install_code_102": "Only supports Windows",
       "install_code_103": "Download OVMS runtime failed",
       "install_code_104": "Failed to install OVMS runtime",
@@ -2510,7 +2542,8 @@
   },
   "preview": {
     "copy": {
-      "image": "Copy as image"
+      "image": "Copy as image",
+      "src": "Copy Image Source"
     },
     "dialog": "Open Dialog",
     "label": "Preview",
@@ -2531,7 +2564,7 @@
   },
   "provider": {
     "302ai": "302.AI",
-    "ai-gateway": "AI Gateway",
+    "ai-gateway": "Vercel AI Gateway",
     "aihubmix": "AiHubMix",
     "aionly": "AiOnly",
     "alayanew": "Alaya NeW",
@@ -3906,6 +3939,7 @@
       "jsonSaveError": "Failed to save JSON configuration.",
       "jsonSaveSuccess": "JSON configuration has been saved.",
       "logoUrl": "Logo URL",
+      "logs": "Logs",
       "longRunning": "Long Running Mode",
       "longRunningTooltip": "When enabled, the server supports long-running tasks. When receiving progress notifications, the timeout will be reset and the maximum execution time will be extended to 10 minutes.",
       "marketplaces": "Marketplaces",
@@ -3925,6 +3959,7 @@
       "name": "Name",
       "newServer": "MCP Server",
       "noDescriptionAvailable": "No description available",
+      "noLogs": "No logs yet",
       "noServers": "No servers configured",
       "not_support": "Model not supported",
       "npx_list": {
@@ -4273,6 +4308,12 @@
         "tip": "Specifies the latency tier to use for processing the request",
         "title": "Service Tier"
       },
+      "stream_options": {
+        "include_usage": {
+          "tip": "Whether token usage is included (applicable only to the OpenAI Chat Completions API)",
+          "title": "Include usage"
+        }
+      },
       "summary_text_mode": {
         "auto": "auto",
         "concise": "concise",
@@ -4374,7 +4415,7 @@
         "url": {
           "preview": "Preview: {{url}}",
           "reset": "Reset",
-          "tip": "ending with # forces use of input address"
+          "tip": "Add # at the end to disable the automatically appended API version."
         }
       },
       "api_host": "API Host",
