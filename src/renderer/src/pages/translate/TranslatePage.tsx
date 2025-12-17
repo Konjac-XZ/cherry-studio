@@ -402,10 +402,6 @@ const TranslatePage: FC = () => {
       abortKey: string
     ): Promise<void> => {
       try {
-        if (translating) {
-          return
-        }
-
         let translated: string
         dispatch(setTranslateAbortKey(abortKey))
 
@@ -1398,9 +1394,12 @@ const TranslatePage: FC = () => {
               couldTranslate={couldTranslate}
               onAbort={onAbort}
             />
-            {couldFlip && (
-              <FlipButton translating={translating} onFlip={handleFlipLanguage} couldTranslate={couldTranslate} />
-            )}
+            <FlipButton
+              onFlip={handleFlipLanguage}
+              couldFlip={couldFlip}
+              couldTranslate={couldTranslate}
+              translating={translating}
+            />
           </InnerOperationBar>
           <InnerOperationBar style={{ justifyContent: 'flex-end' }}>
             <ModelSelectButton
@@ -1787,23 +1786,34 @@ const TranslateButton = ({
 }
 
 const FlipButton = ({
-  translating,
   onFlip,
-  couldTranslate
+  couldFlip,
+  couldTranslate,
+  translating
 }: {
-  translating: boolean
   onFlip: () => void
+  couldFlip: boolean
   couldTranslate: boolean
+  translating: boolean
 }) => {
   const { t } = useTranslation()
+  const isDisabled = !couldFlip || (!couldTranslate && !translating)
+
   return (
     <Tooltip title={t('translate.flip.label')} placement="bottom">
       <Button
-        type="primary"
-        variant="outlined"
         onClick={onFlip}
-        disabled={!couldTranslate || translating}
+        disabled={isDisabled}
         icon={<RefreshCw size={14} />}
+        style={
+          isDisabled
+            ? undefined
+            : {
+                border: '1px solid #faad14',
+                background: 'white',
+                color: '#faad14'
+              }
+        }
       />
     </Tooltip>
   )
