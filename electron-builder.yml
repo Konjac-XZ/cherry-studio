@@ -134,54 +134,38 @@ artifactBuildCompleted: scripts/artifact-build-completed.js
 releaseInfo:
   releaseNotes: |
     <!--LANG:en-->
-    Cherry Studio 1.7.4 - New Browser MCP & Model Updates
+    Cherry Studio 1.7.6 - New Models & MCP Enhancements
 
-    This release adds a powerful browser automation MCP server, new web search provider, and model support updates.
+    This release adds support for new AI models and includes a new MCP server for memory management.
 
     ✨ New Features
-    - [MCP] Add @cherry/browser CDP MCP server with session management for browser automation
-    - [Web Search] Add ExaMCP free web search provider (no API key required)
-    - [Model] Support GPT 5.2 series models
-    - [Model] Add capabilities support for Doubao Seed Code models (tool calling, reasoning, vision)
-
-    🔧 Improvements
-    - [Translate] Add reasoning effort option to translate service
-    - [i18n] Improve zh-TW Traditional Chinese locale
-    - [Settings] Update MCP Settings layout and styling
+    - [Models] Add support for Xiaomi MiMo model
+    - [Models] Add support for Gemini 3 Flash and Pro model detection
+    - [Models] Add support for Volcengine Doubao-Seed-1.8 model
+    - [MCP] Add Nowledge Mem builtin MCP server for memory management
+    - [Settings] Add default reasoning effort option to resolve confusion between undefined and none
 
     🐛 Bug Fixes
-    - [Chat] Fix line numbers being wrongly copied from code blocks
-    - [Translate] Fix default to first supported reasoning effort when translating
-    - [Chat] Fix preserve thinking block in assistant messages
-    - [Web Search] Fix max search result limit
-    - [Embedding] Fix embedding dimensions retrieval for ModernAiProvider
-    - [Chat] Fix token calculation in prompt tool use plugin
-    - [Model] Fix Ollama provider options for Qwen model support
-    - [UI] Fix Chat component marginRight calculation for improved layout
+    - [Azure] Restore deployment-based URLs for non-v1 apiVersion
+    - [Translation] Disable reasoning mode for translation to improve efficiency
+    - [Image] Update API path for image generation requests in OpenAIBaseClient
+    - [Windows] Auto-discover and persist Git Bash path on Windows for scoop users
 
     <!--LANG:zh-CN-->
-    Cherry Studio 1.7.4 - 新增浏览器 MCP 与模型更新
+    Cherry Studio 1.7.6 - 新模型与 MCP 增强
 
-    本次更新新增强大的浏览器自动化 MCP 服务器、新的网页搜索提供商以及模型支持更新。
+    本次更新添加了多个新 AI 模型支持，并新增记忆管理 MCP 服务器。
 
     ✨ 新功能
-    - [MCP] 新增 @cherry/browser CDP MCP 服务器，支持会话管理的浏览器自动化
-    - [网页搜索] 新增 ExaMCP 免费网页搜索提供商（无需 API 密钥）
-    - [模型] 支持 GPT 5.2 系列模型
-    - [模型] 为豆包 Seed Code 模型添加能力支持（工具调用、推理、视觉）
-
-    🔧 功能改进
-    - [翻译] 为翻译服务添加推理强度选项
-    - [国际化] 改进繁体中文（zh-TW）本地化
-    - [设置] 优化 MCP 设置布局和样式
+    - [模型] 添加小米 MiMo 模型支持
+    - [模型] 添加 Gemini 3 Flash 和 Pro 模型检测支持
+    - [模型] 添加火山引擎 Doubao-Seed-1.8 模型支持
+    - [MCP] 新增 Nowledge Mem 内置 MCP 服务器，用于记忆管理
+    - [设置] 添加默认推理强度选项，解决 undefined 和 none 之间的混淆
 
     🐛 问题修复
-    - [聊天] 修复代码块中行号被错误复制的问题
-    - [翻译] 修复翻译时默认使用第一个支持的推理强度
-    - [聊天] 修复助手消息中思考块的保留问题
-    - [网页搜索] 修复最大搜索结果数限制
-    - [嵌入] 修复 ModernAiProvider 嵌入维度获取问题
-    - [聊天] 修复提示词工具使用插件的 token 计算问题
-    - [模型] 修复 Ollama 提供商对 Qwen 模型的支持选项
-    - [界面] 修复聊天组件右边距计算以改善布局
+    - [Azure] 修复非 v1 apiVersion 的部署 URL 问题
+    - [翻译] 禁用翻译时的推理模式以提高效率
+    - [图像] 更新 OpenAIBaseClient 中图像生成请求的 API 路径
+    - [Windows] 自动发现并保存 Windows scoop 用户的 Git Bash 路径
     <!--LANG:END-->
