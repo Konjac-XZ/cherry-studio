@@ -39,7 +39,8 @@ export const DEFAULT_ASSISTANT_SETTINGS = {
   autoCopy: false,
   // It would gracefully fallback to prompt if not supported by model.
   toolUseMode: 'function',
-  customParameters: []
+  customParameters: [],
+  reasoning_effort: 'default'
 } as const satisfies AssistantSettings
 
 export function getDefaultAssistant(): Assistant {
@@ -75,7 +76,9 @@ export function getDefaultTranslateAssistant(
     throw new Error('Unknown target language')
   }
 
-  const reasoningEffort = getModelSupportedReasoningEffortOptions(model)?.[0]
+  const supportedOptions = getModelSupportedReasoningEffortOptions(model)
+  // disable reasoning if it could be disabled, otherwise no configuration
+  const reasoningEffort = supportedOptions?.includes('none') ? 'none' : 'default'
   const settings = {
     temperature: 0.7,
     reasoning_effort: reasoningEffort,
@@ -189,7 +192,7 @@ export const getAssistantSettings = (assistant: Assistant): AssistantSettings =>
     autoCopy: assistant?.settings?.autoCopy ?? false,
     toolUseMode: assistant?.settings?.toolUseMode ?? 'function',
     defaultModel: assistant?.defaultModel ?? undefined,
-    reasoning_effort: assistant?.settings?.reasoning_effort ?? undefined,
+    reasoning_effort: assistant?.settings?.reasoning_effort ?? 'default',
     customParameters: assistant?.settings?.customParameters ?? []
   }
 }
