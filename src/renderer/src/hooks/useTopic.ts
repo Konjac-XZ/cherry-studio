@@ -1,3 +1,4 @@
+import { loggerService } from '@logger'
 import db from '@renderer/databases'
 import i18n from '@renderer/i18n'
 import { fetchMessagesSummary } from '@renderer/services/ApiService'
@@ -18,7 +19,7 @@ import { getStoreSetting } from './useSettings'
 let _activeTopic: Topic
 let _setActiveTopic: Dispatch<SetStateAction<Topic>>
 
-// const logger = loggerService.withContext('useTopic')
+const logger = loggerService.withContext('useTopic')
 
 export function useActiveTopic(assistantId: string, topic?: Topic) {
   const { assistant } = useAssistant(assistantId)
@@ -29,10 +30,26 @@ export function useActiveTopic(assistantId: string, topic?: Topic) {
 
   useEffect(() => {
     if (activeTopic) {
-      store.dispatch(loadTopicMessagesThunk(activeTopic.id))
+      const startAt = performance?.now?.() ?? Date.now()
+      const topicId = activeTopic.id
+      const assistantId = assistant?.id
+      logger.info('Topic switch: load start', { topicId, assistantId })
+      const loadPromise = store.dispatch(loadTopicMessagesThunk(topicId))
+      loadPromise
+        .then(() => {
+          const endAt = performance?.now?.() ?? Date.now()
+          logger.info('Topic switch: load complete', {
+            topicId,
+            assistantId,
+            durationMs: Math.round(endAt - startAt)
+          })
+        })
+        .catch((error) => {
+          logger.error('Topic switch: load failed', error as Error)
+        })
       EventEmitter.emit(EVENT_NAMES.CHANGE_TOPIC, activeTopic)
     }
-  }, [activeTopic])
+  }, [activeTopic, assistant?.id])
 
   useEffect(() => {
     // activeTopic not in assistant.topics

@@ -1,3 +1,4 @@
+import { loggerService } from '@logger'
 import { ErrorBoundary } from '@renderer/components/ErrorBoundary'
 import { useAgentSessionInitializer } from '@renderer/hooks/agents/useAgentSessionInitializer'
 import { useAssistants } from '@renderer/hooks/useAssistant'
@@ -14,7 +15,7 @@ import type { Assistant, Topic } from '@renderer/types'
 import { MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH, SECOND_MIN_WINDOW_WIDTH } from '@shared/config/constant'
 import { AnimatePresence, motion } from 'motion/react'
 import type { FC } from 'react'
-import { startTransition, useCallback, useEffect, useMemo, useState } from 'react'
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useDispatch } from 'react-redux'
 import { useLocation, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
@@ -29,6 +30,15 @@ const HomePage: FC = () => {
   const { assistants } = useAssistants()
   const navigate = useNavigate()
   const { isLeftNavbar } = useNavbarPosition()
+  const logger = loggerService.withContext('HomePage')
+  const assistantSwitchTimingRef = useRef<{
+    fromId?: string
+    toId: string
+    startAt: number
+    fromTopicId?: string
+    toTopicId?: string
+    toTopicCount?: number
+  } | null>(null)
 
   // Initialize agent session hook
   useAgentSessionInitializer()
@@ -95,6 +105,16 @@ const HomePage: FC = () => {
     // TODO: allow to set it as null.
     (newAssistant: Assistant) => {
       if (newAssistant.id === activeAssistant?.id) return
+      const startAt = performance?.now?.() ?? Date.now()
+      assistantSwitchTimingRef.current = {
+        fromId: activeAssistant?.id,
+        toId: newAssistant.id,
+        startAt,
+        fromTopicId: activeTopic?.id,
+        toTopicId: newAssistant.topics?.[0]?.id,
+        toTopicCount: newAssistant.topics?.length ?? 0
+      }
+      logger.info('Assistant switch started', assistantSwitchTimingRef.current)
       startTransition(() => {
         _setActiveAssistant(newAssistant)
         if (newAssistant.id !== 'fake') {
@@ -105,7 +125,7 @@ const HomePage: FC = () => {
         _setActiveTopic((prev) => (newTopic?.id === prev.id ? prev : newTopic))
       })
     },
-    [_setActiveTopic, activeAssistant?.id, dispatch]
+    [_setActiveTopic, activeAssistant?.id, activeTopic?.id, dispatch, logger]
   )
 
   const setActiveTopic = useCallback(
@@ -195,6 +215,22 @@ const HomePage: FC = () => {
     state?.topic && setActiveTopic(state?.topic)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state])
+
+  useEffect(() => {
+    const timing = assistantSwitchTimingRef.current
+    if (!timing || timing.toId !== activeAssistant?.id) {
+      return
+    }
+
+    const endAt = performance?.now?.() ?? Date.now()
+    logger.info('Assistant switch completed', {
+      fromAssistantId: timing.fromId,
+      toAssistantId: timing.toId,
+      durationMs: Math.round(endAt - timing.startAt),
+      activeTopicId: activeTopic?.id
+    })
+    assistantSwitchTimingRef.current = null
+  }, [activeAssistant?.id, activeTopic?.id, logger])
 
   useEffect(() => {
     const canMinimize = topicPosition == 'left' ? !showAssistants : !showAssistants && !showTopics
