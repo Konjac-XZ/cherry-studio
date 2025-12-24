@@ -33,7 +33,7 @@ jobs:
       # 2) Guard / lock: if blocked, do nothing this run
       #    - Blocked if an open conflict issue exists (needs-manual-merge)
       #    - Blocked if an open sync PR already exists (don't keep updating it while you're asleep)
-      - name: Guard: skip if blocked (open conflict issue or open sync PR)
+      - name: "Guard: skip if blocked (open conflict issue or open sync PR)"
         id: guard
         uses: actions/github-script@v7
         with:
