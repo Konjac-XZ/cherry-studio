@@ -33,8 +33,7 @@ import {
 } from '@renderer/types'
 import { getFileExtension, isTextFile, runAsyncFunction, uuid } from '@renderer/utils'
 import { abortCompletion, readyToAbort, removeAbortController } from '@renderer/utils/abortController'
-import { isAbortError } from '@renderer/utils/error'
-import { formatErrorMessage } from '@renderer/utils/error'
+import { formatErrorMessageWithPrefix, isAbortError } from '@renderer/utils/error'
 import { getFilesFromDropEvent, getTextFromDropEvent } from '@renderer/utils/input'
 import {
   createInputScrollHandler,
@@ -414,17 +413,11 @@ const TranslatePage: FC = () => {
             window.toast.info(t('translate.info.aborted'))
           } else {
             logger.error('Failed to translate text', e as Error)
-            window.toast.error(t('translate.error.failed') + ': ' + formatErrorMessage(e))
+            window.toast.error(formatErrorMessageWithPrefix(e, t('translate.error.failed')))
           }
           setTranslating(false)
           return
         }
-
-        // Ensure any trailing throttled updates have been applied and state matches final translated result
-        if (typeof (throttledUpdate as any).flush === 'function') {
-          ;(throttledUpdate as any).flush()
-        }
-        setTranslatedContent(translated)
 
         // Ensure any trailing throttled updates have been applied and state matches final translated result
         if (typeof (throttledUpdate as any).flush === 'function') {
@@ -448,11 +441,11 @@ const TranslatePage: FC = () => {
           await saveTranslateHistory(text, translated, actualSourceLanguage.langCode, actualTargetLanguage.langCode)
         } catch (e) {
           logger.error('Failed to save translate history', e as Error)
-          window.toast.error(t('translate.history.error.save') + ': ' + formatErrorMessage(e))
+          window.toast.error(formatErrorMessageWithPrefix(e, t('translate.history.error.save')))
         }
       } catch (e) {
         logger.error('Failed to translate', e as Error)
-        window.toast.error(t('translate.error.unknown') + ': ' + formatErrorMessage(e))
+        window.toast.error(formatErrorMessageWithPrefix(e, t('translate.error.unknown')))
       } finally {
         removeAbortController(abortKey)
       }
@@ -556,7 +549,7 @@ const TranslatePage: FC = () => {
         logger.info('Translation aborted by user during detection or translation')
       } else {
         logger.error('Translation error:', error as Error)
-        window.toast.error(t('translate.error.failed') + ': ' + formatErrorMessage(error))
+        window.toast.error(formatErrorMessageWithPrefix(error, t('translate.error.failed')))
       }
       return
     } finally {
@@ -928,7 +921,7 @@ const TranslatePage: FC = () => {
       setAutoDetectionMethod(method)
     } catch (e) {
       logger.error('Failed to update auto detection method setting.', e as Error)
-      window.toast.error(t('translate.error.detect.update_setting') + formatErrorMessage(e))
+      window.toast.error(formatErrorMessageWithPrefix(e, t('translate.error.detect.update_setting')))
     }
   }
 
@@ -1066,7 +1059,7 @@ const TranslatePage: FC = () => {
               isText = await isTextFile(file.path)
             } catch (e) {
               logger.error('Failed to check file type.', e as Error)
-              window.toast.error(t('translate.files.error.check_type') + ': ' + formatErrorMessage(e))
+              window.toast.error(formatErrorMessageWithPrefix(e, t('translate.files.error.check_type')))
               return
             }
           } else {
@@ -1098,11 +1091,11 @@ const TranslatePage: FC = () => {
             setText(text + result)
           } catch (e) {
             logger.error('Failed to read file.', e as Error)
-            window.toast.error(t('translate.files.error.unknown') + ': ' + formatErrorMessage(e))
+            window.toast.error(formatErrorMessageWithPrefix(e, t('translate.files.error.unknown')))
           }
         } catch (e) {
           logger.error('Failed to read file.', e as Error)
-          window.toast.error(t('translate.files.error.unknown') + ': ' + formatErrorMessage(e))
+          window.toast.error(formatErrorMessageWithPrefix(e, t('translate.files.error.unknown')))
         }
       }
       const promise = _readFile()
@@ -1146,7 +1139,7 @@ const TranslatePage: FC = () => {
       await processFile(file)
     } catch (e) {
       logger.error('Unknown error when selecting file.', e as Error)
-      window.toast.error(t('translate.files.error.unknown') + ': ' + formatErrorMessage(e))
+      window.toast.error(formatErrorMessageWithPrefix(e, t('translate.files.error.unknown')))
     } finally {
       clearFiles()
       setIsProcessing(false)
