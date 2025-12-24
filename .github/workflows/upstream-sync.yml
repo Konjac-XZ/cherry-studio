@@ -5,6 +5,11 @@ on:
     - cron: "0 */4 * * *" # every 4 hours
   workflow_dispatch:
 
+# 1) Prevent overlapping runs (no “jumbled together” behavior)
+concurrency:
+  group: upstream-sync
+  cancel-in-progress: true
+
 permissions:
   contents: write
   pull-requests: write
@@ -25,22 +30,60 @@ jobs:
           git config --local user.name "upstream-sync-bot"
           git config --local user.email "upstream-sync-bot@users.noreply.github.com"
 
+      # 2) Guard / lock: if blocked, do nothing this run
+      #    - Blocked if an open conflict issue exists (needs-manual-merge)
+      #    - Blocked if an open sync PR already exists (don't keep updating it while you're asleep)
+      - name: Guard: skip if blocked (open conflict issue or open sync PR)
+        id: guard
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            // Open conflict-lock issue?
+            const openIssues = await github.rest.issues.listForRepo({
+              owner, repo,
+              state: "open",
+              labels: "upstream-sync,needs-manual-merge",
+              per_page: 1,
+            });
+            const blockedByIssue = openIssues.data.length > 0;
+
+            // Open upstream-sync PR?
+            const prs = await github.rest.pulls.list({
+              owner, repo,
+              state: "open",
+              head: `${owner}:bot/upstream-sync`,
+              base: "main",
+              per_page: 1,
+            });
+            const blockedByPR = prs.data.length > 0;
+
+            core.setOutput("blocked", (blockedByIssue || blockedByPR) ? "true" : "false");
+
+            if (blockedByIssue) core.notice("Sync is locked by an open merge-conflict issue (needs-manual-merge).");
+            if (blockedByPR) core.notice("An upstream-sync PR is already open; skipping updates.");
+
       - name: Ensure remote-tracking ref for PR branch exists
+        if: steps.guard.outputs.blocked != 'true'
         run: |
           git fetch origin bot/upstream-sync:refs/remotes/origin/bot/upstream-sync || true
 
       - name: Add/fetch upstream
+        if: steps.guard.outputs.blocked != 'true'
         run: |
           git remote add upstream https://github.com/CherryHQ/cherry-studio.git || true
           git fetch upstream main --prune
 
       - name: Check if upstream is ahead
+        if: steps.guard.outputs.blocked != 'true'
         id: check
         run: |
           echo "ahead=$(git rev-list --count HEAD..upstream/main)" >> "$GITHUB_OUTPUT"
 
       - name: Try merge upstream into main (local)
-        if: steps.check.outputs.ahead != '0'
+        if: steps.guard.outputs.blocked != 'true' && steps.check.outputs.ahead != '0'
         id: merge
         shell: bash
         run: |
@@ -56,7 +99,7 @@ jobs:
           fi
 
       - name: Create or update PR
-        if: steps.check.outputs.ahead != '0' && steps.merge.outputs.status == 'clean'
+        if: steps.guard.outputs.blocked != 'true' && steps.check.outputs.ahead != '0' && steps.merge.outputs.status == 'clean'
         id: cpr
         uses: peter-evans/create-pull-request@v8
         with:
@@ -69,35 +112,54 @@ jobs:
             Upstream commits not yet in this repo: ${{ steps.check.outputs.ahead }}
 
       - name: Enable auto-merge
-        if: steps.check.outputs.ahead != '0' && steps.merge.outputs.status == 'clean' && steps.cpr.outputs.pull-request-number != ''
+        if: steps.guard.outputs.blocked != 'true' && steps.check.outputs.ahead != '0' && steps.merge.outputs.status == 'clean' && steps.cpr.outputs.pull-request-number != ''
         uses: peter-evans/enable-pull-request-automerge@v3
         with:
           token: ${{ secrets.SYNC_PAT }}
           pull-request-number: ${{ steps.cpr.outputs.pull-request-number }}
           merge-method: merge
 
-      - name: Open issue on conflicts (email via GitHub notifications)
-        if: steps.check.outputs.ahead != '0' && steps.merge.outputs.status == 'conflict'
+      # 3) Conflict handling: create-or-comment ONE lock issue (no spam),
+      #    and future runs will stop due to the guard step.
+      - name: Open or update conflict issue (locks future runs)
+        if: steps.guard.outputs.blocked != 'true' && steps.check.outputs.ahead != '0' && steps.merge.outputs.status == 'conflict'
         uses: actions/github-script@v7
         with:
           script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const title = "Upstream sync failed: merge conflicts";
+            const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
             const conflicts = `${{ steps.merge.outputs.conflicts }}`.trim() || "(unable to detect files)";
-            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            const mention = "@Konjac-XZ"; // 改成你的 GitHub 用户名，@mention 更容易触发邮件
+            const mention = "@Konjac-XZ"; // change if needed
 
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: "Upstream sync failed: merge conflicts",
-              body: [
-                `${mention} 自动同步 upstream 时出现冲突，需要你手动解决。`,
-                "",
-                "Conflicting files:",
-                "```",
-                conflicts,
-                "```",
-                "",
-                `Workflow run: ${runUrl}`,
-              ].join("\n"),
-              labels: ["upstream-sync", "needs-manual-merge"]
+            const bodyLines = [
+              `${mention} 自动同步 upstream 时出现冲突：我已“加锁”暂停后续自动同步。`,
+              "",
+              "处理方式：手动解决冲突并更新 bot/upstream-sync（或你自行合并处理），然后关闭此 Issue 或移除 needs-manual-merge 标签以解锁。",
+              "",
+              "Conflicting files:",
+              "```",
+              conflicts,
+              "```",
+              "",
+              `Workflow run: ${runUrl}`,
+            ].join("\n");
+
+            // Find existing open issue with same title
+            const search = await github.rest.search.issuesAndPullRequests({
+              q: `repo:${owner}/${repo} is:issue is:open in:title "${title}"`,
+              per_page: 1,
             });
+
+            if (search.data.items.length > 0) {
+              const issue_number = search.data.items[0].number;
+              await github.rest.issues.createComment({ owner, repo, issue_number, body: bodyLines });
+            } else {
+              await github.rest.issues.create({
+                owner, repo,
+                title,
+                body: bodyLines,
+                labels: ["upstream-sync", "needs-manual-merge"]
+              });
+            }
