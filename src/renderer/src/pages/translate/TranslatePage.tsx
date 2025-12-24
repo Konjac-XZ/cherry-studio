@@ -401,6 +401,10 @@ const TranslatePage: FC = () => {
       abortKey: string
     ): Promise<void> => {
       try {
+        if (translating) {
+          return
+        }
+
         let translated: string
         dispatch(setTranslateAbortKey(abortKey))
 
