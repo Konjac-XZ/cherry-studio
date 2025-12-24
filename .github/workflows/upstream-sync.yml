@@ -1,0 +1,103 @@
+name: Upstream sync
+
+on:
+  schedule:
+    - cron: "0 */4 * * *" # every 4 hours
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Configure git identity (needed for merge commits)
+        run: |
+          git config --local user.name "upstream-sync-bot"
+          git config --local user.email "upstream-sync-bot@users.noreply.github.com"
+
+      - name: Ensure remote-tracking ref for PR branch exists
+        run: |
+          git fetch origin bot/upstream-sync:refs/remotes/origin/bot/upstream-sync || true
+
+      - name: Add/fetch upstream
+        run: |
+          git remote add upstream https://github.com/CherryHQ/cherry-studio.git || true
+          git fetch upstream main --prune
+
+      - name: Check if upstream is ahead
+        id: check
+        run: |
+          echo "ahead=$(git rev-list --count HEAD..upstream/main)" >> "$GITHUB_OUTPUT"
+
+      - name: Try merge upstream into main (local)
+        if: steps.check.outputs.ahead != '0'
+        id: merge
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git merge --no-edit upstream/main; then
+            echo "status=clean" >> "$GITHUB_OUTPUT"
+          else
+            echo "status=conflict" >> "$GITHUB_OUTPUT"
+            echo "conflicts<<EOF" >> "$GITHUB_OUTPUT"
+            git diff --name-only --diff-filter=U || true
+            echo "EOF" >> "$GITHUB_OUTPUT"
+            git merge --abort || true
+          fi
+
+      - name: Create or update PR
+        if: steps.check.outputs.ahead != '0' && steps.merge.outputs.status == 'clean'
+        id: cpr
+        uses: peter-evans/create-pull-request@v8
+        with:
+          token: ${{ secrets.SYNC_PAT }}
+          branch: bot/upstream-sync
+          base: main
+          title: "chore: sync upstream main"
+          body: |
+            Automated upstream sync.
+            Upstream commits not yet in this repo: ${{ steps.check.outputs.ahead }}
+
+      - name: Enable auto-merge
+        if: steps.check.outputs.ahead != '0' && steps.merge.outputs.status == 'clean' && steps.cpr.outputs.pull-request-number != ''
+        uses: peter-evans/enable-pull-request-automerge@v3
+        with:
+          token: ${{ secrets.SYNC_PAT }}
+          pull-request-number: ${{ steps.cpr.outputs.pull-request-number }}
+          merge-method: merge
+
+      - name: Open issue on conflicts (email via GitHub notifications)
+        if: steps.check.outputs.ahead != '0' && steps.merge.outputs.status == 'conflict'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const conflicts = `${{ steps.merge.outputs.conflicts }}`.trim() || "(unable to detect files)";
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const mention = "@Konjac-XZ"; // 改成你的 GitHub 用户名，@mention 更容易触发邮件
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: "Upstream sync failed: merge conflicts",
+              body: [
+                `${mention} 自动同步 upstream 时出现冲突，需要你手动解决。`,
+                "",
+                "Conflicting files:",
+                "```",
+                conflicts,
+                "```",
+                "",
+                `Workflow run: ${runUrl}`,
+              ].join("\n"),
+              labels: ["upstream-sync", "needs-manual-merge"]
+            });
