@@ -461,7 +461,7 @@ const Input = styled.input`
   padding: 0 5px; /* Adjust padding, wrapper will handle spacing */
   flex: 1; /* Allow input to grow */
   font-size: 14px;
-  font-family: Ubuntu;
+  font-family: -apple-system, system-ui, Arial, sans-serif;
 `
 
 const ToolBar = styled.div`
@@ -488,7 +488,7 @@ const SearchResults = styled.div`
   flex: 0 0 auto;
   color: var(--color-text-1);
   font-size: 14px;
-  font-family: Ubuntu;
+  font-family: -apple-system, system-ui, Arial, sans-serif;
 `
 
 const SearchResultsPlaceholder = styled.span`

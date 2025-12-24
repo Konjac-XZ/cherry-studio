@@ -43,7 +43,8 @@ import {
   setShowMessageOutline,
   setShowPrompt,
   setShowTranslateConfirm,
-  setThoughtAutoCollapse
+  setThoughtAutoCollapse,
+  setUserNativeLanguage
 } from '@renderer/store/settings'
 import type { Assistant, CodeStyleVarious, MathEngine } from '@renderer/types'
 import { isGroqSystemProvider, ThemeMode } from '@renderer/types'
@@ -89,6 +90,7 @@ const SettingsTab: FC<Props> = (props) => {
     sendMessageShortcut,
     setSendMessageShortcut,
     targetLanguage,
+    userNativeLanguage,
     setTargetLanguage,
     pasteLongTextAsFile,
     renderInputMessageAsMarkdown,
@@ -559,6 +561,27 @@ const SettingsTab: FC<Props> = (props) => {
               options={translateLanguages.map((item) => {
                 return { value: item.langCode, label: item.emoji + ' ' + item.label() }
               })}
+            />
+          </SettingRow>
+          <SettingDivider />
+          <SettingRow>
+            <SettingRowTitleSmall>{t('settings.input.user_native_language')}</SettingRowTitleSmall>
+            <Selector
+              value={userNativeLanguage || 'unspecified'}
+              onChange={(value) => {
+                if (value === 'unspecified') {
+                  dispatch(setUserNativeLanguage(undefined))
+                } else {
+                  dispatch(setUserNativeLanguage(value))
+                }
+              }}
+              options={[
+                { value: 'unspecified', label: t('settings.input.user_native_language.unspecified') },
+                ...translateLanguages.map((option) => ({
+                  value: option.langCode,
+                  label: `${option.emoji} ${option.label()}`
+                }))
+              ]}
             />
           </SettingRow>
           <SettingDivider />

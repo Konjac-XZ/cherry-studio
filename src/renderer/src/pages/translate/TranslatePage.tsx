@@ -1,3 +1,5 @@
+import 'katex/dist/katex.min.css'
+
 import { PlusOutlined, SendOutlined, SwapOutlined } from '@ant-design/icons'
 import { loggerService } from '@logger'
 import { Navbar, NavbarCenter } from '@renderer/components/app/Navbar'
@@ -13,6 +15,7 @@ import { useDrag } from '@renderer/hooks/useDrag'
 import { useFiles } from '@renderer/hooks/useFiles'
 import { useOcr } from '@renderer/hooks/useOcr'
 import { useTemporaryValue } from '@renderer/hooks/useTemporaryValue'
+import { useSettings } from '@renderer/hooks/useSettings'
 import { useTimer } from '@renderer/hooks/useTimer'
 import useTranslate from '@renderer/hooks/useTranslate'
 import { estimateTextTokens } from '@renderer/services/TokenService'
@@ -29,7 +32,7 @@ import {
   type TranslateLanguage
 } from '@renderer/types'
 import { getFileExtension, isTextFile, runAsyncFunction, uuid } from '@renderer/utils'
-import { abortCompletion } from '@renderer/utils/abortController'
+import { abortCompletion, readyToAbort, removeAbortController } from '@renderer/utils/abortController'
 import { formatErrorMessageWithPrefix, isAbortError } from '@renderer/utils/error'
 import { getFilesFromDropEvent, getTextFromDropEvent } from '@renderer/utils/input'
 import {
@@ -38,17 +41,29 @@ import {
   detectLanguage,
   determineTargetLanguage
 } from '@renderer/utils/translate'
-import { documentExts } from '@shared/config/constant'
-import { imageExts, MB, textExts } from '@shared/config/constant'
+import { processLatexBrackets } from '@renderer/utils/markdown'
+import { documentExts, imageExts, MB, textExts } from '@shared/config/constant'
 import { Button, Flex, FloatButton, Popover, Tooltip, Typography } from 'antd'
 import type { TextAreaRef } from 'antd/es/input/TextArea'
 import TextArea from 'antd/es/input/TextArea'
 import { isEmpty, throttle } from 'lodash'
-import { Check, CirclePause, FolderClock, Settings2, UploadIcon } from 'lucide-react'
-import type { FC } from 'react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  Check,
+  CirclePause,
+  Columns2,
+  FolderClock,
+  GripVertical,
+  RefreshCw,
+  Rows2,
+  Settings2,
+  SpellCheck,
+  UploadIcon
+} from 'lucide-react'
+import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useLocation, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
+import TurndownService from 'turndown'
 
 import TranslateHistoryList from './TranslateHistory'
 import TranslateSettings from './TranslateSettings'
@@ -59,6 +74,67 @@ const logger = loggerService.withContext('TranslatePage')
 let _sourceLanguage: TranslateLanguage | 'auto' = 'auto'
 let _targetLanguage = LanguagesEnum.enUS
 
+const DraggableDivider: FC<{
+  isVertical: boolean
+  onResize: (size: number) => void
+  containerRef: React.RefObject<HTMLDivElement | null>
+}> = ({ isVertical, onResize, containerRef }) => {
+  const dividerRef = useRef<HTMLDivElement>(null)
+  const isDragging = useRef(false)
+
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault()
+      isDragging.current = true
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = isVertical ? 'row-resize' : 'col-resize'
+      document.body.style.userSelect = 'none'
+    },
+    [isVertical]
+  )
+
+  const handleMouseMove = useCallback(
+    (e: MouseEvent) => {
+      if (!isDragging.current) return
+
+      const container = (dividerRef.current?.parentElement as HTMLDivElement | null) || containerRef.current
+      if (!container) return
+      const rect = container.getBoundingClientRect()
+
+      if (isVertical) {
+        const minHeight = 200
+        const maxHeightPercent = Math.max(30, ((rect.height - minHeight) / rect.height) * 100)
+        const newSize = ((e.clientY - rect.top) / rect.height) * 100
+        onResize(Math.max(30, Math.min(maxHeightPercent, newSize)))
+      } else {
+        const availableWidth = rect.width
+        const minWidth = window.innerWidth < 600 ? 250 : window.innerWidth < 800 ? 280 : 320
+        const maxWidthPercent = Math.max(30, ((availableWidth - minWidth) / availableWidth) * 100)
+        const newSize = ((e.clientX - rect.left) / availableWidth) * 100
+        onResize(Math.max(30, Math.min(maxWidthPercent, newSize)))
+      }
+    },
+    [isVertical, onResize, containerRef]
+  )
+
+  const handleMouseUp = useCallback(() => {
+    isDragging.current = false
+    document.removeEventListener('mousemove', handleMouseMove)
+    document.removeEventListener('mouseup', handleMouseUp)
+    document.body.style.cursor = ''
+    document.body.style.userSelect = ''
+  }, [handleMouseMove])
+
+  return (
+    <DividerContainer ref={dividerRef} $isVertical={isVertical} onMouseDown={handleMouseDown}>
+      <DividerHandle $isVertical={isVertical}>
+        <GripVertical size={16} />
+      </DividerHandle>
+    </DividerContainer>
+  )
+}
+
 const TranslatePage: FC = () => {
   // hooks
   const { t } = useTranslation()
@@ -66,6 +142,7 @@ const TranslatePage: FC = () => {
   const { prompt, getLanguageByLangcode, settings } = useTranslate()
   const { autoCopy } = settings
   const { shikiMarkdownIt } = useCodeStyle()
+  const { mathEngine, mathEnableSingleDollar } = useSettings()
   const { onSelectFile, selecting, clearFiles } = useFiles({ extensions: [...imageExts, ...textExts, ...documentExts] })
   const { ocr } = useOcr()
   const { setTimeoutTimer } = useTimer()
@@ -100,17 +177,147 @@ const TranslatePage: FC = () => {
   const textAreaRef = useRef<TextAreaRef>(null)
   const outputTextRef = useRef<HTMLDivElement>(null)
   const isProgrammaticScroll = useRef(false)
+  // Ensure settings are loaded before acting on global shortcut triggers
+  const [settingsReady, setSettingsReady] = useState(false)
+  const pendingShortcutRef = useRef<string | null>(null)
 
   const dispatch = useAppDispatch()
+  const location = useLocation()
+  const navigate = useNavigate()
 
   _sourceLanguage = sourceLanguage
   _targetLanguage = targetLanguage
+
+  // Resizable layout states
+  const [panelSize, setPanelSize] = useState<number>(50)
+  const [isVerticalLayout, setIsVerticalLayout] = useState<boolean>(false)
+  const [manualLayoutOverride, setManualLayoutOverride] = useState<'auto' | 'horizontal' | 'vertical'>('auto')
 
   // 控制翻译模型切换
   const handleModelChange = (model: Model) => {
     setTranslateModel(model)
     db.settings.put({ id: 'translate:model', value: model.id })
   }
+
+  const notifyHtmlConversion = useCallback(() => {
+    window.toast.info(t('translate.info.html_conversion'))
+  }, [t])
+
+  const turndownService = useMemo(() => {
+    const service = new TurndownService({
+      codeBlockStyle: 'fenced',
+      fence: '```'
+    })
+    return service
+  }, [])
+
+  const convertHtmlToMarkdownWithNotification = useCallback(
+    (html: string) => {
+      try {
+        const converted = turndownService.turndown(html)
+        if (converted && converted.trim()) {
+          notifyHtmlConversion()
+        }
+        return converted
+      } catch (error) {
+        logger.debug('Turndown conversion failed', error as Error)
+        return ''
+      }
+    },
+    [notifyHtmlConversion, turndownService]
+  )
+
+  const readClipboardForTranslate = useCallback(async (): Promise<string> => {
+    const readFromNativeClipboard = (): string => {
+      const clipboardApi = window.api?.clipboard
+      if (!clipboardApi) {
+        return ''
+      }
+
+      try {
+        const html = clipboardApi.readHtml?.()
+        if (html && html.trim()) {
+          const converted = convertHtmlToMarkdownWithNotification(html)
+          if (converted.trim()) {
+            return converted
+          }
+        }
+      } catch (error) {
+        logger.debug('Native clipboard HTML read failed', error as Error)
+      }
+
+      try {
+        const plain = clipboardApi.readText?.()
+        if (plain && plain.trim()) {
+          return plain
+        }
+      } catch (error) {
+        logger.debug('Native clipboard text read failed', error as Error)
+      }
+
+      return ''
+    }
+
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      const tryRichClipboard = async (): Promise<string> => {
+        const read = (navigator.clipboard as Clipboard & { read?: () => Promise<ClipboardItem[]> }).read
+        if (typeof read !== 'function') {
+          return ''
+        }
+
+        try {
+          const items = await read.call(navigator.clipboard)
+
+          for (const item of items) {
+            if (item.types.includes('text/html')) {
+              const blob = await item.getType('text/html')
+              const html = await blob.text()
+              if (html && html.trim()) {
+                const converted = convertHtmlToMarkdownWithNotification(html)
+                if (converted.trim()) {
+                  return converted
+                }
+              }
+            }
+          }
+
+          for (const item of items) {
+            if (item.types.includes('text/plain')) {
+              const blob = await item.getType('text/plain')
+              const text = await blob.text()
+              if (text && text.trim()) {
+                if (text.trim()) {
+                  return text
+                }
+              }
+            }
+          }
+        } catch (error) {
+          logger.debug('Rich clipboard read failed', error as Error)
+        }
+
+        return ''
+      }
+
+      const richContent = await tryRichClipboard()
+      if (richContent && richContent.trim()) {
+        return richContent
+      }
+
+      try {
+        const plain = await navigator.clipboard.readText()
+        if (plain && plain.trim()) {
+          return plain
+        }
+      } catch (error) {
+        logger.debug('Plain clipboard read failed', error as Error)
+      }
+    } else {
+      logger.debug('Navigator clipboard unavailable, using native clipboard fallback')
+    }
+
+    return readFromNativeClipboard()
+  }, [convertHtmlToMarkdownWithNotification])
 
   // 控制翻译状态
   const setText = useCallback(
@@ -137,8 +344,36 @@ const TranslatePage: FC = () => {
   // 控制复制行为
   const copy = useCallback(
     async (text: string) => {
-      await navigator.clipboard.writeText(text)
-      setCopied(true)
+      let lastError: unknown
+
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        try {
+          await navigator.clipboard.writeText(text)
+          setCopied(true)
+          return
+        } catch (error) {
+          lastError = error
+          logger.debug('Navigator clipboard write failed', error as Error)
+        }
+      }
+
+      try {
+        const fallbackWrite = window.api?.clipboard?.writeText
+        if (fallbackWrite) {
+          fallbackWrite(text)
+          setCopied(true)
+          return
+        }
+      } catch (error) {
+        lastError = error
+        logger.error('Native clipboard write failed', error as Error)
+      }
+
+      if (lastError) {
+        throw lastError
+      }
+
+      throw new Error('Clipboard write is not available in this environment.')
     },
     [setCopied]
   )
@@ -162,19 +397,17 @@ const TranslatePage: FC = () => {
     async (
       text: string,
       actualSourceLanguage: TranslateLanguage,
-      actualTargetLanguage: TranslateLanguage
+      actualTargetLanguage: TranslateLanguage,
+      abortKey: string
     ): Promise<void> => {
       try {
-        if (translating) {
-          return
-        }
-
         let translated: string
-        const abortKey = uuid()
         dispatch(setTranslateAbortKey(abortKey))
 
+        // use a throttled updater for streaming, ensure we flush and set final content afterward
+        const throttledUpdate = throttle(setTranslatedContent, 100)
         try {
-          translated = await translateText(text, actualTargetLanguage, throttle(setTranslatedContent, 100), abortKey)
+          translated = await translateText(text, actualTargetLanguage, throttledUpdate, abortKey)
         } catch (e) {
           if (isAbortError(e)) {
             window.toast.info(t('translate.info.aborted'))
@@ -186,14 +419,21 @@ const TranslatePage: FC = () => {
           return
         }
 
+        // Ensure any trailing throttled updates have been applied and state matches final translated result
+        if (typeof (throttledUpdate as any).flush === 'function') {
+          ;(throttledUpdate as any).flush()
+        }
+        setTranslatedContent(translated)
+
         window.toast.success(t('translate.complete'))
         if (autoCopy) {
+          // Copy the freshly finished translation immediately (no need to wait for Redux store propagation)
           setTimeoutTimer(
             'auto-copy',
             async () => {
               await copy(translated)
             },
-            100
+            0
           )
         }
 
@@ -206,9 +446,11 @@ const TranslatePage: FC = () => {
       } catch (e) {
         logger.error('Failed to translate', e as Error)
         window.toast.error(formatErrorMessageWithPrefix(e, t('translate.error.unknown')))
+      } finally {
+        removeAbortController(abortKey)
       }
     },
-    [autoCopy, copy, dispatch, setTimeoutTimer, setTranslatedContent, setTranslating, t, translating]
+    [autoCopy, copy, dispatch, removeAbortController, setTimeoutTimer, setTranslatedContent, setTranslating, t, translating]
   )
 
   // 控制翻译按钮是否可用
@@ -232,15 +474,54 @@ const TranslatePage: FC = () => {
       return
     }
 
+    const abortKey = uuid()
+    dispatch(setTranslateAbortKey(abortKey))
+
+    // Prepare abort signal early so Stop works during language detection as well
+    const abortSignal = readyToAbort(abortKey)
+
     setTranslating(true)
 
     try {
       // 确定源语言：如果用户选择了特定语言，使用用户选择的；如果选择'auto'，则自动检测
       let actualSourceLanguage: TranslateLanguage
       if (sourceLanguage === 'auto') {
-        actualSourceLanguage = getLanguageByLangcode(await detectLanguage(text))
+        const candidateLangCodes = isBidirectional
+          ? Array.from(
+              new Set(
+                bidirectionalPair
+                  .map((lang) => lang.langCode)
+                  .filter((langCode) => langCode !== UNKNOWN.langCode)
+              )
+            )
+          : undefined
+        const detectionOptions = candidateLangCodes && candidateLangCodes.length > 0 ? { candidates: candidateLangCodes } : undefined
+
+        logger.debug('Detecting source language for translate flow', {
+          hasCandidates: Boolean(detectionOptions?.candidates?.length),
+          candidateLangCodes
+        })
+
+        const detectionParams = detectionOptions ? { ...detectionOptions, signal: abortSignal } : { signal: abortSignal }
+        const detectedLangCode = await detectLanguage(text, detectionParams)
+        logger.debug('detectLanguage returned', {
+          detectedLangCode,
+          candidateLangCodes
+        })
+
+        actualSourceLanguage = getLanguageByLangcode(detectedLangCode)
+        if (actualSourceLanguage.langCode === UNKNOWN.langCode) {
+          logger.warn('Detected language code could not be resolved', {
+            detectedLangCode,
+            candidateLangCodes,
+            textPreview: text.slice(0, 120)
+          })
+        }
         setDetectedLanguage(actualSourceLanguage)
       } else {
+        if (sourceLanguage.langCode === UNKNOWN.langCode) {
+          logger.warn('User-selected source language is UNKNOWN, continuing with UNKNOWN fallback')
+        }
         actualSourceLanguage = sourceLanguage
       }
 
@@ -262,19 +543,27 @@ const TranslatePage: FC = () => {
         setTargetLanguage(actualTargetLanguage)
       }
 
-      await translate(text, actualSourceLanguage, actualTargetLanguage)
+      await translate(text, actualSourceLanguage, actualTargetLanguage, abortKey)
     } catch (error) {
-      logger.error('Translation error:', error as Error)
-      window.toast.error(formatErrorMessageWithPrefix(error, t('translate.error.failed')))
+      if (isAbortError(error)) {
+        logger.info('Translation aborted by user during detection or translation')
+      } else {
+        logger.error('Translation error:', error as Error)
+        window.toast.error(formatErrorMessageWithPrefix(error, t('translate.error.failed')))
+      }
       return
     } finally {
       setTranslating(false)
+      removeAbortController(abortKey)
     }
   }, [
     bidirectionalPair,
     couldTranslate,
+    dispatch,
     getLanguageByLangcode,
     isBidirectional,
+    readyToAbort,
+    removeAbortController,
     setTranslating,
     sourceLanguage,
     t,
@@ -293,6 +582,67 @@ const TranslatePage: FC = () => {
     abortCompletion(abortKey)
   }
 
+  // Auto paste and translate when navigated with ?paste=1
+  const onTranslateRef = useRef(onTranslate)
+  useEffect(() => {
+    onTranslateRef.current = onTranslate
+  }, [onTranslate])
+
+  useEffect(() => {
+    const triggerFromQuery = async () => {
+      try {
+        const params = new URLSearchParams(location.search || '')
+        const shouldPaste = params.get('paste') === '1'
+        if (!shouldPaste) return
+
+        // prevent duplicate triggers for the same navigation
+        const nonce = params.get('_') || ''
+        const key = `translate:paste:nonce:${nonce}`
+        if (nonce && sessionStorage.getItem(key)) return
+
+        // Shared guard to prevent double-triggering with hash-based effect and debounce
+        const running = sessionStorage.getItem('translate:paste:running') === '1'
+        const now = Date.now()
+        const lastTs = Number(sessionStorage.getItem('translate:paste:lastTs') || '0')
+        if (running || now - lastTs < 1000) return
+        sessionStorage.setItem('translate:paste:running', '1')
+
+        const clip = await readClipboardForTranslate()
+        if (clip && clip.trim()) {
+          // Force auto-detect for global shortcut flow
+          if (sourceLanguage !== 'auto') {
+            setSourceLanguage('auto')
+            db.settings.put({ id: 'translate:source:language', value: 'auto' })
+          }
+          setDetectedLanguage(null)
+          if (!settingsReady) {
+            // Defer action until settings loaded to ensure bidirectional logic is applied
+            pendingShortcutRef.current = clip
+          } else {
+            setText(clip)
+            // give state a tick to update
+            setTimeout(() => {
+              onTranslateRef.current()
+            }, 0)
+          }
+        }
+
+        if (nonce) sessionStorage.setItem(key, '1')
+        sessionStorage.setItem('translate:paste:lastTs', String(now))
+        // Clear query to avoid re-triggers
+        if (location.search) {
+          navigate('/translate', { replace: true })
+        }
+        // release guard shortly after
+        setTimeout(() => sessionStorage.removeItem('translate:paste:running'), 500)
+      } catch {
+        // Ignore errors from URL parameter parsing
+      }
+    }
+
+    triggerFromQuery()
+  }, [location.search, readClipboardForTranslate, setText, sourceLanguage, settingsReady])
+
   // 控制双向翻译切换
   const toggleBidirectional = (value: boolean) => {
     setIsBidirectional(value)
@@ -305,12 +655,9 @@ const TranslatePage: FC = () => {
   ) => {
     setText(history.sourceText)
     setTranslatedContent(history.targetText)
-    if (history._sourceLanguage === UNKNOWN) {
-      setSourceLanguage('auto')
-    } else {
-      setSourceLanguage(history._sourceLanguage)
-    }
-    setTargetLanguage(history._targetLanguage)
+    // Intentionally DO NOT change current language selections when loading history.
+    // This preserves user's existing source (including 'auto') and target language choices
+    // so they can continue translating new content without re-enabling auto-detect.
     setHistoryDrawerVisible(false)
   }
 
@@ -324,6 +671,16 @@ const TranslatePage: FC = () => {
   )
 
   const couldExchange = useMemo(() => couldExchangeAuto && !isBidirectional, [couldExchangeAuto, isBidirectional])
+
+  // Check if flip button should be visible
+  // Show button when: auto-detect is on, not bidirectional, and has translated content or is translating
+  const couldFlip = useMemo(
+    () =>
+      sourceLanguage === 'auto' &&
+      isBidirectional &&
+      (translating || (detectedLanguage !== null && detectedLanguage.langCode !== UNKNOWN.langCode)),
+    [detectedLanguage, isBidirectional, sourceLanguage, translating]
+  )
 
   const handleExchange = useCallback(() => {
     if (sourceLanguage === 'auto' && !couldExchangeAuto) {
@@ -343,6 +700,66 @@ const TranslatePage: FC = () => {
     setTargetLanguage(source)
   }, [couldExchangeAuto, detectedLanguage, sourceLanguage, t, targetLanguage])
 
+  // Handle flip detected language and trigger translation
+  const handleFlipLanguage = useCallback(async () => {
+    // If currently translating, abort first
+    if (translating && abortKey) {
+      abortCompletion(abortKey)
+      setTranslating(false)
+      // Wait a bit for abort to complete
+      await new Promise((resolve) => setTimeout(resolve, 100))
+    }
+
+    if (!text.trim()) {
+      return
+    }
+
+    if (!translateModel) {
+      window.toast.error(t('translate.error.not_configured'))
+      return
+    }
+
+    // If we have a detected language, flip it with target
+    if (detectedLanguage && detectedLanguage.langCode !== UNKNOWN.langCode) {
+      const newSourceLanguage = targetLanguage
+      const newTargetLanguage = detectedLanguage
+
+      // Update UI state - keep sourceLanguage as 'auto' but update detectedLanguage
+      // This keeps the dropdown showing "Auto Detect (Language)" instead of switching to the language option
+      setDetectedLanguage(newSourceLanguage)
+      setTargetLanguage(newTargetLanguage)
+
+      window.toast.success(t('translate.flip.success'))
+
+      // Create new abort key
+      const newAbortKey = uuid()
+      dispatch(setTranslateAbortKey(newAbortKey))
+      readyToAbort(newAbortKey)
+
+      setTranslating(true)
+
+      // Call translate directly with flipped languages, bypassing detection
+      await translate(text, newSourceLanguage, newTargetLanguage, newAbortKey)
+
+      setTranslating(false)
+    } else {
+      // No detected language yet, cannot flip
+      window.toast.warning(t('translate.error.invalid_source'))
+    }
+  }, [
+    abortKey,
+    detectedLanguage,
+    dispatch,
+    readyToAbort,
+    setTranslating,
+    t,
+    targetLanguage,
+    text,
+    translate,
+    translateModel,
+    translating
+  ])
+
   useEffect(() => {
     isEmpty(text) && setTranslatedContent('')
   }, [setTranslatedContent, text])
@@ -350,21 +767,42 @@ const TranslatePage: FC = () => {
   // Render markdown content when result or enableMarkdown changes
   // 控制Markdown渲染
   useEffect(() => {
-    if (enableMarkdown && translatedContent) {
-      let isMounted = true
-      shikiMarkdownIt(translatedContent).then((rendered) => {
-        if (isMounted) {
+    if (!enableMarkdown || !translatedContent) {
+      setRenderedMarkdown('')
+      return
+    }
+
+    let disposed = false
+    const shouldRenderMath = mathEngine === 'KaTeX'
+    const markdownSource = shouldRenderMath ? processLatexBrackets(translatedContent) : translatedContent
+
+    const renderOptions = shouldRenderMath
+      ? { math: { engine: 'katex' as const, allowSingleDollar: mathEnableSingleDollar } }
+      : undefined
+
+    shikiMarkdownIt(markdownSource, renderOptions)
+      .then((rendered) => {
+        if (!disposed) {
           setRenderedMarkdown(rendered)
         }
       })
-      return () => {
-        isMounted = false
-      }
-    } else {
-      setRenderedMarkdown('')
-      return undefined
+      .catch((error) => {
+        logger.error('Failed to render markdown', error as Error)
+        if (!disposed) {
+          const fallback = markdownSource
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;')
+          setRenderedMarkdown(fallback)
+        }
+      })
+
+    return () => {
+      disposed = true
     }
-  }, [enableMarkdown, shikiMarkdownIt, translatedContent])
+  }, [enableMarkdown, mathEnableSingleDollar, mathEngine, shikiMarkdownIt, translatedContent])
 
   // 控制设置加载
   useEffect(() => {
@@ -408,6 +846,9 @@ const TranslatePage: FC = () => {
       const markdownSetting = await db.settings.get({ id: 'translate:markdown:enabled' })
       setEnableMarkdown(markdownSetting ? markdownSetting.value : false)
 
+      const layoutOverrideSetting = await db.settings.get({ id: 'translate:layout:override' })
+      setManualLayoutOverride(layoutOverrideSetting ? layoutOverrideSetting.value : 'auto')
+
       const autoDetectionMethodSetting = await db.settings.get({ id: 'translate:detect:method' })
 
       if (autoDetectionMethodSetting) {
@@ -416,8 +857,62 @@ const TranslatePage: FC = () => {
         setAutoDetectionMethod('franc')
         db.settings.put({ id: 'translate:detect:method', value: 'franc' })
       }
+      // Mark settings as ready so that global shortcut flows can proceed with correct bidirectional state
+      setSettingsReady(true)
     })
   }, [getLanguageByLangcode])
+
+  // If a global shortcut arrived before settings were ready, process it now
+  useEffect(() => {
+    if (!settingsReady) return
+    const clip = pendingShortcutRef.current
+    if (clip && clip.trim()) {
+      pendingShortcutRef.current = null
+      setText(clip)
+      setTimeout(() => {
+        onTranslateRef.current()
+      }, 0)
+    }
+  }, [settingsReady, setText])
+
+  // Load saved panel size
+  useEffect(() => {
+    try {
+      const savedSize = localStorage.getItem('translate-panel-size')
+      if (savedSize) {
+        const num = parseFloat(savedSize)
+        if (!Number.isNaN(num) && num > 0 && num < 100) setPanelSize(num)
+      }
+    } catch {
+      // Ignore errors from localStorage access
+    }
+  }, [])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('translate-panel-size', String(panelSize))
+    } catch {
+      // Ignore errors from localStorage access
+    }
+  }, [panelSize])
+
+  // Derive layout mode
+  useEffect(() => {
+    const handleResize = () => {
+      if (manualLayoutOverride !== 'auto') {
+        setIsVerticalLayout(manualLayoutOverride === 'vertical')
+        return
+      }
+      const w = window.innerWidth
+      const h = window.innerHeight
+      const aspect = w / h
+      const shouldVertical = w < 900 || aspect < 1 || h > w * 1
+      setIsVerticalLayout(shouldVertical)
+    }
+    handleResize()
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [manualLayoutOverride])
 
   // 控制设置同步
   const updateAutoDetectionMethod = async (method: AutoDetectionMethod) => {
@@ -433,7 +928,7 @@ const TranslatePage: FC = () => {
   // 控制Enter触发翻译
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     const isEnterPressed = e.key === 'Enter'
-    if (isEnterPressed && !e.nativeEvent.isComposing && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+    if (isEnterPressed && !e.nativeEvent.isComposing && !e.shiftKey && e.ctrlKey && !e.metaKey) {
       e.preventDefault()
       onTranslate()
     }
@@ -442,6 +937,20 @@ const TranslatePage: FC = () => {
   // 控制双向滚动
   const handleInputScroll = createInputScrollHandler(outputTextRef, isProgrammaticScroll, isScrollSyncEnabled)
   const handleOutputScroll = createOutputScrollHandler(textAreaRef, isProgrammaticScroll, isScrollSyncEnabled)
+
+  // Toggle layout and persist override
+  const toggleLayout = () => {
+    let next: 'auto' | 'vertical' | 'horizontal'
+    if (manualLayoutOverride === 'auto') {
+      next = 'vertical'
+    } else if (manualLayoutOverride === 'vertical') {
+      next = 'horizontal'
+    } else {
+      next = 'auto'
+    }
+    setManualLayoutOverride(next)
+    db.settings.put({ id: 'translate:layout:override', value: next })
+  }
 
   // 获取目标语言显示
   const getLanguageDisplay = () => {
@@ -480,6 +989,59 @@ const TranslatePage: FC = () => {
 
   // 控制token估计
   const tokenCount = useMemo(() => estimateTextTokens(text + prompt), [prompt, text])
+
+  // Auto-paste and translate when navigated with ?paste=1
+  useEffect(() => {
+    let aborted = false
+    const url = new URL(window.location.href)
+    const shouldPaste = url.hash.includes('/translate') && url.hash.includes('paste=1')
+    if (!shouldPaste) return
+
+    if (translating) {
+      if (location.search) {
+        navigate('/translate', { replace: true })
+      }
+      return
+    }
+
+    const run = async () => {
+      try {
+        // Shared guard to prevent double-triggering with the other effect
+        const running = sessionStorage.getItem('translate:paste:running') === '1'
+        const now = Date.now()
+        const lastTs = Number(sessionStorage.getItem('translate:paste:lastTs') || '0')
+        if (running || now - lastTs < 1000) return
+        sessionStorage.setItem('translate:paste:running', '1')
+        const clip = await readClipboardForTranslate()
+        if (aborted) return
+        if (clip && clip.trim().length > 0) {
+          // Force auto-detect for global shortcut flow
+          if (sourceLanguage !== 'auto') {
+            setSourceLanguage('auto')
+            db.settings.put({ id: 'translate:source:language', value: 'auto' })
+          }
+          setDetectedLanguage(null)
+          setText(clip)
+          // wait a tick for state to propagate
+          setTimeout(() => {
+            void onTranslate()
+          }, 0)
+          sessionStorage.setItem('translate:paste:lastTs', String(now))
+        }
+      } catch (e) {
+        // ignore clipboard errors silently
+      } finally {
+        // release guard shortly after
+        setTimeout(() => sessionStorage.removeItem('translate:paste:running'), 500)
+      }
+    }
+    run()
+
+    return () => {
+      aborted = true
+    }
+    // trigger when location changes to /translate?paste=1
+  }, [location, onTranslate, readClipboardForTranslate, setText, sourceLanguage])
 
   const readFile = useCallback(
     async (file: FileMetadata) => {
@@ -654,8 +1216,47 @@ const TranslatePage: FC = () => {
     async (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
       if (isProcessing) return
       setIsProcessing(true)
-      // logger.debug('event', event)
+
+      // Try to get HTML content from clipboard
+      const clipboardHtml = event.clipboardData.getData('text/html')
       const clipboardText = event.clipboardData.getData('text')
+
+      // If we have HTML content (formatted text), convert it to Markdown
+      if (!isEmpty(clipboardHtml)) {
+        event.preventDefault()
+        try {
+          const markdown = convertHtmlToMarkdownWithNotification(clipboardHtml)
+          if (markdown && markdown.trim()) {
+            // Insert the markdown at current cursor position
+            const textarea = textAreaRef.current?.resizableTextArea?.textArea
+            if (textarea) {
+              const start = textarea.selectionStart || 0
+              const end = textarea.selectionEnd || 0
+              const beforeText = text.substring(0, start)
+              const afterText = text.substring(end)
+              setText(beforeText + markdown + afterText)
+
+              // Set cursor position after the inserted markdown
+              setTimeout(() => {
+                textarea.setSelectionRange(start + markdown.length, start + markdown.length)
+                textarea.focus()
+              }, 0)
+            } else {
+              // Fallback: just append to the end
+              setText(text + markdown)
+            }
+          }
+        } catch (e) {
+          logger.error('Failed to convert HTML to Markdown', e as Error)
+          // Fall back to plain text if conversion fails
+          if (!isEmpty(clipboardText)) {
+            // Let default behavior handle it
+          }
+        }
+        setIsProcessing(false)
+        return
+      }
+
       if (!isEmpty(clipboardText)) {
         // depend default. this branch is only for preventing files when clipboard contains text
       } else if (event.clipboardData.files && event.clipboardData.files.length > 0) {
@@ -697,7 +1298,7 @@ const TranslatePage: FC = () => {
       }
       setIsProcessing(false)
     },
-    [getSingleFile, isProcessing, processFile, t]
+    [convertHtmlToMarkdownWithNotification, getSingleFile, isProcessing, processFile, t]
   )
   return (
     <Container
@@ -717,6 +1318,32 @@ const TranslatePage: FC = () => {
         />
         <OperationBar>
           <InnerOperationBar style={{ justifyContent: 'flex-start' }}>
+            <Tooltip
+              title={
+                manualLayoutOverride === 'auto'
+                  ? 'Auto Layout'
+                  : manualLayoutOverride === 'vertical'
+                    ? 'Vertical Layout'
+                    : 'Horizontal Layout'
+              }
+              placement="bottom">
+              <Button
+                className="nodrag"
+                color="default"
+                variant="text"
+                type="text"
+                icon={
+                  manualLayoutOverride === 'auto' ? (
+                    <SpellCheck size={16} />
+                  ) : manualLayoutOverride === 'vertical' ? (
+                    <Rows2 size={16} />
+                  ) : (
+                    <Columns2 size={16} />
+                  )
+                }
+                onClick={toggleLayout}
+              />
+            </Tooltip>
             <Button
               className="nodrag"
               color="default"
@@ -760,6 +1387,12 @@ const TranslatePage: FC = () => {
               couldTranslate={couldTranslate}
               onAbort={onAbort}
             />
+            <FlipButton
+              onFlip={handleFlipLanguage}
+              couldFlip={couldFlip}
+              couldTranslate={couldTranslate}
+              translating={translating}
+            />
           </InnerOperationBar>
           <InnerOperationBar style={{ justifyContent: 'flex-end' }}>
             <ModelSelectButton
@@ -771,7 +1404,7 @@ const TranslatePage: FC = () => {
             <Button type="text" icon={<Settings2 size={18} />} onClick={() => setSettingsVisible(true)} />
           </InnerOperationBar>
         </OperationBar>
-        <AreaContainer>
+        <AreaContainer $isVertical={isVerticalLayout} $panelSize={panelSize}>
           <InputContainer
             style={isDraggingOnInput ? { border: '2px dashed var(--color-primary)' } : undefined}
             onDragEnter={handleDragEnterInput}
@@ -815,12 +1448,18 @@ const TranslatePage: FC = () => {
             </Footer>
           </InputContainer>
 
+          <DraggableDivider
+            isVertical={isVerticalLayout}
+            onResize={(s) => setPanelSize(s)}
+            containerRef={contentContainerRef}
+          />
+
           <OutputContainer>
             <CopyButton
               type="text"
               size="small"
               className="copy-button"
-              onClick={onCopy}
+              onClick={() => onCopy()}
               disabled={!translatedContent}
               icon={copied ? <Check size={16} color="var(--color-primary)" /> : <CopyIcon size={16} />}
             />
@@ -874,24 +1513,130 @@ const ContentContainer = styled.div<{ $historyDrawerVisible: boolean }>`
   [navbar-position='left'] & {
     padding: 12px 16px;
   }
+  min-height: 0;
+  overflow: hidden;
 `
 
-const AreaContainer = styled.div`
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+const AreaContainer = styled.div<{ $isVertical: boolean; $panelSize: number }>`
+  display: flex;
   flex: 1;
-  gap: 8px;
+  gap: 0;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  flex-direction: ${({ $isVertical }) => ($isVertical ? 'column' : 'row')};
+
+  ${({ $isVertical, $panelSize }) =>
+    $isVertical
+      ? `
+    & > *:first-child {
+      height: ${$panelSize}%;
+      min-height: 200px;
+    }
+    & > *:last-child {
+      height: ${100 - $panelSize}%;
+      min-height: 200px;
+    }
+  `
+      : `
+    & > *:first-child {
+      width: ${$panelSize}%;
+      min-width: 320px;
+  height: 100%;
+  min-height: 0;
+    }
+    & > *:last-child {
+      width: ${100 - $panelSize}%;
+      min-width: 320px;
+  height: 100%;
+  min-height: 0;
+    }
+  `}
+
+  @media (max-width: 800px) {
+    ${({ $isVertical }) =>
+      !$isVertical &&
+      `
+      & > *:first-child { min-width: 280px; }
+      & > *:last-child { min-width: 280px; }
+    `}
+  }
+
+  @media (max-width: 600px) {
+    ${({ $isVertical }) =>
+      !$isVertical &&
+      `
+      & > *:first-child { min-width: 250px; }
+      & > *:last-child { min-width: 250px; }
+    `}
+  }
+`
+
+const DividerContainer = styled.div<{ $isVertical: boolean }>`
+  ${({ $isVertical }) =>
+    $isVertical
+      ? `
+    height: 6px;
+    width: 100%;
+    cursor: row-resize;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 10;
+
+    &:hover { background-color: var(--color-primary-bg); }
+  `
+      : `
+    width: 6px;
+    height: 100%;
+    cursor: col-resize;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 10;
+
+    &:hover { background-color: var(--color-primary-bg); }
+  `}
+`
+
+const DividerHandle = styled.div<{ $isVertical: boolean }>`
+  ${({ $isVertical }) =>
+    $isVertical
+      ? `
+    width: 40px;
+    height: 4px;
+    background-color: var(--color-border);
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    svg { transform: rotate(90deg); width: 12px; height: 12px; color: var(--color-text-3); }
+  `
+      : `
+    width: 4px;
+    height: 40px;
+    background-color: var(--color-border);
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    svg { width: 12px; height: 12px; color: var(--color-text-3); }
+  `}
 `
 
 const InputContainer = styled.div`
+  min-height: 0;
   position: relative;
   display: flex;
-  flex: 1;
   flex-direction: column;
   padding: 10px 5px;
   border: 1px solid var(--color-border-soft);
   border-radius: 10px;
-  height: calc(100vh - var(--navbar-height) - 70px);
   overflow: hidden;
   .float-button {
     opacity: 0;
@@ -922,6 +1667,7 @@ const Textarea = styled(TextArea)`
   display: flex;
   flex: 1;
   border-radius: 0;
+  font-size: 16px;
   .ant-input {
     resize: none;
     padding: 5px 16px;
@@ -941,7 +1687,6 @@ const Footer = styled.div`
 
 const OutputContainer = styled.div`
   display: flex;
-  flex: 1;
   flex-direction: column;
   min-height: 0;
   position: relative;
@@ -979,6 +1724,8 @@ const OutputText = styled.div`
   padding: 5px 16px;
   overflow-y: auto;
 
+  overscroll-behavior: contain;
+  font-size: 16px;
   .plain {
     white-space: pre-wrap;
     overflow-wrap: break-word;
@@ -1031,6 +1778,40 @@ const TranslateButton = ({
   )
 }
 
+const FlipButton = ({
+  onFlip,
+  couldFlip,
+  couldTranslate,
+  translating
+}: {
+  onFlip: () => void
+  couldFlip: boolean
+  couldTranslate: boolean
+  translating: boolean
+}) => {
+  const { t } = useTranslation()
+  const isDisabled = !couldFlip || (!couldTranslate && !translating)
+
+  return (
+    <Tooltip title={t('translate.flip.label')} placement="bottom">
+      <Button
+        onClick={onFlip}
+        disabled={isDisabled}
+        icon={<RefreshCw size={14} />}
+        style={
+          isDisabled
+            ? undefined
+            : {
+                border: '1px solid #faad14',
+                background: 'white',
+                color: '#faad14'
+              }
+        }
+      />
+    </Tooltip>
+  )
+}
+
 const BidirectionalLanguageDisplay = styled.div`
   padding: 4px 11px;
   border-radius: 6px;
@@ -1048,6 +1829,7 @@ const OperationBar = styled.div`
   justify-content: space-between;
   gap: 4px;
   padding-bottom: 4px;
+  min-width: 0;
 `
 
 const InnerOperationBar = styled.div`
@@ -1056,6 +1838,7 @@ const InnerOperationBar = styled.div`
   align-items: center;
   gap: 8px;
   overflow: hidden;
+  min-width: 0;
 `
 
 export default TranslatePage

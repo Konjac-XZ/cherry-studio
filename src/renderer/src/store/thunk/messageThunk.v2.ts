@@ -30,19 +30,29 @@ export const loadTopicMessagesThunkV2 =
 
     // Skip if already cached and not forcing reload
     if (!forceReload && state.messages.messageIdsByTopic[topicId]) {
+      logger.info('Skipped loading topic messages (cached)', { topicId })
       return
     }
 
+    const startAt = performance?.now?.() ?? Date.now()
     try {
       dispatch(newMessagesActions.setTopicLoading({ topicId, loading: true }))
 
+      const fetchStartAt = performance?.now?.() ?? Date.now()
       // Unified call - no need to check isAgentSessionTopicId
       const { messages, blocks } = await dbService.fetchMessages(topicId)
+      const fetchEndAt = performance?.now?.() ?? Date.now()
 
       logger.silly('Loaded messages via DbService', {
         topicId,
         messageCount: messages.length,
         blockCount: blocks.length
+      })
+      logger.info('Fetched topic messages', {
+        topicId,
+        messageCount: messages.length,
+        blockCount: blocks.length,
+        fetchDurationMs: Math.round(fetchEndAt - fetchStartAt)
       })
 
       // Update Redux state with fetched data
@@ -55,6 +65,8 @@ export const loadTopicMessagesThunkV2 =
       // Could dispatch an error action here if needed
     } finally {
       dispatch(newMessagesActions.setTopicLoading({ topicId, loading: false }))
+      const endAt = performance?.now?.() ?? Date.now()
+      logger.info('Topic messages load finished', { topicId, durationMs: Math.round(endAt - startAt) })
     }
   }
 

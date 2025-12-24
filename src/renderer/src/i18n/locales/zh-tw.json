@@ -4688,12 +4688,16 @@
       "search_message_in_chat": "在目前對話中搜尋訊息",
       "selection_assistant_select_text": "劃詞助手：取詞",
       "selection_assistant_toggle": "開關劃詞助手",
+      "go_home": "返回首頁",
       "show_app": "顯示 / 隱藏應用程式",
       "show_settings": "開啟設定",
+      "show_translate": "翻譯剪貼簿",
       "title": "快捷鍵",
       "toggle_new_context": "清除上下文",
       "toggle_show_assistants": "切換助手顯示",
       "toggle_show_topics": "切換話題顯示",
+      "previous_assistant": "切換到上一個助手",
+      "next_assistant": "切換到下一個助手",
       "zoom_in": "放大介面",
       "zoom_out": "縮小介面",
       "zoom_reset": "重設縮放"
@@ -4953,6 +4957,7 @@
       "language": "任意語言"
     },
     "button": {
+      "flip": "翻轉",
       "translate": "翻譯"
     },
     "close": "關閉",
@@ -5005,6 +5010,10 @@
     "exchange": {
       "label": "交換來源語言與目標語言"
     },
+    "flip": {
+      "label": "翻轉識別的語言並重新翻譯",
+      "success": "語言已翻轉"
+    },
     "files": {
       "drag_text": "拖曳到此處",
       "error": {
@@ -5030,7 +5039,8 @@
       "title": "翻譯歷史"
     },
     "info": {
-      "aborted": "翻譯中止"
+      "aborted": "翻譯中止",
+      "html_conversion": "偵測到 HTML 格式，已觸發轉換，請留意核對"
     },
     "input": {
       "placeholder": "可貼上或拖曳文字、文字檔案、圖片（支援 OCR）"

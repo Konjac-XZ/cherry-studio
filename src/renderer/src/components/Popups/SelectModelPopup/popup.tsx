@@ -33,7 +33,7 @@ import SelectModelSearchBar from './searchbar'
 import TagFilterSection from './TagFilterSection'
 import type { FlatListItem, FlatListModel } from './types'
 
-const PAGE_SIZE = 12
+const PAGE_SIZE = 25
 const ITEM_HEIGHT = 36
 
 interface PopupParams {
@@ -415,6 +415,8 @@ const PopupContainer: React.FC<Props> = ({ model, filter: baseFilter, showTagFil
           padding: 0,
           overflow: 'hidden',
           paddingBottom: 16
+          // 需要稳定高度避免布局偏移
+          // height: userFilterDisabled ? undefined : 530
         },
         body: {
           maxHeight: 'inherit',

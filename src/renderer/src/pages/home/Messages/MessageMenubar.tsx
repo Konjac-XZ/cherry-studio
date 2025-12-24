@@ -7,6 +7,7 @@ import { SelectModelPopup } from '@renderer/components/Popups/SelectModelPopup'
 import { isEmbeddingModel, isRerankModel, isVisionModel } from '@renderer/config/models'
 import type { MessageMenubarButtonId, MessageMenubarScope } from '@renderer/config/registry/messageMenubar'
 import { DEFAULT_MESSAGE_MENUBAR_SCOPE, getMessageMenubarConfig } from '@renderer/config/registry/messageMenubar'
+import { UNKNOWN } from '@renderer/config/translate'
 import { useMessageEditing } from '@renderer/context/MessageEditingContext'
 import { useChatContext } from '@renderer/hooks/useChatContext'
 import { useMessageOperations } from '@renderer/hooks/useMessageOperations'
@@ -98,6 +99,7 @@ type MessageMenubarButtonContext = {
   handleResendUserMessage: (messageUpdate?: Message) => Promise<void>
   handleTraceUserMessage: () => void | Promise<void>
   handleTranslate: (language: TranslateLanguage) => Promise<void>
+  handleDirectTranslate: () => Promise<void>
   hasTranslationBlocks: boolean
   isAssistantMessage: boolean
   isBubbleStyle: boolean
@@ -117,6 +119,7 @@ type MessageMenubarButtonContext = {
   softHoverBg: boolean
   t: TFunction
   translateLanguages: TranslateLanguage[]
+  userNativeLanguage?: TranslateLanguage
 }
 
 type MessageMenubarButtonRenderer = (ctx: MessageMenubarButtonContext) => ReactNode | null
@@ -141,7 +144,8 @@ const MessageMenubar: FC<Props> = (props) => {
   const [isTranslating, setIsTranslating] = useState(false)
   // remove confirm for regenerate; tooltip stays simple
   const [showDeleteTooltip, setShowDeleteTooltip] = useState(false)
-  const { translateLanguages } = useTranslate()
+  const { translateLanguages, getLanguageByLangcode } = useTranslate()
+  const { userNativeLanguage: userNativeLanguageCode } = useSettings()
   // const assistantModel = assistant?.model
   const {
     deleteMessage,
@@ -162,6 +166,13 @@ const MessageMenubar: FC<Props> = (props) => {
 
   const exportMenuOptions = useSelector((state: RootState) => state.settings.exportMenuOptions)
   const dispatch = useAppDispatch()
+
+  // Resolve user's default/native language to TranslateLanguage object
+  const userNativeLanguage = useMemo(() => {
+    if (!userNativeLanguageCode) return undefined
+    const lang = getLanguageByLangcode(userNativeLanguageCode)
+    return lang.langCode === UNKNOWN.langCode ? undefined : lang
+  }, [getLanguageByLangcode, userNativeLanguageCode])
 
   // const processedMessage = useMemo(() => {
   //   if (message.role === 'assistant' && message.model && isReasoningModel(message.model)) {
@@ -248,6 +259,12 @@ const MessageMenubar: FC<Props> = (props) => {
     },
     [isTranslating, message, getTranslationUpdater, mainTextContent, t, dispatch]
   )
+
+  const handleDirectTranslate = useCallback(async () => {
+    if (userNativeLanguage) {
+      await handleTranslate(userNativeLanguage)
+    }
+  }, [userNativeLanguage, handleTranslate])
 
   const handleTraceUserMessage = useCallback(async () => {
     if (message.traceId) {
@@ -537,6 +554,7 @@ const MessageMenubar: FC<Props> = (props) => {
     handleResendUserMessage,
     handleTraceUserMessage,
     handleTranslate,
+    handleDirectTranslate,
     hasTranslationBlocks,
     isAssistantMessage,
     isBubbleStyle,
@@ -555,7 +573,8 @@ const MessageMenubar: FC<Props> = (props) => {
     showDeleteTooltip,
     softHoverBg,
     t,
-    translateLanguages
+    translateLanguages,
+    userNativeLanguage
   }
 
   return (
@@ -742,6 +761,8 @@ const buttonRenderers: Record<MessageMenubarButtonId, MessageMenubarButtonRender
     isUserMessage,
     translateLanguages,
     handleTranslate,
+    handleDirectTranslate,
+    userNativeLanguage,
     hasTranslationBlocks,
     message,
     blockEntities,
@@ -751,6 +772,24 @@ const buttonRenderers: Record<MessageMenubarButtonId, MessageMenubarButtonRender
   }) => {
     if (isUserMessage) {
       return null
+    }
+
+    if (userNativeLanguage && !hasTranslationBlocks) {
+      return (
+        <Tooltip
+          title={`${t('chat.translate')} (${userNativeLanguage.emoji} ${userNativeLanguage.label()})`}
+          mouseEnterDelay={1.2}>
+          <ActionButton
+            className="message-action-button"
+            onClick={(e) => {
+              e.stopPropagation()
+              void handleDirectTranslate()
+            }}
+            $softHoverBg={softHoverBg}>
+            <Languages size={16} />
+          </ActionButton>
+        </Tooltip>
+      )
     }
 
     const items: MenuProps['items'] = [

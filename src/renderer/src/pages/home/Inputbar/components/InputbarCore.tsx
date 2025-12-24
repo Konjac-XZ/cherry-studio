@@ -147,6 +147,7 @@ export const InputbarCore: FC<InputbarCoreProps> = ({
   const startDragY = useRef<number>(0)
   const startHeight = useRef<number>(0)
   const { setTimeoutTimer } = useTimer()
+  const wasTranslatingRef = useRef(false)
 
   // 全局 QuickPanel Hook (用于控制面板显示状态)
   const quickPanel = useQuickPanel()
@@ -471,9 +472,12 @@ export const InputbarCore: FC<InputbarCoreProps> = ({
   const onTranslated = useCallback(
     (translatedText: string) => {
       setText(translatedText)
-      setTimeoutTimer('onTranslated', () => resizeTextArea(), 0)
+      setTimeoutTimer('onTranslated', () => {
+        resizeTextArea()
+        focusTextarea()
+      }, 0)
     },
-    [resizeTextArea, setText, setTimeoutTimer]
+    [focusTextarea, resizeTextArea, setText, setTimeoutTimer]
   )
 
   const appendTxtContentToInput = useCallback(
@@ -571,6 +575,15 @@ export const InputbarCore: FC<InputbarCoreProps> = ({
     },
     [focusTextarea, resizeTextArea, setText, setTimeoutTimer]
   )
+
+  useEffect(() => {
+    if (wasTranslatingRef.current && !isTranslating) {
+      setTimeoutTimer('translate_refocus', () => {
+        focusTextarea()
+      }, 0)
+    }
+    wasTranslatingRef.current = isTranslating
+  }, [focusTextarea, isTranslating, setTimeoutTimer])
 
   useEffect(() => {
     const quoteListener = window.electron?.ipcRenderer.on(IpcChannel.App_QuoteToMain, (_, selectedText: string) =>

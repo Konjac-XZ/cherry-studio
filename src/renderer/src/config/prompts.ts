@@ -406,6 +406,9 @@ export const TRANSLATE_PROMPT =
 
 export const LANG_DETECT_PROMPT = `Your task is to precisely identify the language used in the user's input text and output its corresponding language code from the predefined list {{list_lang}}. It is crucial to focus strictly on the language *of the input text itself*, and not on any language the text might be referencing or describing.
 
+Special Rule 1: If Chinese characters are found in the input (including mixed-language text), identify it as \`zh-cn\`.
+Special Rule 2: If uncertain, default to a language other than \`zh-cn\` in the predefined list (usually \`en-us\`).
+
 - **Crucially, if the input is 'Chinese', the output MUST be 'en-us', because 'Chinese' is an English word, despite referring to the Chinese language.**
 - Similarly, if the input is '英语', the output should be 'zh-cn', as '英语' is a Chinese word.
 

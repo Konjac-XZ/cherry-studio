@@ -32,6 +32,20 @@ const initialState: ShortcutsState = {
       system: true
     },
     {
+      key: 'show_translate',
+      shortcut: ['CommandOrControl', 'Shift', 'T'],
+      editable: true,
+      enabled: true,
+      system: true
+    },
+    {
+      key: 'go_home',
+      shortcut: ['Ctrl', 'H'],
+      editable: true,
+      enabled: true,
+      system: false
+    },
+    {
       //enable/disable selection assistant
       key: 'selection_assistant_toggle',
       shortcut: [],
@@ -72,6 +86,20 @@ const initialState: ShortcutsState = {
     {
       key: 'toggle_show_topics',
       shortcut: ['CommandOrControl', ']'],
+      editable: true,
+      enabled: true,
+      system: false
+    },
+    {
+      key: 'previous_assistant',
+      shortcut: ['Ctrl', 'ArrowUp'],
+      editable: true,
+      enabled: true,
+      system: false
+    },
+    {
+      key: 'next_assistant',
+      shortcut: ['Ctrl', 'ArrowDown'],
       editable: true,
       enabled: true,
       system: false

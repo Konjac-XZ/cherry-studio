@@ -4,8 +4,8 @@
  */
 
 import { anthropic } from '@ai-sdk/anthropic'
-import { azure } from '@ai-sdk/azure'
 import { google } from '@ai-sdk/google'
+import { openai } from '@ai-sdk/openai'
 import { vertexAnthropic } from '@ai-sdk/google-vertex/anthropic/edge'
 import { vertex } from '@ai-sdk/google-vertex/edge'
 import { combineHeaders } from '@ai-sdk/provider-utils'
@@ -166,7 +166,7 @@ export async function buildStreamTextParams(
         blockedDomains: blockedDomains.length > 0 ? blockedDomains : undefined
       }) as ProviderDefinedTool
     } else if (aiSdkProviderId === 'azure-responses') {
-      tools.web_search_preview = azure.tools.webSearchPreview({
+      tools.web_search_preview = openai.tools.webSearchPreview({
         searchContextSize: webSearchPluginConfig?.openai!.searchContextSize
       }) as ProviderDefinedTool
     } else if (aiSdkProviderId === 'azure-anthropic') {

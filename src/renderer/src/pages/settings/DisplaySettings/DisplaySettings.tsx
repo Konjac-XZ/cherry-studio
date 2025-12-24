@@ -312,7 +312,7 @@ const DisplaySettings: FC = () => {
               options={[
                 {
                   label: (
-                    <span style={{ fontFamily: 'Ubuntu, -apple-system, system-ui, Arial, sans-serif' }}>
+                    <span style={{ fontFamily: '-apple-system, system-ui, Arial, sans-serif' }}>
                       {t('settings.display.font.default')}
                     </span>
                   ),
@@ -344,7 +344,7 @@ const DisplaySettings: FC = () => {
               options={[
                 {
                   label: (
-                    <span style={{ fontFamily: 'Ubuntu, -apple-system, system-ui, Arial, sans-serif' }}>
+                    <span style={{ fontFamily: '-apple-system, system-ui, Arial, sans-serif' }}>
                       {t('settings.display.font.default')}
                     </span>
                   ),

@@ -43,7 +43,9 @@ import type {
   WebDavConfig
 } from '@types'
 import type { OpenDialogOptions } from 'electron'
-import { contextBridge, ipcRenderer, shell, webUtils } from 'electron'
+import { clipboard, contextBridge, ipcRenderer, shell, webUtils } from 'electron'
+
+type ElectronClipboardType = Parameters<typeof clipboard.readText>[0]
 import type { CreateDirectoryOptions } from 'webdav'
 
 import type {
@@ -407,6 +409,12 @@ const api = {
   },
   shell: {
     openExternal: (url: string, options?: Electron.OpenExternalOptions) => shell.openExternal(url, options)
+  },
+  clipboard: {
+    readText: (type?: ElectronClipboardType) => clipboard.readText(type),
+    writeText: (text: string, type?: ElectronClipboardType) => clipboard.writeText(text, type),
+    readHtml: (type?: ElectronClipboardType) => clipboard.readHTML(type),
+    writeHtml: (html: string, type?: ElectronClipboardType) => clipboard.writeHTML(html, type)
   },
   copilot: {
     getAuthMessage: (headers?: Record<string, string>) =>

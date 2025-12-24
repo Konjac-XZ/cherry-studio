@@ -545,6 +545,7 @@
         "title": "MCP Settings"
       },
       "model": "Model Settings",
+      "auto_copy": "Auto-copy assistant replies",
       "more": "Assistant Settings",
       "prompt": "Prompt Settings",
       "reasoning_effort": {
@@ -3900,7 +3901,9 @@
         "japanese": "Japanese",
         "label": "Target language",
         "russian": "Russian"
-      }
+      },
+      "user_native_language": "User Native Language",
+      "user_native_language.unspecified": "Unspecified"
     },
     "launch": {
       "onboot": "Start Automatically on Boot",
@@ -4688,12 +4691,16 @@
       "search_message_in_chat": "Search Message in Current Chat",
       "selection_assistant_select_text": "Selection Assistant: Select Text",
       "selection_assistant_toggle": "Toggle Selection Assistant",
+      "go_home": "Go to Home",
       "show_app": "Show/Hide App",
       "show_settings": "Open Settings",
+      "show_translate": "Translate Clipboard",
       "title": "Keyboard Shortcuts",
       "toggle_new_context": "Clear Context",
       "toggle_show_assistants": "Toggle Assistants",
       "toggle_show_topics": "Toggle Topics",
+      "previous_assistant": "Previous Assistant",
+      "next_assistant": "Next Assistant",
       "zoom_in": "Zoom In",
       "zoom_out": "Zoom Out",
       "zoom_reset": "Reset Zoom"
@@ -4953,6 +4960,7 @@
       "language": "Any language"
     },
     "button": {
+      "flip": "Flip",
       "translate": "Translate"
     },
     "close": "Close",
@@ -5005,6 +5013,10 @@
     "exchange": {
       "label": "Swap the source and target languages"
     },
+    "flip": {
+      "label": "Flip the detected language and translate again",
+      "success": "Language flipped"
+    },
     "files": {
       "drag_text": "Drop here",
       "error": {
@@ -5030,7 +5042,8 @@
       "title": "Translation History"
     },
     "info": {
-      "aborted": "Translation aborted"
+      "aborted": "Translation aborted",
+      "html_conversion": "HTML format detected, conversion triggered. Please review the results"
     },
     "input": {
       "placeholder": "Text, text files, or images (with OCR support) can be pasted or dragged in"

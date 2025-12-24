@@ -47,6 +47,7 @@ export const DEFAULT_ASSISTANT_SETTINGS = {
   enableTemperature: false,
   topP: 1,
   enableTopP: false,
+  autoCopy: false,
   contextCount: DEFAULT_CONTEXTCOUNT,
   streamOutput: true,
   defaultModel: undefined,
@@ -82,7 +83,8 @@ export function getDefaultAssistant(): Assistant {
     messages: [],
     type: 'assistant',
     regularPhrases: [], // Added regularPhrases
-    settings: DEFAULT_ASSISTANT_SETTINGS
+    settings: DEFAULT_ASSISTANT_SETTINGS,
+    persistedMentionedModels: []
   }
 }
 
@@ -249,6 +251,7 @@ export const getAssistantSettings = (assistant: Assistant): AssistantSettings =>
     maxTokens: getAssistantMaxTokens(),
     streamOutput: assistant?.settings?.streamOutput ?? DEFAULT_ASSISTANT_SETTINGS.streamOutput,
     toolUseMode: assistant?.settings?.toolUseMode ?? DEFAULT_ASSISTANT_SETTINGS.toolUseMode,
+    autoCopy: assistant?.settings?.autoCopy ?? DEFAULT_ASSISTANT_SETTINGS.autoCopy,
     defaultModel: assistant?.defaultModel ?? DEFAULT_ASSISTANT_SETTINGS.defaultModel,
     reasoning_effort: assistant?.settings?.reasoning_effort ?? DEFAULT_ASSISTANT_SETTINGS.reasoning_effort,
     customParameters: assistant?.settings?.customParameters ?? DEFAULT_ASSISTANT_SETTINGS.customParameters

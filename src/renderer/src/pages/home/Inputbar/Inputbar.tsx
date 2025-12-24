@@ -27,6 +27,7 @@ import { CacheService } from '@renderer/services/CacheService'
 import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import FileManager from '@renderer/services/FileManager'
 import { checkRateLimit, getUserMessage } from '@renderer/services/MessagesService'
+import { getModelUniqId } from '@renderer/services/ModelService'
 import { spanManagerService } from '@renderer/services/SpanManagerService'
 import { estimateTextTokens as estimateTxtTokens, estimateUserPromptUsage } from '@renderer/services/TokenService'
 import WebSearchService from '@renderer/services/WebSearchService'
@@ -39,7 +40,7 @@ import { getSendMessageShortcutLabel } from '@renderer/utils/input'
 import { documentExts, imageExts, textExts } from '@shared/config/constant'
 import { debounce } from 'lodash'
 import type { FC } from 'react'
-import React, { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { InputbarCore } from './components/InputbarCore'
@@ -54,12 +55,14 @@ const logger = loggerService.withContext('Inputbar')
 const INPUTBAR_DRAFT_CACHE_KEY = 'inputbar-draft'
 const DRAFT_CACHE_TTL = 24 * 60 * 60 * 1000 // 24 hours
 
-const getMentionedModelsCacheKey = (assistantId: string) => `inputbar-mentioned-models-${assistantId}`
+const getValidatedMentionedModels = (models?: Model[]): Model[] => {
+  if (!Array.isArray(models)) return []
+  return models.filter((model) => model?.id && model?.name)
+}
 
-const getValidatedCachedModels = (assistantId: string): Model[] => {
-  const cached = CacheService.get<Model[]>(getMentionedModelsCacheKey(assistantId))
-  if (!Array.isArray(cached)) return []
-  return cached.filter((model) => model?.id && model?.name)
+const areSameModelList = (a: Model[], b: Model[]) => {
+  if (a.length !== b.length) return false
+  return a.every((model, index) => getModelUniqId(model) === getModelUniqId(b[index]))
 }
 
 interface Props {
@@ -91,18 +94,16 @@ const Inputbar: FC<Props> = ({ assistant: initialAssistant, setActiveTopic, topi
     toggleExpanded: () => {}
   })
 
-  const [initialMentionedModels] = useState(() => getValidatedCachedModels(initialAssistant.id))
-
   const initialState = useMemo(
     () => ({
       files: [] as FileType[],
-      mentionedModels: initialMentionedModels,
+      mentionedModels: getValidatedMentionedModels(initialAssistant.persistedMentionedModels),
       selectedKnowledgeBases: initialAssistant.knowledge_bases ?? [],
       isExpanded: false,
       couldAddImageFile: false,
       extensions: [] as string[]
     }),
-    [initialMentionedModels, initialAssistant.knowledge_bases]
+    [initialAssistant.knowledge_bases, initialAssistant.persistedMentionedModels]
   )
 
   return (
@@ -155,6 +156,8 @@ const InputbarInner: FC<InputbarInnerProps> = ({ assistant: initialAssistant, se
   const { sendMessageShortcut, showInputEstimatedTokens, enableQuickPanelTriggers } = useSettings()
   const [estimateTokenCount, setEstimateTokenCount] = useState(0)
   const [contextCount, setContextCount] = useState({ current: 0, max: 0 })
+  const mentionedModelsRef = useRef<Model[]>([])
+  const syncingMentionedModelsRef = useRef(false)
 
   const { t } = useTranslation()
   const { pauseMessages } = useMessageOperations(topic)
@@ -164,6 +167,29 @@ const InputbarInner: FC<InputbarInnerProps> = ({ assistant: initialAssistant, se
   const isGenerateImageAssistant = useMemo(() => isGenerateImageModel(model), [model])
   const { setTimeoutTimer } = useTimer()
   const isMultiSelectMode = useAppSelector((state) => state.runtime.chat.isMultiSelectMode)
+
+  useEffect(() => {
+    mentionedModelsRef.current = mentionedModels
+  }, [mentionedModels])
+
+  useEffect(() => {
+    const persisted = getValidatedMentionedModels(assistant.persistedMentionedModels)
+    if (!areSameModelList(mentionedModelsRef.current, persisted)) {
+      syncingMentionedModelsRef.current = true
+      setMentionedModels(persisted)
+    }
+  }, [assistant.id, assistant.persistedMentionedModels, setMentionedModels])
+
+  useEffect(() => {
+    if (syncingMentionedModelsRef.current) {
+      syncingMentionedModelsRef.current = false
+      return
+    }
+    const nextPersisted = getValidatedMentionedModels(mentionedModels)
+    if (!areSameModelList(nextPersisted, getValidatedMentionedModels(assistant.persistedMentionedModels))) {
+      updateAssistant({ persistedMentionedModels: nextPersisted })
+    }
+  }, [assistant.id, assistant.persistedMentionedModels, mentionedModels, updateAssistant])
 
   const isVisionSupported = useMemo(
     () =>
@@ -206,15 +232,6 @@ const InputbarInner: FC<InputbarInnerProps> = ({ assistant: initialAssistant, se
   useEffect(() => {
     setCouldAddImageFile(canAddImageFile)
   }, [canAddImageFile, setCouldAddImageFile])
-
-  const onUnmount = useEffectEvent((id: string) => {
-    CacheService.set(getMentionedModelsCacheKey(id), mentionedModels, DRAFT_CACHE_TTL)
-  })
-
-  useEffect(() => {
-    return () => onUnmount(assistant.id)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [assistant.id])
 
   const placeholderText = enableQuickPanelTriggers
     ? t('chat.input.placeholder', { key: getSendMessageShortcutLabel(sendMessageShortcut) })

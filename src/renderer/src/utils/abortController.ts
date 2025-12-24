@@ -8,7 +8,7 @@ export const addAbortController = (id: string, abortFn: () => void) => {
   abortMap.set(id, [...(abortMap.get(id) || []), abortFn])
 }
 
-export const removeAbortController = (id: string, abortFn: () => void) => {
+export const removeAbortController = (id: string, abortFn?: () => void) => {
   const callbackArr = abortMap.get(id)
   if (abortFn && callbackArr) {
     const index = callbackArr.indexOf(abortFn)

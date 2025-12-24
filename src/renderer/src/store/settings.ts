@@ -48,6 +48,7 @@ export interface SettingsState {
   sendMessageShortcut: SendMessageShortcut
   language: LanguageVarious
   targetLanguage: TranslateLanguageCode
+  userNativeLanguage?: TranslateLanguageCode
   proxyMode: 'system' | 'custom' | 'none'
   proxyUrl?: string
   proxyBypassRules?: string
@@ -238,6 +239,7 @@ export const initialState: SettingsState = {
   sendMessageShortcut: 'Enter',
   language: navigator.language as LanguageVarious,
   targetLanguage: 'en-us',
+  userNativeLanguage: undefined,
   proxyMode: 'system',
   proxyUrl: undefined,
   proxyBypassRules: undefined,
@@ -455,6 +457,9 @@ const settingsSlice = createSlice({
     },
     setTargetLanguage: (state, action: PayloadAction<TranslateLanguageCode>) => {
       state.targetLanguage = action.payload
+    },
+    setUserNativeLanguage: (state, action: PayloadAction<TranslateLanguageCode | undefined>) => {
+      state.userNativeLanguage = action.payload
     },
     setProxyMode: (state, action: PayloadAction<'system' | 'custom' | 'none'>) => {
       state.proxyMode = action.payload
@@ -884,6 +889,7 @@ export const {
   setSendMessageShortcut,
   setLanguage,
   setTargetLanguage,
+  setUserNativeLanguage,
   setProxyMode,
   setProxyUrl,
   setProxyBypassRules,

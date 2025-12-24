@@ -414,7 +414,7 @@ const EditorContainer = styled(Space)`
     border-radius: 15px;
     padding: 1em;
     flex: 1;
-    font-family: Ubuntu;
+    font-family: -apple-system, system-ui, Arial, sans-serif;
     resize: none !important;
     overflow: auto;
     width: 100%;

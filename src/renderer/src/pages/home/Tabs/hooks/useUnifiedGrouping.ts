@@ -54,29 +54,32 @@ export const useUnifiedGrouping = (options: UseUnifiedGroupingOptions) => {
       }
     })
 
-    // Sort groups: untagged first, then by savedTagsOrder
+    // Sort groups: untagged first, then according to savedTagsOrder, others follow
     const untaggedKey = t('assistants.tags.untagged')
-    const sortedGroups = Array.from(groups.entries()).sort(([tagA], [tagB]) => {
-      if (tagA === untaggedKey) return -1
-      if (tagB === untaggedKey) return 1
 
-      if (savedTagsOrder.length > 0) {
+    const entries = Array.from(groups.entries())
+
+    // Move untagged group to the front if present
+    const untaggedIndex = entries.findIndex(([tag]) => tag === untaggedKey)
+    if (untaggedIndex > -1) {
+      const [untagged] = entries.splice(untaggedIndex, 1)
+      entries.unshift(untagged)
+    }
+
+    if (savedTagsOrder.length > 0) {
+      const head = entries.length > 0 && entries[0][0] === untaggedKey ? entries.shift() : null
+      entries.sort(([tagA], [tagB]) => {
         const indexA = savedTagsOrder.indexOf(tagA)
         const indexB = savedTagsOrder.indexOf(tagB)
+        if (indexA === -1 && indexB === -1) return 0
+        if (indexA === -1) return 1
+        if (indexB === -1) return -1
+        return indexA - indexB
+      })
+      if (head) entries.unshift(head)
+    }
 
-        if (indexA !== -1 && indexB !== -1) {
-          return indexA - indexB
-        }
-
-        if (indexA !== -1) return -1
-
-        if (indexB !== -1) return 1
-      }
-
-      return 0
-    })
-
-    return sortedGroups.map(([tag, items]) => ({ tag, items }))
+    return entries.map(([tag, items]) => ({ tag, items }))
   }, [unifiedItems, t, savedTagsOrder])
 
   const handleUnifiedGroupReorder = useCallback(

@@ -3,6 +3,7 @@ import type { BundledLanguage, BundledTheme } from 'shiki/bundle/web'
 import type { SpecialLanguage, ThemedToken } from 'shiki/core'
 import { getTokenStyleObject, type HighlighterGeneric } from 'shiki/core'
 
+import { configureKatex } from './markdownIt/katex'
 import { AsyncInitializer } from './asyncInitializer'
 
 export const DEFAULT_LANGUAGES = ['text', 'javascript', 'typescript', 'python', 'java', 'markdown', 'json']
@@ -136,18 +137,30 @@ export function getReactStyleFromToken(token: ThemedToken): Record<string, strin
  */
 const mdInitializer = new AsyncInitializer(async () => {
   const md = await import('markdown-it')
-  return md.default({
+  const cjkFriendly = await import('markdown-it-cjk-friendly')
+  const instance = md.default({
     linkify: true, // 自动转换 URL 为链接
     typographer: true // 启用印刷格式优化
   })
+  // 使用 CJK 友好插件，改善中日韩文字的换行处理
+  instance.use(cjkFriendly.default)
+  return instance
 })
+
+export interface MarkdownRenderOptions {
+  math?: {
+    engine: 'katex'
+    allowSingleDollar?: boolean
+  }
+}
 
 /**
  * 获取 markdown-it 渲染器
  * @param theme - 主题
  * @param markdown
+ * @param options - 渲染配置
  */
-export async function getMarkdownIt(theme: string, markdown: string) {
+export async function getMarkdownIt(theme: string, markdown: string, options?: MarkdownRenderOptions) {
   const highlighter = await getHighlighter()
   await loadMarkdownLanguage(markdown, highlighter)
   const md = await mdInitializer.get()
@@ -178,6 +191,9 @@ export async function getMarkdownIt(theme: string, markdown: string) {
       fallbackLanguage: 'json'
     })
   )
+
+  const mathOptions = options?.math
+  configureKatex(md, mathOptions?.engine === 'katex', mathOptions?.allowSingleDollar ?? true)
 
   return md
 }

@@ -4,7 +4,14 @@ import { useSettings } from '@renderer/hooks/useSettings'
 import type { HighlightChunkResult, ShikiPreProperties } from '@renderer/services/ShikiStreamService'
 import { shikiStreamService } from '@renderer/services/ShikiStreamService'
 import { ThemeMode } from '@renderer/types'
-import { getHighlighter, getMarkdownIt, getShiki, loadLanguageIfNeeded, loadThemeIfNeeded } from '@renderer/utils/shiki'
+import {
+  getHighlighter,
+  getMarkdownIt,
+  getShiki,
+  loadLanguageIfNeeded,
+  loadThemeIfNeeded,
+  type MarkdownRenderOptions
+} from '@renderer/utils/shiki'
 import * as cmThemes from '@uiw/codemirror-themes-all'
 import type React from 'react'
 import { createContext, type PropsWithChildren, use, useCallback, useEffect, useMemo, useState } from 'react'
@@ -16,7 +23,7 @@ interface CodeStyleContextType {
   cleanupTokenizers: (callerId: string) => void
   getShikiPreProperties: (language: string) => Promise<ShikiPreProperties>
   highlightCode: (code: string, language: string) => Promise<string>
-  shikiMarkdownIt: (code: string) => Promise<string>
+  shikiMarkdownIt: (code: string, options?: MarkdownRenderOptions) => Promise<string>
   themeNames: string[]
   activeShikiTheme: string
   isShikiThemeDark: boolean
@@ -154,8 +161,8 @@ export const CodeStyleProvider: React.FC<PropsWithChildren> = ({ children }) => 
 
   // 使用 Shiki 和 Markdown-it 渲染代码
   const shikiMarkdownIt = useCallback(
-    async (code: string) => {
-      const renderer = await getMarkdownIt(activeShikiTheme, code)
+    async (code: string, options?: MarkdownRenderOptions) => {
+      const renderer = await getMarkdownIt(activeShikiTheme, code, options)
       if (!renderer) {
         return code
       }
