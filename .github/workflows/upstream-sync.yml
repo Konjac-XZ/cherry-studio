@@ -27,8 +27,8 @@ jobs:
 
       - name: Configure git identity (needed for merge commits)
         run: |
-          git config --local user.name "upstream-sync-bot"
-          git config --local user.email "upstream-sync-bot@users.noreply.github.com"
+          git config --local user.name "Konjac-XZ"
+          git config --local user.email "1951801592@qq.com"
 
       # 2) Guard / lock: if blocked, do nothing this run
       #    - Blocked if an open conflict issue exists (needs-manual-merge)
