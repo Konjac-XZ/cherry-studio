@@ -32,12 +32,12 @@ jobs:
   check-repository:
     runs-on: ubuntu-latest
     outputs:
-      should_run: ${{ github.repository == 'CherryHQ/cherry-studio' }}
+      should_run: ${{ github.repository == 'Konjac-XZ/cherry-studio' }}
     steps:
-      - name: Check if running in main repository
+      - name: Check if running in my repository
         run: |
           echo "Running in repository: ${{ github.repository }}"
-          echo "Should run: ${{ github.repository == 'CherryHQ/cherry-studio' }}"
+          echo "Should run: ${{ github.repository == 'Konjac-XZ/cherry-studio' }}"
 
   nightly-build:
     needs: check-repository
