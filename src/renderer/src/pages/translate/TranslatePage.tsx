@@ -165,6 +165,7 @@ const TranslatePage: FC = () => {
   const [targetLanguage, setTargetLanguage] = useState<TranslateLanguage>(_targetLanguage)
   const [autoDetectionMethod, setAutoDetectionMethod] = useState<AutoDetectionMethod>('franc')
   const [isProcessing, setIsProcessing] = useState(false)
+  const [fontSize, setFontSize] = useState<number>(16)
 
   // redux states
   const text = useAppSelector((state) => state.translate.translateInput)
@@ -857,6 +858,18 @@ const TranslatePage: FC = () => {
         setAutoDetectionMethod('franc')
         db.settings.put({ id: 'translate:detect:method', value: 'franc' })
       }
+
+      const fontSizeSetting = await db.settings.get({ id: 'translate:font:size' })
+      if (fontSizeSetting) {
+        const parsedSize = Number(fontSizeSetting.value)
+        if (Number.isFinite(parsedSize)) {
+          setFontSize(Math.max(12, Math.min(24, Math.round(parsedSize))))
+        } else {
+          db.settings.put({ id: 'translate:font:size', value: 16 })
+        }
+      } else {
+        db.settings.put({ id: 'translate:font:size', value: 16 })
+      }
       // Mark settings as ready so that global shortcut flows can proceed with correct bidirectional state
       setSettingsReady(true)
     })
@@ -1429,6 +1442,7 @@ const TranslatePage: FC = () => {
             <Textarea
               ref={textAreaRef}
               variant="borderless"
+              $fontSize={fontSize}
               placeholder={t('translate.input.placeholder')}
               value={text}
               onChange={(e) => setText(e.target.value)}
@@ -1463,7 +1477,7 @@ const TranslatePage: FC = () => {
               disabled={!translatedContent}
               icon={copied ? <Check size={16} color="var(--color-primary)" /> : <CopyIcon size={16} />}
             />
-            <OutputText ref={outputTextRef} onScroll={handleOutputScroll} className={'selectable'}>
+            <OutputText ref={outputTextRef} $fontSize={fontSize} onScroll={handleOutputScroll} className={'selectable'}>
               {!translatedContent ? (
                 <div style={{ color: 'var(--color-text-3)', userSelect: 'none' }}>
                   {t('translate.output.placeholder')}
@@ -1492,6 +1506,12 @@ const TranslatePage: FC = () => {
         translateModel={translateModel}
         autoDetectionMethod={autoDetectionMethod}
         setAutoDetectionMethod={updateAutoDetectionMethod}
+        fontSize={fontSize}
+        setFontSize={(value) => {
+          const nextValue = Math.max(12, Math.min(24, Math.round(value)))
+          setFontSize(nextValue)
+          db.settings.put({ id: 'translate:font:size', value: nextValue })
+        }}
       />
     </Container>
   )
@@ -1663,17 +1683,18 @@ const InputContainerDraggingHintContainer = styled.div`
   color: var(--color-text-3);
 `
 
-const Textarea = styled(TextArea)`
+const Textarea = styled(TextArea)<{ $fontSize: number }>`
   display: flex;
   flex: 1;
   border-radius: 0;
-  font-size: 16px;
+  font-size: ${({ $fontSize }) => $fontSize}px;
   .ant-input {
     resize: none;
     padding: 5px 16px;
+    font-size: ${({ $fontSize }) => $fontSize}px;
   }
   .ant-input-clear-icon {
-    font-size: 16px;
+    font-size: ${({ $fontSize }) => $fontSize}px;
   }
 `
 
@@ -1718,14 +1739,14 @@ const CopyButton = styled(Button)`
     visibility 0.2s ease-in-out;
 `
 
-const OutputText = styled.div`
+const OutputText = styled.div<{ $fontSize: number }>`
   min-height: 0;
   flex: 1;
   padding: 5px 16px;
   overflow-y: auto;
 
   overscroll-behavior: contain;
-  font-size: 16px;
+  font-size: ${({ $fontSize }) => $fontSize}px;
   .plain {
     white-space: pre-wrap;
     overflow-wrap: break-word;

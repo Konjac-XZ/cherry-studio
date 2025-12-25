@@ -3,7 +3,7 @@ import { HStack } from '@renderer/components/Layout'
 import db from '@renderer/databases'
 import useTranslate from '@renderer/hooks/useTranslate'
 import type { AutoDetectionMethod, Model, TranslateLanguage } from '@renderer/types'
-import { Button, Flex, Modal, Radio, Space, Switch, Tooltip } from 'antd'
+import { Button, Flex, Modal, Radio, Slider, Space, Switch, Tooltip } from 'antd'
 import { HelpCircle } from 'lucide-react'
 import type { FC } from 'react'
 import { memo, useEffect, useState } from 'react'
@@ -26,6 +26,8 @@ const TranslateSettings: FC<{
   translateModel: Model | undefined
   autoDetectionMethod: AutoDetectionMethod
   setAutoDetectionMethod: (method: AutoDetectionMethod) => void
+  fontSize: number
+  setFontSize: (value: number) => void
 }> = ({
   visible,
   onClose,
@@ -38,7 +40,9 @@ const TranslateSettings: FC<{
   bidirectionalPair,
   setBidirectionalPair,
   autoDetectionMethod,
-  setAutoDetectionMethod
+  setAutoDetectionMethod,
+  fontSize,
+  setFontSize
 }) => {
   const { t } = useTranslation()
   const [localPair, setLocalPair] = useState<[TranslateLanguage, TranslateLanguage]>(bidirectionalPair)
@@ -82,6 +86,23 @@ const TranslateSettings: FC<{
             <div style={{ fontWeight: 500 }}>{t('translate.settings.autoCopy')}</div>
             <Switch checked={autoCopy} onChange={(checked) => updateSettings({ autoCopy: checked })} />
           </HStack>
+        </div>
+
+        <div>
+          <HStack alignItems="center" justifyContent="space-between">
+            <div style={{ fontWeight: 500 }}>{t('translate.settings.font_size')}</div>
+            <div style={{ color: 'var(--color-text-3)' }}>{fontSize}px</div>
+          </HStack>
+          <Slider
+            value={fontSize}
+            min={12}
+            max={24}
+            step={1}
+            onChange={(value) => {
+              if (Array.isArray(value)) return
+              setFontSize(value)
+            }}
+          />
         </div>
 
         <div>
