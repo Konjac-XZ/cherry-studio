@@ -46,7 +46,7 @@ jobs:
 
     strategy:
       matrix:
-        os: [macos-latest, windows-latest, ubuntu-latest]
+        os: [windows-latest]
       fail-fast: false
 
     steps:
@@ -66,11 +66,6 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 22
-
-      - name: macos-latest dependencies fix
-        if: matrix.os == 'macos-latest'
-        run: |
-          brew install python-setuptools
 
       - name: Install corepack
         run: corepack enable && corepack prepare yarn@4.9.1 --activate
@@ -97,38 +92,7 @@ jobs:
         run: echo "date=$(date +'%Y%m%d')" >> $GITHUB_OUTPUT
         shell: bash
 
-      - name: Build Linux
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          sudo apt-get install -y rpm
-          yarn build:linux
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NODE_OPTIONS: --max-old-space-size=8192
-          MAIN_VITE_CHERRYAI_CLIENT_SECRET: ${{ secrets.MAIN_VITE_CHERRYAI_CLIENT_SECRET }}
-          MAIN_VITE_MINERU_API_KEY: ${{ secrets.MAIN_VITE_MINERU_API_KEY }}
-          RENDERER_VITE_AIHUBMIX_SECRET: ${{ secrets.RENDERER_VITE_AIHUBMIX_SECRET }}
-          RENDERER_VITE_PPIO_APP_SECRET: ${{ secrets.RENDERER_VITE_PPIO_APP_SECRET }}
-
-      - name: Build Mac
-        if: matrix.os == 'macos-latest'
-        run: |
-          yarn build:mac
-        env:
-          CSC_LINK: ${{ secrets.CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NODE_OPTIONS: --max-old-space-size=8192
-          MAIN_VITE_CHERRYAI_CLIENT_SECRET: ${{ secrets.MAIN_VITE_CHERRYAI_CLIENT_SECRET }}
-          MAIN_VITE_MINERU_API_KEY: ${{ secrets.MAIN_VITE_MINERU_API_KEY }}
-          RENDERER_VITE_AIHUBMIX_SECRET: ${{ secrets.RENDERER_VITE_AIHUBMIX_SECRET }}
-          RENDERER_VITE_PPIO_APP_SECRET: ${{ secrets.RENDERER_VITE_PPIO_APP_SECRET }}
-
       - name: Build Windows
-        if: matrix.os == 'windows-latest'
         run: |
           yarn build:win
         env:
@@ -146,34 +110,14 @@ jobs:
           DATE=${{ steps.date.outputs.date }}
 
           # Windows artifacts - based on actual file naming pattern
-          if [ "${{ matrix.os }}" == "windows-latest" ]; then
-            # Setup installer
-            find dist -name "*-x64-setup.exe" -exec cp {} renamed-artifacts/cherry-studio-nightly-${DATE}-x64-setup.exe \;
-            find dist -name "*-arm64-setup.exe" -exec cp {} renamed-artifacts/cherry-studio-nightly-${DATE}-arm64-setup.exe \;
-
-            # Portable exe
-            find dist -name "*-x64-portable.exe" -exec cp {} renamed-artifacts/cherry-studio-nightly-${DATE}-x64-portable.exe \;
-            find dist -name "*-arm64-portable.exe" -exec cp {} renamed-artifacts/cherry-studio-nightly-${DATE}-arm64-portable.exe \;
-          fi
-
-          # macOS artifacts
-          if [ "${{ matrix.os }}" == "macos-latest" ]; then
-            find dist -name "*-arm64.dmg" -exec cp {} renamed-artifacts/cherry-studio-nightly-${DATE}-arm64.dmg \;
-            find dist -name "*-x64.dmg" -exec cp {} renamed-artifacts/cherry-studio-nightly-${DATE}-x64.dmg \;
-          fi
-
-          # Linux artifacts
-          if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
-            find dist -name "*-x86_64.AppImage" -exec cp {} renamed-artifacts/cherry-studio-nightly-${DATE}-x86_64.AppImage \;
-            find dist -name "*-arm64.AppImage" -exec cp {} renamed-artifacts/cherry-studio-nightly-${DATE}-arm64.AppImage \;
-          fi
+          # Setup installer only
+          find dist -name "*-x64-setup.exe" -exec cp {} renamed-artifacts/cherry-studio-nightly-${DATE}-x64-setup.exe \;
 
           # Copy update files
           cp dist/latest*.yml renamed-artifacts/ || true
 
-      # Generate SHA256 checksums (Windows)
-      - name: Generate SHA256 checksums (Windows)
-        if: runner.os == 'Windows'
+      # Generate SHA256 checksums
+      - name: Generate SHA256 checksums
         shell: pwsh
         run: |
           cd renamed-artifacts
@@ -185,33 +129,11 @@ jobs:
           }
           cat SHA256SUMS.txt
 
-      # Generate SHA256 checksums (macOS/Linux)
-      - name: Generate SHA256 checksums (macOS/Linux)
-        if: runner.os != 'Windows'
-        shell: bash
-        run: |
-          cd renamed-artifacts
-          echo "# SHA256 checksums for ${{ runner.os }} - $(date +'%Y-%m-%d')" > SHA256SUMS.txt
-          if command -v shasum &>/dev/null; then
-            # macOS
-            shasum -a 256 * 2>/dev/null | grep -v SHA256SUMS.txt >> SHA256SUMS.txt || echo "No files to hash" >> SHA256SUMS.txt
-          else
-            # Linux
-            sha256sum * 2>/dev/null | grep -v SHA256SUMS.txt >> SHA256SUMS.txt || echo "No files to hash" >> SHA256SUMS.txt
-          fi
-          cat SHA256SUMS.txt
-
       - name: List files to be uploaded
         shell: bash
         run: |
           echo "准备上传的文件:"
-          if [ -x "$(command -v tree)" ]; then
-            tree renamed-artifacts
-          elif [ "$RUNNER_OS" == "Windows" ]; then
-            dir renamed-artifacts
-          else
-            ls -la renamed-artifacts
-          fi
+          dir renamed-artifacts
           echo "总计: $(find renamed-artifacts -type f | wc -l) 个文件"
 
       - name: Upload artifacts
@@ -251,9 +173,7 @@ jobs:
           echo "请在下载后验证文件完整性。提供 SHA256 校验和。" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          # Check each platform's artifacts and show checksums if available
-
-          # Windows
+          # Windows artifacts
           WIN_ARTIFACT_DIR="all-artifacts/cherry-studio-nightly-${{ steps.date.outputs.date }}-windows-latest"
           if [ -d "$WIN_ARTIFACT_DIR" ] && [ -f "$WIN_ARTIFACT_DIR/SHA256SUMS.txt" ]; then
             echo "### Windows 安装包" >> $GITHUB_STEP_SUMMARY
@@ -264,34 +184,6 @@ jobs:
           else
             echo "### Windows 安装包" >> $GITHUB_STEP_SUMMARY
             echo "❌ Windows 构建未成功完成或未生成校验和。" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-          fi
-
-          # macOS
-          MAC_ARTIFACT_DIR="all-artifacts/cherry-studio-nightly-${{ steps.date.outputs.date }}-macos-latest"
-          if [ -d "$MAC_ARTIFACT_DIR" ] && [ -f "$MAC_ARTIFACT_DIR/SHA256SUMS.txt" ]; then
-            echo "### macOS 安装包" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            cat "$MAC_ARTIFACT_DIR/SHA256SUMS.txt" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "### macOS 安装包" >> $GITHUB_STEP_SUMMARY
-            echo "❌ macOS 构建未成功完成或未生成校验和。" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-          fi
-
-          # Linux
-          LINUX_ARTIFACT_DIR="all-artifacts/cherry-studio-nightly-${{ steps.date.outputs.date }}-ubuntu-latest"
-          if [ -d "$LINUX_ARTIFACT_DIR" ] && [ -f "$LINUX_ARTIFACT_DIR/SHA256SUMS.txt" ]; then
-            echo "### Linux 安装包" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            cat "$LINUX_ARTIFACT_DIR/SHA256SUMS.txt" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "### Linux 安装包" >> $GITHUB_STEP_SUMMARY
-            echo "❌ Linux 构建未成功完成或未生成校验和。" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
           fi
 
