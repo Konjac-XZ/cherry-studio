@@ -165,7 +165,21 @@ const TranslatePage: FC = () => {
   const [targetLanguage, setTargetLanguage] = useState<TranslateLanguage>(_targetLanguage)
   const [autoDetectionMethod, setAutoDetectionMethod] = useState<AutoDetectionMethod>('franc')
   const [isProcessing, setIsProcessing] = useState(false)
-  const [fontSize, setFontSize] = useState<number>(16)
+  const clampFontSize = (value: number) => Math.max(12, Math.min(24, Math.round(value)))
+  const [fontSize, setFontSize] = useState<number>(() => {
+    try {
+      const cachedSize = localStorage.getItem('translate:font:size')
+      if (cachedSize) {
+        const parsedSize = Number(cachedSize)
+        if (Number.isFinite(parsedSize)) {
+          return clampFontSize(parsedSize)
+        }
+      }
+    } catch {
+      // Ignore errors from localStorage access
+    }
+    return 16
+  })
 
   // redux states
   const text = useAppSelector((state) => state.translate.translateInput)
@@ -863,7 +877,13 @@ const TranslatePage: FC = () => {
       if (fontSizeSetting) {
         const parsedSize = Number(fontSizeSetting.value)
         if (Number.isFinite(parsedSize)) {
-          setFontSize(Math.max(12, Math.min(24, Math.round(parsedSize))))
+          const nextSize = clampFontSize(parsedSize)
+          setFontSize((current) => (current === nextSize ? current : nextSize))
+          try {
+            localStorage.setItem('translate:font:size', String(nextSize))
+          } catch {
+            // Ignore errors from localStorage access
+          }
         } else {
           db.settings.put({ id: 'translate:font:size', value: 16 })
         }
@@ -1508,9 +1528,14 @@ const TranslatePage: FC = () => {
         setAutoDetectionMethod={updateAutoDetectionMethod}
         fontSize={fontSize}
         setFontSize={(value) => {
-          const nextValue = Math.max(12, Math.min(24, Math.round(value)))
+          const nextValue = clampFontSize(value)
           setFontSize(nextValue)
           db.settings.put({ id: 'translate:font:size', value: nextValue })
+          try {
+            localStorage.setItem('translate:font:size', String(nextValue))
+          } catch {
+            // Ignore errors from localStorage access
+          }
         }}
       />
     </Container>
