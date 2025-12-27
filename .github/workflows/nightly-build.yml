@@ -149,11 +149,6 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - name: Get date tag
-        id: date
-        run: echo "date=$(date +'%Y%m%d')" >> $GITHUB_OUTPUT
-        shell: bash
-
       - name: Download all artifacts
         uses: actions/download-artifact@v5
         with:
@@ -173,12 +168,12 @@ jobs:
           echo "请在下载后验证文件完整性。提供 SHA256 校验和。" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          # Windows artifacts
-          WIN_ARTIFACT_DIR="all-artifacts/cherry-studio-nightly-${{ steps.date.outputs.date }}-windows-latest"
-          if [ -d "$WIN_ARTIFACT_DIR" ] && [ -f "$WIN_ARTIFACT_DIR/SHA256SUMS.txt" ]; then
+          # Windows artifacts (search to avoid date mismatch when summary runs across UTC date boundaries)
+          WIN_SHA_FILE=$(find all-artifacts -maxdepth 3 -name SHA256SUMS.txt | head -n 1)
+          if [ -n "$WIN_SHA_FILE" ] && [ -f "$WIN_SHA_FILE" ]; then
             echo "### Windows 安装包" >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
-            cat "$WIN_ARTIFACT_DIR/SHA256SUMS.txt" >> $GITHUB_STEP_SUMMARY
+            cat "$WIN_SHA_FILE" >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
           else
