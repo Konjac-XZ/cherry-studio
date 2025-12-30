@@ -851,7 +851,6 @@ const buttonRenderers: Record<MessageMenubarButtonId, MessageMenubarButtonRender
       <Dropdown
         menu={{
           style: {
-            maxHeight: 250,
             overflowY: 'auto',
             backgroundClip: 'border-box'
           },
