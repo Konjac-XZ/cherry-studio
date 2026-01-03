@@ -3,6 +3,8 @@ import { homedir } from 'node:os'
 import { promisify } from 'node:util'
 
 import { loggerService } from '@logger'
+import { isWin } from '@main/constant'
+import { getCpuName } from '@main/utils/system'
 import { HOME_CHERRY_DIR } from '@shared/config/constant'
 import * as fs from 'fs-extra'
 import * as path from 'path'
@@ -10,6 +12,8 @@ import * as path from 'path'
 const logger = loggerService.withContext('OvmsManager')
 
 const execAsync = promisify(exec)
+
+export const isOvmsSupported = isWin && getCpuName().toLowerCase().includes('intel')
 
 interface OvmsProcess {
   pid: number
@@ -28,6 +32,12 @@ interface OvmsConfig {
 
 class OvmsManager {
   private ovms: OvmsProcess | null = null
+
+  constructor() {
+    if (!isOvmsSupported) {
+      throw new Error('OVMS Manager is only supported on Windows platform with Intel CPU.')
+    }
+  }
 
   /**
    * Recursively terminate a process and all its child processes
@@ -585,3 +595,5 @@ class OvmsManager {
 }
 
 export default OvmsManager
+// Export singleton instance
+export const ovmsManager = isOvmsSupported ? new OvmsManager() : undefined
