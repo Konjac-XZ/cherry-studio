@@ -131,9 +131,7 @@ const detectLanguageByLLM = async (
   const assistant: Assistant = getDefaultAssistant()
 
   assistant.model = model
-  assistant.settings = {
-    temperature: 0.7
-  }
+  assistant.settings = {}
   assistant.prompt = LANG_DETECT_PROMPT.replace('{{list_lang}}', listLangText).replace('{{input}}', text)
 
   const onChunk: (chunk: Chunk) => void = (chunk: Chunk) => {
@@ -309,6 +307,7 @@ export const getTranslateOptions = async () => {
     }))
     return [...builtinLanguages, ...transformedCustomLangs]
   } catch (e) {
+    logger.error('[getTranslateOptions] Failed to get custom languages. Fallback to builtinLanguages', e as Error)
     return builtinLanguages
   }
 }

@@ -51,6 +51,7 @@ export default function useTranslate() {
       }
 
       const result = translateLanguages.find((item) => item.langCode === langCode)
+
       if (result) {
         return result
       } else {
@@ -63,6 +64,7 @@ export default function useTranslate() {
         })
         return UNKNOWN
       }
+      return UNKNOWN
     },
     [isLoaded, translateLanguages]
   )
@@ -78,6 +80,7 @@ export default function useTranslate() {
     prompt,
     settings,
     translateLanguages,
+    isLoaded,
     getLanguageByLangcode,
     updateSettings: handleUpdateSettings
   }
