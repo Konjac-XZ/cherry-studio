@@ -123,6 +123,7 @@ jobs:
           body: |
             Automated upstream sync.
             Upstream commits not yet in this repo: ${{ steps.check.outputs.ahead }}
+          rebase: false
 
       - name: Enable auto-merge (squash)
         if: steps.guard.outputs.blocked != 'true' && steps.check.outputs.ahead != '0' && steps.merge.outputs.status == 'clean' && steps.cpr.outputs.pull-request-number != ''
