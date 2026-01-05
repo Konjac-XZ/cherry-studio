@@ -1,5 +1,11 @@
 name: Upstream sync
 
+# Purpose
+# - Reset bot/upstream-sync to the current main.
+# - Merge upstream/main onto bot/upstream-sync (no rebase).
+# - Open a squash-only PR from bot/upstream-sync to main so only one commit lands.
+# - Skip PR creation when the branch is content-identical to main (avoids "no diff" failures).
+
 on:
   schedule:
     - cron: "0 */4 * * *" # every 4 hours
@@ -83,13 +89,14 @@ jobs:
         run: |
           echo "ahead=$(git rev-list --count HEAD..upstream/main)" >> "$GITHUB_OUTPUT"
 
-      # Keep bot/upstream-sync rooted at the latest main so it never lags behind manual merges
+      # 1) Reset bot/upstream-sync to current main
       - name: Reset bot sync branch to latest main
         if: steps.guard.outputs.blocked != 'true' && steps.check.outputs.ahead != '0'
         run: |
           git fetch origin main --prune
           git checkout -B bot/upstream-sync origin/main
 
+      # 2) Merge upstream/main into bot/upstream-sync (no rebase)
       - name: Merge upstream into sync branch (no rebase)
         if: steps.guard.outputs.blocked != 'true' && steps.check.outputs.ahead != '0'
         id: merge
@@ -106,13 +113,25 @@ jobs:
             git merge --abort || true
           fi
 
+      - name: Check for tree diff vs main
+        if: steps.guard.outputs.blocked != 'true' && steps.check.outputs.ahead != '0' && steps.merge.outputs.status == 'clean'
+        id: diff
+        run: |
+          if git diff --quiet origin/main..HEAD; then
+            echo "has_diff=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No tree diff against origin/main; skipping PR creation."
+          else
+            echo "has_diff=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Push sync branch
         if: steps.guard.outputs.blocked != 'true' && steps.check.outputs.ahead != '0' && steps.merge.outputs.status == 'clean'
         run: |
           git push origin bot/upstream-sync:bot/upstream-sync --force-with-lease
 
+      # 3) Open/refresh PR from bot/upstream-sync -> main; final merge will squash to a single commit
       - name: Ensure PR exists (no rewrite)
-        if: steps.guard.outputs.blocked != 'true' && steps.check.outputs.ahead != '0' && steps.merge.outputs.status == 'clean'
+        if: steps.guard.outputs.blocked != 'true' && steps.check.outputs.ahead != '0' && steps.merge.outputs.status == 'clean' && steps.diff.outputs.has_diff == 'true'
         id: ensure_pr
         uses: actions/github-script@v7
         env:
@@ -143,7 +162,7 @@ jobs:
             core.setOutput("pull-request-number", prNumber.toString());
 
       - name: Enable auto-merge (squash)
-        if: steps.guard.outputs.blocked != 'true' && steps.check.outputs.ahead != '0' && steps.merge.outputs.status == 'clean' && steps.ensure_pr.outputs.pull-request-number != ''
+        if: steps.guard.outputs.blocked != 'true' && steps.check.outputs.ahead != '0' && steps.merge.outputs.status == 'clean' && steps.diff.outputs.has_diff == 'true' && steps.ensure_pr.outputs.pull-request-number != ''
         uses: peter-evans/enable-pull-request-automerge@v3
         with:
           token: ${{ secrets.SYNC_PAT }}
