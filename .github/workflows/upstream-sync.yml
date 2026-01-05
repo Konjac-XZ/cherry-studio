@@ -33,7 +33,7 @@ jobs:
       # 2) Guard / lock: if blocked, do nothing this run
       #    - Blocked if an open conflict issue exists (needs-manual-merge)
       #    - Blocked if an open sync PR already exists (don't keep updating it while you're asleep)
-      - name: "Guard: skip if blocked (open conflict issue or open sync PR)"
+      - name: "Guard: skip if blocked (open conflict issue)"
         id: guard
         uses: actions/github-script@v7
         with:
@@ -50,7 +50,7 @@ jobs:
             });
             const blockedByIssue = openIssues.data.length > 0;
 
-            // Open upstream-sync PR?
+            // Open upstream-sync PR? Only informational; we still refresh the branch to keep it current.
             const prs = await github.rest.pulls.list({
               owner, repo,
               state: "open",
@@ -58,12 +58,13 @@ jobs:
               base: "main",
               per_page: 1,
             });
-            const blockedByPR = prs.data.length > 0;
+            const hasOpenPR = prs.data.length > 0;
 
-            core.setOutput("blocked", (blockedByIssue || blockedByPR) ? "true" : "false");
+            core.setOutput("blocked", blockedByIssue ? "true" : "false");
+            core.setOutput("hasOpenPR", hasOpenPR ? "true" : "false");
 
             if (blockedByIssue) core.notice("Sync is locked by an open merge-conflict issue (needs-manual-merge).");
-            if (blockedByPR) core.notice("An upstream-sync PR is already open; skipping updates.");
+            if (hasOpenPR) core.notice("An upstream-sync PR is open; branch will be refreshed to current main before updating.");
 
       - name: Ensure remote-tracking ref for PR branch exists
         if: steps.guard.outputs.blocked != 'true'
@@ -81,6 +82,13 @@ jobs:
         id: check
         run: |
           echo "ahead=$(git rev-list --count HEAD..upstream/main)" >> "$GITHUB_OUTPUT"
+
+      # Keep bot/upstream-sync rooted at the latest main so it never lags behind manual merges
+      - name: Reset bot sync branch to latest main
+        if: steps.guard.outputs.blocked != 'true' && steps.check.outputs.ahead != '0'
+        run: |
+          git fetch origin main --prune
+          git checkout -B bot/upstream-sync origin/main
 
       - name: Rebase upstream onto main (linear, no merge commit)
         if: steps.guard.outputs.blocked != 'true' && steps.check.outputs.ahead != '0'
