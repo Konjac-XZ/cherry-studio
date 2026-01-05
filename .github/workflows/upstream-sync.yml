@@ -90,20 +90,20 @@ jobs:
           git fetch origin main --prune
           git checkout -B bot/upstream-sync origin/main
 
-      - name: Rebase upstream onto main (linear, no merge commit)
+      - name: Merge upstream into sync branch (no rebase)
         if: steps.guard.outputs.blocked != 'true' && steps.check.outputs.ahead != '0'
         id: merge
         shell: bash
         run: |
           set -euo pipefail
-          if git rebase upstream/main; then
+          if git merge --no-edit upstream/main; then
             echo "status=clean" >> "$GITHUB_OUTPUT"
           else
             echo "status=conflict" >> "$GITHUB_OUTPUT"
             echo "conflicts<<EOF" >> "$GITHUB_OUTPUT"
             git diff --name-only --diff-filter=U || true
             echo "EOF" >> "$GITHUB_OUTPUT"
-            git rebase --abort || true
+            git merge --abort || true
           fi
 
       - name: Create or update PR
@@ -119,13 +119,13 @@ jobs:
             Automated upstream sync.
             Upstream commits not yet in this repo: ${{ steps.check.outputs.ahead }}
 
-      - name: Enable auto-merge
+      - name: Enable auto-merge (squash)
         if: steps.guard.outputs.blocked != 'true' && steps.check.outputs.ahead != '0' && steps.merge.outputs.status == 'clean' && steps.cpr.outputs.pull-request-number != ''
         uses: peter-evans/enable-pull-request-automerge@v3
         with:
           token: ${{ secrets.SYNC_PAT }}
           pull-request-number: ${{ steps.cpr.outputs.pull-request-number }}
-          merge-method: rebase
+          merge-method: squash
 
       # 3) Conflict handling: create-or-comment ONE lock issue (no spam),
       #    and future runs will stop due to the guard step.
