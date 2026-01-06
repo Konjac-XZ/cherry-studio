@@ -23,18 +23,18 @@ When creating a Pull Request, you MUST:
 
 ## Development Commands
 
-- **Install**: `yarn install` - Install all project dependencies
-- **Development**: `yarn dev` - Runs Electron app in development mode with hot reload
-- **Debug**: `yarn debug` - Starts with debugging enabled, use `chrome://inspect` to attach debugger
-- **Build Check**: `yarn build:check` - **REQUIRED** before commits (lint + test + typecheck)
-  - If having i18n sort issues, run `yarn i18n:sync` first to sync template
-  - If having formatting issues, run `yarn format` first
-- **Test**: `yarn test` - Run all tests (Vitest) across main and renderer processes
+- **Install**: `pnpm install` - Install all project dependencies
+- **Development**: `pnpm dev` - Runs Electron app in development mode with hot reload
+- **Debug**: `pnpm debug` - Starts with debugging enabled, use `chrome://inspect` to attach debugger
+- **Build Check**: `pnpm build:check` - **REQUIRED** before commits (lint + test + typecheck)
+  - If having i18n sort issues, run `pnpm i18n:sync` first to sync template
+  - If having formatting issues, run `pnpm format` first
+- **Test**: `pnpm test` - Run all tests (Vitest) across main and renderer processes
 - **Single Test**:
-  - `yarn test:main` - Run tests for main process only
-  - `yarn test:renderer` - Run tests for renderer process only
-- **Lint**: `yarn lint` - Fix linting issues and run TypeScript type checking
-- **Format**: `yarn format` - Auto-format code using Biome
+  - `pnpm test:main` - Run tests for main process only
+  - `pnpm test:renderer` - Run tests for renderer process only
+- **Lint**: `pnpm lint` - Fix linting issues and run TypeScript type checking
+- **Format**: `pnpm format` - Auto-format code using Biome
 
 ## Project Architecture
 
@@ -48,7 +48,7 @@ When creating a Pull Request, you MUST:
 
 - **AI Core** (`src/renderer/src/aiCore/`): Middleware pipeline for multiple AI providers.
 - **Services** (`src/main/services/`): MCPService, KnowledgeService, WindowService, etc.
-- **Build System**: Electron-Vite with experimental rolldown-vite, yarn workspaces.
+- **Build System**: Electron-Vite with experimental rolldown-vite, pnpm workspaces.
 - **State Management**: Redux Toolkit (`src/renderer/src/store/`) for predictable state.
 
 ### Logging
