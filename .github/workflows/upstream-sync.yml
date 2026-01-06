@@ -1,7 +1,7 @@
 name: Upstream sync
 
 # Purpose
-# - Reset bot/upstream-sync to the current main.
+# - Merge main into bot/upstream-sync (preserves prior conflict resolutions).
 # - Merge upstream/main onto bot/upstream-sync (no rebase).
 # - Open a squash-only PR from bot/upstream-sync to main so only one commit lands.
 # - Skip PR creation when the branch is content-identical to main (avoids "no diff" failures).
@@ -89,12 +89,17 @@ jobs:
         run: |
           echo "ahead=$(git rev-list --count HEAD..upstream/main)" >> "$GITHUB_OUTPUT"
 
-      # 1) Reset bot/upstream-sync to current main
-      - name: Reset bot sync branch to latest main
+      # 1) Bring bot/upstream-sync up to date with main (without resetting)
+      - name: Merge main into sync branch
         if: steps.guard.outputs.blocked != 'true' && steps.check.outputs.ahead != '0'
         run: |
           git fetch origin main --prune
-          git checkout -B bot/upstream-sync origin/main
+          if git show-ref --verify --quiet refs/remotes/origin/bot/upstream-sync; then
+            git checkout -B bot/upstream-sync origin/bot/upstream-sync
+          else
+            git checkout -B bot/upstream-sync origin/main
+          fi
+          git merge --no-edit origin/main
 
       # 2) Merge upstream/main into bot/upstream-sync (no rebase)
       - name: Merge upstream into sync branch (no rebase)
