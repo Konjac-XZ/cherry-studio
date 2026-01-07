@@ -336,7 +336,8 @@ export default class ModernAiProvider {
         ...params,
         model,
         experimental_context: { onChunk: config.onChunk }
-      })
+        // Cross-version ai types disagree on ToolSet; cast to executor input to keep both satisfied
+      } as Parameters<typeof executor.streamText>[0])
 
       const finalText = await adapter.processStream(streamResult)
 
@@ -347,7 +348,8 @@ export default class ModernAiProvider {
       const streamResult = await executor.streamText({
         ...params,
         model
-      })
+        // Cross-version ai types disagree on ToolSet; cast to executor input to keep both satisfied
+      } as Parameters<typeof executor.streamText>[0])
 
       // 强制消费流,不然await streamResult.text会阻塞
       await streamResult?.consumeStream()

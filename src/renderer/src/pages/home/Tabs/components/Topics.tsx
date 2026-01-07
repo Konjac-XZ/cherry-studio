@@ -4,7 +4,6 @@ import { CopyIcon, DeleteIcon, EditIcon } from '@renderer/components/Icons'
 import ObsidianExportPopup from '@renderer/components/Popups/ObsidianExportPopup'
 import PromptPopup from '@renderer/components/Popups/PromptPopup'
 import SaveToKnowledgePopup from '@renderer/components/Popups/SaveToKnowledgePopup'
-import { isMac } from '@renderer/config/constant'
 import { db } from '@renderer/databases'
 import { useAssistant, useAssistants } from '@renderer/hooks/useAssistant'
 import { useInPlaceEdit } from '@renderer/hooks/useInPlaceEdit'
@@ -53,7 +52,7 @@ import {
   UploadIcon,
   XIcon
 } from 'lucide-react'
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useDispatch, useSelector } from 'react-redux'
 import styled from 'styled-components'
@@ -82,8 +81,6 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
 
   const borderRadius = showTopicTime ? 12 : 'var(--list-item-border-radius)'
 
-  const [deletingTopicId, setDeletingTopicId] = useState<string | null>(null)
-  const deleteTimerRef = useRef<NodeJS.Timeout>(null)
   const [editingTopicId, setEditingTopicId] = useState<string | null>(null)
 
   // 管理模式状态
@@ -127,18 +124,6 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
     [newlyRenamedTopics]
   )
 
-  const handleDeleteClick = useCallback((topicId: string, e: React.MouseEvent) => {
-    e.stopPropagation()
-
-    if (deleteTimerRef.current) {
-      clearTimeout(deleteTimerRef.current)
-    }
-
-    setDeletingTopicId(topicId)
-
-    deleteTimerRef.current = setTimeout(() => setDeletingTopicId(null), 2000)
-  }, [])
-
   const onClearMessages = useCallback((topic: Topic) => {
     // window.keyv.set(EVENT_NAMES.CHAT_COMPLETION_PAUSED, true)
     store.dispatch(setGenerating(false))
@@ -161,7 +146,6 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
       }
       await modelGenerating()
       removeTopic(topic)
-      setDeletingTopicId(null)
     },
     [activeTopic.id, addTopic, assistant.id, assistant.topics, removeTopic, setActiveTopic]
   )
@@ -577,6 +561,12 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
             <Dropdown menu={{ items: getTopicMenuItems }} trigger={['contextMenu']} disabled={isManageMode}>
               <TopicListItem
                 onContextMenu={() => setTargetTopic(topic)}
+                onMouseDown={(e) => {
+                  if (e.button === 1 && !topic.pinned) {
+                    e.preventDefault()
+                    handleConfirmDelete(topic, e as any)
+                  }
+                }}
                 className={classNames(
                   isActive && !isManageMode ? 'active' : '',
                   singlealone ? 'singlealone' : '',
@@ -623,31 +613,9 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
                     </TopicName>
                   )}
                   {!topic.pinned && (
-                    <Tooltip
-                      placement="bottom"
-                      mouseEnterDelay={0.7}
-                      mouseLeaveDelay={0}
-                      title={
-                        <div style={{ fontSize: '12px', opacity: 0.8, fontStyle: 'italic' }}>
-                          {t('chat.topics.delete.shortcut', { key: isMac ? '⌘' : 'Ctrl' })}
-                        </div>
-                      }>
-                      <MenuButton
-                        className="menu"
-                        onClick={(e) => {
-                          if (e.ctrlKey || e.metaKey) {
-                            handleConfirmDelete(topic, e)
-                          } else if (deletingTopicId === topic.id) {
-                            handleConfirmDelete(topic, e)
-                          } else {
-                            handleDeleteClick(topic.id, e)
-                          }
-                        }}>
-                        {deletingTopicId === topic.id ? (
-                          <DeleteIcon size={14} color="var(--color-error)" style={{ pointerEvents: 'none' }} />
-                        ) : (
-                          <XIcon size={14} color="var(--color-text-3)" style={{ pointerEvents: 'none' }} />
-                        )}
+                    <Tooltip placement="bottom" mouseEnterDelay={0.7} mouseLeaveDelay={0} title="">
+                      <MenuButton className="menu" onClick={(e) => handleConfirmDelete(topic, e)}>
+                        <XIcon size={14} color="var(--color-text-3)" style={{ pointerEvents: 'none' }} />
                       </MenuButton>
                     </Tooltip>
                   )}
