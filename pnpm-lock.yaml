@@ -868,6 +868,9 @@ importers:
       markdown-it:
         specifier: ^14.1.0
         version: 14.1.0
+      markdown-it-cjk-friendly:
+        specifier: ^1.3.2
+        version: 1.3.2(@types/markdown-it@14.1.2)(markdown-it@14.1.0)
       md5:
         specifier: 2.3.0
         version: 2.3.0
@@ -8740,6 +8743,16 @@ packages:
     engines: {node: '>=12.0.0'}
     hasBin: true
 
+  markdown-it-cjk-friendly@1.3.2:
+    resolution: {integrity: sha512-6d7MmSnmD1rHTE3iNftpvdvv4sqV0VSBaPQCC1FsIipB2050/WxlJzSLtDp7QPWFF1lfpLu/N5/OUroaZqCv/w==}
+    engines: {node: '>=16'}
+    peerDependencies:
+      '@types/markdown-it': '*'
+      markdown-it: '*'
+    peerDependenciesMeta:
+      '@types/markdown-it':
+        optional: true
+
   markdown-it@14.1.0:
     resolution: {integrity: sha512-a54IwgWPaeBCAAsv13YgmALOF1elABB08FxO9i+r4VFk5Vl4pKokRPeX8u5TCgSsPi6ec1otfLjdOpVcgbpshg==}
     hasBin: true
@@ -11911,7 +11924,7 @@ packages:
         optional: true
 
   xlsx@https://cdn.sheetjs.com/xlsx-0.20.2/xlsx-0.20.2.tgz:
-    resolution: {tarball: https://cdn.sheetjs.com/xlsx-0.20.2/xlsx-0.20.2.tgz}
+    resolution: {integrity: sha512-+nKZ39+nvK7Qq6i0PvWWRA4j/EkfWOtkP/YhMtupm+lJIiHxUrgTr1CcKv1nBk1rHtkRRQ3O2+Ih/q/sA+FXZA==, tarball: https://cdn.sheetjs.com/xlsx-0.20.2/xlsx-0.20.2.tgz}
     version: 0.20.2
     engines: {node: '>=0.8'}
     hasBin: true
@@ -21223,6 +21236,13 @@ snapshots:
       underscore: 1.13.7
       xmlbuilder: 10.1.1
 
+  markdown-it-cjk-friendly@1.3.2(@types/markdown-it@14.1.2)(markdown-it@14.1.0):
+    dependencies:
+      get-east-asian-width: 1.4.0
+      markdown-it: 14.1.0
+    optionalDependencies:
+      '@types/markdown-it': 14.1.2
+
   markdown-it@14.1.0:
     dependencies:
       argparse: 2.0.1
@@ -25203,7 +25223,7 @@ snapshots:
 
   wide-align@1.1.5:
     dependencies:
-      string-width: 1.0.2
+      string-width: 4.2.3
 
   windows-system-proxy@1.0.1:
     dependencies:
