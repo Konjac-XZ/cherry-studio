@@ -561,12 +561,6 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
             <Dropdown menu={{ items: getTopicMenuItems }} trigger={['contextMenu']} disabled={isManageMode}>
               <TopicListItem
                 onContextMenu={() => setTargetTopic(topic)}
-                onMouseDown={(e) => {
-                  if (e.button === 1 && !topic.pinned) {
-                    e.preventDefault()
-                    handleConfirmDelete(topic, e as any)
-                  }
-                }}
                 className={classNames(
                   isActive && !isManageMode ? 'active' : '',
                   singlealone ? 'singlealone' : '',
