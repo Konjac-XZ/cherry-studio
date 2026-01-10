@@ -3116,6 +3116,10 @@
   },
   "settings": {
     "about": {
+      "careers": {
+        "button": "View",
+        "title": "Careers"
+      },
       "checkUpdate": {
         "available": "Update",
         "label": "Check Update"
