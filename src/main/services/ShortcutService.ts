@@ -31,6 +31,7 @@ let showMiniWindowAccelerator: string | null = null
 let selectionAssistantToggleAccelerator: string | null = null
 let selectionAssistantSelectTextAccelerator: string | null = null
 let showTranslateAccelerator: string | null = null
+let goHomeAccelerator: string | null = null
 
 //indicate if the shortcuts are registered on app boot time
 let isRegisterOnBoot = true
@@ -102,6 +103,46 @@ function getShortcutHandler(shortcut: Shortcut) {
           })
         } catch (error) {
           logger.warn('Failed to handle show_translate shortcut')
+        }
+      }
+    case 'go_home':
+      return () => {
+        try {
+          // Ensure main window is visible
+          windowService.showMainWindow()
+
+          const mainWindow = windowService.getMainWindow()
+          if (!mainWindow || mainWindow.isDestroyed()) return
+
+          const navigateToHome = async () => {
+            try {
+              const hasNavigate = await mainWindow.webContents.executeJavaScript(
+                `typeof window.navigate === 'function'`
+              )
+              if (hasNavigate) {
+                await mainWindow.webContents.executeJavaScript(`window.navigate('/')`)
+                return true
+              }
+              return false
+            } catch (e) {
+              return false
+            }
+          }
+
+          // try immediately, then retry a couple times if navigate isn't ready yet
+          navigateToHome().then((ok) => {
+            if (!ok) {
+              setTimeout(() => {
+                navigateToHome().then((ok2) => {
+                  if (!ok2) {
+                    setTimeout(() => void navigateToHome(), 800)
+                  }
+                })
+              }, 400)
+            }
+          })
+        } catch (error) {
+          logger.warn('Failed to handle go_home shortcut')
         }
       }
     case 'selection_assistant_toggle':
@@ -244,7 +285,8 @@ export function registerShortcuts(window: BrowserWindow) {
             'mini_window',
             'selection_assistant_toggle',
             'selection_assistant_select_text',
-            'show_translate'
+            'show_translate',
+            'go_home'
           ].includes(shortcut.key)
         ) {
           return
@@ -269,6 +311,10 @@ export function registerShortcuts(window: BrowserWindow) {
 
           case 'show_translate':
             showTranslateAccelerator = formatShortcutKey(shortcut.shortcut)
+            break
+
+          case 'go_home':
+            goHomeAccelerator = formatShortcutKey(shortcut.shortcut)
             break
 
           case 'selection_assistant_toggle':
@@ -339,6 +385,12 @@ export function registerShortcuts(window: BrowserWindow) {
         const accelerator = convertShortcutFormat(showTranslateAccelerator)
         handler && globalShortcut.register(accelerator, () => handler(window))
       }
+
+      if (goHomeAccelerator) {
+        const handler = getShortcutHandler({ key: 'go_home' } as Shortcut)
+        const accelerator = convertShortcutFormat(goHomeAccelerator)
+        handler && globalShortcut.register(accelerator, () => handler(window))
+      }
     } catch (error) {
       logger.warn('Failed to unregister shortcuts')
     }
@@ -367,6 +419,7 @@ export function unregisterAllShortcuts() {
     selectionAssistantToggleAccelerator = null
     selectionAssistantSelectTextAccelerator = null
     showTranslateAccelerator = null
+    goHomeAccelerator = null
     windowOnHandlers.forEach((handlers, window) => {
       window.off('focus', handlers.onFocusHandler)
       window.off('blur', handlers.onBlurHandler)
