@@ -12,12 +12,27 @@ import {
 } from '@renderer/store/llm'
 import type { Assistant, Model, Provider } from '@renderer/types'
 import { isSystemProvider } from '@renderer/types'
+import { withoutTrailingSlash } from '@renderer/utils/api'
 
 import { useDefaultModel } from './useAssistant'
 
+/**
+ * Normalizes provider apiHost by removing trailing slashes.
+ * This ensures consistent URL concatenation across the application.
+ */
+function normalizeProvider<T extends Provider>(provider: T): T {
+  return {
+    ...provider,
+    apiHost: withoutTrailingSlash(provider.apiHost)
+  }
+}
+
 const selectEnabledProviders = createSelector(
   (state) => state.llm.providers,
-  (providers) => providers.filter((p) => p.enabled)
+  (providers) =>
+    providers
+      .map(normalizeProvider)
+      .filter((p) => p.enabled)
 )
 
 export function useProviders() {
@@ -34,21 +49,24 @@ export function useProviders() {
 }
 
 export function useSystemProviders() {
-  return useAppSelector((state) => state.llm.providers.filter((p) => isSystemProvider(p)))
+  return useAppSelector((state) => state.llm.providers.filter((p) => isSystemProvider(p)).map(normalizeProvider))
 }
 
 export function useUserProviders() {
-  return useAppSelector((state) => state.llm.providers.filter((p) => !isSystemProvider(p)))
+  return useAppSelector((state) => state.llm.providers.filter((p) => !isSystemProvider(p)).map(normalizeProvider))
 }
 
 export function useAllProviders() {
-  return useAppSelector((state) => state.llm.providers)
+  return useAppSelector((state) => state.llm.providers.map(normalizeProvider))
 }
 
 export function useProvider(id: string) {
   const provider =
-    useAppSelector((state) => state.llm.providers.find((p) => p.id === id)) ||
-    getDefaultProvider()
+    useAppSelector((state) =>
+      state.llm.providers
+        .map(normalizeProvider)
+        .find((p) => p.id === id)
+    ) || getDefaultProvider()
   const dispatch = useAppDispatch()
 
   return {
