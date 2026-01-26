@@ -39,6 +39,91 @@ let isRegisterOnBoot = true
 // store the focus and blur handlers for each window to unregister them later
 const windowOnHandlers = new Map<BrowserWindow, { onFocusHandler: () => void; onBlurHandler: () => void }>()
 
+const NAVIGATION_WAIT_TIMEOUT_MS = 4000
+const NAVIGATION_POLL_INTERVAL_MS = 200
+
+const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
+
+async function waitForWebContentsReady(mainWindow: BrowserWindow): Promise<boolean> {
+  const { webContents } = mainWindow
+  if (webContents.isDestroyed()) {
+    return false
+  }
+
+  if (!webContents.isLoading()) {
+    return true
+  }
+
+  return new Promise((resolve) => {
+    let settled = false
+
+    const cleanup = () => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      webContents.removeListener('did-finish-load', onReady)
+      webContents.removeListener('did-fail-load', onReady)
+      webContents.removeListener('render-process-gone', onGone)
+    }
+
+    const onReady = () => {
+      cleanup()
+      resolve(!webContents.isDestroyed())
+    }
+
+    const onGone = () => {
+      cleanup()
+      resolve(false)
+    }
+
+    const timer = setTimeout(() => {
+      cleanup()
+      resolve(!webContents.isDestroyed())
+    }, NAVIGATION_WAIT_TIMEOUT_MS)
+
+    webContents.once('did-finish-load', onReady)
+    webContents.once('did-fail-load', onReady)
+    webContents.once('render-process-gone', onGone)
+  })
+}
+
+async function waitForNavigateReady(mainWindow: BrowserWindow): Promise<boolean> {
+  const startTime = Date.now()
+
+  while (Date.now() - startTime < NAVIGATION_WAIT_TIMEOUT_MS) {
+    if (mainWindow.isDestroyed() || mainWindow.webContents.isDestroyed()) {
+      return false
+    }
+
+    try {
+      const hasNavigate = await mainWindow.webContents.executeJavaScript(`typeof window.navigate === 'function'`)
+      if (hasNavigate) {
+        return true
+      }
+    } catch (error) {
+      return false
+    }
+
+    await delay(NAVIGATION_POLL_INTERVAL_MS)
+  }
+
+  return false
+}
+
+async function navigateWhenReady(mainWindow: BrowserWindow, url: string) {
+  const isReady = await waitForWebContentsReady(mainWindow)
+  if (!isReady) {
+    return
+  }
+
+  const canNavigate = await waitForNavigateReady(mainWindow)
+  if (!canNavigate) {
+    return
+  }
+
+  await mainWindow.webContents.executeJavaScript(`window.navigate(${JSON.stringify(url)})`)
+}
+
 function getShortcutHandler(shortcut: Shortcut) {
   switch (shortcut.key) {
     case 'zoom_in':
@@ -72,35 +157,8 @@ function getShortcutHandler(shortcut: Shortcut) {
 
           const mainWindow = windowService.getMainWindow()
           if (!mainWindow || mainWindow.isDestroyed()) return
-
-          const navigateToTranslate = async () => {
-            try {
-              const hasNavigate = await mainWindow.webContents.executeJavaScript(
-                `typeof window.navigate === 'function'`
-              )
-              if (hasNavigate) {
-                const ts = Date.now()
-                await mainWindow.webContents.executeJavaScript(`window.navigate('/translate?paste=1&_=' + ${ts})`)
-                return true
-              }
-              return false
-            } catch (e) {
-              return false
-            }
-          }
-
-          // try immediately, then retry a couple times if navigate isn't ready yet
-          navigateToTranslate().then((ok) => {
-            if (!ok) {
-              setTimeout(() => {
-                navigateToTranslate().then((ok2) => {
-                  if (!ok2) {
-                    setTimeout(() => void navigateToTranslate(), 800)
-                  }
-                })
-              }, 400)
-            }
-          })
+          const ts = Date.now()
+          void navigateWhenReady(mainWindow, `/translate?paste=1&_=${ts}`)
         } catch (error) {
           logger.warn('Failed to handle show_translate shortcut')
         }
@@ -113,34 +171,7 @@ function getShortcutHandler(shortcut: Shortcut) {
 
           const mainWindow = windowService.getMainWindow()
           if (!mainWindow || mainWindow.isDestroyed()) return
-
-          const navigateToHome = async () => {
-            try {
-              const hasNavigate = await mainWindow.webContents.executeJavaScript(
-                `typeof window.navigate === 'function'`
-              )
-              if (hasNavigate) {
-                await mainWindow.webContents.executeJavaScript(`window.navigate('/')`)
-                return true
-              }
-              return false
-            } catch (e) {
-              return false
-            }
-          }
-
-          // try immediately, then retry a couple times if navigate isn't ready yet
-          navigateToHome().then((ok) => {
-            if (!ok) {
-              setTimeout(() => {
-                navigateToHome().then((ok2) => {
-                  if (!ok2) {
-                    setTimeout(() => void navigateToHome(), 800)
-                  }
-                })
-              }, 400)
-            }
-          })
+          void navigateWhenReady(mainWindow, '/')
         } catch (error) {
           logger.warn('Failed to handle go_home shortcut')
         }

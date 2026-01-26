@@ -48,6 +48,7 @@ export const DEFAULT_ASSISTANT_SETTINGS = {
   topP: 1,
   enableTopP: false,
   autoCopy: false,
+  autoTranslate: false,
   contextCount: DEFAULT_CONTEXTCOUNT,
   streamOutput: true,
   defaultModel: undefined,

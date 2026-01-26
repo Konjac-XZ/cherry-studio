@@ -159,6 +159,7 @@ export type AssistantSettings = {
   contextCount: number
   streamOutput: boolean
   autoCopy?: boolean
+  autoTranslate?: boolean
   defaultModel?: Model
   customParameters?: AssistantSettingCustomParameters[]
   reasoning_effort: ReasoningEffortOption

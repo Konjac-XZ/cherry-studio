@@ -563,6 +563,7 @@
       },
       "model": "Model Settings",
       "auto_copy": "Auto-copy assistant replies",
+      "auto_translate": "Auto-translate assistant replies",
       "more": "Assistant Settings",
       "prompt": "Prompt Settings",
       "reasoning_effort": {

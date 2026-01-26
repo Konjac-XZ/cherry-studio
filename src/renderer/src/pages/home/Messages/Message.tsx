@@ -1,20 +1,23 @@
 import { loggerService } from '@logger'
 import HorizontalScrollContainer from '@renderer/components/HorizontalScrollContainer'
 import Scrollbar from '@renderer/components/Scrollbar'
+import { UNKNOWN } from '@renderer/config/translate'
 import { useMessageEditing } from '@renderer/context/MessageEditingContext'
 import { useAssistant } from '@renderer/hooks/useAssistant'
 import { useChatContext } from '@renderer/hooks/useChatContext'
 import { useMessageOperations } from '@renderer/hooks/useMessageOperations'
 import { useModel } from '@renderer/hooks/useModel'
 import { useSettings } from '@renderer/hooks/useSettings'
+import useTranslate from '@renderer/hooks/useTranslate'
 import { useTimer } from '@renderer/hooks/useTimer'
 import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import { getMessageModelId } from '@renderer/services/MessagesService'
 import { getModelUniqId } from '@renderer/services/ModelService'
 import { estimateMessageUsage } from '@renderer/services/TokenService'
+import { translateText } from '@renderer/services/TranslateService'
 import type { Assistant, Model, Topic } from '@renderer/types'
 import type { Message, MessageBlock } from '@renderer/types/newMessage'
-import { AssistantMessageStatus } from '@renderer/types/newMessage'
+import { AssistantMessageStatus, MessageBlockType } from '@renderer/types/newMessage'
 import store from '@renderer/store'
 import { classNames, cn } from '@renderer/utils'
 import { removeTrailingDoubleSpaces } from '@renderer/utils/markdown'
@@ -140,13 +143,15 @@ const MessageItem: FC<Props> = ({
   const { assistant, setModel } = useAssistant(message.assistantId)
   const { isMultiSelectMode } = useChatContext(topic)
   const model = useModel(getMessageModelId(message), message.model?.provider) || message.model
-  const { messageFont, fontSize, messageStyle, showMessageOutline } = useSettings()
-  const { editMessageBlocks, resendUserMessageWithEdit, editMessage } = useMessageOperations(topic)
+  const { messageFont, fontSize, messageStyle, showMessageOutline, userNativeLanguage: userNativeLanguageCode } = useSettings()
+  const { editMessageBlocks, resendUserMessageWithEdit, editMessage, getTranslationUpdater } = useMessageOperations(topic)
   const messageContainerRef = useRef<HTMLDivElement>(null)
   const prevStatusRef = useRef(message.status)
   const { editingMessageId, startEditing, stopEditing } = useMessageEditing()
   const { setTimeoutTimer } = useTimer()
   const autoCopyEnabled = assistant?.settings?.autoCopy ?? false
+  const autoTranslateEnabled = assistant?.settings?.autoTranslate ?? false
+  const { getLanguageByLangcode, isLoaded: translateLanguagesLoaded } = useTranslate()
   const isEditing = editingMessageId === message.id
 
   useEffect(() => {
@@ -163,15 +168,18 @@ const MessageItem: FC<Props> = ({
     const previousStatus = prevStatusRef.current
     prevStatusRef.current = message.status
 
-    if (!autoCopyEnabled || message.role !== 'assistant') {
+    // Skip if neither feature is enabled or message is not from assistant
+    if ((!autoCopyEnabled && !autoTranslateEnabled) || message.role !== 'assistant') {
       return
     }
 
+    // Only trigger on status transition to SUCCESS
     if (previousStatus === AssistantMessageStatus.SUCCESS || message.status !== AssistantMessageStatus.SUCCESS) {
       return
     }
 
     const state = store.getState()
+    // Handle multi-model priority check
     if (message.askId) {
       const userMessage = state.messages.entities[message.askId]
       if (userMessage?.mentions?.length) {
@@ -188,11 +196,59 @@ const MessageItem: FC<Props> = ({
       return
     }
 
-    void copyTextWithFallback(text).catch((error) => {
-      logger.error('Failed to auto copy assistant message:', error as Error)
-      window.toast.error(t('common.copy_failed'))
-    })
-  }, [autoCopyEnabled, message.askId, message.id, message.role, message.status, message.topicId, t])
+    // Auto-copy logic
+    if (autoCopyEnabled) {
+      void copyTextWithFallback(text).catch((error) => {
+        logger.error('Failed to auto copy assistant message:', error as Error)
+        window.toast.error(t('common.copy_failed'))
+      })
+    }
+
+    // Auto-translate logic
+    if (autoTranslateEnabled && userNativeLanguageCode && userNativeLanguageCode !== UNKNOWN.langCode && translateLanguagesLoaded) {
+      // Check if translation already exists
+      let hasTranslation = false
+      if (latestMessage.blocks && latestMessage.blocks.length > 0) {
+        for (const blockId of latestMessage.blocks) {
+          const block = state.messageBlocks.entities[blockId]
+          if (block && block.type === MessageBlockType.TRANSLATION) {
+            hasTranslation = true
+            break
+          }
+        }
+      }
+
+      if (!hasTranslation) {
+        const targetLanguage = getLanguageByLangcode(userNativeLanguageCode)
+        if (targetLanguage) {
+          void (async () => {
+            try {
+              const translationUpdater = await getTranslationUpdater(message.id, targetLanguage.langCode)
+              if (translationUpdater) {
+                await translateText(text, targetLanguage, translationUpdater)
+              }
+            } catch (error) {
+              logger.error('Failed to auto translate assistant message:', error as Error)
+              // Don't show toast for auto-translate failures
+            }
+          })()
+        }
+      }
+    }
+  }, [
+    autoCopyEnabled,
+    autoTranslateEnabled,
+    userNativeLanguageCode,
+    translateLanguagesLoaded,
+    getLanguageByLangcode,
+    getTranslationUpdater,
+    message.askId,
+    message.id,
+    message.role,
+    message.status,
+    message.topicId,
+    t
+  ])
 
   const handleEditSave = useCallback(
     async (blocks: MessageBlock[]) => {
