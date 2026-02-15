@@ -140,62 +140,28 @@ artifactBuildCompleted: scripts/artifact-build-completed.js
 releaseInfo:
   releaseNotes: |
     <!--LANG:en-->
-    Cherry Studio 1.7.16 - New Features & Improvements
-
-    ✨ New Features
-    - [CherryIN] Add OAuth login support with automatic API key configuration
-    - [Agent] Task list now stays pinned above input area for better visibility
-    - [Plugins] Support installing plugins from ZIP files and folders via drag-and-drop
-    - [Integration] Add OpenClaw integration - power your personal AI assistant across WhatsApp, Telegram, Slack, and more
-    - [Chat] Show token usage in message headers (bubble mode)
-    - [OCR] Add PaddleOCR as a new image recognition option
-    - [Models] Add Kimi K2.5 model support
-    - [Models] Add free Qwen3-Next-80B model
-
-    🎨 Improvements
-    - [Agent] Improved tool execution display with status indicators
-    - [Chat] Unified click behavior for multi-level reasoning models
+    Cherry Studio 1.7.19 - Bug Fixes & Improvements
 
     🐛 Bug Fixes
-    - [Notifications] Disk space warning can now be dismissed
-    - [Chat] Fix display issues with Claude extended thinking on Bedrock
-    - [Providers] Update Kimi/Moonshot logos
-    - [Chat] Fix image-only message display
-    - [Topics] Show notification when topic rename fails
-    - [MCP] Fix system prompt duplication in recursive tool calls
-    - [MCP] Fix refresh token expiration handling
-    - [Chat] Fix extra newline when copying from code blocks
-    - [Models] Fix Ollama model name handling
-    - [Models] Fix Aliyun GLM model parameters
-    - [Windows] Fix silent update permissions for system-wide installations
+    - [Settings] Fixed provider name input removing spaces during typing
+    - [Data] Fixed factory reset not clearing agents, memories, knowledge base and notes data
+    - [Data] Fixed backup restore failure on Windows (EBUSY error)
+    - [MCP] Fixed MCP tools returning images exceeding API message size limits
+
+    💄 Improvements
+    - [Agent] Improved settings popup UI with better permission mode selection
+    - [Models] Updated MiniMax models to the latest M2.x series
 
     <!--LANG:zh-CN-->
-    Cherry Studio 1.7.16 - 新功能与改进
-
-    ✨ 新功能
-    - [CherryIN] 新增 OAuth 登录，自动配置 API 密钥
-    - [智能体] 任务列表固定在输入框上方显示，方便查看进度
-    - [插件] 支持从压缩包和文件夹拖放安装插件
-    - [集成] 新增 OpenClaw 集成，可在 WhatsApp、Telegram、Slack 等平台使用 AI 助手
-    - [对话] 消息头部显示 Token 用量（气泡模式）
-    - [OCR] 新增 PaddleOCR 图像识别选项
-    - [模型] 新增 Kimi K2.5 模型
-    - [模型] 新增免费 Qwen3-Next-80B 模型
-
-    🎨 改进
-    - [智能体] 优化工具执行显示，新增状态指示器
-    - [对话] 统一多层推理模型的点击交互
+    Cherry Studio 1.7.19 - 问题修复与改进
 
     🐛 问题修复
-    - [通知] 磁盘空间警告现可关闭
-    - [对话] 修复 Bedrock Claude 扩展思考的显示问题
-    - [服务商] 更新 Kimi/Moonshot 图标
-    - [对话] 修复纯图片消息的显示问题
-    - [话题] 话题重命名失败时显示提示
-    - [MCP] 修复递归工具调用时系统提示词重复
-    - [MCP] 修复刷新令牌过期处理
-    - [对话] 修复代码块复制时的多余换行
-    - [模型] 修复 Ollama 模型名称处理
-    - [模型] 修复阿里云 GLM 模型参数
-    - [Windows] 修复系统级安装的静默更新权限
+    - [设置] 修复服务商名称输入时空格被立即移除的问题
+    - [数据] 修复重置数据时未清除智能体、记忆、知识库和笔记数据的问题
+    - [数据] 修复 Windows 上恢复备份失败的问题（EBUSY 错误）
+    - [MCP] 修复 MCP 工具返回图片时超出 API 消息大小限制的问题
+
+    💄 改进
+    - [智能体] 优化设置弹窗界面，改进权限模式选择体验
+    - [模型] 更新 MiniMax 模型至最新的 M2.x 系列
     <!--LANG:END-->

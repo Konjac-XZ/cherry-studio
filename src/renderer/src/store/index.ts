@@ -86,7 +86,7 @@ const persistedReducer = persistReducer(
   {
     key: 'cherry-studio',
     storage,
-    version: 195,
+    version: 198,
     blacklist: ['runtime', 'messages', 'messageBlocks', 'tabs', 'toolPermissions'],
     migrate
   },
@@ -141,19 +141,8 @@ export const persistor = persistStore(store, undefined, () => {
   }
 
   // Notify main process that Redux store is ready
-  window.electron.ipcRenderer.invoke(IpcChannel.ReduxStoreReady)
+  window.electron?.ipcRenderer?.invoke(IpcChannel.ReduxStoreReady)
   logger.info('Redux store ready, notified main process')
-})
-
-// Subscribe to store changes and notify main process (throttled to avoid performance issues)
-let throttleTimer: ReturnType<typeof setTimeout> | null = null
-store.subscribe(() => {
-  if (throttleTimer) return
-  throttleTimer = setTimeout(() => {
-    throttleTimer = null
-    const state = store.getState()
-    window.electron.ipcRenderer.send(IpcChannel.ReduxStateChange, state)
-  }, 100) // 100ms throttle
 })
 
 export const useAppDispatch = useDispatch.withTypes<AppDispatch>()
