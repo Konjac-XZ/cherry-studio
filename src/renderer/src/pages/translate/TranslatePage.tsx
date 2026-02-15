@@ -1735,10 +1735,13 @@ const OutputContainer = styled.div`
   display: flex;
   flex-direction: column;
   min-height: 0;
+  min-width: 0;
   position: relative;
   background-color: var(--color-background-soft);
   border-radius: 10px;
   padding: 10px 5px;
+  width: 100%;
+  max-width: 100%;
   height: calc(100vh - var(--navbar-height) - 70px);
   overflow: hidden;
 
@@ -1766,22 +1769,53 @@ const CopyButton = styled(Button)`
 
 const OutputText = styled.div<{ $fontSize: number }>`
   min-height: 0;
+  min-width: 0;
   flex: 1;
+  width: 100%;
+  max-width: 100%;
   padding: 5px 16px;
   overflow-y: auto;
+  overflow-x: hidden;
 
   overscroll-behavior: contain;
   font-size: ${({ $fontSize }) => $fontSize}px;
   .plain {
+    max-width: 100%;
     white-space: pre-wrap;
-    overflow-wrap: break-word;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 
   .markdown {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+    overflow-wrap: anywhere;
+
+    * {
+      max-width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
+    }
+
+    pre,
+    code {
+      max-width: 100%;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    pre {
+      overflow-x: hidden;
+    }
+
     /* for shiki code block overflow */
     .line * {
       white-space: pre-wrap;
-      overflow-wrap: break-word;
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
   }
 `
