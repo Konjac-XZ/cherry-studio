@@ -1582,8 +1582,16 @@
       "message": "定位到訊息"
     },
     "search": {
+      "match": {
+        "substring": "包含",
+        "whole_word": "整詞"
+      },
       "messages": "搜尋所有訊息",
       "placeholder": "搜尋話題或訊息...",
+      "sort": {
+        "newest": "最新優先",
+        "oldest": "最早優先"
+      },
       "topics": {
         "empty": "沒有找到相關話題，按 Enter 鍵搜尋所有訊息"
       }
@@ -4643,6 +4651,13 @@
       "open_link_external": {
         "title": "在瀏覽器中開啟新視窗連結"
       },
+      "region": {
+        "auto": "自動檢測",
+        "cn": "中國",
+        "description": "根據所在地區篩選不支援的小程式",
+        "global": "全球",
+        "title": "小程式區域篩選"
+      },
       "reset_tooltip": "重設為預設值",
       "sidebar_description": "設定側邊欄是否顯示活躍的小程式",
       "sidebar_title": "側邊欄活躍小程式顯示設定",
@@ -5121,6 +5136,7 @@
       "reset_to_default": "重設為預設",
       "search_message": "搜尋訊息",
       "search_message_in_chat": "在目前對話中搜尋訊息",
+      "select_model": "選擇模型",
       "selection_assistant_select_text": "劃詞助手：取詞",
       "selection_assistant_toggle": "開關劃詞助手",
       "go_home": "返回首頁",

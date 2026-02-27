@@ -1584,8 +1584,16 @@
       "message": "定位到消息"
     },
     "search": {
+      "match": {
+        "substring": "包含",
+        "whole_word": "整词"
+      },
       "messages": "搜索所有消息",
       "placeholder": "搜索话题或消息...",
+      "sort": {
+        "newest": "最新优先",
+        "oldest": "最早优先"
+      },
       "topics": {
         "empty": "没有找到相关话题，点击回车键搜索所有消息"
       }
@@ -4664,6 +4672,13 @@
       "open_link_external": {
         "title": "在浏览器中打开新窗口链接"
       },
+      "region": {
+        "auto": "自动检测",
+        "cn": "中国",
+        "description": "根据所在地区过滤不支持的小程序",
+        "global": "全球",
+        "title": "小程序区域筛选"
+      },
       "reset_tooltip": "重置为默认值",
       "sidebar_description": "设置侧边栏是否显示活跃的小程序",
       "sidebar_title": "侧边栏活跃小程序显示设置",
@@ -5142,6 +5157,7 @@
       "reset_to_default": "重置为默认",
       "search_message": "搜索消息",
       "search_message_in_chat": "在当前对话中搜索消息",
+      "select_model": "选择模型",
       "selection_assistant_select_text": "划词助手：取词",
       "selection_assistant_toggle": "开关划词助手",
       "go_home": "返回首页",

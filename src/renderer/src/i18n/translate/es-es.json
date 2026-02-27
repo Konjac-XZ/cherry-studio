@@ -1582,8 +1582,16 @@
       "message": "Localizar mensaje"
     },
     "search": {
+      "match": {
+        "substring": "Contiene",
+        "whole_word": "Palabra completa"
+      },
       "messages": "Buscar todos los mensajes",
       "placeholder": "Buscar tema o mensaje...",
+      "sort": {
+        "newest": "Más nuevo primero",
+        "oldest": "Más antiguos primero"
+      },
       "topics": {
         "empty": "No se encontraron temas relacionados, presione Enter para buscar todos los mensajes"
       }
@@ -4643,6 +4651,13 @@
       "open_link_external": {
         "title": "Abrir enlace en nueva ventana del navegador"
       },
+      "region": {
+        "auto": "Detección automática",
+        "cn": "China",
+        "description": "Los pequeños programas que no son compatibles se filtran según la región.",
+        "global": "global",
+        "title": "Filtro de área de la miniaplicación"
+      },
       "reset_tooltip": "Restablecer a los valores predeterminados",
       "sidebar_description": "Configura si se muestra o no en la barra lateral la miniaplicación activa",
       "sidebar_title": "Visualización de miniaplicaciones activas en la barra lateral",
@@ -5121,6 +5136,7 @@
       "reset_to_default": "Restablecer a predeterminado",
       "search_message": "Buscar mensaje",
       "search_message_in_chat": "Buscar mensajes en la conversación actual",
+      "select_model": "Select Model",
       "selection_assistant_select_text": "Asistente de selección de texto: obtener palabras",
       "selection_assistant_toggle": "Activar/desactivar el asistente de selección de texto",
       "show_app": "Mostrar aplicación",

@@ -114,6 +114,7 @@ const ThinkModelTypes = [
   'gemini2_pro',
   'gemini3_flash',
   'gemini3_pro',
+  'gemini3_1_pro',
   'qwen',
   'qwen_thinking',
   'doubao',
@@ -125,7 +126,7 @@ const ThinkModelTypes = [
   'perplexity',
   'deepseek_hybrid',
   'kimi_k2_5',
-  'opus46'
+  'claude46'
 ] as const
 
 /** If the model's reasoning effort could be controlled, or its reasoning behavior could be turned on/off.
@@ -511,8 +512,8 @@ export type MinAppType = {
   name: string
   /** i18n key for translatable names */
   nameKey?: string
-  /** Locale codes where this app should be visible (e.g., ['zh-CN', 'zh-TW']) */
-  locales?: LanguageVarious[]
+  /** Regions where this app is available. If includes 'Global', shown to international users. */
+  supportedRegions?: MinAppRegion[]
   logo?: string
   url: string
   // FIXME: It should be `bordered`
@@ -522,6 +523,11 @@ export type MinAppType = {
   addTime?: string
   type?: 'Custom' | 'Default' // Added the 'type' property
 }
+
+/** Region types for miniapps visibility */
+export type MinAppRegion = 'CN' | 'Global'
+
+export type MinAppRegionFilter = 'auto' | MinAppRegion
 
 export enum ThemeMode {
   light = 'light',
