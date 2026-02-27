@@ -47,7 +47,7 @@ import { getSendMessageShortcutLabel } from '@renderer/utils/input'
 import { documentExts, imageExts, textExts } from '@shared/config/constant'
 import { debounce } from 'lodash'
 import type { FC } from 'react'
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { InputbarCore } from './components/InputbarCore'
@@ -61,6 +61,14 @@ const logger = loggerService.withContext('Inputbar')
 
 const INPUTBAR_DRAFT_CACHE_KEY = 'inputbar-draft'
 const DRAFT_CACHE_TTL = 24 * 60 * 60 * 1000 // 24 hours
+
+const getMentionedModelsCacheKey = (assistantId: string) => `inputbar-mentioned-models-${assistantId}`
+
+const getValidatedCachedModels = (assistantId: string): Model[] => {
+  const cached = CacheService.get<Model[]>(getMentionedModelsCacheKey(assistantId))
+  if (!Array.isArray(cached)) return []
+  return cached.filter((model) => model?.id && model?.name)
+}
 
 const getValidatedMentionedModels = (models?: Model[]): Model[] => {
   if (!Array.isArray(models)) return []
@@ -101,6 +109,8 @@ const Inputbar: FC<Props> = ({ assistant: initialAssistant, setActiveTopic, topi
     toggleExpanded: () => {}
   })
 
+  const [initialMentionedModels] = useState(() => getValidatedCachedModels(initialAssistant.id))
+
   const initialState = useMemo(
     () => ({
       files: [] as FileMetadata[],
@@ -110,7 +120,7 @@ const Inputbar: FC<Props> = ({ assistant: initialAssistant, setActiveTopic, topi
       couldAddImageFile: false,
       extensions: [] as string[]
     }),
-    [initialAssistant.knowledge_bases, initialAssistant.persistedMentionedModels]
+    [initialMentionedModels, initialAssistant.knowledge_bases]
   )
 
   return (
@@ -239,6 +249,15 @@ const InputbarInner: FC<InputbarInnerProps> = ({ assistant: initialAssistant, se
   useEffect(() => {
     setCouldAddImageFile(canAddImageFile)
   }, [canAddImageFile, setCouldAddImageFile])
+
+  const onUnmount = useEffectEvent((id: string) => {
+    CacheService.set(getMentionedModelsCacheKey(id), mentionedModels, DRAFT_CACHE_TTL)
+  })
+
+  useEffect(() => {
+    return () => onUnmount(assistant.id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assistant.id])
 
   const placeholderText = enableQuickPanelTriggers
     ? t('chat.input.placeholder', { key: getSendMessageShortcutLabel(sendMessageShortcut) })
