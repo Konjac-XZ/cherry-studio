@@ -41,6 +41,7 @@ import { type AiSdkParam, isAiSdkParam, type OpenAIVerbosity } from '@renderer/t
 import { isSupportServiceTierProvider, isSupportVerbosityProvider } from '@renderer/utils/provider'
 import type { JSONValue } from 'ai'
 import { t } from 'i18next'
+import { merge } from 'lodash'
 import type { OllamaCompletionProviderOptions } from 'ollama-ai-provider-v2'
 
 import { addAnthropicHeaders } from '../prepareParams/header'
@@ -302,44 +303,28 @@ export function buildProviderOptions(
   for (const key of Object.keys(providerParams)) {
     if (actualAiSdkProviderIds.includes(key)) {
       // Case 1: Key is an actual AI SDK provider ID - merge directly
-      providerSpecificOptions = {
-        ...providerSpecificOptions,
-        [key]: {
-          ...providerSpecificOptions[key],
-          ...providerParams[key]
-        }
-      }
+      providerSpecificOptions = merge({}, providerSpecificOptions, {
+        [key]: providerParams[key]
+      })
     } else if (key === rawProviderId && !actualAiSdkProviderIds.includes(rawProviderId)) {
       // Case 2: Key is the current provider (not in actualAiSdkProviderIds, so it's a proxy or special provider)
       // Gateway is special: it needs routing config preserved
       if (key === SystemProviderIds.gateway) {
         // Preserve gateway config for routing
-        providerSpecificOptions = {
-          ...providerSpecificOptions,
-          [key]: {
-            ...providerSpecificOptions[key],
-            ...providerParams[key]
-          }
-        }
+        providerSpecificOptions = merge({}, providerSpecificOptions, {
+          [key]: providerParams[key]
+        })
       } else {
         // Proxy provider (cherryin, etc.) - map to actual AI SDK provider
-        providerSpecificOptions = {
-          ...providerSpecificOptions,
-          [primaryAiSdkProviderId]: {
-            ...providerSpecificOptions[primaryAiSdkProviderId],
-            ...providerParams[key]
-          }
-        }
+        providerSpecificOptions = merge({}, providerSpecificOptions, {
+          [primaryAiSdkProviderId]: providerParams[key]
+        })
       }
     } else {
       // Case 3: Regular parameter - merge to primary provider
-      providerSpecificOptions = {
-        ...providerSpecificOptions,
-        [primaryAiSdkProviderId]: {
-          ...providerSpecificOptions[primaryAiSdkProviderId],
-          [key]: providerParams[key]
-        }
-      }
+      providerSpecificOptions = merge({}, providerSpecificOptions, {
+        [primaryAiSdkProviderId]: { [key]: providerParams[key] }
+      })
     }
   }
   logger.debug('Final providerSpecificOptions after merging providerParams', { providerSpecificOptions })

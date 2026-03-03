@@ -23,6 +23,7 @@ export interface TranslateState {
   // TODO: #9749
   settings: {
     autoCopy: boolean
+    customBody: string
   }
 }
 
@@ -30,7 +31,8 @@ const initialState: TranslateState = {
   translateInput: '',
   translatedContent: '',
   settings: {
-    autoCopy: false
+    autoCopy: false,
+    customBody: ''
   }
 } as const
 

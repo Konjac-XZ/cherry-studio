@@ -14,8 +14,8 @@ import { useDefaultModel } from '@renderer/hooks/useAssistant'
 import { useDrag } from '@renderer/hooks/useDrag'
 import { useFiles } from '@renderer/hooks/useFiles'
 import { useOcr } from '@renderer/hooks/useOcr'
-import { useTemporaryValue } from '@renderer/hooks/useTemporaryValue'
 import { useSettings } from '@renderer/hooks/useSettings'
+import { useTemporaryValue } from '@renderer/hooks/useTemporaryValue'
 import { useTimer } from '@renderer/hooks/useTimer'
 import useTranslate from '@renderer/hooks/useTranslate'
 import { estimateTextTokens } from '@renderer/services/TokenService'
@@ -35,13 +35,13 @@ import { getFileExtension, isTextFile, runAsyncFunction, uuid } from '@renderer/
 import { abortCompletion, readyToAbort, removeAbortController } from '@renderer/utils/abortController'
 import { formatErrorMessageWithPrefix, isAbortError } from '@renderer/utils/error'
 import { getFilesFromDropEvent, getTextFromDropEvent } from '@renderer/utils/input'
+import { processLatexBrackets } from '@renderer/utils/markdown'
 import {
   createInputScrollHandler,
   createOutputScrollHandler,
   detectLanguage,
   determineTargetLanguage
 } from '@renderer/utils/translate'
-import { processLatexBrackets } from '@renderer/utils/markdown'
 import { documentExts, imageExts, MB, textExts } from '@shared/config/constant'
 import { Button, Flex, FloatButton, Popover, Tooltip, Typography } from 'antd'
 import type { TextAreaRef } from 'antd/es/input/TextArea'
@@ -59,7 +59,8 @@ import {
   SpellCheck,
   UploadIcon
 } from 'lucide-react'
-import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { FC} from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'

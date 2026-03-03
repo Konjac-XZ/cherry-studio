@@ -5383,6 +5383,7 @@
         }
       },
       "prompt": "翻译提示词",
+      "custom_body": "自定义请求体（使用 Vercel AI SDK 语法）",
       "title": "翻译设置"
     },
     "tray": {

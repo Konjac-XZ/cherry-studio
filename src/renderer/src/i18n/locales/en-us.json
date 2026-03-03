@@ -5366,6 +5366,7 @@
         }
       },
       "prompt": "Translation prompt",
+      "custom_body": "Custom Request Body",
       "title": "Translation settings"
     },
     "tray": {

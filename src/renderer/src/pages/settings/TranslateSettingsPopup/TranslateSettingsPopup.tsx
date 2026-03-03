@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { SettingContainer, SettingGroup } from '..'
+import CustomBodySettings from './CustomBodySettings'
 import CustomLanguageSettings from './CustomLanguageSettings'
 import TranslatePromptSettings from './TranslatePromptSettings'
 
@@ -44,6 +45,7 @@ const PopupContainer: React.FC<Props> = ({ resolve }) => {
       centered>
       <SettingContainer theme={theme} style={{ padding: '10px 0', background: 'transparent' }}>
         <TranslatePromptSettings />
+        <CustomBodySettings />
         <SettingGroup theme={theme} style={{ flex: 1 }}>
           <CustomLanguageSettings />
         </SettingGroup>

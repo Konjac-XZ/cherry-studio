@@ -75,7 +75,7 @@ const createInlineRule = (state: KatexState): RuleInline => {
     if (!silent) {
       const token = inlineState.push('cherry_katex_inline', 'math', 0)
       token.content = content
-      token.meta = { ...(token.meta ?? {}), displayMode: isDouble }
+      token.meta = { ...token.meta, displayMode: isDouble }
     }
 
     inlineState.pos = end + marker.length

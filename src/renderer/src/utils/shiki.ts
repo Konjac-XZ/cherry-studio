@@ -3,8 +3,8 @@ import type { BundledLanguage, BundledTheme } from 'shiki/bundle/web'
 import type { SpecialLanguage, ThemedToken } from 'shiki/core'
 import { getTokenStyleObject, type HighlighterGeneric } from 'shiki/core'
 
-import { configureKatex } from './markdownIt/katex'
 import { AsyncInitializer } from './asyncInitializer'
+import { configureKatex } from './markdownIt/katex'
 
 export const DEFAULT_LANGUAGES = ['text', 'javascript', 'typescript', 'python', 'java', 'markdown', 'json']
 export const DEFAULT_THEMES = ['one-light', 'material-theme-darker']
