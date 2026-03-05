@@ -3,14 +3,13 @@ import { type AnthropicProviderOptions } from '@ai-sdk/anthropic'
 import type { GoogleGenerativeAIProviderOptions } from '@ai-sdk/google'
 import type { OpenAIResponsesProviderOptions } from '@ai-sdk/openai'
 import type { XaiProviderOptions } from '@ai-sdk/xai'
-import { baseProviderIdSchema, customProviderIdSchema, hasProviderConfig } from '@cherrystudio/ai-core/provider'
+import { baseProviderIdSchema, customProviderIdSchema } from '@cherrystudio/ai-core/provider'
 import { loggerService } from '@logger'
 import {
   getModelSupportedVerbosity,
   isAnthropicModel,
   isGeminiModel,
   isGrokModel,
-  isInterleavedThinkingModel,
   isOpenAIModel,
   isOpenAIOpenWeightModel,
   isQwenMTModel,
@@ -42,7 +41,21 @@ import { isSupportServiceTierProvider, isSupportVerbosityProvider } from '@rende
 import type { JSONValue } from 'ai'
 import { t } from 'i18next'
 import { merge } from 'lodash'
-import type { OllamaCompletionProviderOptions } from 'ollama-ai-provider-v2'
+type OllamaProviderOptions = {
+  think?: boolean | 'low' | 'medium' | 'high'
+  options?: {
+    num_ctx?: number
+    repeat_last_n?: number
+    repeat_penalty?: number
+    temperature?: number
+    seed?: number
+    stop?: string[]
+    num_predict?: number
+    top_k?: number
+    top_p?: number
+    min_p?: number
+  }
+}
 
 import { addAnthropicHeaders } from '../prepareParams/header'
 import { getAiSdkProviderId } from '../provider/factory'
@@ -559,19 +572,27 @@ function buildOllamaProviderOptions(
     enableWebSearch: boolean
     enableGenerateImage: boolean
   }
-): Record<string, OllamaCompletionProviderOptions> {
+): Record<string, OllamaProviderOptions> {
   const { enableReasoning } = capabilities
-  const providerOptions: OllamaCompletionProviderOptions = {}
+  const providerOptions: OllamaProviderOptions = {}
   const reasoningEffort = assistant.settings?.reasoning_effort
   if (enableReasoning) {
     if (isOpenAIOpenWeightModel(model)) {
-      // For gpt-oss models, Ollama accepts: 'low' | 'medium' | 'high'
+      // gpt-oss models accept 'low' | 'medium' | 'high' string values
       if (reasoningEffort === 'low' || reasoningEffort === 'medium' || reasoningEffort === 'high') {
         providerOptions.think = reasoningEffort
+      } else if (reasoningEffort === 'none') {
+        providerOptions.think = false
+      } else {
+        providerOptions.think = true
       }
     } else {
-      providerOptions.think = !['none', undefined].includes(reasoningEffort)
+      // Other models: boolean only. undefined defaults to true (user enabled reasoning)
+      providerOptions.think = reasoningEffort !== 'none'
     }
+  } else {
+    // Explicitly disable thinking when reasoning is turned off (fixes Issue #11612)
+    providerOptions.think = false
   }
   return {
     ollama: providerOptions
@@ -591,26 +612,13 @@ function buildGenericProviderOptions(
     enableGenerateImage: boolean
   }
 ): Record<string, any> {
-  const { enableWebSearch, enableReasoning } = capabilities
+  const { enableWebSearch } = capabilities
   let providerOptions: Record<string, any> = {}
 
   const reasoningParams = getReasoningEffort(assistant, model)
   providerOptions = {
     ...providerOptions,
     ...reasoningParams
-  }
-  if (enableReasoning) {
-    if (isInterleavedThinkingModel(model)) {
-      // sendReasoning is a patch specific to @ai-sdk/openai-compatible
-      // Only apply when provider will actually use openai-compatible SDK
-      // (i.e., no dedicated SDK registered OR explicitly openai-compatible)
-      if (!hasProviderConfig(providerId) || providerId === 'openai-compatible') {
-        providerOptions = {
-          ...providerOptions,
-          sendReasoning: true
-        }
-      }
-    }
   }
 
   if (enableWebSearch) {
@@ -636,10 +644,6 @@ function buildGenericProviderOptions(
     } else {
       throw new Error(t('translate.error.chat_qwen_mt'))
     }
-  }
-
-  if (isOpenAIModel(model)) {
-    providerOptions.strictJsonSchema = false
   }
 
   return {

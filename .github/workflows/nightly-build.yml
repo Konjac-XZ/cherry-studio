@@ -65,7 +65,7 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version-file: '.node-version'
 
       - name: Install corepack
         run: corepack enable && corepack prepare yarn@4.9.1 --activate
@@ -149,7 +149,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           path: all-artifacts
           merge-multiple: false

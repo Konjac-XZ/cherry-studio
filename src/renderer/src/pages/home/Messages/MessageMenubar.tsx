@@ -1,6 +1,7 @@
 // import { InfoCircleOutlined } from '@ant-design/icons'
 import { loggerService } from '@logger'
 import { CopyIcon, DeleteIcon, EditIcon, RefreshIcon } from '@renderer/components/Icons'
+import InspectMessagePopup from '@renderer/components/Popups/InspectMessagePopup'
 import ObsidianExportPopup from '@renderer/components/Popups/ObsidianExportPopup'
 import SaveToKnowledgePopup from '@renderer/components/Popups/SaveToKnowledgePopup'
 import { SelectModelPopup } from '@renderer/components/Popups/SelectModelPopup'
@@ -24,9 +25,11 @@ import { messageBlocksSelectors, removeOneBlock } from '@renderer/store/messageB
 import { selectMessagesForTopic } from '@renderer/store/newMessage'
 import { TraceIcon } from '@renderer/trace/pages/Component'
 import type { Assistant, Model, Topic, TranslateLanguage } from '@renderer/types'
-import { type Message, MessageBlockType } from '@renderer/types/newMessage'
+import { type Message, MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessage'
 import { captureScrollableAsBlob, captureScrollableAsDataURL, classNames } from '@renderer/utils'
+import { abortCompletion } from '@renderer/utils/abortController'
 import { copyMessageAsPlainText } from '@renderer/utils/copy'
+import { isAbortError } from '@renderer/utils/error'
 import {
   exportMarkdownToJoplin,
   exportMarkdownToSiyuan,
@@ -50,7 +53,9 @@ import dayjs from 'dayjs'
 import type { TFunction } from 'i18next'
 import {
   AtSign,
+  Bug,
   Check,
+  CirclePause,
   FilePenLine,
   Languages,
   ListChecks,
@@ -68,6 +73,12 @@ import { useSelector } from 'react-redux'
 import styled from 'styled-components'
 
 import MessageTokens from './MessageTokens'
+
+const createTranslationAbortKey = (messageId: string) => `translation-abort-key:${messageId}`
+
+const abortTranslation = (messageId: string) => {
+  abortCompletion(createTranslationAbortKey(messageId))
+}
 
 interface Props {
   message: Message
@@ -105,6 +116,7 @@ type MessageMenubarButtonContext = {
   isBubbleStyle: boolean
   isGrouped?: boolean
   isLastMessage: boolean
+  isTranslating: boolean
   isUserMessage: boolean
   message: Message
   notesPath: string
@@ -141,7 +153,7 @@ const MessageMenubar: FC<Props> = (props) => {
   const { notesPath } = useNotesSettings()
   const { toggleMultiSelectMode } = useChatContext(props.topic)
   const [copied, setCopied] = useTemporaryValue(false, 2000)
-  const [isTranslating, setIsTranslating] = useState(false)
+  const translationAbortKey = createTranslationAbortKey(message.id)
   // remove confirm for regenerate; tooltip stays simple
   const [showDeleteTooltip, setShowDeleteTooltip] = useState(false)
   const { translateLanguages, getLanguageByLangcode } = useTranslate()
@@ -229,19 +241,32 @@ const MessageMenubar: FC<Props> = (props) => {
     startEditing(message.id)
   }, [message.id, startEditing])
 
+  const blockEntities = useSelector(messageBlocksSelectors.selectEntities)
+
+  const isTranslating = useMemo(() => {
+    const translationBlock = message.blocks
+      .map((blockId) => blockEntities[blockId])
+      .find((block) => block?.type === MessageBlockType.TRANSLATION)
+    return (
+      translationBlock?.status === MessageBlockStatus.STREAMING ||
+      translationBlock?.status === MessageBlockStatus.PROCESSING
+    )
+  }, [message.blocks, blockEntities])
+
   const handleTranslate = useCallback(
     async (language: TranslateLanguage) => {
       if (isTranslating) return
 
-      setIsTranslating(true)
       const messageId = message.id
       const translationUpdater = await getTranslationUpdater(messageId, language.langCode)
       if (!translationUpdater) return
+
       try {
-        await translateText(mainTextContent, language, translationUpdater)
+        await translateText(mainTextContent, language, translationUpdater, translationAbortKey)
       } catch (error) {
-        window.toast.error(t('translate.error.failed'))
-        // 理应只有一个
+        if (!isAbortError(error)) {
+          window.toast.error(t('translate.error.failed'))
+        }
         const translationBlocks = findTranslationBlocksById(message.id)
         logger.silly(`there are ${translationBlocks.length} translation blocks`)
         if (translationBlocks.length > 0) {
@@ -251,13 +276,9 @@ const MessageMenubar: FC<Props> = (props) => {
             dispatch(removeOneBlock(block.id))
           }
         }
-
-        // clearStreamMessage(message.id)
-      } finally {
-        setIsTranslating(false)
       }
     },
-    [isTranslating, message, getTranslationUpdater, mainTextContent, t, dispatch]
+    [isTranslating, message.id, getTranslationUpdater, mainTextContent, translationAbortKey, t, dispatch]
   )
 
   const handleDirectTranslate = useCallback(async () => {
@@ -360,7 +381,8 @@ const MessageMenubar: FC<Props> = (props) => {
               const imageData = await captureScrollableAsDataURL(messageContainerRef)
               const title = await getMessageTitle(message)
               if (title && imageData) {
-                window.api.file.saveImage(title, imageData)
+                const success = await window.api.file.saveImage(title, imageData)
+                if (success) window.toast.success(t('chat.topics.export.image_saved'))
               }
             }
           },
@@ -532,7 +554,6 @@ const MessageMenubar: FC<Props> = (props) => {
     [message.id, onUpdateUseful]
   )
 
-  const blockEntities = useSelector(messageBlocksSelectors.selectEntities)
   const hasTranslationBlocks = useMemo(() => {
     const translationBlocks = findTranslationBlocks(message)
     return translationBlocks.length > 0
@@ -560,6 +581,7 @@ const MessageMenubar: FC<Props> = (props) => {
     isBubbleStyle,
     isGrouped,
     isLastMessage,
+    isTranslating,
     isUserMessage,
     message,
     notesPath,
@@ -759,6 +781,7 @@ const buttonRenderers: Record<MessageMenubarButtonId, MessageMenubarButtonRender
   },
   translate: ({
     isUserMessage,
+    isTranslating,
     translateLanguages,
     handleTranslate,
     handleDirectTranslate,
@@ -772,6 +795,22 @@ const buttonRenderers: Record<MessageMenubarButtonId, MessageMenubarButtonRender
   }) => {
     if (isUserMessage) {
       return null
+    }
+
+    if (isTranslating) {
+      return (
+        <Tooltip title={t('translate.stop')} mouseEnterDelay={0.8}>
+          <ActionButton
+            className="message-action-button"
+            onClick={(e) => {
+              e.stopPropagation()
+              abortTranslation(message.id)
+            }}
+            $softHoverBg={softHoverBg}>
+            <CirclePause size={15} />
+          </ActionButton>
+        </Tooltip>
+      )
     }
 
     if (userNativeLanguage && !hasTranslationBlocks) {
@@ -928,12 +967,17 @@ const buttonRenderers: Record<MessageMenubarButtonId, MessageMenubarButtonRender
       </Tooltip>
     )
 
+    const handleDeleteMessage = async () => {
+      abortTranslation(message.id)
+      await deleteMessage(message.id, message.traceId, message.model?.name)
+    }
+
     if (confirmDeleteMessage) {
       return (
         <Popconfirm
           title={t('message.message.delete.content')}
           okButtonProps={{ danger: true }}
-          onConfirm={() => deleteMessage(message.id, message.traceId, message.model?.name)}
+          onConfirm={async () => await handleDeleteMessage()}
           onOpenChange={(open) => open && setShowDeleteTooltip(false)}>
           <ActionButton
             className="message-action-button"
@@ -948,9 +992,9 @@ const buttonRenderers: Record<MessageMenubarButtonId, MessageMenubarButtonRender
     return (
       <ActionButton
         className="message-action-button"
-        onClick={(e) => {
+        onClick={async (e) => {
           e.stopPropagation()
-          deleteMessage(message.id, message.traceId, message.model?.name)
+          await handleDeleteMessage()
         }}
         $softHoverBg={softHoverBg}>
         {deleteTooltip}
@@ -966,6 +1010,29 @@ const buttonRenderers: Record<MessageMenubarButtonId, MessageMenubarButtonRender
       <Tooltip title={t('trace.label')} mouseEnterDelay={0.8}>
         <ActionButton className="message-action-button" onClick={() => handleTraceUserMessage()}>
           <TraceIcon size={16} className={'lucide lucide-trash'} />
+        </ActionButton>
+      </Tooltip>
+    )
+  },
+  'inspect-data': ({ message, blockEntities, enableDeveloperMode }) => {
+    if (!enableDeveloperMode) {
+      return null
+    }
+
+    const handleInspect = (e: React.MouseEvent) => {
+      e.stopPropagation()
+      const blocks = message.blocks.map((blockId) => blockEntities[blockId]).filter(Boolean)
+      InspectMessagePopup.show({
+        title: `Message: ${message.id}`,
+        message,
+        blocks
+      })
+    }
+
+    return (
+      <Tooltip title="Inspect Data (Dev)" mouseEnterDelay={0.8}>
+        <ActionButton className="message-action-button" onClick={handleInspect}>
+          <Bug size={15} />
         </ActionButton>
       </Tooltip>
     )

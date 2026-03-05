@@ -2505,7 +2505,8 @@ const migrateConfig = {
   '152': (state: RootState) => {
     try {
       state.translate.settings = {
-        autoCopy: false
+        autoCopy: false,
+        customBody: ''
       }
       return state
     } catch (error) {

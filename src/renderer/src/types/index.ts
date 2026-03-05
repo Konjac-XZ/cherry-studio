@@ -1,4 +1,4 @@
-import type { LanguageModelV2Source } from '@ai-sdk/provider'
+import type { LanguageModelV3Source } from '@ai-sdk/provider'
 import type { WebSearchResultBlock } from '@anthropic-ai/sdk/resources'
 import type OpenAI from '@cherrystudio/openai'
 import type { GenerateImagesConfig, GroundingMetadata, PersonGeneration } from '@google/genai'
@@ -26,6 +26,7 @@ export * from './notification'
 export * from './ocr'
 export * from './plugin'
 export * from './provider'
+export * from './serialize'
 
 export type McpMode = 'disabled' | 'auto' | 'manual'
 
@@ -719,7 +720,7 @@ export type WebSearchProviderResponse = {
   results: WebSearchProviderResult[]
 }
 
-export type AISDKWebSearchResult = Omit<Extract<LanguageModelV2Source, { sourceType: 'url' }>, 'sourceType'>
+export type AISDKWebSearchResult = Omit<Extract<LanguageModelV3Source, { sourceType: 'url' }>, 'sourceType'>
 
 export type WebSearchResults =
   | WebSearchProviderResponse
