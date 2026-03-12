@@ -26,6 +26,14 @@ export const filterMessages = (messages: Message[]) => {
     })
 }
 
+export function isMessageVisibleInChat(message: Message): boolean {
+  return !(message.role === 'user' && message.hiddenInChat)
+}
+
+export function filterVisibleChatMessages(messages: Message[]): Message[] {
+  return messages.filter(isMessageVisibleInChat)
+}
+
 /**
  * Filters messages to include only those after the last 'clear' type message.
  */

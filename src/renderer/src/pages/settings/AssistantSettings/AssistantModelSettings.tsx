@@ -35,6 +35,7 @@ const AssistantModelSettings: FC<Props> = ({ assistant, updateAssistant, updateA
   const [streamOutput, setStreamOutput] = useState(assistant?.settings?.streamOutput)
   const autoCopy = assistant?.settings?.autoCopy ?? false
   const autoTranslate = assistant?.settings?.autoTranslate ?? false
+  const autoCleanupUserMessage = assistant?.settings?.autoCleanupUserMessage ?? false
   const [toolUseMode, setToolUseMode] = useState<AssistantSettings['toolUseMode']>(
     assistant?.settings?.toolUseMode ?? 'function'
   )
@@ -479,6 +480,16 @@ const AssistantModelSettings: FC<Props> = ({ assistant, updateAssistant, updateA
           checked={autoTranslate}
           onChange={(checked) => {
             updateAssistantSettings({ autoTranslate: checked })
+          }}
+        />
+      </SettingRow>
+      <Divider style={{ margin: '10px 0' }} />
+      <SettingRow style={{ minHeight: 30 }}>
+        <Label>{t('assistants.settings.auto_cleanup_user_message')}</Label>
+        <Switch
+          checked={autoCleanupUserMessage}
+          onChange={(checked) => {
+            updateAssistantSettings({ autoCleanupUserMessage: checked })
           }}
         />
       </SettingRow>

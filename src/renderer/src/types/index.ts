@@ -180,6 +180,7 @@ export type AssistantSettings = {
   streamOutput: boolean
   autoCopy?: boolean
   autoTranslate?: boolean
+  autoCleanupUserMessage?: boolean
   defaultModel?: Model
   customParameters?: AssistantSettingCustomParameters[]
   reasoning_effort: ReasoningEffortOption

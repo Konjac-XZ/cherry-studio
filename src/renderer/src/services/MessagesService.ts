@@ -38,8 +38,10 @@ export {
   filterEmptyMessages,
   filterErrorOnlyMessagesWithRelated,
   filterMessages,
+  filterVisibleChatMessages,
   filterUsefulMessages,
   filterUserRoleStartMessages,
+  isMessageVisibleInChat,
   getGroupedMessages
 } from '@renderer/utils/messageUtils/filters'
 

@@ -208,6 +208,7 @@ export type Message = {
   // UI相关
   multiModelMessageStyle?: 'horizontal' | 'vertical' | 'fold' | 'grid'
   foldSelected?: boolean
+  hiddenInChat?: boolean
 
   // 块集合
   blocks: MessageBlock['id'][]

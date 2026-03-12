@@ -638,6 +638,7 @@
       "model": "模型设置",
       "auto_copy": "自动复制助手回复",
       "auto_translate": "自动翻译助手回复",
+      "auto_cleanup_user_message": "自动清理已发送的用户消息",
       "more": "助手设置",
       "prompt": "提示词设置",
       "reasoning_effort": {

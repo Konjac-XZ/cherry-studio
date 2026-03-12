@@ -12,6 +12,7 @@ import { isGenerating, locateToMessage } from '@renderer/services/MessagesServic
 import NavigationService from '@renderer/services/NavigationService'
 import type { Topic } from '@renderer/types'
 import { classNames, runAsyncFunction } from '@renderer/utils'
+import { filterVisibleChatMessages } from '@renderer/utils/messageUtils/filters'
 import { Button, Divider, Empty } from 'antd'
 import { t } from 'i18next'
 import { Forward } from 'lucide-react'
@@ -32,6 +33,7 @@ const TopicMessages: FC<Props> = ({ topic: _topic, ...props }) => {
   const { setTimeoutTimer } = useTimer()
 
   const [topic, setTopic] = useState<Topic | undefined>(_topic)
+  const visibleMessages = filterVisibleChatMessages(topic?.messages || [])
 
   useEffect(() => {
     if (!_topic) return
@@ -42,7 +44,7 @@ const TopicMessages: FC<Props> = ({ topic: _topic, ...props }) => {
     })
   }, [_topic, topic])
 
-  const isEmpty = (topic?.messages || []).length === 0
+  const isEmpty = visibleMessages.length === 0
 
   if (!topic) {
     return null
@@ -60,7 +62,7 @@ const TopicMessages: FC<Props> = ({ topic: _topic, ...props }) => {
     <MessageEditingProvider>
       <MessagesContainer {...props} ref={containerRef} onScroll={handleScroll}>
         <ContainerWrapper className={messageStyle}>
-          {topic?.messages.map((message) => (
+          {visibleMessages.map((message) => (
             <MessageWrapper key={message.id} className={classNames([messageStyle, message.role])}>
               <MessageItem message={message} topic={topic} hideMenuBar={true} />
               <Button

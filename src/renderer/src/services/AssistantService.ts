@@ -50,6 +50,7 @@ export const DEFAULT_ASSISTANT_SETTINGS = {
   enableTopP: false,
   autoCopy: false,
   autoTranslate: false,
+  autoCleanupUserMessage: false,
   contextCount: DEFAULT_CONTEXTCOUNT,
   streamOutput: true,
   defaultModel: undefined,
@@ -274,6 +275,9 @@ export const getAssistantSettings = (assistant: Assistant): AssistantSettings =>
     streamOutput: assistant?.settings?.streamOutput ?? DEFAULT_ASSISTANT_SETTINGS.streamOutput,
     toolUseMode: assistant?.settings?.toolUseMode ?? DEFAULT_ASSISTANT_SETTINGS.toolUseMode,
     autoCopy: assistant?.settings?.autoCopy ?? DEFAULT_ASSISTANT_SETTINGS.autoCopy,
+    autoTranslate: assistant?.settings?.autoTranslate ?? DEFAULT_ASSISTANT_SETTINGS.autoTranslate,
+    autoCleanupUserMessage:
+      assistant?.settings?.autoCleanupUserMessage ?? DEFAULT_ASSISTANT_SETTINGS.autoCleanupUserMessage,
     defaultModel: assistant?.defaultModel ?? DEFAULT_ASSISTANT_SETTINGS.defaultModel,
     reasoning_effort: assistant?.settings?.reasoning_effort ?? DEFAULT_ASSISTANT_SETTINGS.reasoning_effort,
     customParameters: assistant?.settings?.customParameters ?? DEFAULT_ASSISTANT_SETTINGS.customParameters

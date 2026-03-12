@@ -29,6 +29,7 @@ import {
   runAsyncFunction
 } from '@renderer/utils'
 import { updateCodeBlock } from '@renderer/utils/markdown'
+import { filterVisibleChatMessages } from '@renderer/utils/messageUtils/filters'
 import { getMainTextContent } from '@renderer/utils/messageUtils/find'
 import { isTextLikeBlock } from '@renderer/utils/messageUtils/is'
 import { last } from 'lodash'
@@ -67,6 +68,7 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
   const { t } = useTranslation()
   const dispatch = useAppDispatch()
   const messages = useTopicMessages(topic.id)
+  const visibleMessages = useMemo(() => filterVisibleChatMessages(messages), [messages])
   const { displayCount, clearTopicMessages, deleteMessage, createTopicBranch } = useMessageOperations(topic)
   const { setTimeoutTimer } = useTimer()
 
@@ -74,10 +76,15 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
 
   const messageElements = useRef<Map<string, HTMLElement>>(new Map())
   const messagesRef = useRef<Message[]>(messages)
+  const visibleMessagesRef = useRef<Message[]>(visibleMessages)
 
   useEffect(() => {
     messagesRef.current = messages
   }, [messages])
+
+  useEffect(() => {
+    visibleMessagesRef.current = visibleMessages
+  }, [visibleMessages])
 
   const registerMessageElement = useCallback((id: string, element: HTMLElement | null) => {
     if (element) {
@@ -88,10 +95,10 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
   }, [])
 
   useEffect(() => {
-    const newDisplayMessages = computeDisplayMessages(messages, 0, displayCount)
+    const newDisplayMessages = computeDisplayMessages(visibleMessages, 0, displayCount)
     setDisplayMessages(newDisplayMessages)
-    setHasMore(messages.length > displayCount)
-  }, [messages, displayCount])
+    setHasMore(visibleMessages.length > displayCount)
+  }, [visibleMessages, displayCount])
 
   // NOTE: 如果设置为平滑滚动会导致滚动条无法跟随生成的新消息保持在底部位置
   const scrollToBottom = useCallback(() => {
@@ -252,18 +259,18 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
       'loadMoreMessages',
       () => {
         const currentLength = displayMessages.length
-        const newMessages = computeDisplayMessages(messages, currentLength, LOAD_MORE_COUNT)
+        const newMessages = computeDisplayMessages(visibleMessages, currentLength, LOAD_MORE_COUNT)
 
         setDisplayMessages((prev) => [...prev, ...newMessages])
-        setHasMore(currentLength + LOAD_MORE_COUNT < messages.length)
+        setHasMore(currentLength + LOAD_MORE_COUNT < visibleMessages.length)
         setIsLoadingMore(false)
       },
       300
     )
-  }, [displayMessages.length, hasMore, isLoadingMore, messages, setTimeoutTimer])
+  }, [displayMessages.length, hasMore, isLoadingMore, setTimeoutTimer, visibleMessages])
 
   useShortcut('copy_last_message', () => {
-    const lastMessage = last(messages)
+    const lastMessage = last(visibleMessages)
     if (lastMessage) {
       navigator.clipboard.writeText(getMainTextContent(lastMessage))
       window.toast.success(t('message.copy.success'))
@@ -271,7 +278,7 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
   })
 
   useShortcut('edit_last_user_message', () => {
-    const lastUserMessage = messagesRef.current.findLast((m) => m.role === 'user' && m.type !== 'clear')
+    const lastUserMessage = visibleMessagesRef.current.findLast((m) => m.role === 'user' && m.type !== 'clear')
     if (lastUserMessage) {
       EventEmitter.emit(EVENT_NAMES.EDIT_MESSAGE, lastUserMessage.id)
     }

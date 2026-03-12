@@ -638,6 +638,7 @@
       "model": "Model Settings",
       "auto_copy": "Auto-copy assistant replies",
       "auto_translate": "Auto-translate assistant replies",
+      "auto_cleanup_user_message": "Auto-clean up sent user messages",
       "more": "Assistant Settings",
       "prompt": "Prompt Settings",
       "reasoning_effort": {

@@ -17,6 +17,7 @@ import { estimateMessageUsage } from '@renderer/services/TokenService'
 import { translateText } from '@renderer/services/TranslateService'
 import store from '@renderer/store'
 import type { Assistant, Model, Topic } from '@renderer/types'
+import { TopicType } from '@renderer/types'
 import type { Message, MessageBlock } from '@renderer/types/newMessage'
 import { AssistantMessageStatus, MessageBlockType } from '@renderer/types/newMessage'
 import { classNames, cn } from '@renderer/utils'
@@ -146,11 +147,13 @@ const MessageItem: FC<Props> = ({
   const { messageFont, fontSize, messageStyle, showMessageOutline, userNativeLanguage: userNativeLanguageCode } = useSettings()
   const { editMessageBlocks, resendUserMessageWithEdit, editMessage, getTranslationUpdater } = useMessageOperations(topic)
   const messageContainerRef = useRef<HTMLDivElement>(null)
-  const prevStatusRef = useRef(message.status)
+  const prevAutomationStatusRef = useRef(message.status)
+  const prevCleanupStatusRef = useRef(message.status)
   const { editingMessageId, startEditing, stopEditing } = useMessageEditing()
   const { setTimeoutTimer } = useTimer()
   const autoCopyEnabled = assistant?.settings?.autoCopy ?? false
   const autoTranslateEnabled = assistant?.settings?.autoTranslate ?? false
+  const autoCleanupUserMessageEnabled = assistant?.settings?.autoCleanupUserMessage ?? false
   const { getLanguageByLangcode, isLoaded: translateLanguagesLoaded } = useTranslate()
   const isEditing = editingMessageId === message.id
 
@@ -165,8 +168,8 @@ const MessageItem: FC<Props> = ({
   }, [isEditing])
 
   useEffect(() => {
-    const previousStatus = prevStatusRef.current
-    prevStatusRef.current = message.status
+    const previousStatus = prevAutomationStatusRef.current
+    prevAutomationStatusRef.current = message.status
 
     // Skip if neither feature is enabled or message is not from assistant
     if ((!autoCopyEnabled && !autoTranslateEnabled) || message.role !== 'assistant') {
@@ -249,6 +252,54 @@ const MessageItem: FC<Props> = ({
     message.topicId,
     t
   ])
+
+  useEffect(() => {
+    const previousStatus = prevCleanupStatusRef.current
+    prevCleanupStatusRef.current = message.status
+
+    if (
+      !autoCleanupUserMessageEnabled ||
+      topic.type === TopicType.Session ||
+      message.role !== 'assistant' ||
+      !message.askId
+    ) {
+      return
+    }
+
+    const terminalStatuses = new Set<AssistantMessageStatus>([
+      AssistantMessageStatus.SUCCESS,
+      AssistantMessageStatus.ERROR,
+      AssistantMessageStatus.PAUSED
+    ])
+
+    if (previousStatus === message.status || !terminalStatuses.has(message.status)) {
+      return
+    }
+
+    const state = store.getState()
+    const userMessage = state.messages.entities[message.askId]
+    if (!userMessage || userMessage.role !== 'user' || userMessage.hiddenInChat) {
+      return
+    }
+
+    const relatedMessages = getAssistantMessagesForAsk(state, message.topicId, message.askId)
+    if (relatedMessages.length === 0) {
+      return
+    }
+
+    const allRepliesCompleted = relatedMessages.every((relatedMessage) => terminalStatuses.has(relatedMessage.status))
+    const hasSuccessfulReply = relatedMessages.some(
+      (relatedMessage) => relatedMessage.status === AssistantMessageStatus.SUCCESS
+    )
+
+    if (!allRepliesCompleted || !hasSuccessfulReply) {
+      return
+    }
+
+    void editMessage(userMessage.id, { hiddenInChat: true }).catch((error) => {
+      logger.error('Failed to auto clean up user message:', error as Error)
+    })
+  }, [autoCleanupUserMessageEnabled, editMessage, message.askId, message.role, message.status, message.topicId, topic.type])
 
   const handleEditSave = useCallback(
     async (blocks: MessageBlock[]) => {

@@ -13,6 +13,7 @@ import type { RootState } from '@renderer/store'
 import { selectMessagesForTopic } from '@renderer/store/newMessage'
 import type { Model } from '@renderer/types'
 import { isEmoji } from '@renderer/utils'
+import { filterVisibleChatMessages } from '@renderer/utils/messageUtils/filters'
 import { getMainTextContent } from '@renderer/utils/messageUtils/find'
 import type { Edge, Node, NodeTypes } from '@xyflow/react'
 import { Controls, Handle, MiniMap, ReactFlow, ReactFlowProvider } from '@xyflow/react'
@@ -233,6 +234,7 @@ const ChatFlowHistory: FC<ChatFlowHistoryProps> = ({ conversationId }) => {
           prevMsg.role === nextMsg.role &&
           prevMsg.createdAt === nextMsg.createdAt &&
           prevMsg.askId === nextMsg.askId &&
+          prevMsg.hiddenInChat === nextMsg.hiddenInChat &&
           isEqual(prevMsg.model, nextMsg.model)
         )
       })
@@ -244,8 +246,9 @@ const ChatFlowHistory: FC<ChatFlowHistoryProps> = ({ conversationId }) => {
 
   // 消息过滤
   const { userMessages, assistantMessages } = useMemo(() => {
-    const userMsgs = messages.filter((msg) => msg.role === 'user')
-    const assistantMsgs = messages.filter((msg) => msg.role === 'assistant')
+    const visibleMessages = filterVisibleChatMessages(messages)
+    const userMsgs = visibleMessages.filter((msg) => msg.role === 'user')
+    const assistantMsgs = visibleMessages.filter((msg) => msg.role === 'assistant')
     return { userMessages: userMsgs, assistantMessages: assistantMsgs }
   }, [messages])
 

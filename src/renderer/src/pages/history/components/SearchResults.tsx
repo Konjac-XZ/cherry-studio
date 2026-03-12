@@ -4,6 +4,7 @@ import useScrollPosition from '@renderer/hooks/useScrollPosition'
 import { selectTopicsMap } from '@renderer/store/assistants'
 import type { Topic } from '@renderer/types'
 import { type Message, MessageBlockType } from '@renderer/types/newMessage'
+import { isMessageVisibleInChat } from '@renderer/utils/messageUtils/filters'
 import {
   buildKeywordRegexes,
   buildKeywordUnionRegex,
@@ -229,7 +230,7 @@ const SearchResults: FC<Props> = ({ keywords, onMessageClick, onTopicClick, ...p
     const results = await Promise.all(
       blocks.map(async (block) => {
         const message = messages?.find((message) => message.id === block.messageId)
-        if (message) {
+        if (message && isMessageVisibleInChat(message)) {
           const topic = storeTopicsMap.get(message.topicId)
           if (topic) {
             return {
