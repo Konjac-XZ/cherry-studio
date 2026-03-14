@@ -266,7 +266,7 @@ const MessageItem: FC<Props> = ({
       return
     }
 
-    const terminalStatuses = new Set<AssistantMessageStatus>([
+    const terminalStatuses = new Set<Message['status']>([
       AssistantMessageStatus.SUCCESS,
       AssistantMessageStatus.ERROR,
       AssistantMessageStatus.PAUSED

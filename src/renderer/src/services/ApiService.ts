@@ -420,6 +420,7 @@ export async function fetchNoteSummary({ content, assistant }: { content: string
   }
 
   const AI = new AiProviderNew(model, providerWithRotatedKey)
+  const actualProvider = AI.getActualProvider()
 
   // only 2000 char and no images
   const truncatedContent = content.substring(0, 2000)
@@ -436,9 +437,17 @@ export async function fetchNoteSummary({ content, assistant }: { content: string
     model
   }
 
+  const { providerOptions, standardParams } = buildProviderOptions(summaryAssistant, model, actualProvider, {
+    enableReasoning: false,
+    enableWebSearch: false,
+    enableGenerateImage: false
+  })
+
   const llmMessages = {
     system: prompt,
-    prompt: purifiedContent
+    prompt: purifiedContent,
+    providerOptions,
+    ...standardParams
   }
 
   const middlewareConfig: AiSdkMiddlewareConfig = {

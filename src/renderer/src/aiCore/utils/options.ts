@@ -18,6 +18,7 @@ import {
 } from '@renderer/config/models'
 import { mapLanguageToQwenMTModel } from '@renderer/config/translate'
 import { getStoreSetting } from '@renderer/hooks/useSettings'
+import { getQuickModelProviderOptionsOverrides } from '@renderer/services/quickModelRequest'
 import { getProviderById } from '@renderer/services/ProviderService'
 import {
   type Assistant,
@@ -288,7 +289,11 @@ export function buildProviderOptions(
    */
   const customParams = getCustomParameters(assistant)
   const { standardParams, providerParams } = extractAiSdkStandardParams(customParams)
-  logger.debug('Extracted standardParams and providerParams', { standardParams, providerParams })
+  const mergedProviderParams = {
+    ...providerParams,
+    ...getQuickModelProviderOptionsOverrides(model.id)
+  }
+  logger.debug('Extracted standardParams and providerParams', { standardParams, providerParams: mergedProviderParams })
 
   /**
    * Get the actual AI SDK provider ID(s) from the already-built providerSpecificOptions.
@@ -301,11 +306,11 @@ export function buildProviderOptions(
   // For openai-compatible providers, auto-convert reasoning_effort (snake_case) to reasoningEffort (camelCase).
   // The AI SDK's openai-compatible provider overwrites reasoning_effort to undefined,
   // but accepts reasoningEffort. See: https://github.com/CherryHQ/cherry-studio/issues/11987
-  if (primaryAiSdkProviderId === 'openai-compatible' && 'reasoning_effort' in providerParams) {
-    if (!('reasoningEffort' in providerParams)) {
-      providerParams.reasoningEffort = providerParams.reasoning_effort
+  if (primaryAiSdkProviderId === 'openai-compatible' && 'reasoning_effort' in mergedProviderParams) {
+    if (!('reasoningEffort' in mergedProviderParams)) {
+      mergedProviderParams.reasoningEffort = mergedProviderParams.reasoning_effort
     }
-    delete providerParams.reasoning_effort
+    delete mergedProviderParams.reasoning_effort
   }
 
   /**
@@ -323,11 +328,11 @@ export function buildProviderOptions(
    * - User writes `google: { opt: 'val' }` → stays as `google: { opt: 'val' }` (case 1)
    * - User writes `customKey: 'val'` → merged to `google: { customKey: 'val' }` (case 3)
    */
-  for (const key of Object.keys(providerParams)) {
+  for (const key of Object.keys(mergedProviderParams)) {
     if (actualAiSdkProviderIds.includes(key)) {
       // Case 1: Key is an actual AI SDK provider ID - merge directly
       providerSpecificOptions = merge({}, providerSpecificOptions, {
-        [key]: providerParams[key]
+        [key]: mergedProviderParams[key]
       })
     } else if (key === rawProviderId && !actualAiSdkProviderIds.includes(rawProviderId)) {
       // Case 2: Key is the current provider (not in actualAiSdkProviderIds, so it's a proxy or special provider)
@@ -335,18 +340,18 @@ export function buildProviderOptions(
       if (key === SystemProviderIds.gateway) {
         // Preserve gateway config for routing
         providerSpecificOptions = merge({}, providerSpecificOptions, {
-          [key]: providerParams[key]
+          [key]: mergedProviderParams[key]
         })
       } else {
         // Proxy provider (cherryin, etc.) - map to actual AI SDK provider
         providerSpecificOptions = merge({}, providerSpecificOptions, {
-          [primaryAiSdkProviderId]: providerParams[key]
+          [primaryAiSdkProviderId]: mergedProviderParams[key]
         })
       }
     } else {
       // Case 3: Regular parameter - merge to primary provider
       providerSpecificOptions = merge({}, providerSpecificOptions, {
-        [primaryAiSdkProviderId]: { [key]: providerParams[key] }
+        [primaryAiSdkProviderId]: { [key]: mergedProviderParams[key] }
       })
     }
   }
