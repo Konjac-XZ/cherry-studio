@@ -3,14 +3,14 @@ import { HStack } from '@renderer/components/Layout'
 import ModelSelector from '@renderer/components/ModelSelector'
 import { InfoTooltip } from '@renderer/components/TooltipIcons'
 import { isEmbeddingModel, isRerankModel, isTextToImageModel } from '@renderer/config/models'
-import { TRANSLATE_PROMPT } from '@renderer/config/prompts'
+import { TRANSLATE_NATIVE_LANGUAGE_PROMPT, TRANSLATE_PROMPT } from '@renderer/config/prompts'
 import { useTheme } from '@renderer/context/ThemeProvider'
 import { useDefaultModel } from '@renderer/hooks/useAssistant'
 import { useProviders } from '@renderer/hooks/useProvider'
 import { useSettings } from '@renderer/hooks/useSettings'
 import { getModelUniqId, hasModel } from '@renderer/services/ModelService'
 import { useAppDispatch } from '@renderer/store'
-import { setTranslateModelPrompt } from '@renderer/store/settings'
+import { setNativeLanguageTranslateModelPrompt, setOtherLanguageTranslateModelPrompt } from '@renderer/store/settings'
 import type { Model } from '@renderer/types'
 import { Button, Tooltip } from 'antd'
 import { find } from 'lodash'
@@ -31,7 +31,7 @@ const ModelSettings: FC = () => {
   const allModels = providers.map((p) => p.models).flat()
   const { theme } = useTheme()
   const { t } = useTranslation()
-  const { translateModelPrompt } = useSettings()
+  const { nativeLanguageTranslateModelPrompt, otherLanguageTranslateModelPrompt } = useSettings()
 
   const dispatch = useAppDispatch()
 
@@ -53,7 +53,8 @@ const ModelSettings: FC = () => {
   )
 
   const onResetTranslatePrompt = () => {
-    dispatch(setTranslateModelPrompt(TRANSLATE_PROMPT))
+    dispatch(setNativeLanguageTranslateModelPrompt(TRANSLATE_NATIVE_LANGUAGE_PROMPT))
+    dispatch(setOtherLanguageTranslateModelPrompt(TRANSLATE_PROMPT))
   }
 
   return (
@@ -123,7 +124,8 @@ const ModelSettings: FC = () => {
             style={{ marginLeft: 8 }}
             onClick={() => TranslateSettingsPopup.show()}
           />
-          {translateModelPrompt !== TRANSLATE_PROMPT && (
+          {(nativeLanguageTranslateModelPrompt !== TRANSLATE_NATIVE_LANGUAGE_PROMPT ||
+            otherLanguageTranslateModelPrompt !== TRANSLATE_PROMPT) && (
             <Tooltip title={t('common.reset')}>
               <Button icon={<RedoOutlined />} style={{ marginLeft: 8 }} onClick={onResetTranslatePrompt}></Button>
             </Tooltip>

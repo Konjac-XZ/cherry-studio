@@ -19,7 +19,6 @@ const logger = loggerService.withContext('useTranslate')
  * - getLanguageByLangcode: 通过语言代码获取语言对象
  */
 export default function useTranslate() {
-  const prompt = useAppSelector((state) => state.settings.translateModelPrompt)
   const settings = useAppSelector((state) => state.translate.settings)
   const [translateLanguages, setTranslateLanguages] = useState<TranslateLanguage[]>(builtinLanguages)
   const [isLoaded, setIsLoaded] = useState(false)
@@ -77,7 +76,6 @@ export default function useTranslate() {
   )
 
   return {
-    prompt,
     settings,
     translateLanguages,
     isLoaded,

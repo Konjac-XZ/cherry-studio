@@ -18,6 +18,7 @@ import { useSettings } from '@renderer/hooks/useSettings'
 import { useTemporaryValue } from '@renderer/hooks/useTemporaryValue'
 import { useTimer } from '@renderer/hooks/useTimer'
 import useTranslate from '@renderer/hooks/useTranslate'
+import { getTranslatePromptTemplate } from '@renderer/services/AssistantService'
 import { estimateTextTokens } from '@renderer/services/TokenService'
 import { findReusableTranslateHistory, saveTranslateHistory, translateText } from '@renderer/services/TranslateService'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
@@ -147,10 +148,17 @@ const TranslatePage: FC = () => {
   // hooks
   const { t } = useTranslation()
   const { translateModel, setTranslateModel } = useDefaultModel()
-  const { prompt, getLanguageByLangcode, settings } = useTranslate()
+  const { getLanguageByLangcode, settings } = useTranslate()
   const { autoCopy } = settings
   const { shikiMarkdownIt } = useCodeStyle()
-  const { mathEngine, mathEnableSingleDollar } = useSettings()
+  const {
+    mathEngine,
+    mathEnableSingleDollar,
+    nativeLanguageTranslateModelPrompt,
+    otherLanguageTranslateModelPrompt,
+    translateModelPrompt,
+    userNativeLanguage
+  } = useSettings()
   const { onSelectFile, selecting, clearFiles } = useFiles({ extensions: [...imageExts, ...textExts, ...documentExts] })
   const { ocr } = useOcr()
   const { setTimeoutTimer } = useTimer()
@@ -1070,7 +1078,27 @@ const TranslatePage: FC = () => {
   )
 
   // 控制token估计
-  const tokenCount = useMemo(() => estimateTextTokens(text + prompt), [prompt, text])
+  const translatePromptTemplate = useMemo(
+    () =>
+      getTranslatePromptTemplate(
+        {
+          translateModelPrompt,
+          nativeLanguageTranslateModelPrompt,
+          otherLanguageTranslateModelPrompt,
+          userNativeLanguage
+        },
+        targetLanguage
+      ),
+    [
+      nativeLanguageTranslateModelPrompt,
+      otherLanguageTranslateModelPrompt,
+      targetLanguage,
+      translateModelPrompt,
+      userNativeLanguage
+    ]
+  )
+
+  const tokenCount = useMemo(() => estimateTextTokens(text + translatePromptTemplate), [text, translatePromptTemplate])
 
   // Auto-paste and translate when navigated with ?paste=1
   useEffect(() => {

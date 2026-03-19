@@ -5451,7 +5451,14 @@
           "placeholder": "English"
         }
       },
-      "prompt": "Translation prompt",
+      "prompt": "Translation prompts",
+      "prompt_hint": "Choose which prompt template to use based on whether the target language matches your User Native Language setting.",
+      "prompt_native": "Translate to native language",
+      "prompt_native_description": "Used only when the target language matches your User Native Language setting. Current value: {{nativeLanguage}}.",
+      "prompt_native_placeholder": "Enter the prompt used when translating back to your native language",
+      "prompt_other": "Translate to other languages",
+      "prompt_other_description": "Used when the target language does not match your User Native Language, or when no native language is set.",
+      "prompt_other_placeholder": "Enter the prompt used for all other target languages",
       "custom_body": "Custom Request Body",
       "title": "Translation settings"
     },

@@ -5447,6 +5447,13 @@
         }
       },
       "prompt": "翻譯提示詞",
+      "prompt_hint": "根據目標語言是否與「使用者母語」設定一致，選擇不同的提示詞範本。",
+      "prompt_native": "翻譯成母語",
+      "prompt_native_description": "僅在目標語言與「使用者母語」設定一致時使用。目前值：{{nativeLanguage}}。",
+      "prompt_native_placeholder": "請輸入翻譯回母語時使用的提示詞",
+      "prompt_other": "翻譯成其他語言",
+      "prompt_other_description": "當目標語言與「使用者母語」不一致，或尚未設定母語時使用。",
+      "prompt_other_placeholder": "請輸入翻譯到其他目標語言時使用的提示詞",
       "custom_body": "自訂請求體",
       "title": "翻譯設定"
     },

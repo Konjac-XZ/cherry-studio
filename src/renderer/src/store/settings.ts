@@ -17,7 +17,7 @@
 import type { PayloadAction } from '@reduxjs/toolkit'
 import { createSlice } from '@reduxjs/toolkit'
 import { DEFAULT_STREAM_OPTIONS_INCLUDE_USAGE, isMac } from '@renderer/config/constant'
-import { TRANSLATE_PROMPT } from '@renderer/config/prompts'
+import { TRANSLATE_NATIVE_LANGUAGE_PROMPT, TRANSLATE_PROMPT } from '@renderer/config/prompts'
 import { DEFAULT_SIDEBAR_ICONS } from '@renderer/config/sidebar'
 import type {
   ApiServerConfig,
@@ -142,6 +142,8 @@ export interface SettingsState {
   webdavSkipBackupFile: boolean
   webdavDisableStream: boolean
   translateModelPrompt: string
+  nativeLanguageTranslateModelPrompt: string
+  otherLanguageTranslateModelPrompt: string
   autoTranslateWithSpace: boolean
   showTranslateConfirm: boolean
   enableTopicNaming: boolean
@@ -338,6 +340,8 @@ export const initialState: SettingsState = {
   webdavSkipBackupFile: false,
   webdavDisableStream: false,
   translateModelPrompt: TRANSLATE_PROMPT,
+  nativeLanguageTranslateModelPrompt: TRANSLATE_NATIVE_LANGUAGE_PROMPT,
+  otherLanguageTranslateModelPrompt: TRANSLATE_PROMPT,
   autoTranslateWithSpace: false,
   showTranslateConfirm: true,
   enableTopicNaming: true,
@@ -681,6 +685,14 @@ const settingsSlice = createSlice({
     },
     setTranslateModelPrompt: (state, action: PayloadAction<string>) => {
       state.translateModelPrompt = action.payload
+      state.otherLanguageTranslateModelPrompt = action.payload
+    },
+    setNativeLanguageTranslateModelPrompt: (state, action: PayloadAction<string>) => {
+      state.nativeLanguageTranslateModelPrompt = action.payload
+    },
+    setOtherLanguageTranslateModelPrompt: (state, action: PayloadAction<string>) => {
+      state.otherLanguageTranslateModelPrompt = action.payload
+      state.translateModelPrompt = action.payload
     },
     setAutoTranslateWithSpace: (state, action: PayloadAction<boolean>) => {
       state.autoTranslateWithSpace = action.payload
@@ -971,6 +983,8 @@ export const {
   setGridPopoverTrigger,
   setMessageStyle,
   setTranslateModelPrompt,
+  setNativeLanguageTranslateModelPrompt,
+  setOtherLanguageTranslateModelPrompt,
   setAutoTranslateWithSpace,
   setShowTranslateConfirm,
   setEnableTopicNaming,

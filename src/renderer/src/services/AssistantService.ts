@@ -8,11 +8,13 @@ import {
 } from '@renderer/config/constant'
 import { getModelSupportedReasoningEffortOptions } from '@renderer/config/models'
 import { isQwenMTModel } from '@renderer/config/models/qwen'
+import { TRANSLATE_NATIVE_LANGUAGE_PROMPT, TRANSLATE_PROMPT } from '@renderer/config/prompts'
 import { UNKNOWN } from '@renderer/config/translate'
 import { getStoreProviders } from '@renderer/hooks/useStore'
 import i18n from '@renderer/i18n'
 import store from '@renderer/store'
 import { addAssistant } from '@renderer/store/assistants'
+import type { SettingsState } from '@renderer/store/settings'
 import type {
   Assistant,
   AssistantPreset,
@@ -126,15 +128,15 @@ export function getDefaultTranslateAssistant(
     reasoning_effort: reasoningEffort,
     ..._settings
   } satisfies Partial<AssistantSettings>
+  const translateSettings = store.getState().settings
 
   const getTranslateContent = (model: Model, text: string, targetLanguage: TranslateLanguage): string => {
     if (isQwenMTModel(model)) {
       return text // QwenMT models handle raw text directly
     }
 
-    return store
-      .getState()
-      .settings.translateModelPrompt.replaceAll('{{target_language}}', targetLanguage.value)
+    return getTranslatePromptTemplate(translateSettings, targetLanguage)
+      .replaceAll('{{target_language}}', targetLanguage.value)
       .replaceAll('{{text}}', text)
   }
 
@@ -169,6 +171,22 @@ export function getDefaultTranslateAssistant(
     content
   } satisfies TranslateAssistant
   return translateAssistant
+}
+
+type TranslatePromptSettings = Pick<
+  SettingsState,
+  'translateModelPrompt' | 'nativeLanguageTranslateModelPrompt' | 'otherLanguageTranslateModelPrompt' | 'userNativeLanguage'
+>
+
+export function getTranslatePromptTemplate(
+  settings: TranslatePromptSettings,
+  targetLanguage: Pick<TranslateLanguage, 'langCode'>
+): string {
+  if (settings.userNativeLanguage && targetLanguage.langCode === settings.userNativeLanguage) {
+    return settings.nativeLanguageTranslateModelPrompt || TRANSLATE_NATIVE_LANGUAGE_PROMPT
+  }
+
+  return settings.otherLanguageTranslateModelPrompt || settings.translateModelPrompt || TRANSLATE_PROMPT
 }
 
 /**
