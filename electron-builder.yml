@@ -140,64 +140,34 @@ artifactBuildCompleted: scripts/artifact-build-completed.js
 releaseInfo:
   releaseNotes: |
     <!--LANG:en-->
-    Cherry Studio 1.7.25 - Security & Stability
-
-    ✨ New Features
-    - [Web Search] Add Querit search provider (1,000 free requests for new users)
-    - [Provider] Add MiniMax Global and Z.ai providers
-    - [Mini Apps] Add MiniMax Agent and IMA mini apps
-    - [Provider] Add agent support filter in provider settings
-    - [Agent] Add custom environment variables support
-    - [Models] Add GPT-5.4 support
+    Cherry Studio 1.8.1 - Quick Fixes
 
     🐛 Bug Fixes
-    - [Security] Built-in filesystem MCP now requires manual approval for write/edit/delete operations
-    - [Security] Fix MCP hub mode bypassing tool permission checks
-    - [Security] Remove auto-execution countdown - tools now wait for user confirmation
-    - [Agent] Fix tool status not stopping when aborting on Windows
-    - [Chat] Fix auto backup interrupting streaming responses
-    - [Chat] Fix topic renaming errors with image-capable models
-    - [UI] Fix "Move To" submenu overflow with long assistant lists
-    - [Editor] Render SVG code blocks as previews
-    - [Models] Fix Gemini 3 and Qwen 3.5 reasoning parameter issues
-    - [xAI] Upgrade to new Responses API with X/Twitter search support
-    - [API Server] Fix tool calling message validation
-    - [Plugins] Fix install/uninstall button state issues
-    - [Update] Fix update dialog not showing on manual check
-    - [Update] Prevent unexpected auto-updates on app quit
+    - [Agents] Fix thinking mode 400 error on non-Anthropic providers
+    - [Windows] Fix Windows Terminal launch failing on non-English systems
+    - [Windows] Fix CLI tools (qwen-code, Copilot CLI) failing to start on Windows
+    - [Azure] Fix dated API versions routing to wrong transport
+    - [Editor] Fix Zed editor unable to open directories from agent workspace
+
+    ✨ New Features
+    - [Agents] Clickable file paths in tool outputs — click to open files, with dropdown to reveal in Finder or open in external editors
 
     💄 Improvements
-    - [Provider] Improve agent model selector ordering and highlighting
-    - [MCP] Add system notifications when tool approval is required
+    - [Backup] Enhanced backup system with new format (v6), improved security, and config.json now included in backups
 
     <!--LANG:zh-CN-->
-    Cherry Studio 1.7.25 - 安全与稳定性
-
-    ✨ 新功能
-    - [网络搜索] 新增 Querit 搜索引擎（新用户 1,000 次免费请求）
-    - [服务商] 新增 MiniMax Global 和 Z.ai 服务商
-    - [小程序] 新增 MiniMax Agent 和 IMA 小程序
-    - [服务商] 添加智能体支持筛选器
-    - [智能体] 支持自定义环境变量配置
-    - [模型] 新增 GPT-5.4 支持
+    Cherry Studio 1.8.1 - 快速修复
 
     🐛 问题修复
-    - [安全] 内置文件系统 MCP 的写入/编辑/删除操作现需手动批准
-    - [安全] 修复 MCP Hub 模式绕过工具权限检查的问题
-    - [安全] 移除自动执行倒计时 - 工具现在等待用户确认
-    - [智能体] 修复 Windows 上中止时工具状态未停止的问题
-    - [对话] 修复自动备份中断流式响应的问题
-    - [对话] 修复使用图像模型时话题重命名出错的问题
-    - [UI] 修复助手列表过长时"移动到"子菜单溢出
-    - [编辑器] SVG 代码块现在显示为预览图
-    - [模型] 修复 Gemini 3 和 Qwen 3.5 推理参数问题
-    - [xAI] 升级到新版 Responses API，支持 X/Twitter 搜索
-    - [API 服务] 修复工具调用消息验证问题
-    - [插件] 修复安装/卸载按钮状态问题
-    - [更新] 修复手动检查更新时对话框不显示的问题
-    - [更新] 防止退出应用时意外自动更新
+    - [智能体] 修复非 Anthropic 服务商思考模式 400 错误
+    - [Windows] 修复 Windows Terminal 在非英语系统上启动失败的问题
+    - [Windows] 修复 CLI 工具（qwen-code、Copilot CLI）在 Windows 上启动失败的问题
+    - [Azure] 修复特定版本的 API 路由到错误传输方式的问题
+    - [编辑器] 修复 Zed 编辑器无法从智能体工作区打开目录的问题
+
+    ✨ 新功能
+    - [智能体] 工具输出中的文件路径可点击 — 点击打开文件，下拉菜单可显示在访达中或在外部编辑器中打开
 
     💄 改进
-    - [服务商] 优化智能体模型选择器排序和高亮
-    - [MCP] 工具需要批准时发送系统通知
+    - [备份] 增强备份系统，新增格式（v6）、改进安全性，config.json 现已包含在备份中
     <!--LANG:END-->

@@ -6,7 +6,15 @@ import type { AgentEntity, Assistant } from '@renderer/types'
 import { useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import type { UnifiedItem } from './useUnifiedItems'
+type UnifiedItem =
+  | {
+      type: 'assistant'
+      data: Assistant
+    }
+  | {
+      type: 'agent'
+      data: AgentEntity
+    }
 
 interface UseUnifiedGroupingOptions {
   unifiedItems: UnifiedItem[]

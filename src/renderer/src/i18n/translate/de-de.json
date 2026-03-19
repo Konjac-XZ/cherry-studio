@@ -38,6 +38,10 @@
     "edit": {
       "title": "Agent bearbeiten"
     },
+    "empty": {
+      "description": "Erstellen Sie einen Agenten zur Bewältigung komplexer Aufgaben mit KI-gestützten Tools.",
+      "title": "Noch keine Agenten"
+    },
     "get": {
       "error": {
         "failed": "Agent abrufen fehlgeschlagen",
@@ -77,6 +81,11 @@
     "list": {
       "error": {
         "failed": "Agent-Liste abrufen fehlgeschlagen"
+      }
+    },
+    "reorder": {
+      "error": {
+        "failed": "Fehler beim Neuanordnen der Agenten"
       }
     },
     "server": {
@@ -129,6 +138,11 @@
       },
       "label_one": "Sitzung",
       "label_other": "Sitzungen",
+      "reorder": {
+        "error": {
+          "failed": "Fehler beim Neuordnen der Sitzungen"
+        }
+      },
       "update": {
         "error": {
           "failed": "Sitzung aktualisieren fehlgeschlagen"
@@ -295,6 +309,7 @@
         }
       }
     },
+    "sidebar_title": "Agenten",
     "todo": {
       "panel": {
         "title": "{{completed}}/{{total}} Aufgaben abgeschlossen"
@@ -395,7 +410,11 @@
       }
     },
     "warning": {
-      "enable_server": "Bitte aktivieren Sie den API-Server, um Agent-Funktionen zu verwenden"
+      "enable_and_start": "Aktivieren & Starten",
+      "enable_server": "Bitte aktivieren Sie den API-Server, um Agent-Funktionen zu verwenden",
+      "enable_server_description": "Der API-Server muss aktiviert sein, damit Agents funktionieren. Sie können ihn direkt aktivieren oder in den Einstellungen konfigurieren.",
+      "server_not_running": "API-Server ist aktiviert, läuft aber nicht. Bitte überprüfen Sie die Serverkonfiguration.",
+      "server_not_running_description": "Der API-Server muss laufen, damit die Agents funktionieren. Sie können ihn direkt starten oder die Einstellungen überprüfen."
     }
   },
   "apiServer": {
@@ -716,6 +735,7 @@
     "progress": {
       "completed": "Backup abgeschlossen",
       "compressing": "Dateien werden komprimiert...",
+      "copying_database": "Datenbank wird kopiert...",
       "copying_files": "Dateien werden kopiert... {{progress}}%",
       "preparing": "Backup wird vorbereitet...",
       "preparing_compression": "Komprimierung wird vorbereitet...",
@@ -753,6 +773,7 @@
       }
     },
     "alerts": {
+      "create_agent": "Erstellen Sie einen Agenten, um loszulegen.",
       "create_session": "Erstelle eine Sitzung",
       "select_agent": "Wählen Sie einen Agenten"
     },
@@ -868,7 +889,11 @@
         "collapse": "Falten",
         "collapse_in": "Zum Falten hinzufügen",
         "collapse_out": "Aus Falten entfernen",
-        "expand": "Ausklappen"
+        "expand": "Ausklappen",
+        "file_not_found": "Datei nicht gefunden: {{path}}",
+        "open_file": "Datei öffnen",
+        "open_file_error": "Fehler beim Öffnen der Datei: {{path}}",
+        "reveal_in_finder": "Im Finder anzeigen"
       },
       "topics": "Themen",
       "translate": "Übersetzen nach {{target_language}}",
@@ -1362,6 +1387,7 @@
     "off": "Aus",
     "on": "An",
     "open": "Öffnen",
+    "open_in": "In {{name}} öffnen",
     "paste": "Einfügen",
     "placeholders": {
       "select": {
@@ -1389,6 +1415,7 @@
     "selected": "Ausgewählt",
     "selectedItems": "{{count}} Elemente ausgewählt",
     "selectedMessages": "{{count}} Nachrichten ausgewählt",
+    "sessions": "Sitzungen",
     "settings": "Einstellungen",
     "sort": {
       "pinyin": {
@@ -3122,7 +3149,10 @@
       "extracting": "Backup wird entpackt...",
       "preparing": "Wiederherstellung wird vorbereitet...",
       "reading_data": "Daten werden gelesen...",
-      "title": "Wiederherstellungsfortschritt"
+      "restoring_data": "Dateien werden wiederhergestellt...",
+      "restoring_database": "Datenbank wird wiederhergestellt...",
+      "title": "Wiederherstellungsfortschritt",
+      "validating": "Backup wird überprüft..."
     },
     "title": "Datenwiederherstellung"
   },
@@ -3675,7 +3705,15 @@
           "button": "Sicherungsdatei auswählen"
         },
         "content": "Exportieren Sie einige Daten, einschließlich Chat-Protokollen und Einstellungen. Bitte beachten Sie, dass der Sicherungsvorgang einige Zeit in Anspruch nehmen kann. Vielen Dank für Ihre Geduld.",
+        "file": {
+          "button": "In Datei exportieren",
+          "content": "Exportiere Daten als Sicherungsdatei, die per Datei auf dem Mobilgerät importiert werden kann.",
+          "export_failed": "Export fehlgeschlagen",
+          "export_success": "Export erfolgreich",
+          "title": "Als Datei exportieren"
+        },
         "lan": {
+          "button": "Übertragung starten",
           "connected": "Verbunden",
           "connection_failed": "Verbindung fehlgeschlagen",
           "content": "Bitte stelle sicher, dass sich dein Computer und dein Telefon im selben Netzwerk befinden, um eine LAN-Übertragung durchzuführen. Öffne die Cherry Studio App, um diesen QR-Code zu scannen.",
@@ -5594,8 +5632,12 @@
     "show_window": "Fenster anzeigen"
   },
   "update": {
+    "download": "Herunterladen",
     "install": "Jetzt installieren",
     "later": "Später",
+    "manualDownload": "Herunterladen",
+    "manualInstallError": "Installation fehlgeschlagen, bitte manuell von der offiziellen Website herunterladen.",
+    "manualInstallInfo": "Diese Version unterstützt keine automatischen Updates. Klicken Sie auf Herunterladen, um das Update abzuschließen.",
     "message": "Neue Version {{version}} gefunden. Jetzt installieren?",
     "noReleaseNotes": "Kein Changelog verfügbar",
     "saveDataError": "Speichern fehlgeschlagen, bitte erneut versuchen",

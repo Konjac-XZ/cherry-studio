@@ -243,7 +243,8 @@ export async function fetchChatCompletion({
     params: aiSdkParams,
     modelId,
     capabilities,
-    webSearchPluginConfig
+    webSearchPluginConfig,
+    idleTimeout
   } = await buildStreamTextParams(messages, assistant, provider, {
     mcpTools: mcpTools,
     allowedTools,
@@ -279,7 +280,8 @@ export async function fetchChatCompletion({
     assistant,
     topicId,
     callType: 'chat',
-    uiMessages
+    uiMessages,
+    idleTimeout
   })
 }
 
@@ -395,7 +397,7 @@ export async function fetchMessagesSummary({
     const text = getText()
     const result = removeSpecialCharactersForTopicName(text)
     return result ? { text: result } : { text: null, error: i18n.t('error.no_response') }
-  } catch (error: any) {
+  } catch (error: unknown) {
     return { text: null, error: getErrorMessage(error) }
   }
 }

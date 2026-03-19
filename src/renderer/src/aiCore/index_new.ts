@@ -17,6 +17,7 @@ import type { StartSpanParams } from '@renderer/trace/types/ModelSpanEntity'
 import { type Assistant, type GenerateImageParams, type Model, type Provider, SystemProviderIds } from '@renderer/types'
 import type { StreamTextParams } from '@renderer/types/aiCoreTypes'
 import { SUPPORTED_IMAGE_ENDPOINT_LIST } from '@renderer/utils'
+import type { IdleTimeoutHandle } from '@renderer/utils/IdleTimeoutController'
 import { buildClaudeCodeSystemModelMessage } from '@shared/anthropic'
 import { gateway, type LanguageModel, type Provider as AiSdkProvider } from 'ai'
 
@@ -42,6 +43,7 @@ export type ModernAiProviderConfig = AiSdkMiddlewareConfig & {
   // topicId for tracing
   topicId?: string
   callType: string
+  idleTimeout?: IdleTimeoutHandle
 }
 
 export default class ModernAiProvider {
@@ -335,7 +337,8 @@ export default class ModernAiProvider {
         config.enableWebSearch,
         undefined,
         undefined,
-        this.config!.providerId
+        this.config!.providerId,
+        config.idleTimeout
       )
 
       const streamResult = await executor.streamText({
@@ -351,21 +354,46 @@ export default class ModernAiProvider {
         getText: () => finalText
       }
     } else {
+      // Since no onChunk is provided, the external consumer would not handle error chunk.
+      // So we need to capture the actual stream error so we can throw it instead of the
+      // generic NoTextGeneratedError ("No output generated. Check the stream
+      // for errors.") that AI SDK raises when streamResult.text is accessed
+      // after a failed stream.
+      let streamError: unknown = undefined
+
       const streamResult = await executor.streamText({
         ...params,
-        model
+        model,
+        onError({ error }) {
+          streamError = error
+        }
         // Cross-version ai types disagree on ToolSet; cast to executor input to keep both satisfied
       } as Parameters<typeof executor.streamText>[0])
 
       // 强制消费流,不然await streamResult.text会阻塞
-      await streamResult?.consumeStream()
+      await streamResult?.consumeStream({
+        onError(error) {
+          if (!streamError) {
+            streamError = error
+          }
+        }
+      })
 
-      const finalText = await streamResult.text
-      const usage = await streamResult.totalUsage
+      try {
+        const finalText = await streamResult.text
+        const usage = await streamResult.totalUsage
 
-      return {
-        getText: () => finalText,
-        usage
+        return {
+          getText: () => finalText,
+          usage
+        }
+      } catch (error) {
+        // If we captured the real stream error, throw that instead of the
+        // generic NoTextGeneratedError so callers get actionable diagnostics.
+        if (streamError) {
+          throw streamError
+        }
+        throw error
       }
     }
   }
