@@ -5596,7 +5596,8 @@
     },
     "info": {
       "aborted": "Translation aborted",
-      "html_conversion": "HTML format detected, conversion triggered. Please review the results"
+      "html_conversion": "HTML format detected, conversion triggered. Please review the results",
+      "reused_cached": "Reused a previous translation. {{modifier}}+Click Translate to refresh it."
     },
     "input": {
       "placeholder": "Text, text files, or images (with OCR support) can be pasted or dragged in"
@@ -5640,6 +5641,7 @@
     "target_language": "Target Language",
     "title": "Translation",
     "tooltip": {
+      "force_refresh": "{{modifier}}+Click: refresh and overwrite the saved result",
       "newline": "Newline"
     }
   },

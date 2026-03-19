@@ -19,7 +19,7 @@ import { useTemporaryValue } from '@renderer/hooks/useTemporaryValue'
 import { useTimer } from '@renderer/hooks/useTimer'
 import useTranslate from '@renderer/hooks/useTranslate'
 import { estimateTextTokens } from '@renderer/services/TokenService'
-import { saveTranslateHistory, translateText } from '@renderer/services/TranslateService'
+import { findReusableTranslateHistory, saveTranslateHistory, translateText } from '@renderer/services/TranslateService'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
 import { setTranslateAbortKey, setTranslating as setTranslatingAction } from '@renderer/store/runtime'
 import { setTranslatedContent as setTranslatedContentAction, setTranslateInput } from '@renderer/store/translate'
@@ -70,6 +70,13 @@ import TranslateHistoryList from './TranslateHistory'
 import TranslateSettings from './TranslateSettings'
 
 const logger = loggerService.withContext('TranslatePage')
+
+type TranslateTriggerOptions = {
+  forceRefresh?: boolean
+}
+
+const isMacLikePlatform = () =>
+  typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent)
 
 // cache variables
 let _sourceLanguage: TranslateLanguage | 'auto' = 'auto'
@@ -217,6 +224,10 @@ const TranslatePage: FC = () => {
 
   const notifyHtmlConversion = useCallback(() => {
     window.toast.info(t('translate.info.html_conversion'))
+  }, [t])
+
+  const notifyReuseHit = useCallback(() => {
+    window.toast.info(t('translate.info.reused_cached', { modifier: isMacLikePlatform() ? 'Cmd' : 'Ctrl' }))
   }, [t])
 
   const turndownService = useMemo(() => {
@@ -414,7 +425,8 @@ const TranslatePage: FC = () => {
       text: string,
       actualSourceLanguage: TranslateLanguage,
       actualTargetLanguage: TranslateLanguage,
-      abortKey: string
+      abortKey: string,
+      options?: TranslateTriggerOptions
     ): Promise<void> => {
       try {
         let translated: string
@@ -454,7 +466,10 @@ const TranslatePage: FC = () => {
         }
 
         try {
-          await saveTranslateHistory(text, translated, actualSourceLanguage.langCode, actualTargetLanguage.langCode)
+          await saveTranslateHistory(text, translated, actualSourceLanguage.langCode, actualTargetLanguage.langCode, {
+            modelId: translateModel?.id,
+            overwriteExisting: options?.forceRefresh
+          })
         } catch (e) {
           logger.error('Failed to save translate history', e as Error)
           window.toast.error(formatErrorMessageWithPrefix(e, t('translate.history.error.save')))
@@ -466,7 +481,7 @@ const TranslatePage: FC = () => {
         removeAbortController(abortKey)
       }
     },
-    [autoCopy, copy, dispatch, removeAbortController, setTimeoutTimer, setTranslatedContent, setTranslating, t, translating]
+    [autoCopy, copy, dispatch, removeAbortController, setTimeoutTimer, setTranslatedContent, setTranslating, t, translateModel]
   )
 
   // 控制翻译按钮是否可用
@@ -482,7 +497,7 @@ const TranslatePage: FC = () => {
   }, [bidirectionalPair, isBidirectional, isProcessing, sourceLanguage, targetLanguage.langCode, text])
 
   // 控制翻译按钮，翻译前进行校验
-  const onTranslate = useCallback(async () => {
+  const onTranslate = useCallback(async (options?: TranslateTriggerOptions) => {
     if (!couldTranslate) return
     if (!text.trim()) return
     if (!translateModel) {
@@ -559,7 +574,33 @@ const TranslatePage: FC = () => {
         setTargetLanguage(actualTargetLanguage)
       }
 
-      await translate(text, actualSourceLanguage, actualTargetLanguage, abortKey)
+      if (!options?.forceRefresh) {
+        const reusableHistory = await findReusableTranslateHistory({
+          sourceText: text,
+          sourceLanguage: actualSourceLanguage.langCode,
+          targetLanguage: actualTargetLanguage.langCode,
+          modelId: translateModel.id
+        })
+
+        if (reusableHistory) {
+          setTranslatedContent(reusableHistory.targetText)
+          notifyReuseHit()
+
+          if (autoCopy) {
+            setTimeoutTimer(
+              'auto-copy',
+              async () => {
+                await copy(reusableHistory.targetText)
+              },
+              0
+            )
+          }
+
+          return
+        }
+      }
+
+      await translate(text, actualSourceLanguage, actualTargetLanguage, abortKey, options)
     } catch (error) {
       if (isAbortError(error)) {
         logger.info('Translation aborted by user during detection or translation')
@@ -586,7 +627,12 @@ const TranslatePage: FC = () => {
     targetLanguage,
     text,
     translate,
-    translateModel
+    translateModel,
+    autoCopy,
+    copy,
+    notifyReuseHit,
+    setTimeoutTimer,
+    setTranslatedContent
   ])
 
   // 控制停止翻译
@@ -966,7 +1012,7 @@ const TranslatePage: FC = () => {
     const isEnterPressed = e.key === 'Enter'
     if (isEnterPressed && !e.nativeEvent.isComposing && !e.shiftKey && e.ctrlKey && !e.metaKey) {
       e.preventDefault()
-      onTranslate()
+      void onTranslate()
     }
   }
 
@@ -1830,11 +1876,16 @@ const TranslateButton = ({
   onAbort
 }: {
   translating: boolean
-  onTranslate: () => void
+  onTranslate: (options?: TranslateTriggerOptions) => void
   couldTranslate: boolean
   onAbort: () => void
 }) => {
   const { t } = useTranslation()
+  const handleTranslateClick = (event: React.MouseEvent<HTMLElement>) => {
+    const shouldForceRefresh = (isMacLikePlatform() ? event.metaKey : event.ctrlKey) && !event.altKey && !event.shiftKey
+    onTranslate({ forceRefresh: shouldForceRefresh })
+  }
+
   return (
     <Tooltip
       mouseEnterDelay={0.5}
@@ -1845,10 +1896,12 @@ const TranslateButton = ({
           Enter: {t('translate.button.translate')}
           <br />
           Shift + Enter: {t('translate.tooltip.newline')}
+          <br />
+          {t('translate.tooltip.force_refresh', { modifier: isMacLikePlatform() ? 'Cmd' : 'Ctrl' })}
         </div>
       }>
       {!translating && (
-        <Button type="primary" onClick={onTranslate} disabled={!couldTranslate} icon={<SendOutlined />}>
+        <Button type="primary" onClick={handleTranslateClick} disabled={!couldTranslate} icon={<SendOutlined />}>
           {t('translate.button.translate')}
         </Button>
       )}

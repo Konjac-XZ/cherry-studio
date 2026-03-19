@@ -23,8 +23,48 @@ import { getDefaultTranslateAssistant } from './AssistantService'
 
 const logger = loggerService.withContext('TranslateService')
 
+type TranslateHistoryLookup = {
+  sourceText: string
+  sourceLanguage: TranslateLanguageCode
+  targetLanguage: TranslateLanguageCode
+  modelId?: string
+}
+
+type SaveTranslateHistoryOptions = {
+  modelId?: string
+  overwriteExisting?: boolean
+}
+
 type TranslateOptions = {
   reasoningEffort: ReasoningEffortOption
+}
+
+const normalizeTranslateCacheText = (text: string) => text.trim().replace(/\s+/g, ' ')
+
+export const createTranslateHistoryCacheKey = ({
+  sourceText,
+  sourceLanguage,
+  targetLanguage,
+  modelId
+}: TranslateHistoryLookup) => {
+  const normalizedText = normalizeTranslateCacheText(sourceText)
+  return `translate:${modelId || ''}:${sourceLanguage}:${targetLanguage}:${normalizedText}`
+}
+
+export const findReusableTranslateHistory = async ({
+  sourceText,
+  sourceLanguage,
+  targetLanguage,
+  modelId
+}: TranslateHistoryLookup): Promise<TranslateHistory | undefined> => {
+  const cacheKey = createTranslateHistoryCacheKey({
+    sourceText,
+    sourceLanguage,
+    targetLanguage,
+    modelId
+  })
+
+  return db.translate_history.where('cacheKey').equals(cacheKey).last()
 }
 
 /**
@@ -204,14 +244,42 @@ export const saveTranslateHistory = async (
   sourceText: string,
   targetText: string,
   sourceLanguage: TranslateLanguageCode,
-  targetLanguage: TranslateLanguageCode
+  targetLanguage: TranslateLanguageCode,
+  options?: SaveTranslateHistoryOptions
 ) => {
+  const cacheKey = createTranslateHistoryCacheKey({
+    sourceText,
+    sourceLanguage,
+    targetLanguage,
+    modelId: options?.modelId
+  })
+
+  if (options?.overwriteExisting) {
+    const existing = await db.translate_history.where('cacheKey').equals(cacheKey).last()
+
+    if (existing) {
+      await db.translate_history.put({
+        ...existing,
+        sourceText,
+        targetText,
+        sourceLanguage,
+        targetLanguage,
+        modelId: options.modelId,
+        cacheKey,
+        createdAt: new Date().toISOString()
+      })
+      return
+    }
+  }
+
   const history: TranslateHistory = {
     id: uuid(),
     sourceText,
     targetText,
     sourceLanguage,
     targetLanguage,
+    modelId: options?.modelId,
+    cacheKey,
     createdAt: new Date().toISOString()
   }
   await db.translate_history.add(history)

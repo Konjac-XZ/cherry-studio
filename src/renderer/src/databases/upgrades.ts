@@ -16,7 +16,7 @@
  */
 import { loggerService } from '@logger'
 import { LanguagesEnum } from '@renderer/config/translate'
-import type { LegacyMessage as OldMessage, Topic, TranslateLanguageCode } from '@renderer/types'
+import type { LegacyMessage as OldMessage, Topic, TranslateHistory, TranslateLanguageCode } from '@renderer/types'
 import { FILE_TYPE, WEB_SEARCH_SOURCE } from '@renderer/types' // Import FileTypes enum
 import type {
   BaseMessageBlock,
@@ -40,6 +40,18 @@ import {
 } from '../utils/messageUtils/create'
 
 const logger = loggerService.withContext('Database:Upgrades')
+
+const normalizeTranslateCacheText = (text: string) => text.trim().replace(/\s+/g, ' ')
+
+const createTranslateHistoryCacheKey = (
+  sourceText: string,
+  sourceLanguage: TranslateLanguageCode,
+  targetLanguage: TranslateLanguageCode,
+  modelId?: string
+) => {
+  const normalizedText = normalizeTranslateCacheText(sourceText)
+  return `translate:${modelId || ''}:${sourceLanguage}:${targetLanguage}:${normalizedText}`
+}
 
 export async function upgradeToV5(tx: Transaction): Promise<void> {
   const topics = await tx.table('topics').toArray()
@@ -412,4 +424,29 @@ export async function upgradeToV8(tx: Transaction): Promise<void> {
     }
   }
   logger.info('DB migration to version 8 finished.')
+}
+
+export async function upgradeToV11(tx: Transaction): Promise<void> {
+  logger.info('DB migration to version 11 started')
+
+  const historiesTable = tx.table('translate_history')
+  const histories = (await historiesTable.toArray()) as TranslateHistory[]
+
+  for (const history of histories) {
+    try {
+      await historiesTable.put({
+        ...history,
+        cacheKey: createTranslateHistoryCacheKey(
+          history.sourceText,
+          history.sourceLanguage,
+          history.targetLanguage,
+          history.modelId
+        )
+      })
+    } catch (error) {
+      logger.error('Error upgrading translate history cache key:', error as Error)
+    }
+  }
+
+  logger.info('DB migration to version 11 finished.')
 }

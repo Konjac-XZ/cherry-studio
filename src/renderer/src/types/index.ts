@@ -636,6 +636,8 @@ export interface TranslateHistory {
   targetText: string
   sourceLanguage: TranslateLanguageCode
   targetLanguage: TranslateLanguageCode
+  modelId?: string
+  cacheKey?: string
   createdAt: string
   /** 收藏状态 */
   star?: boolean

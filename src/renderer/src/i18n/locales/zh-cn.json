@@ -5613,7 +5613,8 @@
     },
     "info": {
       "aborted": "翻译中止",
-      "html_conversion": "检测到 HTML 格式，已触发转换，请注意检查"
+      "html_conversion": "检测到 HTML 格式，已触发转换，请注意检查",
+      "reused_cached": "已复用之前的翻译结果。{{modifier}}+点击“翻译”可强制刷新。"
     },
     "input": {
       "placeholder": "可粘贴或拖入文本、文本文件、图片（支持 OCR）"
@@ -5657,6 +5658,7 @@
     "target_language": "目标语言",
     "title": "翻译",
     "tooltip": {
+      "force_refresh": "{{modifier}}+点击：重新翻译并覆盖已保存结果",
       "newline": "换行"
     }
   },
