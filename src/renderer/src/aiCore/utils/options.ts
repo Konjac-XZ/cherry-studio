@@ -638,10 +638,7 @@ function buildGenericProviderOptions(
 
   if (enableWebSearch) {
     const webSearchParams = getWebSearchParams(model)
-    providerOptions = {
-      ...providerOptions,
-      ...webSearchParams
-    }
+    providerOptions = merge({}, providerOptions, webSearchParams)
   }
 
   // 特殊处理 Qwen MT
