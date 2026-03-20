@@ -211,33 +211,64 @@ export const isLanguageInPair = (
   return [languagePair[0].langCode, languagePair[1].langCode].includes(sourceLanguage.langCode)
 }
 
+const getBidirectionalFallbackLanguage = (
+  sourceLanguage: TranslateLanguage,
+  languagePair: [TranslateLanguage, TranslateLanguage],
+  nativeLanguage?: TranslateLanguage
+): TranslateLanguage => {
+  if (nativeLanguage && nativeLanguage.langCode !== UNKNOWN.langCode && nativeLanguage.langCode !== sourceLanguage.langCode) {
+    return nativeLanguage
+  }
+
+  return languagePair[0].langCode !== sourceLanguage.langCode ? languagePair[0] : languagePair[1]
+}
+
+export type DetermineTargetLanguageResult =
+  | {
+      success: true
+      language: TranslateLanguage
+      mode: 'manual' | 'pair_swap' | 'native_fallback'
+    }
+  | {
+      success: false
+      errorType: 'same_language'
+    }
+
 /**
  * 确定翻译的目标语言
  * @param sourceLanguage 检测到的源语言
  * @param targetLanguage 用户设置的目标语言
  * @param isBidirectional 是否开启双向翻译
  * @param bidirectionalPair 双向翻译的语言对
+ * @param nativeLanguage 用户配置的母语，用于双向翻译的兜底目标语言
  * @returns 处理结果对象
  */
 export const determineTargetLanguage = (
   sourceLanguage: TranslateLanguage,
   targetLanguage: TranslateLanguage,
   isBidirectional: boolean,
-  bidirectionalPair: [TranslateLanguage, TranslateLanguage]
-): { success: boolean; language?: TranslateLanguage; errorType?: 'same_language' | 'not_in_pair' } => {
+  bidirectionalPair: [TranslateLanguage, TranslateLanguage],
+  nativeLanguage?: TranslateLanguage
+): DetermineTargetLanguageResult => {
   if (isBidirectional) {
-    if (!isLanguageInPair(sourceLanguage, bidirectionalPair)) {
-      return { success: false, errorType: 'not_in_pair' }
+    if (isLanguageInPair(sourceLanguage, bidirectionalPair)) {
+      return {
+        success: true,
+        language: getTargetLanguageForBidirectional(sourceLanguage, bidirectionalPair),
+        mode: 'pair_swap'
+      }
     }
+
     return {
       success: true,
-      language: getTargetLanguageForBidirectional(sourceLanguage, bidirectionalPair)
+      language: getBidirectionalFallbackLanguage(sourceLanguage, bidirectionalPair, nativeLanguage),
+      mode: 'native_fallback'
     }
   } else {
     if (sourceLanguage.langCode === targetLanguage.langCode) {
       return { success: false, errorType: 'same_language' }
     }
-    return { success: true, language: targetLanguage }
+    return { success: true, language: targetLanguage, mode: 'manual' }
   }
 }
 

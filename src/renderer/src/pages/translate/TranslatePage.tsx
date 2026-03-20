@@ -525,34 +525,20 @@ const TranslatePage: FC = () => {
       // 确定源语言：如果用户选择了特定语言，使用用户选择的；如果选择'auto'，则自动检测
       let actualSourceLanguage: TranslateLanguage
       if (sourceLanguage === 'auto') {
-        const candidateLangCodes = isBidirectional
-          ? Array.from(
-              new Set(
-                bidirectionalPair
-                  .map((lang) => lang.langCode)
-                  .filter((langCode) => langCode !== UNKNOWN.langCode)
-              )
-            )
-          : undefined
-        const detectionOptions = candidateLangCodes && candidateLangCodes.length > 0 ? { candidates: candidateLangCodes } : undefined
-
         logger.debug('Detecting source language for translate flow', {
-          hasCandidates: Boolean(detectionOptions?.candidates?.length),
-          candidateLangCodes
+          isBidirectional,
+          detectionScope: 'all_languages'
         })
 
-        const detectionParams = detectionOptions ? { ...detectionOptions, signal: abortSignal } : { signal: abortSignal }
-        const detectedLangCode = await detectLanguage(text, detectionParams)
+        const detectedLangCode = await detectLanguage(text, { signal: abortSignal })
         logger.debug('detectLanguage returned', {
-          detectedLangCode,
-          candidateLangCodes
+          detectedLangCode
         })
 
         actualSourceLanguage = getLanguageByLangcode(detectedLangCode)
         if (actualSourceLanguage.langCode === UNKNOWN.langCode) {
           logger.warn('Detected language code could not be resolved', {
             detectedLangCode,
-            candidateLangCodes,
             textPreview: text.slice(0, 120)
           })
         }
@@ -564,16 +550,16 @@ const TranslatePage: FC = () => {
         actualSourceLanguage = sourceLanguage
       }
 
-      const result = determineTargetLanguage(actualSourceLanguage, targetLanguage, isBidirectional, bidirectionalPair)
+      const nativeFallbackLanguage = userNativeLanguage ? getLanguageByLangcode(userNativeLanguage) : undefined
+      const result = determineTargetLanguage(
+        actualSourceLanguage,
+        targetLanguage,
+        isBidirectional,
+        bidirectionalPair,
+        nativeFallbackLanguage
+      )
       if (!result.success) {
-        let errorMessage = ''
-        if (result.errorType === 'same_language') {
-          errorMessage = t('translate.language.same')
-        } else if (result.errorType === 'not_in_pair') {
-          errorMessage = t('translate.language.not_pair')
-        }
-
-        window.toast.warning(errorMessage)
+        window.toast.warning(t('translate.language.same'))
         return
       }
 
