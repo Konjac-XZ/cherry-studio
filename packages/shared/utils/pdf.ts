@@ -1,4 +1,20 @@
-import { PDFParse } from 'pdf-parse'
+type PDFParseCtor = new (options: { data?: Uint8Array; url?: string }) => {
+  getText: () => Promise<{ text: string }>
+  destroy: () => Promise<void>
+}
+
+let pdfParseCtorPromise: Promise<PDFParseCtor> | undefined
+
+async function getPdfParseCtor(): Promise<PDFParseCtor> {
+  if (!pdfParseCtorPromise) {
+    const isBrowserRuntime = typeof window !== 'undefined' && typeof window.document !== 'undefined'
+    pdfParseCtorPromise = (isBrowserRuntime ? import('pdf-parse') : import('pdf-parse/node')).then(
+      (module) => module.PDFParse as PDFParseCtor
+    )
+  }
+
+  return pdfParseCtorPromise
+}
 
 /**
  * Extract text content from PDF data.
@@ -8,6 +24,8 @@ import { PDFParse } from 'pdf-parse'
  * @returns Extracted text content
  */
 export async function extractPdfText(data: Uint8Array | ArrayBuffer | string | URL): Promise<string> {
+  const PDFParse = await getPdfParseCtor()
+
   if (data instanceof URL) {
     const parser = new PDFParse({ url: data.href })
     try {
