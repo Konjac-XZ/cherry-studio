@@ -1,4 +1,7 @@
-type PDFParseCtor = new (options: { data?: Uint8Array; url?: string }) => {
+type PDFParseCtor = new (options: {
+  data?: Uint8Array
+  url?: string
+}) => {
   getText: () => Promise<{ text: string }>
   destroy: () => Promise<void>
 }

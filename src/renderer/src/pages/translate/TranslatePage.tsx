@@ -36,8 +36,8 @@ import { getFileExtension, isTextFile, runAsyncFunction, uuid } from '@renderer/
 import { abortCompletion, readyToAbort, removeAbortController } from '@renderer/utils/abortController'
 import { formatErrorMessageWithPrefix, isAbortError } from '@renderer/utils/error'
 import { getFilesFromDropEvent, getTextFromDropEvent } from '@renderer/utils/input'
-import { htmlToMarkdown } from '@renderer/utils/markdownConverter'
 import { processLatexBrackets } from '@renderer/utils/markdown'
+import { htmlToMarkdown } from '@renderer/utils/markdownConverter'
 import {
   createInputScrollHandler,
   createOutputScrollHandler,
@@ -61,7 +61,7 @@ import {
   SpellCheck,
   UploadIcon
 } from 'lucide-react'
-import type { FC} from 'react';
+import type { FC } from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
@@ -481,7 +481,17 @@ const TranslatePage: FC = () => {
         removeAbortController(abortKey)
       }
     },
-    [autoCopy, copy, dispatch, removeAbortController, setTimeoutTimer, setTranslatedContent, setTranslating, t, translateModel]
+    [
+      autoCopy,
+      copy,
+      dispatch,
+      removeAbortController,
+      setTimeoutTimer,
+      setTranslatedContent,
+      setTranslating,
+      t,
+      translateModel
+    ]
   )
 
   // 控制翻译按钮是否可用
@@ -497,129 +507,132 @@ const TranslatePage: FC = () => {
   }, [bidirectionalPair, isBidirectional, isProcessing, sourceLanguage, targetLanguage.langCode, text])
 
   // 控制翻译按钮，翻译前进行校验
-  const onTranslate = useCallback(async (options?: TranslateTriggerOptions) => {
-    if (!couldTranslate) return
-    if (!text.trim()) return
-    if (!translateModel) {
-      window.toast.error(t('translate.error.not_configured'))
-      return
-    }
-
-    const abortKey = uuid()
-    dispatch(setTranslateAbortKey(abortKey))
-
-    // Prepare abort signal early so Stop works during language detection as well
-    const abortSignal = readyToAbort(abortKey)
-
-    setTranslating(true)
-
-    try {
-      // 确定源语言：如果用户选择了特定语言，使用用户选择的；如果选择'auto'，则自动检测
-      let actualSourceLanguage: TranslateLanguage
-      if (sourceLanguage === 'auto') {
-        logger.debug('Detecting source language for translate flow', {
-          isBidirectional,
-          detectionScope: 'all_languages'
-        })
-
-        const detectedLangCode = await detectLanguage(text, { signal: abortSignal })
-        logger.debug('detectLanguage returned', {
-          detectedLangCode
-        })
-
-        actualSourceLanguage = getLanguageByLangcode(detectedLangCode)
-        if (actualSourceLanguage.langCode === UNKNOWN.langCode) {
-          logger.warn('Detected language code could not be resolved', {
-            detectedLangCode,
-            textPreview: text.slice(0, 120)
-          })
-        }
-        setDetectedLanguage(actualSourceLanguage)
-      } else {
-        if (sourceLanguage.langCode === UNKNOWN.langCode) {
-          logger.warn('User-selected source language is UNKNOWN, continuing with UNKNOWN fallback')
-        }
-        actualSourceLanguage = sourceLanguage
-      }
-
-      const nativeFallbackLanguage = userNativeLanguage ? getLanguageByLangcode(userNativeLanguage) : undefined
-      const result = determineTargetLanguage(
-        actualSourceLanguage,
-        targetLanguage,
-        isBidirectional,
-        bidirectionalPair,
-        nativeFallbackLanguage
-      )
-      if (!result.success) {
-        window.toast.warning(t('translate.language.same'))
+  const onTranslate = useCallback(
+    async (options?: TranslateTriggerOptions) => {
+      if (!couldTranslate) return
+      if (!text.trim()) return
+      if (!translateModel) {
+        window.toast.error(t('translate.error.not_configured'))
         return
       }
 
-      const actualTargetLanguage = result.language as TranslateLanguage
-      if (isBidirectional) {
-        setTargetLanguage(actualTargetLanguage)
-      }
+      const abortKey = uuid()
+      dispatch(setTranslateAbortKey(abortKey))
 
-      if (!options?.forceRefresh) {
-        const reusableHistory = await findReusableTranslateHistory({
-          sourceText: text,
-          sourceLanguage: actualSourceLanguage.langCode,
-          targetLanguage: actualTargetLanguage.langCode,
-          modelId: translateModel.id
-        })
+      // Prepare abort signal early so Stop works during language detection as well
+      const abortSignal = readyToAbort(abortKey)
 
-        if (reusableHistory) {
-          setTranslatedContent(reusableHistory.targetText)
-          notifyReuseHit()
+      setTranslating(true)
 
-          if (autoCopy) {
-            setTimeoutTimer(
-              'auto-copy',
-              async () => {
-                await copy(reusableHistory.targetText)
-              },
-              0
-            )
+      try {
+        // 确定源语言：如果用户选择了特定语言，使用用户选择的；如果选择'auto'，则自动检测
+        let actualSourceLanguage: TranslateLanguage
+        if (sourceLanguage === 'auto') {
+          logger.debug('Detecting source language for translate flow', {
+            isBidirectional,
+            detectionScope: 'all_languages'
+          })
+
+          const detectedLangCode = await detectLanguage(text, { signal: abortSignal })
+          logger.debug('detectLanguage returned', {
+            detectedLangCode
+          })
+
+          actualSourceLanguage = getLanguageByLangcode(detectedLangCode)
+          if (actualSourceLanguage.langCode === UNKNOWN.langCode) {
+            logger.warn('Detected language code could not be resolved', {
+              detectedLangCode,
+              textPreview: text.slice(0, 120)
+            })
           }
+          setDetectedLanguage(actualSourceLanguage)
+        } else {
+          if (sourceLanguage.langCode === UNKNOWN.langCode) {
+            logger.warn('User-selected source language is UNKNOWN, continuing with UNKNOWN fallback')
+          }
+          actualSourceLanguage = sourceLanguage
+        }
 
+        const nativeFallbackLanguage = userNativeLanguage ? getLanguageByLangcode(userNativeLanguage) : undefined
+        const result = determineTargetLanguage(
+          actualSourceLanguage,
+          targetLanguage,
+          isBidirectional,
+          bidirectionalPair,
+          nativeFallbackLanguage
+        )
+        if (!result.success) {
+          window.toast.warning(t('translate.language.same'))
           return
         }
-      }
 
-      await translate(text, actualSourceLanguage, actualTargetLanguage, abortKey, options)
-    } catch (error) {
-      if (isAbortError(error)) {
-        logger.info('Translation aborted by user during detection or translation')
-      } else {
-        logger.error('Translation error:', error as Error)
-        window.toast.error(formatErrorMessageWithPrefix(error, t('translate.error.failed')))
+        const actualTargetLanguage = result.language as TranslateLanguage
+        if (isBidirectional) {
+          setTargetLanguage(actualTargetLanguage)
+        }
+
+        if (!options?.forceRefresh) {
+          const reusableHistory = await findReusableTranslateHistory({
+            sourceText: text,
+            sourceLanguage: actualSourceLanguage.langCode,
+            targetLanguage: actualTargetLanguage.langCode,
+            modelId: translateModel.id
+          })
+
+          if (reusableHistory) {
+            setTranslatedContent(reusableHistory.targetText)
+            notifyReuseHit()
+
+            if (autoCopy) {
+              setTimeoutTimer(
+                'auto-copy',
+                async () => {
+                  await copy(reusableHistory.targetText)
+                },
+                0
+              )
+            }
+
+            return
+          }
+        }
+
+        await translate(text, actualSourceLanguage, actualTargetLanguage, abortKey, options)
+      } catch (error) {
+        if (isAbortError(error)) {
+          logger.info('Translation aborted by user during detection or translation')
+        } else {
+          logger.error('Translation error:', error as Error)
+          window.toast.error(formatErrorMessageWithPrefix(error, t('translate.error.failed')))
+        }
+        return
+      } finally {
+        setTranslating(false)
+        removeAbortController(abortKey)
       }
-      return
-    } finally {
-      setTranslating(false)
-      removeAbortController(abortKey)
-    }
-  }, [
-    bidirectionalPair,
-    couldTranslate,
-    dispatch,
-    getLanguageByLangcode,
-    isBidirectional,
-    readyToAbort,
-    removeAbortController,
-    setTranslating,
-    sourceLanguage,
-    t,
-    targetLanguage,
-    text,
-    translate,
-    translateModel,
-    autoCopy,
-    copy,
-    notifyReuseHit,
-    setTimeoutTimer,
-    setTranslatedContent
-  ])
+    },
+    [
+      bidirectionalPair,
+      couldTranslate,
+      dispatch,
+      getLanguageByLangcode,
+      isBidirectional,
+      readyToAbort,
+      removeAbortController,
+      setTranslating,
+      sourceLanguage,
+      t,
+      targetLanguage,
+      text,
+      translate,
+      translateModel,
+      autoCopy,
+      copy,
+      notifyReuseHit,
+      setTimeoutTimer,
+      setTranslatedContent
+    ]
+  )
 
   // 控制停止翻译
   const onAbort = async () => {

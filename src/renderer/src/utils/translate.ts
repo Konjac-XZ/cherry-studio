@@ -54,6 +54,23 @@ const LANGUAGE_CODE_TO_ISO3 = Object.entries(ISO3_TO_TRANSLATE_LANGUAGE).reduce<
   return acc
 }, {})
 
+const CHINESE_VARIANT_LANG_CODES = new Set<TranslateLanguageCode>([
+  LanguagesEnum.zhCN.langCode,
+  LanguagesEnum.zhTW.langCode
+])
+
+const isChineseVariant = (language: TranslateLanguage): boolean => CHINESE_VARIANT_LANG_CODES.has(language.langCode)
+
+const isEquivalentBidirectionalLanguage = (
+  leftLanguage: TranslateLanguage,
+  rightLanguage: TranslateLanguage
+): boolean => {
+  return (
+    leftLanguage.langCode === rightLanguage.langCode ||
+    (isChineseVariant(leftLanguage) && isChineseVariant(rightLanguage))
+  )
+}
+
 /**
  * 检测输入文本的语言
  * @param inputText 需要检测语言的文本
@@ -190,12 +207,12 @@ export const getTargetLanguageForBidirectional = (
   sourceLanguage: TranslateLanguage,
   languagePair: [TranslateLanguage, TranslateLanguage]
 ): TranslateLanguage => {
-  if (sourceLanguage.langCode === languagePair[0].langCode) {
+  if (isEquivalentBidirectionalLanguage(sourceLanguage, languagePair[0])) {
     return languagePair[1]
-  } else if (sourceLanguage.langCode === languagePair[1].langCode) {
+  } else if (isEquivalentBidirectionalLanguage(sourceLanguage, languagePair[1])) {
     return languagePair[0]
   }
-  return languagePair[0] !== sourceLanguage ? languagePair[0] : languagePair[1]
+  return !isEquivalentBidirectionalLanguage(sourceLanguage, languagePair[0]) ? languagePair[0] : languagePair[1]
 }
 
 /**
@@ -208,7 +225,7 @@ export const isLanguageInPair = (
   sourceLanguage: TranslateLanguage,
   languagePair: [TranslateLanguage, TranslateLanguage]
 ): boolean => {
-  return [languagePair[0].langCode, languagePair[1].langCode].includes(sourceLanguage.langCode)
+  return languagePair.some((language) => isEquivalentBidirectionalLanguage(sourceLanguage, language))
 }
 
 const getBidirectionalFallbackLanguage = (
@@ -216,11 +233,15 @@ const getBidirectionalFallbackLanguage = (
   languagePair: [TranslateLanguage, TranslateLanguage],
   nativeLanguage?: TranslateLanguage
 ): TranslateLanguage => {
-  if (nativeLanguage && nativeLanguage.langCode !== UNKNOWN.langCode && nativeLanguage.langCode !== sourceLanguage.langCode) {
+  if (
+    nativeLanguage &&
+    nativeLanguage.langCode !== UNKNOWN.langCode &&
+    !isEquivalentBidirectionalLanguage(nativeLanguage, sourceLanguage)
+  ) {
     return nativeLanguage
   }
 
-  return languagePair[0].langCode !== sourceLanguage.langCode ? languagePair[0] : languagePair[1]
+  return !isEquivalentBidirectionalLanguage(languagePair[0], sourceLanguage) ? languagePair[0] : languagePair[1]
 }
 
 export type DetermineTargetLanguageResult =

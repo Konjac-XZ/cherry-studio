@@ -82,6 +82,16 @@ describe('utils/translate determineTargetLanguage', () => {
     })
   })
 
+  it('treats simplified and traditional chinese as the same native family inside the pair', () => {
+    const result = determineTargetLanguage(LanguagesEnum.zhTW, LanguagesEnum.enUS, true, bidirectionalPair, LanguagesEnum.zhCN)
+
+    expect(result).toEqual({
+      success: true,
+      language: LanguagesEnum.enUS,
+      mode: 'pair_swap'
+    })
+  })
+
   it('falls back to the user native language when source is outside the pair', () => {
     const result = determineTargetLanguage(LanguagesEnum.jaJP, LanguagesEnum.enUS, true, bidirectionalPair, LanguagesEnum.zhCN)
 
@@ -104,6 +114,22 @@ describe('utils/translate determineTargetLanguage', () => {
 
   it('falls back to the pair when native language matches the detected third language', () => {
     const result = determineTargetLanguage(LanguagesEnum.jaJP, LanguagesEnum.enUS, true, bidirectionalPair, LanguagesEnum.jaJP)
+
+    expect(result).toEqual({
+      success: true,
+      language: LanguagesEnum.enUS,
+      mode: 'native_fallback'
+    })
+  })
+
+  it('does not route chinese variant mismatches back into the native language fallback', () => {
+    const result = determineTargetLanguage(
+      LanguagesEnum.zhTW,
+      LanguagesEnum.enUS,
+      true,
+      [LanguagesEnum.enUS, LanguagesEnum.jaJP],
+      LanguagesEnum.zhCN
+    )
 
     expect(result).toEqual({
       success: true,
