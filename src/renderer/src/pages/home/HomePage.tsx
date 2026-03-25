@@ -118,7 +118,7 @@ const HomePage: FC = () => {
         _setActiveTopic((prev) => (newTopic?.id === prev.id ? prev : newTopic))
       })
     },
-    [_setActiveTopic, activeAssistant?.id, dispatch]
+    [_setActiveTopic, activeAssistant?.id, activeTopic?.id]
   )
 
   const setActiveTopic = useCallback(
@@ -192,7 +192,14 @@ const HomePage: FC = () => {
         }
       }
     },
-    [activeAssistant?.id, assistants, assistantsTabSortType, orderedAssistantIds, setActiveAssistant, visibleAssistantIds]
+    [
+      activeAssistant?.id,
+      assistants,
+      assistantsTabSortType,
+      orderedAssistantIds,
+      setActiveAssistant,
+      visibleAssistantIds
+    ]
   )
 
   useShortcut('previous_assistant', () => handleAssistantSwitch('previous'))
@@ -222,14 +229,14 @@ const HomePage: FC = () => {
       activeTopicId: activeTopic?.id
     })
     assistantSwitchTimingRef.current = null
-  }, [activeAssistant?.id, activeTopic?.id, logger])
+  }, [activeAssistant?.id, activeTopic?.id])
 
   useEffect(() => {
     const canMinimize = topicPosition == 'left' ? !showAssistants : !showAssistants && !showTopics
-    window.api.window.setMinimumSize(canMinimize ? SECOND_MIN_WINDOW_WIDTH : MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT)
+    void window.api.window.setMinimumSize(canMinimize ? SECOND_MIN_WINDOW_WIDTH : MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT)
 
     return () => {
-      window.api.window.resetMinimumSize()
+      void window.api.window.resetMinimumSize()
     }
   }, [showAssistants, showTopics, topicPosition])
 

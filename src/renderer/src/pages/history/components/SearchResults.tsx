@@ -4,13 +4,13 @@ import useScrollPosition from '@renderer/hooks/useScrollPosition'
 import { selectTopicsMap } from '@renderer/store/assistants'
 import type { Topic } from '@renderer/types'
 import { type Message, MessageBlockType } from '@renderer/types/newMessage'
-import { isMessageVisibleInChat } from '@renderer/utils/messageUtils/filters'
 import {
   buildKeywordRegexes,
   buildKeywordUnionRegex,
   type KeywordMatchMode,
   splitKeywordsToTerms
 } from '@renderer/utils/keywordSearch'
+import { isMessageVisibleInChat } from '@renderer/utils/messageUtils/filters'
 import { List, Segmented, Spin, Typography } from 'antd'
 import { useLiveQuery } from 'dexie-react-hooks'
 import type { FC } from 'react'
@@ -278,7 +278,7 @@ const SearchResults: FC<Props> = ({ keywords, onMessageClick, onTopicClick, ...p
   }
 
   useEffect(() => {
-    onSearch()
+    void onSearch()
   }, [onSearch])
 
   useEffect(() => {

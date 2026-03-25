@@ -389,6 +389,9 @@
         "TodoWrite": {
           "description": "Creates and manages structured task lists"
         },
+        "ToolSearch": {
+          "description": "Discovers deferred tools from large libraries"
+        },
         "WebFetch": {
           "description": "Fetches content from a specified URL"
         },
@@ -1195,6 +1198,8 @@
             "content": "Are you sure you want to delete {{count}} selected topic(s)? This action cannot be undone.",
             "title": "Delete Topics"
           },
+          "error": "Failed to delete. Please try again.",
+          "partial_success": "Successfully deleted {{successCount}} topics, {{failedCount}} failed",
           "success": "Deleted {{count}} topic(s)"
         },
         "deselect_all": "Deselect All",

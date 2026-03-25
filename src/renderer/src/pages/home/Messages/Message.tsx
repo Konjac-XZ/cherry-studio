@@ -144,8 +144,15 @@ const MessageItem: FC<Props> = ({
   const { assistant, setModel } = useAssistant(message.assistantId)
   const { isMultiSelectMode } = useChatContext(topic)
   const model = useModel(getMessageModelId(message), message.model?.provider) || message.model
-  const { messageFont, fontSize, messageStyle, showMessageOutline, userNativeLanguage: userNativeLanguageCode } = useSettings()
-  const { editMessageBlocks, resendUserMessageWithEdit, editMessage, getTranslationUpdater } = useMessageOperations(topic)
+  const {
+    messageFont,
+    fontSize,
+    messageStyle,
+    showMessageOutline,
+    userNativeLanguage: userNativeLanguageCode
+  } = useSettings()
+  const { editMessageBlocks, resendUserMessageWithEdit, editMessage, getTranslationUpdater } =
+    useMessageOperations(topic)
   const messageContainerRef = useRef<HTMLDivElement>(null)
   const prevAutomationStatusRef = useRef(message.status)
   const prevCleanupStatusRef = useRef(message.status)
@@ -208,7 +215,12 @@ const MessageItem: FC<Props> = ({
     }
 
     // Auto-translate logic
-    if (autoTranslateEnabled && userNativeLanguageCode && userNativeLanguageCode !== UNKNOWN.langCode && translateLanguagesLoaded) {
+    if (
+      autoTranslateEnabled &&
+      userNativeLanguageCode &&
+      userNativeLanguageCode !== UNKNOWN.langCode &&
+      translateLanguagesLoaded
+    ) {
       // Check if translation already exists
       let hasTranslation = false
       if (latestMessage.blocks && latestMessage.blocks.length > 0) {
@@ -245,6 +257,7 @@ const MessageItem: FC<Props> = ({
     translateLanguagesLoaded,
     getLanguageByLangcode,
     getTranslationUpdater,
+    message,
     message.askId,
     message.id,
     message.role,
@@ -299,14 +312,22 @@ const MessageItem: FC<Props> = ({
     void editMessage(userMessage.id, { hiddenInChat: true }).catch((error) => {
       logger.error('Failed to auto clean up user message:', error as Error)
     })
-  }, [autoCleanupUserMessageEnabled, editMessage, message.askId, message.role, message.status, message.topicId, topic.type])
+  }, [
+    autoCleanupUserMessageEnabled,
+    editMessage,
+    message.askId,
+    message.role,
+    message.status,
+    message.topicId,
+    topic.type
+  ])
 
   const handleEditSave = useCallback(
     async (blocks: MessageBlock[]) => {
       try {
         await editMessageBlocks(message.id, blocks)
         const usage = await estimateMessageUsage(message)
-        editMessage(message.id, { usage: usage })
+        void editMessage(message.id, { usage: usage })
         stopEditing()
       } catch (error) {
         logger.error('Failed to save message blocks:', error as Error)
@@ -389,7 +410,7 @@ const MessageItem: FC<Props> = ({
           if (isMultiSelectMode) {
             return
           }
-          EventEmitter.emit(EVENT_NAMES.NEW_CONTEXT)
+          void EventEmitter.emit(EVENT_NAMES.NEW_CONTEXT)
         }}>
         <Divider dashed style={{ padding: '0 20px' }} plain>
           {t('chat.message.new.context')}

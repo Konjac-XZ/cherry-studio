@@ -55,7 +55,7 @@ const TranslateSettings: FC<{
 
   const onMoreSetting = () => {
     onClose()
-    TranslateSettingsPopup.show()
+    void TranslateSettingsPopup.show()
   }
 
   return (
@@ -75,7 +75,7 @@ const TranslateSettings: FC<{
               checked={enableMarkdown}
               onChange={(checked) => {
                 setEnableMarkdown(checked)
-                db.settings.put({ id: 'translate:markdown:enabled', value: checked })
+                void db.settings.put({ id: 'translate:markdown:enabled', value: checked })
               }}
             />
           </Flex>
@@ -112,7 +112,7 @@ const TranslateSettings: FC<{
               checked={isScrollSyncEnabled}
               onChange={(checked) => {
                 setIsScrollSyncEnabled(checked)
-                db.settings.put({ id: 'translate:scroll:sync', value: checked })
+                void db.settings.put({ id: 'translate:scroll:sync', value: checked })
               }}
             />
           </Flex>
@@ -183,7 +183,7 @@ const TranslateSettings: FC<{
                     }
                     setLocalPair(newPair)
                     setBidirectionalPair(newPair)
-                    db.settings.put({
+                    void db.settings.put({
                       id: 'translate:bidirectional:pair',
                       value: [newPair[0].langCode, newPair[1].langCode]
                     })
@@ -201,7 +201,7 @@ const TranslateSettings: FC<{
                     }
                     setLocalPair(newPair)
                     setBidirectionalPair(newPair)
-                    db.settings.put({
+                    void db.settings.put({
                       id: 'translate:bidirectional:pair',
                       value: [newPair[0].langCode, newPair[1].langCode]
                     })

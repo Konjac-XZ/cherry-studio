@@ -26,7 +26,7 @@ export default function useTranslate() {
   const dispatch = useDispatch()
 
   useEffect(() => {
-    runAsyncFunction(async () => {
+    void runAsyncFunction(async () => {
       const options = await getTranslateOptions()
       setTranslateLanguages(options)
       logger.debug('Translate language options loaded', {
@@ -54,7 +54,10 @@ export default function useTranslate() {
       if (result) {
         return result
       } else {
-        const stackLines = new Error().stack?.split('\n').slice(2, 8).map((line) => line.trim())
+        const stackLines = new Error().stack
+          ?.split('\n')
+          .slice(2, 8)
+          .map((line) => line.trim())
         logger.warn('Unknown language lookup', {
           requestedLangCode: langCode,
           availableLangCodes: translateLanguages.map((item) => item.langCode),

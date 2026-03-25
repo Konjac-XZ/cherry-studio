@@ -91,18 +91,6 @@ const DraggableDivider: FC<{
   const dividerRef = useRef<HTMLDivElement>(null)
   const isDragging = useRef(false)
 
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault()
-      isDragging.current = true
-      document.addEventListener('mousemove', handleMouseMove)
-      document.addEventListener('mouseup', handleMouseUp)
-      document.body.style.cursor = isVertical ? 'row-resize' : 'col-resize'
-      document.body.style.userSelect = 'none'
-    },
-    [isVertical]
-  )
-
   const handleMouseMove = useCallback(
     (e: MouseEvent) => {
       if (!isDragging.current) return
@@ -134,6 +122,18 @@ const DraggableDivider: FC<{
     document.body.style.cursor = ''
     document.body.style.userSelect = ''
   }, [handleMouseMove])
+
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault()
+      isDragging.current = true
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = isVertical ? 'row-resize' : 'col-resize'
+      document.body.style.userSelect = 'none'
+    },
+    [handleMouseMove, handleMouseUp, isVertical]
+  )
 
   return (
     <DividerContainer ref={dividerRef} $isVertical={isVertical} onMouseDown={handleMouseDown}>
@@ -227,7 +227,7 @@ const TranslatePage: FC = () => {
   // 控制翻译模型切换
   const handleModelChange = (model: Model) => {
     setTranslateModel(model)
-    db.settings.put({ id: 'translate:model', value: model.id })
+    void db.settings.put({ id: 'translate:model', value: model.id })
   }
 
   const notifyHtmlConversion = useCallback(() => {
@@ -481,17 +481,7 @@ const TranslatePage: FC = () => {
         removeAbortController(abortKey)
       }
     },
-    [
-      autoCopy,
-      copy,
-      dispatch,
-      removeAbortController,
-      setTimeoutTimer,
-      setTranslatedContent,
-      setTranslating,
-      t,
-      translateModel
-    ]
+    [autoCopy, copy, dispatch, setTimeoutTimer, setTranslatedContent, setTranslating, t, translateModel]
   )
 
   // 控制翻译按钮是否可用
@@ -617,8 +607,6 @@ const TranslatePage: FC = () => {
       dispatch,
       getLanguageByLangcode,
       isBidirectional,
-      readyToAbort,
-      removeAbortController,
       setTranslating,
       sourceLanguage,
       t,
@@ -626,6 +614,7 @@ const TranslatePage: FC = () => {
       text,
       translate,
       translateModel,
+      userNativeLanguage,
       autoCopy,
       copy,
       notifyReuseHit,
@@ -702,12 +691,12 @@ const TranslatePage: FC = () => {
     }
 
     triggerFromQuery()
-  }, [location.search, readClipboardForTranslate, setText, sourceLanguage, settingsReady])
+  }, [location.search, navigate, readClipboardForTranslate, setText, sourceLanguage, settingsReady])
 
   // 控制双向翻译切换
   const toggleBidirectional = (value: boolean) => {
     setIsBidirectional(value)
-    db.settings.put({ id: 'translate:bidirectional:enabled', value })
+    void db.settings.put({ id: 'translate:bidirectional:enabled', value })
   }
 
   // 控制历史记录点击
@@ -759,8 +748,8 @@ const TranslatePage: FC = () => {
     const target = targetLanguage
     setSourceLanguage(target)
     setTargetLanguage(source)
-    db.settings.put({ id: 'translate:source:language', value: target.langCode })
-    db.settings.put({ id: 'translate:target:language', value: source.langCode })
+    void db.settings.put({ id: 'translate:source:language', value: target.langCode })
+    void db.settings.put({ id: 'translate:target:language', value: source.langCode })
   }, [couldExchangeAuto, detectedLanguage, sourceLanguage, t, targetLanguage])
 
   // Handle flip detected language and trigger translation
@@ -813,7 +802,6 @@ const TranslatePage: FC = () => {
     abortKey,
     detectedLanguage,
     dispatch,
-    readyToAbort,
     setTranslating,
     t,
     targetLanguage,
@@ -869,7 +857,7 @@ const TranslatePage: FC = () => {
 
   // 控制设置加载
   useEffect(() => {
-    runAsyncFunction(async () => {
+    void runAsyncFunction(async () => {
       const targetLang = await db.settings.get({ id: 'translate:target:language' })
       targetLang && setTargetLanguage(getLanguageByLangcode(targetLang.value))
 
@@ -893,7 +881,7 @@ const TranslatePage: FC = () => {
         } else {
           const defaultPair: [TranslateLanguage, TranslateLanguage] = [LanguagesEnum.enUS, LanguagesEnum.zhCN]
           setBidirectionalPair(defaultPair)
-          db.settings.put({
+          void db.settings.put({
             id: 'translate:bidirectional:pair',
             value: [defaultPair[0].langCode, defaultPair[1].langCode]
           })
@@ -918,7 +906,7 @@ const TranslatePage: FC = () => {
         setAutoDetectionMethod(autoDetectionMethodSetting.value)
       } else {
         setAutoDetectionMethod('franc')
-        db.settings.put({ id: 'translate:detect:method', value: 'franc' })
+        void db.settings.put({ id: 'translate:detect:method', value: 'franc' })
       }
 
       const fontSizeSetting = await db.settings.get({ id: 'translate:font:size' })
@@ -1056,7 +1044,7 @@ const TranslatePage: FC = () => {
         value={targetLanguage.langCode}
         onChange={(value) => {
           setTargetLanguage(getLanguageByLangcode(value))
-          db.settings.put({ id: 'translate:target:language', value })
+          void db.settings.put({ id: 'translate:target:language', value })
         }}
       />
     )
@@ -1142,7 +1130,7 @@ const TranslatePage: FC = () => {
       aborted = true
     }
     // trigger when location changes to /translate?paste=1
-  }, [location, onTranslate, readClipboardForTranslate, setText, sourceLanguage])
+  }, [location, navigate, onTranslate, readClipboardForTranslate, setText, sourceLanguage, translating])
 
   const readFile = useCallback(
     async (file: FileMetadata) => {
@@ -1295,7 +1283,7 @@ const TranslatePage: FC = () => {
         if (droppedFiles) {
           const file = getSingleFile(droppedFiles) as FileMetadata
           if (!file) return
-          processFile(file)
+          void processFile(file)
         }
       }
       await process()
@@ -1399,7 +1387,7 @@ const TranslatePage: FC = () => {
       }
       setIsProcessing(false)
     },
-    [convertHtmlToMarkdownWithNotification, getSingleFile, isProcessing, processFile, t]
+    [convertHtmlToMarkdownWithNotification, getSingleFile, isProcessing, processFile, setText, t, text]
   )
   return (
     <Container
@@ -1461,7 +1449,7 @@ const TranslatePage: FC = () => {
               onChange={(value) => {
                 if (value !== 'auto') setSourceLanguage(getLanguageByLangcode(value))
                 else setSourceLanguage('auto')
-                db.settings.put({ id: 'translate:source:language', value })
+                void db.settings.put({ id: 'translate:source:language', value })
               }}
               extraOptionsBefore={[
                 {

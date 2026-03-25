@@ -308,7 +308,7 @@ export const InputbarCore: FC<InputbarCoreProps> = ({
         if (spaceClickCount === 2) {
           logger.info('Triple space detected - trigger translation')
           setSpaceClickCount(0)
-          translate()
+          void translate()
           return
         }
       }
@@ -456,10 +456,14 @@ export const InputbarCore: FC<InputbarCoreProps> = ({
   const onTranslated = useCallback(
     (translatedText: string) => {
       setText(translatedText)
-      setTimeoutTimer('onTranslated', () => {
-        resizeTextArea()
-        focusTextarea()
-      }, 0)
+      setTimeoutTimer(
+        'onTranslated',
+        () => {
+          resizeTextArea()
+          focusTextarea()
+        },
+        0
+      )
     },
     [focusTextarea, resizeTextArea, setText, setTimeoutTimer]
   )
@@ -562,9 +566,13 @@ export const InputbarCore: FC<InputbarCoreProps> = ({
 
   useEffect(() => {
     if (wasTranslatingRef.current && !isTranslating) {
-      setTimeoutTimer('translate_refocus', () => {
-        focusTextarea()
-      }, 0)
+      setTimeoutTimer(
+        'translate_refocus',
+        () => {
+          focusTextarea()
+        },
+        0
+      )
     }
     wasTranslatingRef.current = isTranslating
   }, [focusTextarea, isTranslating, setTimeoutTimer])

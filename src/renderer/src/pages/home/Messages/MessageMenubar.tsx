@@ -4,7 +4,7 @@ import { CopyIcon, DeleteIcon, EditIcon, RefreshIcon } from '@renderer/component
 import InspectMessagePopup from '@renderer/components/Popups/InspectMessagePopup'
 import ObsidianExportPopup from '@renderer/components/Popups/ObsidianExportPopup'
 import SaveToKnowledgePopup from '@renderer/components/Popups/SaveToKnowledgePopup'
-import { SelectModelPopup } from '@renderer/components/Popups/SelectModelPopup'
+import { SelectChatModelPopup } from '@renderer/components/Popups/SelectModelPopup'
 import { isEmbeddingModel, isRerankModel, isVisionModel } from '@renderer/config/models'
 import type { MessageMenubarButtonId, MessageMenubarScope } from '@renderer/config/registry/messageMenubar'
 import { DEFAULT_MESSAGE_MENUBAR_SCOPE, getMessageMenubarConfig } from '@renderer/config/registry/messageMenubar'
@@ -216,7 +216,7 @@ const MessageMenubar: FC<Props> = (props) => {
         contentToCopy = getMainTextContent(message)
       }
 
-      navigator.clipboard.writeText(removeTrailingDoubleSpaces(contentToCopy.trimStart()))
+      void navigator.clipboard.writeText(removeTrailingDoubleSpaces(contentToCopy.trimStart()))
 
       window.toast.success(t('message.copied'))
       setCopied(true)
@@ -225,7 +225,7 @@ const MessageMenubar: FC<Props> = (props) => {
   )
 
   const onNewBranch = useCallback(async () => {
-    EventEmitter.emit(EVENT_NAMES.NEW_BRANCH, index)
+    void EventEmitter.emit(EVENT_NAMES.NEW_BRANCH, index)
     window.toast.success(t('chat.message.new.branch.created'))
   }, [index, t])
 
@@ -274,7 +274,7 @@ const MessageMenubar: FC<Props> = (props) => {
           const block = translationBlocks[0]
           logger.silly(`block`, block)
           if (!block.content) {
-            dispatch(removeBlocksThunk(message.topicId, message.id, [block.id]))
+            void dispatch(removeBlocksThunk(message.topicId, message.id, [block.id]))
           }
         }
       }
@@ -299,7 +299,7 @@ const MessageMenubar: FC<Props> = (props) => {
 
   const handleTraceUserMessage = useCallback(async () => {
     if (message.traceId) {
-      window.api.trace.openWindow(
+      void window.api.trace.openWindow(
         message.topicId,
         message.traceId,
         true,
@@ -351,14 +351,14 @@ const MessageMenubar: FC<Props> = (props) => {
             key: 'file',
             onClick: () => {
               const fileName = dayjs(message.createdAt).format('YYYYMMDDHHmm') + '.md'
-              window.api.file.save(fileName, mainTextContent)
+              void window.api.file.save(fileName, mainTextContent)
             }
           },
           {
             label: t('chat.save.knowledge.title'),
             key: 'knowledge',
             onClick: () => {
-              SaveToKnowledgePopup.showForMessage(message)
+              void SaveToKnowledgePopup.showForMessage(message)
             }
           }
         ]
@@ -412,7 +412,7 @@ const MessageMenubar: FC<Props> = (props) => {
             onClick: async () => {
               const markdown = messageToMarkdown(message)
               const title = await getMessageTitle(message)
-              window.api.export.toWord(markdown, title)
+              void window.api.export.toWord(markdown, title)
             }
           },
           exportMenuOptions.notion && {
@@ -421,7 +421,7 @@ const MessageMenubar: FC<Props> = (props) => {
             onClick: async () => {
               const title = await getMessageTitle(message)
               const markdown = messageToMarkdown(message)
-              exportMessageToNotion(title, markdown, message)
+              void exportMessageToNotion(title, markdown, message)
             }
           },
           exportMenuOptions.yuque && {
@@ -430,7 +430,7 @@ const MessageMenubar: FC<Props> = (props) => {
             onClick: async () => {
               const title = await getMessageTitle(message)
               const markdown = messageToMarkdown(message)
-              exportMarkdownToYuque(title, markdown)
+              void exportMarkdownToYuque(title, markdown)
             }
           },
           exportMenuOptions.obsidian && {
@@ -446,7 +446,7 @@ const MessageMenubar: FC<Props> = (props) => {
             key: 'joplin',
             onClick: async () => {
               const title = await getMessageTitle(message)
-              exportMarkdownToJoplin(title, message)
+              void exportMarkdownToJoplin(title, message)
             }
           },
           exportMenuOptions.siyuan && {
@@ -455,7 +455,7 @@ const MessageMenubar: FC<Props> = (props) => {
             onClick: async () => {
               const title = await getMessageTitle(message)
               const markdown = messageToMarkdown(message)
-              exportMarkdownToSiyuan(title, markdown)
+              void exportMarkdownToSiyuan(title, markdown)
             }
           }
         ].filter(Boolean)
@@ -510,7 +510,7 @@ const MessageMenubar: FC<Props> = (props) => {
     // editMessage(message.id, { ..._message }) // REMOVED
 
     // Call the function from the hook
-    regenerateAssistantMessage(message, assistant)
+    void regenerateAssistantMessage(message, assistant)
   }
 
   // 按条件筛选能够提及的模型，该函数仅在isAssistantMessage时会用到
@@ -549,9 +549,9 @@ const MessageMenubar: FC<Props> = (props) => {
   const onMentionModel = useCallback(
     async (e: React.MouseEvent) => {
       e.stopPropagation()
-      const selectedModel = await SelectModelPopup.show({ model, filter: mentionModelFilter })
+      const selectedModel = await SelectChatModelPopup.show({ model, filter: mentionModelFilter })
       if (!selectedModel) return
-      appendAssistantResponse(message, selectedModel, { ...assistant, model: selectedModel })
+      void appendAssistantResponse(message, selectedModel, { ...assistant, model: selectedModel })
     },
     [appendAssistantResponse, assistant, mentionModelFilter, message, model]
   )
@@ -865,7 +865,7 @@ const buttonRenderers: Record<MessageMenubarButtonId, MessageMenubarButtonRender
                     .trim()
 
                   if (translationContent) {
-                    navigator.clipboard.writeText(translationContent)
+                    void navigator.clipboard.writeText(translationContent)
                     window.toast.success(t('translate.copied'))
                   } else {
                     window.toast.warning(t('translate.empty'))
@@ -885,7 +885,7 @@ const buttonRenderers: Record<MessageMenubarButtonId, MessageMenubarButtonRender
                 if (translationBlocks.length > 0) {
                   translationBlocks.forEach((blockId) => {
                     if (blockId) {
-                      removeMessageBlock(message.id, blockId)
+                      void removeMessageBlock(message.id, blockId)
                     }
                   })
                   window.toast.success(t('translate.closed'))
@@ -950,7 +950,7 @@ const buttonRenderers: Record<MessageMenubarButtonId, MessageMenubarButtonRender
             e.stopPropagation()
             const title = await getMessageTitle(message)
             const markdown = messageToMarkdown(message)
-            exportMessageToNotes(title, markdown, notesPath)
+            void exportMessageToNotes(title, markdown, notesPath)
           }}
           $softHoverBg={softHoverBg}>
           <NotebookPen size={15} />
@@ -1032,7 +1032,7 @@ const buttonRenderers: Record<MessageMenubarButtonId, MessageMenubarButtonRender
     const handleInspect = (e: React.MouseEvent) => {
       e.stopPropagation()
       const blocks = message.blocks.map((blockId) => blockEntities[blockId]).filter(Boolean)
-      InspectMessagePopup.show({
+      void InspectMessagePopup.show({
         title: `Message: ${message.id}`,
         message,
         blocks
