@@ -79,8 +79,10 @@ win:
   target:
     - target: nsis
     - target: portable
-  signtoolOptions:
-    sign: scripts/win-sign.js
+  signAndEditExecutable: false
+  signExts:
+    - '!.exe'
+  signtoolOptions: null
   verifyUpdateCodeSignature: false
 nsis:
   artifactName: ${productName}-${version}-${arch}-setup.${ext}

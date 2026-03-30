@@ -4,9 +4,10 @@ import { useAgentSessionInitializer } from '@renderer/hooks/agents/useAgentSessi
 import { useAssistants } from '@renderer/hooks/useAssistant'
 import { useNavbarPosition, useSettings } from '@renderer/hooks/useSettings'
 import { useShortcut } from '@renderer/hooks/useShortcuts'
-import { useAssistantsTabSortType } from '@renderer/hooks/useStore'
+import { useAssistantsTabSortType, useShowAssistants, useShowTopics } from '@renderer/hooks/useStore'
 import { useTags } from '@renderer/hooks/useTags'
 import { useActiveTopic } from '@renderer/hooks/useTopic'
+import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import NavigationService from '@renderer/services/NavigationService'
 import { newMessagesActions } from '@renderer/store/newMessage'
 import type { Assistant, Topic } from '@renderer/types'
@@ -52,6 +53,8 @@ const HomePage: FC = () => {
   const { showAssistants, showTopics, topicPosition } = useSettings()
   const { assistantsTabSortType } = useAssistantsTabSortType()
   const { collapsedTags, getGroupedAssistants: groupedAssistants } = useTags()
+  const { setShowAssistants, toggleShowAssistants } = useShowAssistants()
+  const { toggleShowTopics } = useShowTopics()
   const dispatch = useDispatch()
 
   _activeAssistant = activeAssistant
@@ -97,6 +100,40 @@ const HomePage: FC = () => {
 
     return { orderedAssistantIds: ordered, visibleAssistantIds: visible }
   }, [assistants, assistantsTabSortType, collapsedTags, groupedAssistants])
+
+  useShortcut('toggle_show_assistants', () => {
+    if (topicPosition === 'right') {
+      toggleShowAssistants()
+      return
+    }
+
+    if (!showAssistants) {
+      setShowAssistants(true)
+      requestAnimationFrame(() => {
+        void EventEmitter.emit(EVENT_NAMES.SHOW_ASSISTANTS)
+      })
+      return
+    }
+
+    void EventEmitter.emit(EVENT_NAMES.SHOW_ASSISTANTS)
+  })
+
+  useShortcut('toggle_show_topics', () => {
+    if (topicPosition === 'right') {
+      toggleShowTopics()
+      return
+    }
+
+    if (!showAssistants) {
+      setShowAssistants(true)
+      requestAnimationFrame(() => {
+        void EventEmitter.emit(EVENT_NAMES.SHOW_TOPIC_SIDEBAR)
+      })
+      return
+    }
+
+    void EventEmitter.emit(EVENT_NAMES.SHOW_TOPIC_SIDEBAR)
+  })
 
   const setActiveAssistant = useCallback(
     (newAssistant: Assistant) => {

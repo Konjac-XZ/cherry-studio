@@ -19,8 +19,8 @@ import {
 } from '@renderer/config/models'
 import { mapLanguageToQwenMTModel } from '@renderer/config/translate'
 import { getStoreSetting } from '@renderer/hooks/useSettings'
-import { getQuickModelProviderOptionsOverrides } from '@renderer/services/quickModelRequest'
 import { getProviderById } from '@renderer/services/ProviderService'
+import { getQuickModelProviderOptionsOverrides } from '@renderer/services/quickModelRequest'
 import {
   type Assistant,
   type GroqServiceTier,
@@ -637,6 +637,7 @@ function buildGenericProviderOptions(
   let providerOptions: Record<string, any> = {}
 
   const reasoningParams = getReasoningEffort(assistant, model)
+  logger.debug('reasoningParams', reasoningParams)
   providerOptions = {
     ...providerOptions,
     ...reasoningParams
