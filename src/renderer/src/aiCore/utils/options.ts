@@ -20,7 +20,6 @@ import {
 import { mapLanguageToQwenMTModel } from '@renderer/config/translate'
 import { getStoreSetting } from '@renderer/hooks/useSettings'
 import { getProviderById } from '@renderer/services/ProviderService'
-import { getQuickModelProviderOptionsOverrides } from '@renderer/services/quickModelRequest'
 import {
   type Assistant,
   type GroqServiceTier,
@@ -290,10 +289,7 @@ export function buildProviderOptions(
    */
   const customParams = getCustomParameters(assistant)
   const { standardParams, providerParams } = extractAiSdkStandardParams(customParams)
-  const mergedProviderParams = {
-    ...providerParams,
-    ...getQuickModelProviderOptionsOverrides(model.id)
-  }
+  const mergedProviderParams = providerParams
   logger.debug('Extracted standardParams and providerParams', { standardParams, providerParams: mergedProviderParams })
 
   /**

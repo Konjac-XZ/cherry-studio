@@ -37,7 +37,6 @@ import { abortCompletion, readyToAbort, removeAbortController } from '@renderer/
 import { formatErrorMessageWithPrefix, isAbortError } from '@renderer/utils/error'
 import { getFilesFromDropEvent, getTextFromDropEvent } from '@renderer/utils/input'
 import { processLatexBrackets } from '@renderer/utils/markdown'
-import { htmlToMarkdown } from '@renderer/utils/markdownConverter'
 import {
   createInputScrollHandler,
   createOutputScrollHandler,
@@ -66,6 +65,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
+import TurndownService from 'turndown'
 
 import TranslateHistoryList from './TranslateHistory'
 import TranslateSettings from './TranslateSettings'
@@ -238,10 +238,18 @@ const TranslatePage: FC = () => {
     window.toast.info(t('translate.info.reused_cached', { modifier: isMacLikePlatform() ? 'Cmd' : 'Ctrl' }))
   }, [t])
 
+  const turndownService = useMemo(() => {
+    const service = new TurndownService({
+      codeBlockStyle: 'fenced',
+      fence: '```'
+    })
+    return service
+  }, [])
+
   const convertHtmlToMarkdownWithNotification = useCallback(
     (html: string) => {
       try {
-        const converted = htmlToMarkdown(html)
+        const converted = turndownService.turndown(html)
         if (converted && converted.trim()) {
           notifyHtmlConversion()
         }
@@ -251,7 +259,7 @@ const TranslatePage: FC = () => {
         return ''
       }
     },
-    [notifyHtmlConversion]
+    [notifyHtmlConversion, turndownService]
   )
 
   const readClipboardForTranslate = useCallback(async (): Promise<string> => {
