@@ -3,6 +3,7 @@ import { HStack } from '@renderer/components/Layout'
 import db from '@renderer/databases'
 import useTranslate from '@renderer/hooks/useTranslate'
 import type { AutoDetectionMethod, Model, TranslateLanguage } from '@renderer/types'
+import { TRANSLATION_POST_PROCESSOR_SETTING_KEYS } from '@renderer/utils/translationPostProcessors'
 import { Button, Flex, Modal, Radio, Slider, Space, Switch, Tooltip } from 'antd'
 import { HelpCircle } from 'lucide-react'
 import type { FC } from 'react'
@@ -28,6 +29,8 @@ const TranslateSettings: FC<{
   setAutoDetectionMethod: (method: AutoDetectionMethod) => void
   fontSize: number
   setFontSize: (value: number) => void
+  zhCnMarkdownSmartQuotesEnabled: boolean
+  setZhCnMarkdownSmartQuotesEnabled: (value: boolean) => void
 }> = ({
   visible,
   onClose,
@@ -42,7 +45,9 @@ const TranslateSettings: FC<{
   autoDetectionMethod,
   setAutoDetectionMethod,
   fontSize,
-  setFontSize
+  setFontSize,
+  zhCnMarkdownSmartQuotesEnabled,
+  setZhCnMarkdownSmartQuotesEnabled
 }) => {
   const { t } = useTranslation()
   const [localPair, setLocalPair] = useState<[TranslateLanguage, TranslateLanguage]>(bidirectionalPair)
@@ -76,6 +81,31 @@ const TranslateSettings: FC<{
               onChange={(checked) => {
                 setEnableMarkdown(checked)
                 void db.settings.put({ id: 'translate:markdown:enabled', value: checked })
+              }}
+            />
+          </Flex>
+        </div>
+
+        <div>
+          <Flex align="center" justify="space-between">
+            <div style={{ fontWeight: 500 }}>
+              <HStack alignItems="center" gap={5}>
+                {t('translate.settings.zh_cn_smart_quotes.label')}
+                <Tooltip title={t('translate.settings.zh_cn_smart_quotes.tip')}>
+                  <span style={{ display: 'flex', alignItems: 'center' }}>
+                    <HelpCircle size={14} style={{ color: 'var(--color-text-3)' }} />
+                  </span>
+                </Tooltip>
+              </HStack>
+            </div>
+            <Switch
+              checked={zhCnMarkdownSmartQuotesEnabled}
+              onChange={(checked) => {
+                setZhCnMarkdownSmartQuotesEnabled(checked)
+                void db.settings.put({
+                  id: TRANSLATION_POST_PROCESSOR_SETTING_KEYS.zhCnMarkdownSmartQuotes,
+                  value: checked
+                })
               }}
             />
           </Flex>

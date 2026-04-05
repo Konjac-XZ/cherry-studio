@@ -5686,6 +5686,10 @@
       "model_placeholder": "Select translation model",
       "no_model_warning": "No translation model selected",
       "preview": "Markdown Preview",
+      "zh_cn_smart_quotes": {
+        "label": "Simplified Chinese smart quotes",
+        "tip": "Only affects Simplified Chinese Markdown output. Converts straight quotes in prose to Chinese quotes and measurement primes while skipping code, links, URLs, and other structured fragments."
+      },
       "scroll_sync": "Scroll Sync Settings",
       "title": "Translation Settings"
     },

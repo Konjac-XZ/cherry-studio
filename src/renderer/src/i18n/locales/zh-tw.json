@@ -5674,11 +5674,16 @@
       "autoCopy": "翻譯完成後自動複製",
       "bidirectional": "雙向翻譯設定",
       "bidirectional_tip": "開啟後，僅支援在來源語言和目標語言之間進行雙向翻譯",
+      "font_size": "字體大小",
       "model": "模型設定",
       "model_desc": "翻譯服務使用的模型",
       "model_placeholder": "選擇翻譯模型",
       "no_model_warning": "未選擇翻譯模型",
       "preview": "Markdown 預覽",
+      "zh_cn_smart_quotes": {
+        "label": "簡體中文智慧引號",
+        "tip": "僅作用於簡體中文 Markdown 輸出。會將正文中的英文直引號轉為中文引號或尺寸符號，並盡量跳過程式碼、連結、URL 與其他結構化片段。"
+      },
       "scroll_sync": "滾動同步設定",
       "title": "翻譯設定"
     },

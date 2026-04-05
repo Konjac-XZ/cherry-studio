@@ -43,6 +43,11 @@ import {
   detectLanguage,
   determineTargetLanguage
 } from '@renderer/utils/translate'
+import {
+  applyTranslationPostProcessors,
+  DEFAULT_TRANSLATION_POST_PROCESSOR_FEATURES,
+  TRANSLATION_POST_PROCESSOR_SETTING_KEYS
+} from '@renderer/utils/translationPostProcessors'
 import { documentExts, imageExts, MB, textExts } from '@shared/config/constant'
 import { Button, Flex, FloatButton, Popover, Tooltip, Typography } from 'antd'
 import type { TextAreaRef } from 'antd/es/input/TextArea'
@@ -179,8 +184,14 @@ const TranslatePage: FC = () => {
   const [detectedLanguage, setDetectedLanguage] = useState<TranslateLanguage | null>(null)
   const [sourceLanguage, setSourceLanguage] = useState<TranslateLanguage | 'auto'>(_sourceLanguage)
   const [targetLanguage, setTargetLanguage] = useState<TranslateLanguage>(_targetLanguage)
+  const [translatedContentTargetLanguageCode, setTranslatedContentTargetLanguageCode] = useState<string>(
+    _targetLanguage.langCode
+  )
   const [autoDetectionMethod, setAutoDetectionMethod] = useState<AutoDetectionMethod>('franc')
   const [isProcessing, setIsProcessing] = useState(false)
+  const [zhCnMarkdownSmartQuotesEnabled, setZhCnMarkdownSmartQuotesEnabled] = useState(
+    DEFAULT_TRANSLATION_POST_PROCESSOR_FEATURES.zhCnMarkdownSmartQuotes
+  )
   const clampFontSize = (value: number) => Math.max(12, Math.min(24, Math.round(value)))
   const [fontSize, setFontSize] = useState<number>(() => {
     try {
@@ -369,6 +380,24 @@ const TranslatePage: FC = () => {
     [dispatch]
   )
 
+  const applyPostProcessorsForTarget = useCallback(
+    (content: string, targetLanguageCode: string) => {
+      return applyTranslationPostProcessors(content, {
+        features: {
+          zhCnMarkdownSmartQuotes: zhCnMarkdownSmartQuotesEnabled
+        },
+        markdownEnabled: enableMarkdown,
+        targetLanguage: targetLanguageCode
+      })
+    },
+    [enableMarkdown, zhCnMarkdownSmartQuotesEnabled]
+  )
+
+  const effectiveTranslatedContent = useMemo(
+    () => applyPostProcessorsForTarget(translatedContent, translatedContentTargetLanguageCode),
+    [applyPostProcessorsForTarget, translatedContent, translatedContentTargetLanguageCode]
+  )
+
   const setTranslating = useCallback(
     (translating: boolean) => {
       dispatch(setTranslatingAction(translating))
@@ -415,12 +444,12 @@ const TranslatePage: FC = () => {
 
   const onCopy = useCallback(async () => {
     try {
-      await copy(translatedContent)
+      await copy(effectiveTranslatedContent)
     } catch (error) {
       logger.error('Failed to copy text to clipboard:', error as Error)
       window.toast.error(t('common.copy_failed'))
     }
-  }, [copy, t, translatedContent])
+  }, [copy, effectiveTranslatedContent, t])
 
   /**
    * 翻译文本并保存历史记录，包含完整的异常处理，不会抛出异常
@@ -459,7 +488,9 @@ const TranslatePage: FC = () => {
         if (typeof (throttledUpdate as any).flush === 'function') {
           ;(throttledUpdate as any).flush()
         }
-        setTranslatedContent(translated)
+        const finalTranslated = applyPostProcessorsForTarget(translated, actualTargetLanguage.langCode)
+        setTranslatedContentTargetLanguageCode(actualTargetLanguage.langCode)
+        setTranslatedContent(finalTranslated)
 
         window.toast.success(t('translate.complete'))
         if (autoCopy) {
@@ -467,17 +498,23 @@ const TranslatePage: FC = () => {
           setTimeoutTimer(
             'auto-copy',
             async () => {
-              await copy(translated)
+              await copy(finalTranslated)
             },
             0
           )
         }
 
         try {
-          await saveTranslateHistory(text, translated, actualSourceLanguage.langCode, actualTargetLanguage.langCode, {
-            modelId: translateModel?.id,
-            overwriteExisting: options?.forceRefresh
-          })
+          await saveTranslateHistory(
+            text,
+            finalTranslated,
+            actualSourceLanguage.langCode,
+            actualTargetLanguage.langCode,
+            {
+              modelId: translateModel?.id,
+              overwriteExisting: options?.forceRefresh
+            }
+          )
         } catch (e) {
           logger.error('Failed to save translate history', e as Error)
           window.toast.error(formatErrorMessageWithPrefix(e, t('translate.history.error.save')))
@@ -489,7 +526,17 @@ const TranslatePage: FC = () => {
         removeAbortController(abortKey)
       }
     },
-    [autoCopy, copy, dispatch, setTimeoutTimer, setTranslatedContent, setTranslating, t, translateModel]
+    [
+      applyPostProcessorsForTarget,
+      autoCopy,
+      copy,
+      dispatch,
+      setTimeoutTimer,
+      setTranslatedContent,
+      setTranslating,
+      t,
+      translateModel
+    ]
   )
 
   // 控制翻译按钮是否可用
@@ -578,14 +625,19 @@ const TranslatePage: FC = () => {
           })
 
           if (reusableHistory) {
+            setTranslatedContentTargetLanguageCode(actualTargetLanguage.langCode)
             setTranslatedContent(reusableHistory.targetText)
             notifyReuseHit()
 
             if (autoCopy) {
+              const reusableTargetText = applyPostProcessorsForTarget(
+                reusableHistory.targetText,
+                actualTargetLanguage.langCode
+              )
               setTimeoutTimer(
                 'auto-copy',
                 async () => {
-                  await copy(reusableHistory.targetText)
+                  await copy(reusableTargetText)
                 },
                 0
               )
@@ -624,6 +676,7 @@ const TranslatePage: FC = () => {
       translateModel,
       userNativeLanguage,
       autoCopy,
+      applyPostProcessorsForTarget,
       copy,
       notifyReuseHit,
       setTimeoutTimer,
@@ -712,6 +765,7 @@ const TranslatePage: FC = () => {
     history: TranslateHistory & { _sourceLanguage: TranslateLanguage; _targetLanguage: TranslateLanguage }
   ) => {
     setText(history.sourceText)
+    setTranslatedContentTargetLanguageCode(history._targetLanguage.langCode)
     setTranslatedContent(history.targetText)
     // Intentionally DO NOT change current language selections when loading history.
     // This preserves user's existing source (including 'auto') and target language choices
@@ -833,7 +887,9 @@ const TranslatePage: FC = () => {
 
     let disposed = false
     const shouldRenderMath = mathEngine === 'KaTeX'
-    const markdownSource = shouldRenderMath ? processLatexBrackets(translatedContent) : translatedContent
+    const markdownSource = shouldRenderMath
+      ? processLatexBrackets(effectiveTranslatedContent)
+      : effectiveTranslatedContent
 
     const renderOptions = shouldRenderMath
       ? { math: { engine: 'katex' as const, allowSingleDollar: mathEnableSingleDollar } }
@@ -861,13 +917,16 @@ const TranslatePage: FC = () => {
     return () => {
       disposed = true
     }
-  }, [enableMarkdown, mathEnableSingleDollar, mathEngine, shikiMarkdownIt, translatedContent])
+  }, [enableMarkdown, effectiveTranslatedContent, mathEnableSingleDollar, mathEngine, shikiMarkdownIt])
 
   // 控制设置加载
   useEffect(() => {
     void runAsyncFunction(async () => {
       const targetLang = await db.settings.get({ id: 'translate:target:language' })
-      targetLang && setTargetLanguage(getLanguageByLangcode(targetLang.value))
+      if (targetLang) {
+        setTargetLanguage(getLanguageByLangcode(targetLang.value))
+        setTranslatedContentTargetLanguageCode(targetLang.value)
+      }
 
       const sourceLang = await db.settings.get({ id: 'translate:source:language' })
       sourceLang &&
@@ -904,6 +963,19 @@ const TranslatePage: FC = () => {
 
       const markdownSetting = await db.settings.get({ id: 'translate:markdown:enabled' })
       setEnableMarkdown(markdownSetting ? markdownSetting.value : false)
+
+      const zhCnMarkdownSmartQuotesSetting = await db.settings.get({
+        id: TRANSLATION_POST_PROCESSOR_SETTING_KEYS.zhCnMarkdownSmartQuotes
+      })
+      if (zhCnMarkdownSmartQuotesSetting) {
+        setZhCnMarkdownSmartQuotesEnabled(Boolean(zhCnMarkdownSmartQuotesSetting.value))
+      } else {
+        setZhCnMarkdownSmartQuotesEnabled(DEFAULT_TRANSLATION_POST_PROCESSOR_FEATURES.zhCnMarkdownSmartQuotes)
+        void db.settings.put({
+          id: TRANSLATION_POST_PROCESSOR_SETTING_KEYS.zhCnMarkdownSmartQuotes,
+          value: DEFAULT_TRANSLATION_POST_PROCESSOR_FEATURES.zhCnMarkdownSmartQuotes
+        })
+      }
 
       const layoutOverrideSetting = await db.settings.get({ id: 'translate:layout:override' })
       setManualLayoutOverride(layoutOverrideSetting ? layoutOverrideSetting.value : 'auto')
@@ -1558,18 +1630,18 @@ const TranslatePage: FC = () => {
               size="small"
               className="copy-button"
               onClick={() => onCopy()}
-              disabled={!translatedContent}
+              disabled={!effectiveTranslatedContent}
               icon={copied ? <Check size={16} color="var(--color-primary)" /> : <CopyIcon size={16} />}
             />
             <OutputText ref={outputTextRef} $fontSize={fontSize} onScroll={handleOutputScroll} className={'selectable'}>
-              {!translatedContent ? (
+              {!effectiveTranslatedContent ? (
                 <div style={{ color: 'var(--color-text-3)', userSelect: 'none' }}>
                   {t('translate.output.placeholder')}
                 </div>
               ) : enableMarkdown ? (
                 <div className="markdown" dangerouslySetInnerHTML={{ __html: renderedMarkdown }} />
               ) : (
-                <div className="plain">{translatedContent}</div>
+                <div className="plain">{effectiveTranslatedContent}</div>
               )}
             </OutputText>
           </OutputContainer>
@@ -1585,6 +1657,8 @@ const TranslatePage: FC = () => {
         setIsBidirectional={toggleBidirectional}
         enableMarkdown={enableMarkdown}
         setEnableMarkdown={setEnableMarkdown}
+        zhCnMarkdownSmartQuotesEnabled={zhCnMarkdownSmartQuotesEnabled}
+        setZhCnMarkdownSmartQuotesEnabled={setZhCnMarkdownSmartQuotesEnabled}
         bidirectionalPair={bidirectionalPair}
         setBidirectionalPair={setBidirectionalPair}
         translateModel={translateModel}
