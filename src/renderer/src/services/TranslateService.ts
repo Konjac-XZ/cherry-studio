@@ -36,6 +36,7 @@ type SaveTranslateHistoryOptions = {
 }
 
 type TranslateOptions = {
+  // Lets callers opt out of the translation-specific reasoning override.
   reasoningEffort: ReasoningEffortOption
 }
 

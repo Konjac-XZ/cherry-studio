@@ -29,6 +29,8 @@ const TranslateSettings: FC<{
   setAutoDetectionMethod: (method: AutoDetectionMethod) => void
   fontSize: number
   setFontSize: (value: number) => void
+  autoDisableThinking: boolean
+  setAutoDisableThinking: (value: boolean) => void
   zhCnMarkdownSmartQuotesEnabled: boolean
   setZhCnMarkdownSmartQuotesEnabled: (value: boolean) => void
 }> = ({
@@ -46,6 +48,8 @@ const TranslateSettings: FC<{
   setAutoDetectionMethod,
   fontSize,
   setFontSize,
+  autoDisableThinking,
+  setAutoDisableThinking,
   zhCnMarkdownSmartQuotesEnabled,
   setZhCnMarkdownSmartQuotesEnabled
 }) => {
@@ -116,6 +120,28 @@ const TranslateSettings: FC<{
             <div style={{ fontWeight: 500 }}>{t('translate.settings.autoCopy')}</div>
             <Switch checked={autoCopy} onChange={(checked) => updateSettings({ autoCopy: checked })} />
           </HStack>
+        </div>
+
+        <div>
+          <Flex align="center" justify="space-between">
+            <div style={{ fontWeight: 500 }}>
+              <HStack alignItems="center" gap={5}>
+                {t('translate.settings.minimize_thinking.label')}
+                <Tooltip title={t('translate.settings.minimize_thinking.tip')}>
+                  <span style={{ display: 'flex', alignItems: 'center' }}>
+                    <HelpCircle size={14} style={{ color: 'var(--color-text-3)' }} />
+                  </span>
+                </Tooltip>
+              </HStack>
+            </div>
+            <Switch
+              checked={autoDisableThinking}
+              onChange={(checked) => {
+                setAutoDisableThinking(checked)
+                void db.settings.put({ id: 'translate:auto-disable-thinking', value: checked })
+              }}
+            />
+          </Flex>
         </div>
 
         <div>

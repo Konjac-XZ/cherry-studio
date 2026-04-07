@@ -122,11 +122,11 @@ export function getDefaultTranslateAssistant(
   }
 
   const supportedOptions = getModelSupportedReasoningEffortOptions(model)
-  // disable reasoning if it could be disabled, otherwise no configuration
-  const reasoningEffort = supportedOptions?.includes('none') ? 'none' : 'default'
+  // Translation defaults still minimize reasoning when supported, unless the caller explicitly overrides it.
+  const reasoningEffort = _settings?.reasoning_effort ?? (supportedOptions?.includes('none') ? 'none' : 'default')
   const settings = {
-    reasoning_effort: reasoningEffort,
-    ..._settings
+    ..._settings,
+    reasoning_effort: reasoningEffort
   } satisfies Partial<AssistantSettings>
   const translateSettings = store.getState().settings
 
@@ -151,10 +151,18 @@ export function getDefaultTranslateAssistant(
         customParameters = Object.entries(parsed).map(([name, value]) => ({
           name,
           value: typeof value === 'object' ? JSON.stringify(value) : (value as string | number | boolean),
-          type: (typeof value === 'object' ? 'json' : typeof value === 'number' ? 'number' : typeof value === 'boolean' ? 'boolean' : 'string') as AssistantSettingCustomParameters['type']
+          type: (typeof value === 'object'
+            ? 'json'
+            : typeof value === 'number'
+              ? 'number'
+              : typeof value === 'boolean'
+                ? 'boolean'
+                : 'string') as AssistantSettingCustomParameters['type']
         }))
       }
-    } catch { /* skip invalid JSON silently */ }
+    } catch {
+      /* skip invalid JSON silently */
+    }
   }
 
   const mergedSettings = {
@@ -175,7 +183,10 @@ export function getDefaultTranslateAssistant(
 
 type TranslatePromptSettings = Pick<
   SettingsState,
-  'translateModelPrompt' | 'nativeLanguageTranslateModelPrompt' | 'otherLanguageTranslateModelPrompt' | 'userNativeLanguage'
+  | 'translateModelPrompt'
+  | 'nativeLanguageTranslateModelPrompt'
+  | 'otherLanguageTranslateModelPrompt'
+  | 'userNativeLanguage'
 >
 
 export function getTranslatePromptTemplate(

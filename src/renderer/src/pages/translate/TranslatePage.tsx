@@ -81,6 +81,8 @@ type TranslateTriggerOptions = {
   forceRefresh?: boolean
 }
 
+const TRANSLATE_AUTO_DISABLE_THINKING_KEY = 'translate:auto-disable-thinking'
+
 const isMacLikePlatform = () =>
   typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent)
 
@@ -189,6 +191,7 @@ const TranslatePage: FC = () => {
   )
   const [autoDetectionMethod, setAutoDetectionMethod] = useState<AutoDetectionMethod>('franc')
   const [isProcessing, setIsProcessing] = useState(false)
+  const [autoDisableThinking, setAutoDisableThinking] = useState(true)
   const [zhCnMarkdownSmartQuotesEnabled, setZhCnMarkdownSmartQuotesEnabled] = useState(
     DEFAULT_TRANSLATION_POST_PROCESSOR_FEATURES.zhCnMarkdownSmartQuotes
   )
@@ -472,7 +475,9 @@ const TranslatePage: FC = () => {
         // use a throttled updater for streaming, ensure we flush and set final content afterward
         const throttledUpdate = throttle(setTranslatedContent, 100)
         try {
-          translated = await translateText(text, actualTargetLanguage, throttledUpdate, abortKey)
+          translated = await translateText(text, actualTargetLanguage, throttledUpdate, abortKey, {
+            reasoningEffort: autoDisableThinking ? 'none' : 'default'
+          })
         } catch (e) {
           if (isAbortError(e)) {
             window.toast.info(t('translate.info.aborted'))
@@ -528,6 +533,7 @@ const TranslatePage: FC = () => {
     },
     [
       applyPostProcessorsForTarget,
+      autoDisableThinking,
       autoCopy,
       copy,
       dispatch,
@@ -963,6 +969,14 @@ const TranslatePage: FC = () => {
 
       const markdownSetting = await db.settings.get({ id: 'translate:markdown:enabled' })
       setEnableMarkdown(markdownSetting ? markdownSetting.value : false)
+
+      const autoDisableThinkingSetting = await db.settings.get({ id: TRANSLATE_AUTO_DISABLE_THINKING_KEY })
+      if (autoDisableThinkingSetting) {
+        setAutoDisableThinking(Boolean(autoDisableThinkingSetting.value))
+      } else {
+        setAutoDisableThinking(true)
+        void db.settings.put({ id: TRANSLATE_AUTO_DISABLE_THINKING_KEY, value: true })
+      }
 
       const zhCnMarkdownSmartQuotesSetting = await db.settings.get({
         id: TRANSLATION_POST_PROCESSOR_SETTING_KEYS.zhCnMarkdownSmartQuotes
@@ -1665,6 +1679,8 @@ const TranslatePage: FC = () => {
         autoDetectionMethod={autoDetectionMethod}
         setAutoDetectionMethod={updateAutoDetectionMethod}
         fontSize={fontSize}
+        autoDisableThinking={autoDisableThinking}
+        setAutoDisableThinking={setAutoDisableThinking}
         setFontSize={(value) => {
           const nextValue = clampFontSize(value)
           setFontSize(nextValue)

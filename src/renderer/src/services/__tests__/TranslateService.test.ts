@@ -1,4 +1,5 @@
 import type { TranslateHistory } from '@renderer/types'
+import { ChunkType } from '@renderer/types/chunk'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => {
@@ -56,7 +57,8 @@ vi.mock('i18next', () => ({
 import {
   createTranslateHistoryCacheKey,
   findReusableTranslateHistory,
-  saveTranslateHistory
+  saveTranslateHistory,
+  translateText
 } from '../TranslateService'
 
 describe('TranslateService reusable history', () => {
@@ -151,5 +153,27 @@ describe('TranslateService reusable history', () => {
       })
     )
     expect(mocks.translateHistory.add).not.toHaveBeenCalled()
+  })
+
+  it('forwards explicit reasoning effort overrides to translate assistant creation', async () => {
+    const targetLanguage = { langCode: 'zh-cn', value: 'Chinese' } as any
+    mocks.getDefaultTranslateAssistant.mockReturnValue({
+      content: 'Translate hello',
+      model: { id: 'model-a' },
+      settings: {}
+    })
+    mocks.fetchChatCompletion.mockImplementation(async ({ onChunkReceived }) => {
+      onChunkReceived?.({ type: ChunkType.TEXT_DELTA, text: '你好' })
+      onChunkReceived?.({ type: ChunkType.TEXT_COMPLETE, text: '你好' })
+    })
+
+    const result = await translateText('hello', targetLanguage, undefined, undefined, {
+      reasoningEffort: 'default'
+    })
+
+    expect(mocks.getDefaultTranslateAssistant).toHaveBeenCalledWith(targetLanguage, 'hello', {
+      reasoning_effort: 'default'
+    })
+    expect(result).toBe('你好')
   })
 })

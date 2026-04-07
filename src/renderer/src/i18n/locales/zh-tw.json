@@ -6007,6 +6007,10 @@
       "bidirectional": "雙向翻譯設定",
       "bidirectional_tip": "開啟後，僅支援在來源語言和目標語言之間進行雙向翻譯",
       "font_size": "字體大小",
+      "minimize_thinking": {
+        "label": "盡量減少模型思考",
+        "tip": "在所選模型支援時，優先為翻譯請求關閉或降低額外推理，以獲得更快、更節省的翻譯結果。關閉後會恢復模型的預設思考行為。"
+      },
       "model": "模型設定",
       "model_desc": "翻譯服務使用的模型",
       "model_placeholder": "選擇翻譯模型",
