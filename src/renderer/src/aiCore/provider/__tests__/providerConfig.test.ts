@@ -613,9 +613,10 @@ describe('providerToAiSdkConfig', () => {
       })
 
       const config = (await providerToAiSdkConfig(provider, makeModel('llama3', 'ollama'))) as ProviderConfig<'ollama'>
+      const headers = config.providerSettings.headers as Record<string, string> | undefined
 
       expect(config.providerId).toBe('ollama')
-      expect(config.providerSettings.headers?.Authorization).toBe('Bearer my-ollama-key')
+      expect(headers?.Authorization).toBe('Bearer my-ollama-key')
     })
 
     it('omits Authorization header when apiKey is empty', async () => {
@@ -627,9 +628,10 @@ describe('providerToAiSdkConfig', () => {
       })
 
       const config = (await providerToAiSdkConfig(provider, makeModel('llama3', 'ollama'))) as ProviderConfig<'ollama'>
+      const headers = config.providerSettings.headers as Record<string, string> | undefined
 
       expect(config.providerId).toBe('ollama')
-      expect(config.providerSettings.headers?.Authorization).toBeUndefined()
+      expect(headers?.Authorization).toBeUndefined()
     })
   })
 

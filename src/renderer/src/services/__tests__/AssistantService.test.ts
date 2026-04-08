@@ -83,7 +83,7 @@ describe('AssistantService.getDefaultTranslateAssistant', () => {
       reasoning_effort: 'default'
     })
 
-    expect(assistant.settings.reasoning_effort).toBe('default')
+    expect(assistant.settings?.reasoning_effort).toBe('default')
   })
 
   it('falls back to none when the model supports disabling reasoning', () => {
@@ -91,7 +91,7 @@ describe('AssistantService.getDefaultTranslateAssistant', () => {
 
     const assistant = getDefaultTranslateAssistant({ langCode: 'zh-cn', value: 'Chinese' } as any, 'hello')
 
-    expect(assistant.settings.reasoning_effort).toBe('none')
+    expect(assistant.settings?.reasoning_effort).toBe('none')
   })
 
   it('falls back to default when the model cannot disable reasoning', () => {
@@ -99,6 +99,6 @@ describe('AssistantService.getDefaultTranslateAssistant', () => {
 
     const assistant = getDefaultTranslateAssistant({ langCode: 'zh-cn', value: 'Chinese' } as any, 'hello')
 
-    expect(assistant.settings.reasoning_effort).toBe('default')
+    expect(assistant.settings?.reasoning_effort).toBe('default')
   })
 })

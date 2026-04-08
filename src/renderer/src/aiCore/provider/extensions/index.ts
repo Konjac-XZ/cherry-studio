@@ -20,12 +20,13 @@ import {
   type GitHubCopilotProviderSettings
 } from '@opeoginni/github-copilot-openai-compatible'
 import { SystemProviderIds } from '@types'
-import type { OllamaProviderSettings } from 'ollama-ai-provider-v2'
 import { createOllama } from 'ollama-ai-provider-v2'
 import { createVoyage, type VoyageProviderSettings } from 'voyage-ai-provider'
 
 import { type AihubmixProviderSettings, createAihubmix } from '../custom/aihubmix-provider'
 import { createNewApi, type NewApiProviderSettings } from '../custom/newapi-provider'
+
+type OllamaProviderSettings = Parameters<typeof createOllama>[0]
 
 /**
  * Google Vertex AI Extension

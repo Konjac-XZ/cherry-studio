@@ -194,7 +194,7 @@ async function buildCopilotConfig(ctx: BuilderContext): Promise<ProviderConfig<'
 }
 
 function buildOllamaConfig(ctx: BuilderContext): ProviderConfig<'ollama'> {
-  const headers: ProviderConfig<'ollama'>['providerSettings']['headers'] = {
+  const headers: Record<string, string> = {
     ...defaultAppHeaders(),
     ...ctx.actualProvider.extra_headers
   }
