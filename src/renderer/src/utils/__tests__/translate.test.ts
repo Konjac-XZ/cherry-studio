@@ -70,10 +70,19 @@ import { LanguagesEnum, UNKNOWN } from '@renderer/config/translate'
 import { determineTargetLanguage } from '../translate'
 
 describe('utils/translate determineTargetLanguage', () => {
-  const bidirectionalPair: [typeof LanguagesEnum.enUS, typeof LanguagesEnum.zhCN] = [LanguagesEnum.enUS, LanguagesEnum.zhCN]
+  const bidirectionalPair: [typeof LanguagesEnum.enUS, typeof LanguagesEnum.zhCN] = [
+    LanguagesEnum.enUS,
+    LanguagesEnum.zhCN
+  ]
 
   it('swaps to the other language when source is in the bidirectional pair', () => {
-    const result = determineTargetLanguage(LanguagesEnum.enUS, LanguagesEnum.enUS, true, bidirectionalPair, LanguagesEnum.zhCN)
+    const result = determineTargetLanguage(
+      LanguagesEnum.enUS,
+      LanguagesEnum.enUS,
+      true,
+      bidirectionalPair,
+      LanguagesEnum.zhCN
+    )
 
     expect(result).toEqual({
       success: true,
@@ -83,7 +92,13 @@ describe('utils/translate determineTargetLanguage', () => {
   })
 
   it('treats simplified and traditional chinese as the same native family inside the pair', () => {
-    const result = determineTargetLanguage(LanguagesEnum.zhTW, LanguagesEnum.enUS, true, bidirectionalPair, LanguagesEnum.zhCN)
+    const result = determineTargetLanguage(
+      LanguagesEnum.zhTW,
+      LanguagesEnum.enUS,
+      true,
+      bidirectionalPair,
+      LanguagesEnum.zhCN
+    )
 
     expect(result).toEqual({
       success: true,
@@ -93,7 +108,13 @@ describe('utils/translate determineTargetLanguage', () => {
   })
 
   it('falls back to the user native language when source is outside the pair', () => {
-    const result = determineTargetLanguage(LanguagesEnum.jaJP, LanguagesEnum.enUS, true, bidirectionalPair, LanguagesEnum.zhCN)
+    const result = determineTargetLanguage(
+      LanguagesEnum.jaJP,
+      LanguagesEnum.enUS,
+      true,
+      bidirectionalPair,
+      LanguagesEnum.zhCN
+    )
 
     expect(result).toEqual({
       success: true,
@@ -113,7 +134,13 @@ describe('utils/translate determineTargetLanguage', () => {
   })
 
   it('falls back to the pair when native language matches the detected third language', () => {
-    const result = determineTargetLanguage(LanguagesEnum.jaJP, LanguagesEnum.enUS, true, bidirectionalPair, LanguagesEnum.jaJP)
+    const result = determineTargetLanguage(
+      LanguagesEnum.jaJP,
+      LanguagesEnum.enUS,
+      true,
+      bidirectionalPair,
+      LanguagesEnum.jaJP
+    )
 
     expect(result).toEqual({
       success: true,
@@ -139,7 +166,13 @@ describe('utils/translate determineTargetLanguage', () => {
   })
 
   it('rejects non-bidirectional same-language translations', () => {
-    const result = determineTargetLanguage(LanguagesEnum.enUS, LanguagesEnum.enUS, false, bidirectionalPair, LanguagesEnum.zhCN)
+    const result = determineTargetLanguage(
+      LanguagesEnum.enUS,
+      LanguagesEnum.enUS,
+      false,
+      bidirectionalPair,
+      LanguagesEnum.zhCN
+    )
 
     expect(result).toEqual({
       success: false,

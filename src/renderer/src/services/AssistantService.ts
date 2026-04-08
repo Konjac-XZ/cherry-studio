@@ -106,7 +106,8 @@ export function getDefaultAssistant(): Assistant {
 export function getDefaultTranslateAssistant(
   targetLanguage: TranslateLanguage,
   text: string,
-  _settings?: Partial<AssistantSettings>
+  _settings?: Partial<AssistantSettings>,
+  customizedDictionary?: string
 ): TranslateAssistant {
   const model = getTranslateModel()
   const assistant: Assistant = getDefaultAssistant()
@@ -138,6 +139,7 @@ export function getDefaultTranslateAssistant(
     return getTranslatePromptTemplate(translateSettings, targetLanguage)
       .replaceAll('{{target_language}}', targetLanguage.value)
       .replaceAll('{{text}}', text)
+      .replaceAll('{{customized_dictionary}}', customizedDictionary ?? '')
   }
 
   const content = getTranslateContent(model, text, targetLanguage)

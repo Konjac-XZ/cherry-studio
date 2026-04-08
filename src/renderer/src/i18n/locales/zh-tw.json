@@ -892,6 +892,9 @@
     },
     "search": "搜尋助手...",
     "settings": {
+      "auto_cleanup_user_message": "[to be translated]:Auto-clean up sent user messages",
+      "auto_copy": "[to be translated]:Auto-copy assistant replies",
+      "auto_translate": "[to be translated]:Auto-translate assistant replies",
       "default_model": "預設模型",
       "knowledge_base": {
         "label": "知識庫設定",
@@ -4719,7 +4722,9 @@
         "japanese": "日文",
         "label": "目標語言",
         "russian": "俄文"
-      }
+      },
+      "user_native_language": "[to be translated]:User Native Language",
+      "user_native_language.unspecified": "[to be translated]:Unspecified"
     },
     "launch": {
       "onboot": "開機自動啟動",
@@ -5559,10 +5564,13 @@
       "edit_last_user_message": "編輯最後一則使用者訊息",
       "enabled": "啟用",
       "exit_fullscreen": "離開全螢幕",
+      "go_home": "返回首頁",
       "label": "按鍵",
       "mini_window": "快捷助手",
       "new_topic": "新增話題",
+      "next_assistant": "切換到下一個助手",
       "press_shortcut": "按下快捷鍵",
+      "previous_assistant": "切換到上一個助手",
       "rename_topic": "重新命名話題",
       "reset_defaults": "重設預設快捷鍵",
       "reset_defaults_confirm": "確定要重設所有快捷鍵嗎？",
@@ -5572,7 +5580,6 @@
       "select_model": "選擇模型",
       "selection_assistant_select_text": "劃詞助手：取詞",
       "selection_assistant_toggle": "開關劃詞助手",
-      "go_home": "返回首頁",
       "show_app": "顯示 / 隱藏應用程式",
       "show_settings": "開啟設定",
       "show_translate": "翻譯剪貼簿",
@@ -5580,8 +5587,6 @@
       "toggle_new_context": "清除上下文",
       "toggle_show_assistants": "切換助手顯示",
       "toggle_show_topics": "切換話題顯示",
-      "previous_assistant": "切換到上一個助手",
-      "next_assistant": "切換到下一個助手",
       "zoom_in": "放大介面",
       "zoom_out": "縮小介面",
       "zoom_reset": "重設縮放"
@@ -5829,6 +5834,34 @@
           "placeholder": "繁體中文"
         }
       },
+      "custom_body": "自訂請求體",
+      "glossary": {
+        "delete": {
+          "description": "[to be translated]:Are you sure you want to delete this entry?",
+          "title": "[to be translated]:Delete glossary entry"
+        },
+        "error": {
+          "add": "[to be translated]:Failed to add glossary entry",
+          "delete": "[to be translated]:Failed to delete glossary entry",
+          "duplicate": "[to be translated]:An entry with the same source term and target language already exists",
+          "language_empty": "[to be translated]:Target language is required",
+          "source_empty": "[to be translated]:Source term is required",
+          "target_empty": "[to be translated]:Translation is required",
+          "update": "[to be translated]:Failed to update glossary entry"
+        },
+        "hint": "[to be translated]:Add glossary entries to define custom term translations. Use {{customized_dictionary}} in your prompt template to inject matched terms.",
+        "language": "[to be translated]:Target language",
+        "source": "[to be translated]:Source term",
+        "source_placeholder": "[to be translated]:e.g., Agent",
+        "success": {
+          "add": "[to be translated]:Glossary entry added",
+          "delete": "[to be translated]:Glossary entry deleted",
+          "update": "[to be translated]:Glossary entry updated"
+        },
+        "target": "[to be translated]:Translation",
+        "target_placeholder": "[to be translated]:e.g., 智能体",
+        "title": "[to be translated]:Glossary"
+      },
       "prompt": "翻譯提示詞",
       "prompt_hint": "根據目標語言是否與「使用者母語」設定一致，選擇不同的提示詞範本。",
       "prompt_native": "翻譯成母語",
@@ -5837,7 +5870,6 @@
       "prompt_other": "翻譯成其他語言",
       "prompt_other_description": "當目標語言與「使用者母語」不一致，或尚未設定母語時使用。",
       "prompt_other_placeholder": "請輸入翻譯到其他目標語言時使用的提示詞",
-      "custom_body": "自訂請求體",
       "title": "翻譯設定"
     },
     "tray": {
@@ -5951,10 +5983,6 @@
     "exchange": {
       "label": "交換來源語言與目標語言"
     },
-    "flip": {
-      "label": "翻轉識別的語言並重新翻譯",
-      "success": "語言已翻轉"
-    },
     "files": {
       "drag_text": "拖曳到此處",
       "error": {
@@ -5964,6 +5992,10 @@
         "unknown": "讀取檔案內容失敗"
       },
       "reading": "讀取檔案內容中..."
+    },
+    "flip": {
+      "label": "翻轉識別的語言並重新翻譯",
+      "success": "語言已翻轉"
     },
     "history": {
       "clear": "清空歷史",
@@ -5981,7 +6013,8 @@
     },
     "info": {
       "aborted": "翻譯中止",
-      "html_conversion": "偵測到 HTML 格式，已觸發轉換，請留意核對"
+      "html_conversion": "偵測到 HTML 格式，已觸發轉換，請留意核對",
+      "reused_cached": "[to be translated]:Reused a previous translation. {{modifier}}+Click Translate to refresh it."
     },
     "input": {
       "placeholder": "可貼上或拖曳文字、文字檔案、圖片（支援 OCR）"
@@ -6016,12 +6049,16 @@
       "model_placeholder": "選擇翻譯模型",
       "no_model_warning": "未選擇翻譯模型",
       "preview": "Markdown 預覽",
+      "scroll_sync": "滾動同步設定",
+      "title": "翻譯設定",
       "zh_cn_smart_quotes": {
         "label": "簡體中文智慧引號",
         "tip": "僅作用於簡體中文 Markdown 輸出。會將正文中的英文直引號轉為中文引號或尺寸符號，並盡量跳過程式碼、連結、URL 與其他結構化片段。"
       },
-      "scroll_sync": "滾動同步設定",
-      "title": "翻譯設定"
+      "zh_markdown_spacing": {
+        "label": "中文 Markdown 空格優化",
+        "tip": "僅作用於簡繁體中文 Markdown 輸出。在翻譯完成後為中文與拉丁文本自動補空格，並盡量跳過程式碼、公式、連結與其他結構化片段。"
+      }
     },
     "stop": "停止翻譯",
     "success": {
@@ -6033,6 +6070,7 @@
     "target_language": "目標語言",
     "title": "翻譯",
     "tooltip": {
+      "force_refresh": "[to be translated]:{{modifier}}+Click: refresh and overwrite the saved result",
       "newline": "換行"
     }
   },

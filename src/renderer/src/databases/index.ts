@@ -17,6 +17,7 @@
 import type {
   CustomTranslateLanguage,
   FileMetadata,
+  GlossaryEntry,
   KnowledgeNoteItem,
   QuickPhrase,
   TranslateHistory
@@ -39,6 +40,7 @@ export const db = new Dexie('CherryStudio', {
   quick_phrases: EntityTable<QuickPhrase, 'id'>
   message_blocks: EntityTable<MessageBlock, 'id'> // Correct type for message_blocks
   translate_languages: EntityTable<CustomTranslateLanguage, 'id'>
+  translate_glossary: EntityTable<GlossaryEntry, 'id'>
 }
 
 db.version(1).stores({
@@ -147,5 +149,17 @@ db.version(11)
     message_blocks: 'id, messageId, file.id'
   })
   .upgrade((tx) => upgradeToV11(tx))
+
+db.version(12).stores({
+  files: 'id, name, origin_name, path, size, ext, type, created_at, count',
+  topics: '&id',
+  settings: '&id, value',
+  knowledge_notes: '&id, baseId, type, content, created_at, updated_at',
+  translate_history: '&id, cacheKey, modelId, sourceLanguage, targetLanguage, createdAt',
+  translate_languages: '&id, langCode',
+  translate_glossary: '&id, targetLanguage, createdAt',
+  quick_phrases: 'id',
+  message_blocks: 'id, messageId, file.id'
+})
 
 export default db

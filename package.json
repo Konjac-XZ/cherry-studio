@@ -101,6 +101,7 @@
     "node-stream-zip": "1.15.0",
     "officeparser": "4.2.0",
     "os-proxy-config": "1.1.2",
+    "pangu": "7.2.1",
     "pdf-parse": "^2.4.5",
     "selection-hook": "2.0.1",
     "sharp": "0.34.3",

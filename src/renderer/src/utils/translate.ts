@@ -170,10 +170,7 @@ const detectLanguageByLLM = async (
   return detectedLang.trim()
 }
 
-const detectLanguageByFranc = (
-  inputText: string,
-  options: DetectLanguageOptions = {}
-): TranslateLanguageCode => {
+const detectLanguageByFranc = (inputText: string, options: DetectLanguageOptions = {}): TranslateLanguageCode => {
   logger.info('Detect language by franc')
   const candidateIsoList = options.candidates
     ? options.candidates
@@ -183,7 +180,11 @@ const detectLanguageByFranc = (
 
   const uniqueCandidateIsoList = candidateIsoList ? Array.from(new Set(candidateIsoList)) : undefined
 
-  if (options.candidates && options.candidates.length > 0 && (!uniqueCandidateIsoList || uniqueCandidateIsoList.length === 0)) {
+  if (
+    options.candidates &&
+    options.candidates.length > 0 &&
+    (!uniqueCandidateIsoList || uniqueCandidateIsoList.length === 0)
+  ) {
     logger.warn('No valid ISO3 mappings found for candidates. Falling back to full detection set.', {
       candidates: options.candidates
     })

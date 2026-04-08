@@ -4,9 +4,9 @@ import { Modal } from 'antd'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { SettingContainer, SettingGroup } from '..'
+import { SettingContainer } from '..'
 import CustomBodySettings from './CustomBodySettings'
-import CustomLanguageSettings from './CustomLanguageSettings'
+import GlossarySettings from './GlossarySettings'
 import TranslatePromptSettings from './TranslatePromptSettings'
 
 interface Props {
@@ -45,10 +45,8 @@ const PopupContainer: React.FC<Props> = ({ resolve }) => {
       centered>
       <SettingContainer theme={theme} style={{ padding: '10px 0', background: 'transparent' }}>
         <TranslatePromptSettings />
+        <GlossarySettings />
         <CustomBodySettings />
-        <SettingGroup theme={theme} style={{ flex: 1 }}>
-          <CustomLanguageSettings />
-        </SettingGroup>
       </SettingContainer>
     </Modal>
   )

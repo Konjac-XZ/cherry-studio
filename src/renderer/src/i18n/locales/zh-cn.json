@@ -892,6 +892,9 @@
     },
     "search": "搜索助手",
     "settings": {
+      "auto_cleanup_user_message": "自动清理已发送的用户消息",
+      "auto_copy": "自动复制助手回复",
+      "auto_translate": "自动翻译助手回复",
       "default_model": "默认模型",
       "knowledge_base": {
         "label": "知识库设置",
@@ -928,9 +931,6 @@
         "title": "MCP 服务器"
       },
       "model": "模型设置",
-      "auto_copy": "自动复制助手回复",
-      "auto_translate": "自动翻译助手回复",
-      "auto_cleanup_user_message": "自动清理已发送的用户消息",
       "more": "助手设置",
       "prompt": "提示词设置",
       "reasoning_effort": {
@@ -2060,20 +2060,6 @@
     "notes_placeholder": "输入此知识库的附加信息或上下文...",
     "provider_not_found": "未找到服务商",
     "rename": "重命名",
-    "retriever": "检索模式",
-    "retriever_bm25": "全文搜索",
-    "retriever_bm25_desc": "根据关键字的相关性和频率查找文档。",
-    "retriever_hybrid": "混合搜索 (推荐)",
-    "retriever_hybrid_desc": "结合关键词搜索和语义搜索，以实现最佳检索准确性。",
-    "retriever_hybrid_weight": {
-      "bm25": "全文",
-      "recommended": "推荐",
-      "title": "混合搜索权重调整 (全文 / 向量)",
-      "vector": "向量"
-    },
-    "retriever_tooltip": "使用不同的检索方式检索知识库",
-    "retriever_vector": "向量搜索",
-    "retriever_vector_desc": "根据语义相似性和含义查找文档。",
     "search": "搜索知识库",
     "search_placeholder": "输入查询内容",
     "settings": {
@@ -5046,9 +5032,6 @@
       "title": "消息设置",
       "use_serif_font": "使用衬线字体"
     },
-    "mineru": {
-      "api_key": "MinerU 现在提供每日 500 页的免费额度，您不需要填写密钥。"
-    },
     "miniapps": {
       "cache_change_notice": "更改将在打开的小程序增减至设定值后生效",
       "cache_description": "设置同时保持活跃状态的小程序最大数量",
@@ -5581,10 +5564,13 @@
       "edit_last_user_message": "编辑最后一条用户消息",
       "enabled": "启用",
       "exit_fullscreen": "退出全屏",
+      "go_home": "返回首页",
       "label": "按键",
       "mini_window": "快捷助手",
       "new_topic": "新建话题",
+      "next_assistant": "切换到下一个助手",
       "press_shortcut": "按下快捷键",
+      "previous_assistant": "切换到上一个助手",
       "rename_topic": "重命名话题",
       "reset_defaults": "重置默认快捷键",
       "reset_defaults_confirm": "确定要重置所有快捷键吗？",
@@ -5594,7 +5580,6 @@
       "select_model": "选择模型",
       "selection_assistant_select_text": "划词助手：取词",
       "selection_assistant_toggle": "开关划词助手",
-      "go_home": "返回首页",
       "show_app": "显示 / 隐藏应用",
       "show_settings": "打开设置",
       "show_translate": "翻译剪贴板",
@@ -5602,8 +5587,6 @@
       "toggle_new_context": "清除上下文",
       "toggle_show_assistants": "切换助手显示",
       "toggle_show_topics": "切换话题显示",
-      "previous_assistant": "切换到上一个助手",
-      "next_assistant": "切换到下一个助手",
       "zoom_in": "放大界面",
       "zoom_out": "缩小界面",
       "zoom_reset": "重置缩放"
@@ -5851,6 +5834,34 @@
           "placeholder": "中文"
         }
       },
+      "custom_body": "自定义请求体（使用 Vercel AI SDK 语法）",
+      "glossary": {
+        "delete": {
+          "description": "确定要删除此条目吗？",
+          "title": "删除词库条目"
+        },
+        "error": {
+          "add": "添加词库条目失败",
+          "delete": "删除词库条目失败",
+          "duplicate": "具有相同原文和目标语种的条目已存在",
+          "language_empty": "请选择目标语种",
+          "source_empty": "请输入原文",
+          "target_empty": "请输入译文",
+          "update": "更新词库条目失败"
+        },
+        "hint": "添加词库条目以定义自定义术语翻译。在提示词模板中使用 {{customized_dictionary}} 以注入匹配的术语。",
+        "language": "目标语种",
+        "source": "原文",
+        "source_placeholder": "例如：Agent",
+        "success": {
+          "add": "词库条目已添加",
+          "delete": "词库条目已删除",
+          "update": "词库条目已更新"
+        },
+        "target": "译文",
+        "target_placeholder": "例如：智能体",
+        "title": "词库"
+      },
       "prompt": "翻译提示词",
       "prompt_hint": "根据目标语言是否与“用户母语”设置一致，选择不同的提示词模板。",
       "prompt_native": "翻译到母语",
@@ -5859,7 +5870,6 @@
       "prompt_other": "翻译到其他语言",
       "prompt_other_description": "当目标语言与“用户母语”不一致，或尚未设置母语时使用。",
       "prompt_other_placeholder": "请输入翻译到其他目标语言时使用的提示词",
-      "custom_body": "自定义请求体（使用 Vercel AI SDK 语法）",
       "title": "翻译设置"
     },
     "tray": {
@@ -5973,10 +5983,6 @@
     "exchange": {
       "label": "交换源语言与目标语言"
     },
-    "flip": {
-      "label": "翻转识别的语言并重新翻译",
-      "success": "语言已翻转"
-    },
     "files": {
       "drag_text": "拖放到此处",
       "error": {
@@ -5986,6 +5992,10 @@
         "unknown": "读取文件内容失败"
       },
       "reading": "读取文件内容中..."
+    },
+    "flip": {
+      "label": "翻转识别的语言并重新翻译",
+      "success": "语言已翻转"
     },
     "history": {
       "clear": "清空历史",
@@ -6039,12 +6049,16 @@
       "model_placeholder": "选择翻译模型",
       "no_model_warning": "未选择翻译模型",
       "preview": "Markdown 预览",
+      "scroll_sync": "滚动同步设置",
+      "title": "翻译设置",
       "zh_cn_smart_quotes": {
         "label": "简体中文智能引号",
         "tip": "仅作用于简体中文 Markdown 输出。会将正文里的英文直引号转换为中文引号或尺寸符号，并尽量跳过代码、链接、URL 和其他结构化片段。"
       },
-      "scroll_sync": "滚动同步设置",
-      "title": "翻译设置"
+      "zh_markdown_spacing": {
+        "label": "中文 Markdown 空格优化",
+        "tip": "仅作用于简繁体中文 Markdown 输出。在翻译完成后为中文与拉丁文本自动补空格，并尽量跳过代码、公式、链接与其他结构化片段。"
+      }
     },
     "stop": "停止翻译",
     "success": {

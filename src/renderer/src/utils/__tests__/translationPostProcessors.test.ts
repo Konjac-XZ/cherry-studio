@@ -2,31 +2,38 @@ import { describe, expect, it } from 'vitest'
 
 import {
   applyTranslationPostProcessors,
-  DEFAULT_TRANSLATION_POST_PROCESSOR_FEATURES,
   normalizeZhCnMarkdownQuotes,
+  normalizeZhMarkdownTextSpacing,
   shouldApplyZhCnMarkdownSmartQuotes,
+  shouldApplyZhMarkdownTextSpacing,
   type TranslationPostProcessorContext
 } from '../translationPostProcessors'
 
-const enabledContext = (overrides: Partial<TranslationPostProcessorContext> = {}): TranslationPostProcessorContext => ({
-  features: {
-    ...DEFAULT_TRANSLATION_POST_PROCESSOR_FEATURES,
-    zhCnMarkdownSmartQuotes: true,
-    ...overrides.features
-  },
-  markdownEnabled: true,
-  targetLanguage: 'zh-cn',
-  ...overrides
-})
+type TestContextOverrides = Omit<Partial<TranslationPostProcessorContext>, 'features'> & {
+  features?: Partial<TranslationPostProcessorContext['features']>
+}
+
+const enabledContext = (overrides: TestContextOverrides = {}): TranslationPostProcessorContext => {
+  const featureOverrides = overrides.features
+
+  return {
+    features: {
+      zhCnMarkdownSmartQuotes: featureOverrides?.zhCnMarkdownSmartQuotes ?? true,
+      zhMarkdownTextSpacing: featureOverrides?.zhMarkdownTextSpacing ?? true
+    },
+    markdownEnabled: overrides.markdownEnabled ?? true,
+    targetLanguage: overrides.targetLanguage ?? 'zh-cn'
+  }
+}
 
 describe('translationPostProcessors', () => {
   describe('normalizeZhCnMarkdownQuotes', () => {
     it('converts standard prose double quotes to Chinese typography quotes', () => {
-      expect(normalizeZhCnMarkdownQuotes('他说 "你好"。')).toBe('他说 “你好”。')
+      expect(normalizeZhCnMarkdownQuotes('他说"你好"。')).toBe('他说“你好”。')
     })
 
     it('converts nested quotes', () => {
-      expect(normalizeZhCnMarkdownQuotes('她说 "他回答 \'好的\'"。')).toBe('她说 “他回答 ‘好的’”。')
+      expect(normalizeZhCnMarkdownQuotes('她说"他回答\'好的\'"。')).toBe('她说“他回答‘好的’”。')
     })
 
     it('keeps apostrophes as right single quotes', () => {
@@ -40,18 +47,16 @@ describe('translationPostProcessors', () => {
     })
 
     it('skips fenced code blocks and inline code', () => {
-      const input = ['```ts', 'const value = "test"', '```', '', '正文里的 "引号" 和 `const name = \"value\"`'].join(
-        '\n'
-      )
-      const expected = ['```ts', 'const value = "test"', '```', '', '正文里的 “引号” 和 `const name = \"value\"`'].join(
+      const input = ['```ts', 'const value = "test"', '```', '', '正文里的"引号"和 `const name = \"value\"`'].join('\n')
+      const expected = ['```ts', 'const value = "test"', '```', '', '正文里的“引号”和 `const name = \"value\"`'].join(
         '\n'
       )
       expect(normalizeZhCnMarkdownQuotes(input)).toBe(expected)
     })
 
     it('skips math and html fragments while still processing surrounding prose', () => {
-      const input = '正文 "引号"，公式 $f("x")$，以及 <span data-title="raw">"html"</span>。'
-      const expected = '正文 “引号”，公式 $f("x")$，以及 <span data-title="raw">"html"</span>。'
+      const input = '正文"引号"，公式 $f("x")$，以及 <span data-title="raw">"html"</span>。'
+      const expected = '正文“引号”，公式 $f("x")$，以及 <span data-title="raw">"html"</span>。'
       expect(normalizeZhCnMarkdownQuotes(input)).toBe(expected)
     })
 
@@ -73,20 +78,18 @@ describe('translationPostProcessors', () => {
     })
 
     it('pairs quotes across multiple text nodes inside formatting spans', () => {
-      expect(normalizeZhCnMarkdownQuotes('他说 "这段 **加粗** 文本" 值得看。')).toBe(
-        '他说 “这段 **加粗** 文本” 值得看。'
-      )
+      expect(normalizeZhCnMarkdownQuotes('他说"这段**加粗**文本"值得看。')).toBe('他说“这段**加粗**文本”值得看。')
     })
 
     it('handles mixed Chinese and English prose', () => {
-      expect(normalizeZhCnMarkdownQuotes('Claude said "hello", 她回答 \'没问题\'。')).toBe(
-        'Claude said “hello”, 她回答 ‘没问题’。'
+      expect(normalizeZhCnMarkdownQuotes('Claude said "hello", 她回答\'没问题\'。')).toBe(
+        'Claude said “hello”, 她回答‘没问题’。'
       )
     })
 
     it('preserves unrelated markdown structure without stringify normalization', () => {
-      const input = '段落前有 [link](https://example.com "title") 和 `code`，再说 "你好"。'
-      const expected = '段落前有 [link](https://example.com "title") 和 `code`，再说 “你好”。'
+      const input = '段落前有 [link](https://example.com "title") 和 `code`，再说"你好"。'
+      const expected = '段落前有 [link](https://example.com "title") 和 `code`，再说“你好”。'
       expect(normalizeZhCnMarkdownQuotes(input)).toBe(expected)
     })
 
@@ -96,41 +99,112 @@ describe('translationPostProcessors', () => {
     })
 
     it('skips frontmatter and still processes later prose', () => {
-      const input = ['---', 'title: "raw"', '---', '', '正文说 "你好"。'].join('\n')
-      const expected = ['---', 'title: "raw"', '---', '', '正文说 “你好”。'].join('\n')
+      const input = ['---', 'title: "raw"', '---', '', '正文说"你好"。'].join('\n')
+      const expected = ['---', 'title: "raw"', '---', '', '正文说“你好”。'].join('\n')
       expect(normalizeZhCnMarkdownQuotes(input)).toBe(expected)
     })
   })
 
   describe('applyTranslationPostProcessors', () => {
     it('applies the processor only for zh-cn markdown output when enabled', () => {
-      expect(applyTranslationPostProcessors('他说 "你好"。', enabledContext())).toBe('他说 “你好”。')
+      expect(applyTranslationPostProcessors('他说"你好"。', enabledContext())).toBe('他说“你好”。')
     })
 
     it('does not apply when markdown is disabled', () => {
-      expect(applyTranslationPostProcessors('他说 "你好"。', enabledContext({ markdownEnabled: false }))).toBe(
-        '他说 "你好"。'
+      expect(applyTranslationPostProcessors('他说"你好"。', enabledContext({ markdownEnabled: false }))).toBe(
+        '他说"你好"。'
       )
     })
 
     it('does not apply when the feature switch is disabled', () => {
       expect(
-        applyTranslationPostProcessors(
-          '他说 "你好"。',
-          enabledContext({ features: { zhCnMarkdownSmartQuotes: false } })
-        )
-      ).toBe('他说 "你好"。')
+        applyTranslationPostProcessors('他说"你好"。', enabledContext({ features: { zhCnMarkdownSmartQuotes: false } }))
+      ).toBe('他说"你好"。')
     })
 
     it('does not apply for non zh-cn targets', () => {
-      expect(applyTranslationPostProcessors('他说 "你好"。', enabledContext({ targetLanguage: 'en-us' }))).toBe(
-        '他说 "你好"。'
+      expect(applyTranslationPostProcessors('他说"你好"。', enabledContext({ targetLanguage: 'en-us' }))).toBe(
+        '他说"你好"。'
       )
     })
 
     it('exposes the same gate logic through shouldApplyZhCnMarkdownSmartQuotes', () => {
       expect(shouldApplyZhCnMarkdownSmartQuotes(enabledContext())).toBe(true)
       expect(shouldApplyZhCnMarkdownSmartQuotes(enabledContext({ targetLanguage: 'zh-tw' }))).toBe(false)
+    })
+
+    it('applies zh markdown text spacing for zh-cn and zh-tw when enabled', () => {
+      expect(
+        applyTranslationPostProcessors('这是OpenAI开发的模型。', enabledContext({ targetLanguage: 'zh-cn' }))
+      ).toBe('这是 OpenAI 开发的模型。')
+      expect(
+        applyTranslationPostProcessors('這是OpenAI開發的模型。', enabledContext({ targetLanguage: 'zh-tw' }))
+      ).toBe('這是 OpenAI 開發的模型。')
+    })
+
+    it('does not apply zh markdown text spacing when markdown is disabled', () => {
+      expect(
+        applyTranslationPostProcessors(
+          '这是OpenAI开发的模型。',
+          enabledContext({ markdownEnabled: false, targetLanguage: 'zh-cn' })
+        )
+      ).toBe('这是OpenAI开发的模型。')
+    })
+
+    it('does not apply zh markdown text spacing when feature switch is disabled', () => {
+      expect(
+        applyTranslationPostProcessors(
+          '这是OpenAI开发的模型。',
+          enabledContext({ features: { zhMarkdownTextSpacing: false }, targetLanguage: 'zh-cn' })
+        )
+      ).toBe('这是OpenAI开发的模型。')
+    })
+
+    it('does not apply zh markdown text spacing for non-Chinese targets', () => {
+      expect(
+        applyTranslationPostProcessors('这是OpenAI开发的模型。', enabledContext({ targetLanguage: 'en-us' }))
+      ).toBe('这是OpenAI开发的模型。')
+    })
+
+    it('applies smart quotes before spacing when both are enabled', () => {
+      expect(applyTranslationPostProcessors('他说"OpenAI"很厉害。', enabledContext({ targetLanguage: 'zh-cn' }))).toBe(
+        '他说“OpenAI”很厉害。'
+      )
+    })
+
+    it('exposes zh markdown spacing gate logic through shouldApplyZhMarkdownTextSpacing', () => {
+      expect(shouldApplyZhMarkdownTextSpacing(enabledContext({ targetLanguage: 'zh-cn' }))).toBe(true)
+      expect(shouldApplyZhMarkdownTextSpacing(enabledContext({ targetLanguage: 'zh-tw' }))).toBe(true)
+      expect(shouldApplyZhMarkdownTextSpacing(enabledContext({ targetLanguage: 'en-us' }))).toBe(false)
+    })
+  })
+
+  describe('normalizeZhMarkdownTextSpacing', () => {
+    it('adds spaces across formatting boundaries while keeping markdown markers', () => {
+      expect(normalizeZhMarkdownTextSpacing('这是**OpenAI**开发的模型。')).toBe('这是 **OpenAI** 开发的模型。')
+    })
+
+    it('skips spacing changes inside inline code and fenced code blocks', () => {
+      const input = ['```ts', 'const foo="bar"', '```', '', '请调用`fooBar()`函数'].join('\n')
+      const expected = ['```ts', 'const foo="bar"', '```', '', '请调用 `fooBar()` 函数'].join('\n')
+      expect(normalizeZhMarkdownTextSpacing(input)).toBe(expected)
+    })
+
+    it('skips spacing changes inside math and html fragments', () => {
+      const input = '设函数为$f(x)=x^2$，并展示<span>OpenAI测试</span>。'
+      const expected = '设函数为 $f(x)=x^2$，并展示 <span>OpenAI测试</span>。'
+      expect(normalizeZhMarkdownTextSpacing(input)).toBe(expected)
+    })
+
+    it('processes table cell text without changing table structure', () => {
+      const input = ['| 名称 | 描述 |', '| --- | --- |', '| GPT-4 | 由OpenAI开发 |'].join('\n')
+      const expected = ['| 名称 | 描述 |', '| --- | --- |', '| GPT-4 | 由 OpenAI 开发 |'].join('\n')
+      expect(normalizeZhMarkdownTextSpacing(input)).toBe(expected)
+    })
+
+    it('does not add spaces when fullwidth quotes are adjacent to Chinese bold text', () => {
+      const input = '在你的实际设置中，“阴性”**不只是**证据的模糊缺失。'
+      expect(normalizeZhMarkdownTextSpacing(input)).toBe(input)
     })
   })
 })

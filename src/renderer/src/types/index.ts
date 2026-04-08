@@ -671,6 +671,15 @@ export type CustomTranslateLanguage = {
   emoji: string
 }
 
+export interface GlossaryEntry {
+  id: string
+  sourcePhrase: string
+  targetPhrase: string
+  targetLanguage: TranslateLanguageCode
+  createdAt: number
+  updatedAt: number
+}
+
 export const AutoDetectionMethods = {
   franc: 'franc',
   llm: 'llm',

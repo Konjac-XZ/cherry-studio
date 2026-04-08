@@ -892,6 +892,9 @@
     },
     "search": "Search assistants...",
     "settings": {
+      "auto_cleanup_user_message": "Auto-clean up sent user messages",
+      "auto_copy": "Auto-copy assistant replies",
+      "auto_translate": "Auto-translate assistant replies",
       "default_model": "Default Model",
       "knowledge_base": {
         "label": "Knowledge Base Settings",
@@ -928,9 +931,6 @@
         "title": "MCP Settings"
       },
       "model": "Model Settings",
-      "auto_copy": "Auto-copy assistant replies",
-      "auto_translate": "Auto-translate assistant replies",
-      "auto_cleanup_user_message": "Auto-clean up sent user messages",
       "more": "Assistant Settings",
       "prompt": "Prompt Settings",
       "reasoning_effort": {
@@ -5564,10 +5564,13 @@
       "edit_last_user_message": "Edit Last User Message",
       "enabled": "Enable",
       "exit_fullscreen": "Exit Fullscreen",
+      "go_home": "Go to Home",
       "label": "Key",
       "mini_window": "Quick Assistant",
       "new_topic": "New Topic",
+      "next_assistant": "Next Assistant",
       "press_shortcut": "Press Shortcut",
+      "previous_assistant": "Previous Assistant",
       "rename_topic": "Rename Topic",
       "reset_defaults": "Reset Defaults",
       "reset_defaults_confirm": "Are you sure you want to reset all shortcuts?",
@@ -5577,7 +5580,6 @@
       "select_model": "Select Model",
       "selection_assistant_select_text": "Selection Assistant: Select Text",
       "selection_assistant_toggle": "Toggle Selection Assistant",
-      "go_home": "Go to Home",
       "show_app": "Show/Hide App",
       "show_settings": "Open Settings",
       "show_translate": "Translate Clipboard",
@@ -5585,8 +5587,6 @@
       "toggle_new_context": "Clear Context",
       "toggle_show_assistants": "Toggle Assistants",
       "toggle_show_topics": "Toggle Topics",
-      "previous_assistant": "Previous Assistant",
-      "next_assistant": "Next Assistant",
       "zoom_in": "Zoom In",
       "zoom_out": "Zoom Out",
       "zoom_reset": "Reset Zoom"
@@ -5834,6 +5834,34 @@
           "placeholder": "English"
         }
       },
+      "custom_body": "Custom Request Body",
+      "glossary": {
+        "delete": {
+          "description": "Are you sure you want to delete this entry?",
+          "title": "Delete glossary entry"
+        },
+        "error": {
+          "add": "Failed to add glossary entry",
+          "delete": "Failed to delete glossary entry",
+          "duplicate": "An entry with the same source term and target language already exists",
+          "language_empty": "Target language is required",
+          "source_empty": "Source term is required",
+          "target_empty": "Translation is required",
+          "update": "Failed to update glossary entry"
+        },
+        "hint": "Add glossary entries to define custom term translations. Use {{customized_dictionary}} in your prompt template to inject matched terms.",
+        "language": "Target language",
+        "source": "Source term",
+        "source_placeholder": "e.g., Agent",
+        "success": {
+          "add": "Glossary entry added",
+          "delete": "Glossary entry deleted",
+          "update": "Glossary entry updated"
+        },
+        "target": "Translation",
+        "target_placeholder": "e.g., 智能体",
+        "title": "Glossary"
+      },
       "prompt": "Translation prompts",
       "prompt_hint": "Choose which prompt template to use based on whether the target language matches your User Native Language setting.",
       "prompt_native": "Translate to native language",
@@ -5842,7 +5870,6 @@
       "prompt_other": "Translate to other languages",
       "prompt_other_description": "Used when the target language does not match your User Native Language, or when no native language is set.",
       "prompt_other_placeholder": "Enter the prompt used for all other target languages",
-      "custom_body": "Custom Request Body",
       "title": "Translation settings"
     },
     "tray": {
@@ -5956,10 +5983,6 @@
     "exchange": {
       "label": "Swap the source and target languages"
     },
-    "flip": {
-      "label": "Flip the detected language and translate again",
-      "success": "Language flipped"
-    },
     "files": {
       "drag_text": "Drop here",
       "error": {
@@ -5969,6 +5992,10 @@
         "unknown": "Failed to read file content"
       },
       "reading": "Reading file content..."
+    },
+    "flip": {
+      "label": "Flip the detected language and translate again",
+      "success": "Language flipped"
     },
     "history": {
       "clear": "Clear History",
@@ -6022,12 +6049,16 @@
       "model_placeholder": "Select translation model",
       "no_model_warning": "No translation model selected",
       "preview": "Markdown Preview",
+      "scroll_sync": "Scroll Sync Settings",
+      "title": "Translation Settings",
       "zh_cn_smart_quotes": {
         "label": "Simplified Chinese smart quotes",
         "tip": "Only affects Simplified Chinese Markdown output. Converts straight quotes in prose to Chinese quotes and measurement primes while skipping code, links, URLs, and other structured fragments."
       },
-      "scroll_sync": "Scroll Sync Settings",
-      "title": "Translation Settings"
+      "zh_markdown_spacing": {
+        "label": "Chinese Markdown spacing",
+        "tip": "Only affects Simplified/Traditional Chinese Markdown output. Applies spacing between Chinese and Latin text after translation is complete, while skipping code, formulas, links, and other structured fragments."
+      }
     },
     "stop": "Stop Translation",
     "success": {

@@ -33,6 +33,8 @@ const TranslateSettings: FC<{
   setAutoDisableThinking: (value: boolean) => void
   zhCnMarkdownSmartQuotesEnabled: boolean
   setZhCnMarkdownSmartQuotesEnabled: (value: boolean) => void
+  zhMarkdownTextSpacingEnabled: boolean
+  setZhMarkdownTextSpacingEnabled: (value: boolean) => void
 }> = ({
   visible,
   onClose,
@@ -51,7 +53,9 @@ const TranslateSettings: FC<{
   autoDisableThinking,
   setAutoDisableThinking,
   zhCnMarkdownSmartQuotesEnabled,
-  setZhCnMarkdownSmartQuotesEnabled
+  setZhCnMarkdownSmartQuotesEnabled,
+  zhMarkdownTextSpacingEnabled,
+  setZhMarkdownTextSpacingEnabled
 }) => {
   const { t } = useTranslation()
   const [localPair, setLocalPair] = useState<[TranslateLanguage, TranslateLanguage]>(bidirectionalPair)
@@ -108,6 +112,31 @@ const TranslateSettings: FC<{
                 setZhCnMarkdownSmartQuotesEnabled(checked)
                 void db.settings.put({
                   id: TRANSLATION_POST_PROCESSOR_SETTING_KEYS.zhCnMarkdownSmartQuotes,
+                  value: checked
+                })
+              }}
+            />
+          </Flex>
+        </div>
+
+        <div>
+          <Flex align="center" justify="space-between">
+            <div style={{ fontWeight: 500 }}>
+              <HStack alignItems="center" gap={5}>
+                {t('translate.settings.zh_markdown_spacing.label')}
+                <Tooltip title={t('translate.settings.zh_markdown_spacing.tip')}>
+                  <span style={{ display: 'flex', alignItems: 'center' }}>
+                    <HelpCircle size={14} style={{ color: 'var(--color-text-3)' }} />
+                  </span>
+                </Tooltip>
+              </HStack>
+            </div>
+            <Switch
+              checked={zhMarkdownTextSpacingEnabled}
+              onChange={(checked) => {
+                setZhMarkdownTextSpacingEnabled(checked)
+                void db.settings.put({
+                  id: TRANSLATION_POST_PROCESSOR_SETTING_KEYS.zhMarkdownTextSpacing,
                   value: checked
                 })
               }}

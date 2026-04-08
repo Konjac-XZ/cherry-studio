@@ -195,6 +195,9 @@ const TranslatePage: FC = () => {
   const [zhCnMarkdownSmartQuotesEnabled, setZhCnMarkdownSmartQuotesEnabled] = useState(
     DEFAULT_TRANSLATION_POST_PROCESSOR_FEATURES.zhCnMarkdownSmartQuotes
   )
+  const [zhMarkdownTextSpacingEnabled, setZhMarkdownTextSpacingEnabled] = useState(
+    DEFAULT_TRANSLATION_POST_PROCESSOR_FEATURES.zhMarkdownTextSpacing
+  )
   const clampFontSize = (value: number) => Math.max(12, Math.min(24, Math.round(value)))
   const [fontSize, setFontSize] = useState<number>(() => {
     try {
@@ -387,13 +390,14 @@ const TranslatePage: FC = () => {
     (content: string, targetLanguageCode: string) => {
       return applyTranslationPostProcessors(content, {
         features: {
-          zhCnMarkdownSmartQuotes: zhCnMarkdownSmartQuotesEnabled
+          zhCnMarkdownSmartQuotes: zhCnMarkdownSmartQuotesEnabled,
+          zhMarkdownTextSpacing: zhMarkdownTextSpacingEnabled
         },
         markdownEnabled: enableMarkdown,
         targetLanguage: targetLanguageCode
       })
     },
-    [enableMarkdown, zhCnMarkdownSmartQuotesEnabled]
+    [enableMarkdown, zhCnMarkdownSmartQuotesEnabled, zhMarkdownTextSpacingEnabled]
   )
 
   const effectiveTranslatedContent = useMemo(
@@ -988,6 +992,19 @@ const TranslatePage: FC = () => {
         void db.settings.put({
           id: TRANSLATION_POST_PROCESSOR_SETTING_KEYS.zhCnMarkdownSmartQuotes,
           value: DEFAULT_TRANSLATION_POST_PROCESSOR_FEATURES.zhCnMarkdownSmartQuotes
+        })
+      }
+
+      const zhMarkdownTextSpacingSetting = await db.settings.get({
+        id: TRANSLATION_POST_PROCESSOR_SETTING_KEYS.zhMarkdownTextSpacing
+      })
+      if (zhMarkdownTextSpacingSetting) {
+        setZhMarkdownTextSpacingEnabled(Boolean(zhMarkdownTextSpacingSetting.value))
+      } else {
+        setZhMarkdownTextSpacingEnabled(DEFAULT_TRANSLATION_POST_PROCESSOR_FEATURES.zhMarkdownTextSpacing)
+        void db.settings.put({
+          id: TRANSLATION_POST_PROCESSOR_SETTING_KEYS.zhMarkdownTextSpacing,
+          value: DEFAULT_TRANSLATION_POST_PROCESSOR_FEATURES.zhMarkdownTextSpacing
         })
       }
 
@@ -1673,6 +1690,8 @@ const TranslatePage: FC = () => {
         setEnableMarkdown={setEnableMarkdown}
         zhCnMarkdownSmartQuotesEnabled={zhCnMarkdownSmartQuotesEnabled}
         setZhCnMarkdownSmartQuotesEnabled={setZhCnMarkdownSmartQuotesEnabled}
+        zhMarkdownTextSpacingEnabled={zhMarkdownTextSpacingEnabled}
+        setZhMarkdownTextSpacingEnabled={setZhMarkdownTextSpacingEnabled}
         bidirectionalPair={bidirectionalPair}
         setBidirectionalPair={setBidirectionalPair}
         translateModel={translateModel}

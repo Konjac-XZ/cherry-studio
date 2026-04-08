@@ -15,7 +15,7 @@ import { SettingGroup, SettingTitle } from '..'
 const TranslatePromptSettings = () => {
   const { t } = useTranslation()
   const { theme } = useTheme()
-  const { nativeLanguageTranslateModelPrompt, otherLanguageTranslateModelPrompt, userNativeLanguage } = useSettings()
+  const { nativeLanguageTranslateModelPrompt, otherLanguageTranslateModelPrompt } = useSettings()
 
   const [localNativePrompt, setLocalNativePrompt] = useState(nativeLanguageTranslateModelPrompt)
   const [localOtherPrompt, setLocalOtherPrompt] = useState(otherLanguageTranslateModelPrompt)
@@ -42,71 +42,65 @@ const TranslatePromptSettings = () => {
 
   return (
     <SettingGroup theme={theme}>
-      <SettingTitle style={{ marginBottom: 12 }}>
-        {t('settings.translate.prompt')}
-      </SettingTitle>
-      <PromptDescription>{t('settings.translate.prompt_hint')}</PromptDescription>
+      <SettingTitle style={{ marginBottom: 12 }}>{t('settings.translate.prompt')}</SettingTitle>
 
-      <PromptSection>
-        <HStack alignItems="center" gap={10} height={30}>
-          {t('settings.translate.prompt_native')}
-          {localNativePrompt !== TRANSLATE_NATIVE_LANGUAGE_PROMPT && (
-            <Tooltip title={t('common.reset')}>
-              <ResetButton type="reset" onClick={onResetNativePrompt}>
-                <RedoOutlined size={16} />
-              </ResetButton>
-            </Tooltip>
-          )}
-        </HStack>
-        <PromptDescription>
-          {t('settings.translate.prompt_native_description', {
-            nativeLanguage: userNativeLanguage || t('common.not_set')
-          })}
-        </PromptDescription>
-        <Input.TextArea
-          value={localNativePrompt}
-          onChange={(e) => setLocalNativePrompt(e.target.value)}
-          onBlur={(e) => dispatch(setNativeLanguageTranslateModelPrompt(e.target.value))}
-          autoSize={{ minRows: 4, maxRows: 10 }}
-          placeholder={t('settings.translate.prompt_native_placeholder')}
-        />
-      </PromptSection>
+      <PromptGrid>
+        <PromptSection>
+          <HStack alignItems="center" gap={10} height={30}>
+            {t('settings.translate.prompt_native')}
+            {localNativePrompt !== TRANSLATE_NATIVE_LANGUAGE_PROMPT && (
+              <Tooltip title={t('common.reset')}>
+                <ResetButton type="reset" onClick={onResetNativePrompt}>
+                  <RedoOutlined size={16} />
+                </ResetButton>
+              </Tooltip>
+            )}
+          </HStack>
+          <Input.TextArea
+            value={localNativePrompt}
+            onChange={(e) => setLocalNativePrompt(e.target.value)}
+            onBlur={(e) => dispatch(setNativeLanguageTranslateModelPrompt(e.target.value))}
+            autoSize={{ minRows: 4, maxRows: 10 }}
+            placeholder={t('settings.translate.prompt_native_placeholder')}
+          />
+        </PromptSection>
 
-      <PromptSection>
-        <HStack alignItems="center" gap={10} height={30}>
-          {t('settings.translate.prompt_other')}
-          {localOtherPrompt !== TRANSLATE_PROMPT && (
-            <Tooltip title={t('common.reset')}>
-              <ResetButton type="reset" onClick={onResetOtherPrompt}>
-                <RedoOutlined size={16} />
-              </ResetButton>
-            </Tooltip>
-          )}
-        </HStack>
-        <PromptDescription>{t('settings.translate.prompt_other_description')}</PromptDescription>
-        <Input.TextArea
-          value={localOtherPrompt}
-          onChange={(e) => setLocalOtherPrompt(e.target.value)}
-          onBlur={(e) => dispatch(setOtherLanguageTranslateModelPrompt(e.target.value))}
-          autoSize={{ minRows: 4, maxRows: 10 }}
-          placeholder={t('settings.translate.prompt_other_placeholder')}
-        />
-      </PromptSection>
+        <PromptSection>
+          <HStack alignItems="center" gap={10} height={30}>
+            {t('settings.translate.prompt_other')}
+            {localOtherPrompt !== TRANSLATE_PROMPT && (
+              <Tooltip title={t('common.reset')}>
+                <ResetButton type="reset" onClick={onResetOtherPrompt}>
+                  <RedoOutlined size={16} />
+                </ResetButton>
+              </Tooltip>
+            )}
+          </HStack>
+          <Input.TextArea
+            value={localOtherPrompt}
+            onChange={(e) => setLocalOtherPrompt(e.target.value)}
+            onBlur={(e) => dispatch(setOtherLanguageTranslateModelPrompt(e.target.value))}
+            autoSize={{ minRows: 4, maxRows: 10 }}
+            placeholder={t('settings.translate.prompt_other_placeholder')}
+          />
+        </PromptSection>
+      </PromptGrid>
     </SettingGroup>
   )
 }
 
-const PromptSection = styled.div`
-  & + & {
-    margin-top: 20px;
+const PromptGrid = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+
+  @media (max-width: 1024px) {
+    grid-template-columns: 1fr;
   }
 `
 
-const PromptDescription = styled.div`
-  color: var(--color-text-2);
-  font-size: 12px;
-  line-height: 1.5;
-  margin-bottom: 8px;
+const PromptSection = styled.div`
+  min-width: 0;
 `
 
 const ResetButton = styled.button`
