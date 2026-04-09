@@ -1,4 +1,5 @@
 import { loggerService } from '@logger'
+import { TRANSLATE_AUTO_DISABLE_THINKING_KEY } from '@renderer/config/translateSettings'
 import { db } from '@renderer/databases'
 import type {
   AssistantSettings,
@@ -38,10 +39,25 @@ type SaveTranslateHistoryOptions = {
 
 type TranslateOptions = {
   // Lets callers opt out of the translation-specific reasoning override.
-  reasoningEffort: ReasoningEffortOption
+  reasoningEffort?: ReasoningEffortOption
 }
 
 const normalizeTranslateCacheText = (text: string) => text.trim().replace(/\s+/g, ' ')
+
+const shouldAutoDisableTranslateThinking = async (): Promise<boolean> => {
+  try {
+    const autoDisableThinkingSetting = await db.settings.get({ id: TRANSLATE_AUTO_DISABLE_THINKING_KEY })
+    return Boolean(autoDisableThinkingSetting?.value ?? true)
+  } catch (error) {
+    logger.warn('Failed to read translate minimize-thinking setting, fallback to enabled.', error as Error)
+    return true
+  }
+}
+
+export const getTranslateReasoningEffort = async (): Promise<ReasoningEffortOption> => {
+  const autoDisableThinking = await shouldAutoDisableTranslateThinking()
+  return autoDisableThinking ? 'none' : 'default'
+}
 
 export const createTranslateHistoryCacheKey = ({
   sourceText,
@@ -86,9 +102,8 @@ export const translateText = async (
   options?: TranslateOptions
 ) => {
   let error
-  const assistantSettings: Partial<AssistantSettings> | undefined = options
-    ? { reasoning_effort: options?.reasoningEffort }
-    : undefined
+  const reasoningEffort = options?.reasoningEffort ?? (await getTranslateReasoningEffort())
+  const assistantSettings: Partial<AssistantSettings> = { reasoning_effort: reasoningEffort }
 
   const glossaryEntries = await GlossaryService.getByTargetLanguage(targetLanguage.langCode)
   const dictionary = buildCustomizedDictionary(glossaryEntries, text)

@@ -69,7 +69,8 @@ vi.mock('@renderer/config/models', async (importOriginal) => {
   }
 })
 
-vi.mock('@renderer/config/translate', () => ({
+vi.mock('@renderer/config/translate', async (importOriginal) => ({
+  ...(await importOriginal()),
   mapLanguageToQwenMTModel: vi.fn()
 }))
 

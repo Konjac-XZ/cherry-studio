@@ -8,6 +8,7 @@ import LanguageSelect from '@renderer/components/LanguageSelect'
 import ModelSelectButton from '@renderer/components/ModelSelectButton'
 import { isEmbeddingModel, isRerankModel, isTextToImageModel } from '@renderer/config/models'
 import { LanguagesEnum, UNKNOWN } from '@renderer/config/translate'
+import { TRANSLATE_AUTO_DISABLE_THINKING_KEY } from '@renderer/config/translateSettings'
 import { useCodeStyle } from '@renderer/context/CodeStyleProvider'
 import db from '@renderer/databases'
 import { useDefaultModel } from '@renderer/hooks/useAssistant'
@@ -80,8 +81,6 @@ const logger = loggerService.withContext('TranslatePage')
 type TranslateTriggerOptions = {
   forceRefresh?: boolean
 }
-
-const TRANSLATE_AUTO_DISABLE_THINKING_KEY = 'translate:auto-disable-thinking'
 
 const isMacLikePlatform = () =>
   typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent)

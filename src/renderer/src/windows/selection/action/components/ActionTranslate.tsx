@@ -10,6 +10,7 @@ import useTranslate from '@renderer/hooks/useTranslate'
 import MessageContent from '@renderer/pages/home/Messages/MessageContent'
 import { getDefaultTopic, getDefaultTranslateAssistant } from '@renderer/services/AssistantService'
 import { pauseTrace } from '@renderer/services/SpanManagerService'
+import { getTranslateReasoningEffort } from '@renderer/services/TranslateService'
 import type { Assistant, Topic, TranslateLanguage, TranslateLanguageCode } from '@renderer/types'
 import { AssistantMessageStatus } from '@renderer/types/newMessage'
 import type { ActionItem } from '@renderer/types/selectionTypes'
@@ -113,7 +114,10 @@ const ActionTranslate: FC<Props> = ({ action, scrollToBottom }) => {
     logger.silly('[initialize] UpdateLanguagePair completed.')
 
     // Initialize assistant
-    const currentAssistant = getDefaultTranslateAssistant(targetLangRef.current, action.selectedText)
+    const reasoningEffort = await getTranslateReasoningEffort()
+    const currentAssistant = getDefaultTranslateAssistant(targetLangRef.current, action.selectedText, {
+      reasoning_effort: reasoningEffort
+    })
 
     assistantRef.current = currentAssistant
 
@@ -186,7 +190,10 @@ const ActionTranslate: FC<Props> = ({ action, scrollToBottom }) => {
     // Set actual target language for UI display
     setActualTargetLanguage(translateLang)
 
-    const assistant = getDefaultTranslateAssistant(translateLang, action.selectedText)
+    const reasoningEffort = await getTranslateReasoningEffort()
+    const assistant = getDefaultTranslateAssistant(translateLang, action.selectedText, {
+      reasoning_effort: reasoningEffort
+    })
     assistantRef.current = assistant
     logger.debug('process once')
     void processMessages(assistant, topicRef.current, assistant.content, setAskId, onStream, onFinish, onError)

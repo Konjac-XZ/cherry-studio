@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => {
   const last = vi.fn()
   const equals = vi.fn(() => ({ last }))
   const where = vi.fn(() => ({ equals }))
+  const settingsGet = vi.fn()
 
   return {
     translateHistory: {
@@ -14,6 +15,9 @@ const mocks = vi.hoisted(() => {
       where,
       equals,
       last
+    },
+    settings: {
+      get: settingsGet
     },
     uuid: vi.fn(() => 'history-1'),
     readyToAbort: vi.fn(),
@@ -26,7 +30,8 @@ const mocks = vi.hoisted(() => {
 
 vi.mock('@renderer/databases', () => ({
   db: {
-    translate_history: mocks.translateHistory
+    translate_history: mocks.translateHistory,
+    settings: mocks.settings
   }
 }))
 
@@ -72,6 +77,7 @@ describe('TranslateService reusable history', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.uuid.mockReturnValue('history-1')
+    mocks.settings.get.mockResolvedValue({ value: true })
   })
 
   it('normalizes whitespace and includes model in the cache key', () => {
@@ -183,6 +189,59 @@ describe('TranslateService reusable history', () => {
       'hello',
       {
         reasoning_effort: 'default'
+      },
+      ''
+    )
+    expect(result).toBe('你好')
+  })
+
+  it('uses minimize-thinking setting when no explicit reasoning effort is provided', async () => {
+    const targetLanguage = { langCode: 'zh-cn', value: 'Chinese' } as any
+    mocks.settings.get.mockResolvedValue({ value: false })
+    mocks.getDefaultTranslateAssistant.mockReturnValue({
+      content: 'Translate hello',
+      model: { id: 'model-a' },
+      settings: {}
+    })
+    mocks.fetchChatCompletion.mockImplementation(async ({ onChunkReceived }) => {
+      onChunkReceived?.({ type: ChunkType.TEXT_DELTA, text: '你好' })
+      onChunkReceived?.({ type: ChunkType.TEXT_COMPLETE, text: '你好' })
+    })
+
+    const result = await translateText('hello', targetLanguage)
+
+    expect(mocks.settings.get).toHaveBeenCalledWith({ id: 'translate:auto-disable-thinking' })
+    expect(mocks.getDefaultTranslateAssistant).toHaveBeenCalledWith(
+      targetLanguage,
+      'hello',
+      {
+        reasoning_effort: 'default'
+      },
+      ''
+    )
+    expect(result).toBe('你好')
+  })
+
+  it('falls back to minimize-thinking when setting read fails', async () => {
+    const targetLanguage = { langCode: 'zh-cn', value: 'Chinese' } as any
+    mocks.settings.get.mockRejectedValue(new Error('db offline'))
+    mocks.getDefaultTranslateAssistant.mockReturnValue({
+      content: 'Translate hello',
+      model: { id: 'model-a' },
+      settings: {}
+    })
+    mocks.fetchChatCompletion.mockImplementation(async ({ onChunkReceived }) => {
+      onChunkReceived?.({ type: ChunkType.TEXT_DELTA, text: '你好' })
+      onChunkReceived?.({ type: ChunkType.TEXT_COMPLETE, text: '你好' })
+    })
+
+    const result = await translateText('hello', targetLanguage)
+
+    expect(mocks.getDefaultTranslateAssistant).toHaveBeenCalledWith(
+      targetLanguage,
+      'hello',
+      {
+        reasoning_effort: 'none'
       },
       ''
     )

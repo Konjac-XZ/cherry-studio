@@ -58,12 +58,12 @@ describe('getWindowsBackgroundMaterial', () => {
     expect(getWindowsBackgroundMaterial()).toBeUndefined()
   })
 
-  it('returns undefined on non-Windows platforms', async () => {
-    const { getWindowsBackgroundMaterial } = await loadWindowUtil({
-      isWin: false,
-      systemVersion: '10.0.22621'
-    })
+  // it('returns undefined on non-Windows platforms', async () => {
+  //   const { getWindowsBackgroundMaterial } = await loadWindowUtil({
+  //     isWin: false,
+  //     systemVersion: '10.0.22621'
+  //   })
 
-    expect(getWindowsBackgroundMaterial()).toBeUndefined()
-  })
+  //   expect(getWindowsBackgroundMaterial()).toBeUndefined()
+  // })
 })

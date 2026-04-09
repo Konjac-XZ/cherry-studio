@@ -1,5 +1,6 @@
 import LanguageSelect from '@renderer/components/LanguageSelect'
 import { HStack } from '@renderer/components/Layout'
+import { TRANSLATE_AUTO_DISABLE_THINKING_KEY } from '@renderer/config/translateSettings'
 import db from '@renderer/databases'
 import useTranslate from '@renderer/hooks/useTranslate'
 import type { AutoDetectionMethod, Model, TranslateLanguage } from '@renderer/types'
@@ -167,7 +168,7 @@ const TranslateSettings: FC<{
               checked={autoDisableThinking}
               onChange={(checked) => {
                 setAutoDisableThinking(checked)
-                void db.settings.put({ id: 'translate:auto-disable-thinking', value: checked })
+                void db.settings.put({ id: TRANSLATE_AUTO_DISABLE_THINKING_KEY, value: checked })
               }}
             />
           </Flex>
