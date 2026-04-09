@@ -177,6 +177,7 @@ export function getReasoningEffort(assistant: Assistant, model: Model): Reasonin
     if (
       isSupportedThinkingTokenDoubaoModel(model) ||
       isSupportedThinkingTokenZhipuModel(model) ||
+      isSupportedThinkingTokenMiMoModel(model) ||
       isSupportedThinkingTokenKimiModel(model)
     ) {
       if (provider.id === SystemProviderIds.cerebras) {
