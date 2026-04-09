@@ -2498,7 +2498,7 @@ const migrateConfig = {
   },
   '152': (state: RootState) => {
     try {
-      state.translate.settings = {
+      ;(state.translate as any).settings = {
         autoCopy: false,
         customBody: ''
       }
@@ -3411,6 +3411,42 @@ const migrateConfig = {
       return state
     } catch (error) {
       logger.error('migrate 206 error', error as Error)
+      return state
+    }
+  },
+  '207': (state: RootState) => {
+    try {
+      const translateSettings = state.translate.settings as any
+      const oldCustomBody: string = translateSettings.customBody ?? ''
+      delete translateSettings.customBody
+      if (!translateSettings.customParameters) {
+        translateSettings.customParameters = []
+        if (oldCustomBody.trim()) {
+          try {
+            const parsed = JSON.parse(oldCustomBody)
+            if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+              translateSettings.customParameters = Object.entries(parsed).map(([name, value]) => ({
+                name,
+                value: typeof value === 'object' ? JSON.stringify(value) : (value as string | number | boolean),
+                type:
+                  typeof value === 'object'
+                    ? 'json'
+                    : typeof value === 'number'
+                      ? 'number'
+                      : typeof value === 'boolean'
+                        ? 'boolean'
+                        : 'string'
+              }))
+            }
+          } catch {
+            /* invalid JSON — discard silently */
+          }
+        }
+      }
+      logger.info('migrate 207 success')
+      return state
+    } catch (error) {
+      logger.error('migrate 207 error', error as Error)
       return state
     }
   }

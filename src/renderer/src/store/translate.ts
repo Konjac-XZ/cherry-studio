@@ -16,14 +16,14 @@
  */
 import type { PayloadAction } from '@reduxjs/toolkit'
 import { createSlice } from '@reduxjs/toolkit'
+import type { AssistantSettingCustomParameters } from '@renderer/types'
 
 export interface TranslateState {
   translateInput: string
   translatedContent: string
-  // TODO: #9749
   settings: {
     autoCopy: boolean
-    customBody: string
+    customParameters: AssistantSettingCustomParameters[]
   }
 }
 
@@ -32,7 +32,7 @@ const initialState: TranslateState = {
   translatedContent: '',
   settings: {
     autoCopy: false,
-    customBody: ''
+    customParameters: []
   }
 } as const
 

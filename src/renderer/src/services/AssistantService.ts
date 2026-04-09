@@ -18,7 +18,6 @@ import type { SettingsState } from '@renderer/store/settings'
 import type {
   Assistant,
   AssistantPreset,
-  AssistantSettingCustomParameters,
   AssistantSettings,
   Model,
   Provider,
@@ -144,28 +143,7 @@ export function getDefaultTranslateAssistant(
 
   const content = getTranslateContent(model, text, targetLanguage)
 
-  const customBody = store.getState().translate.settings.customBody
-  let customParameters: AssistantSettingCustomParameters[] = []
-  if (customBody?.trim()) {
-    try {
-      const parsed = JSON.parse(customBody)
-      if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
-        customParameters = Object.entries(parsed).map(([name, value]) => ({
-          name,
-          value: typeof value === 'object' ? JSON.stringify(value) : (value as string | number | boolean),
-          type: (typeof value === 'object'
-            ? 'json'
-            : typeof value === 'number'
-              ? 'number'
-              : typeof value === 'boolean'
-                ? 'boolean'
-                : 'string') as AssistantSettingCustomParameters['type']
-        }))
-      }
-    } catch {
-      /* skip invalid JSON silently */
-    }
-  }
+  const customParameters = store.getState().translate.settings.customParameters ?? []
 
   const mergedSettings = {
     ...settings,

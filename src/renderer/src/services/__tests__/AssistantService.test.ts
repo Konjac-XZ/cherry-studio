@@ -72,6 +72,12 @@ describe('AssistantService.getDefaultTranslateAssistant', () => {
         defaultAssistant: {
           settings: {}
         }
+      },
+      translate: {
+        settings: {
+          autoCopy: false,
+          customParameters: []
+        }
       }
     })
   })

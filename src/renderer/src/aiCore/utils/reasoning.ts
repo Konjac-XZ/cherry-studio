@@ -954,7 +954,7 @@ export function getOllamaReasoningParams(assistant: Assistant, model: Model): Pi
  * 从 assistant 设置中提取自定义参数
  */
 export function getCustomParameters(assistant: Assistant): Record<string, any> {
-  return (
+  const customParams =
     assistant?.settings?.customParameters?.reduce((acc, param) => {
       if (!param.name?.trim()) {
         return acc
@@ -979,7 +979,13 @@ export function getCustomParameters(assistant: Assistant): Record<string, any> {
         [param.name]: param.value
       }
     }, {}) || {}
-  )
+
+  logger.debug('Parsed custom parameters', {
+    customParameterNames: Object.keys(customParams),
+    customParams
+  })
+
+  return customParams
 }
 
 /**

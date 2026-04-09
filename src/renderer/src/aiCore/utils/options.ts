@@ -216,6 +216,9 @@ export function buildProviderOptions(
         textVerbosity
       )
       break
+    case 'newapi':
+      providerSpecificOptions = buildNewApiProviderOptions(assistant, model, capabilities, serviceTier, textVerbosity)
+      break
     case SystemProviderIds.ollama:
       providerSpecificOptions = buildOllamaProviderOptions(assistant, model, capabilities)
       break
@@ -309,6 +312,18 @@ export function buildProviderOptions(
     }
   }
   logger.debug('Final providerSpecificOptions after merging providerParams', { providerSpecificOptions })
+
+  if (primaryAiSdkProviderId === 'google' || actualAiSdkProviderIds.includes('google')) {
+    logger.debug('Gemini provider option flow', {
+      rawProviderId,
+      primaryAiSdkProviderId,
+      actualAiSdkProviderIds,
+      customParams,
+      standardParams,
+      providerParams: mergedProviderParams,
+      googleProviderOptions: providerSpecificOptions.google
+    })
+  }
 
   // 返回 AI Core SDK 要求的格式：{ 'providerId': providerOptions } 以及提取的标准参数
   return {
@@ -481,6 +496,35 @@ function buildCherryInProviderOptions(
 
     default:
       return buildGenericProviderOptions('cherryin', assistant, model, capabilities)
+  }
+}
+
+function buildNewApiProviderOptions(
+  assistant: Assistant,
+  model: Model,
+  capabilities: Pick<ProviderCapabilities, 'enableReasoning' | 'enableWebSearch' | 'enableGenerateImage'>,
+  serviceTier: OpenAIServiceTier,
+  textVerbosity: OpenAIVerbosity
+): Record<string, OpenAIResponsesProviderOptions | AnthropicProviderOptions | GoogleGenerativeAIProviderOptions> {
+  switch (model.endpoint_type) {
+    case 'anthropic':
+      return buildAnthropicProviderOptions(assistant, model, capabilities)
+    case 'gemini':
+      return buildGeminiProviderOptions(assistant, model, capabilities)
+    case 'openai-response':
+      return buildOpenAIProviderOptions(assistant, model, capabilities, serviceTier, textVerbosity)
+    default: {
+      const providerOptions = buildGenericProviderOptions('newapi', assistant, model, capabilities)
+
+      return {
+        ...providerOptions,
+        newapi: {
+          ...providerOptions.newapi,
+          serviceTier,
+          textVerbosity
+        }
+      }
+    }
   }
 }
 

@@ -47,8 +47,8 @@ describe('translationPostProcessors', () => {
     })
 
     it('skips fenced code blocks and inline code', () => {
-      const input = ['```ts', 'const value = "test"', '```', '', '正文里的"引号"和 `const name = \"value\"`'].join('\n')
-      const expected = ['```ts', 'const value = "test"', '```', '', '正文里的“引号”和 `const name = \"value\"`'].join(
+      const input = ['```ts', 'const value = "test"', '```', '', '正文里的"引号"和 `const name = "value"`'].join('\n')
+      const expected = ['```ts', 'const value = "test"', '```', '', '正文里的“引号”和 `const name = "value"`'].join(
         '\n'
       )
       expect(normalizeZhCnMarkdownQuotes(input)).toBe(expected)
@@ -205,6 +205,40 @@ describe('translationPostProcessors', () => {
     it('does not add spaces when fullwidth quotes are adjacent to Chinese bold text', () => {
       const input = '在你的实际设置中，“阴性”**不只是**证据的模糊缺失。'
       expect(normalizeZhMarkdownTextSpacing(input)).toBe(input)
+    })
+
+    it('adds space between bold text ending with ASCII and following Chinese character', () => {
+      expect(normalizeZhMarkdownTextSpacing('**数据库 A**回答："我们目前对这个缺陷的判断是什么？"')).toBe(
+        '**数据库 A** 回答："我们目前对这个缺陷的判断是什么？"'
+      )
+    })
+
+    it('adds spaces between Chinese text and numbers inside bold spans', () => {
+      expect(
+        normalizeZhMarkdownTextSpacing(
+          '你总共有**57个目标**，在目标层有**15个阴性**、**13个阳性**、**2个不确定**和**27个待分析**。'
+        )
+      ).toBe('你总共有 **57 个目标**，在目标层有 **15 个阴性**、**13 个阳性**、**2 个不确定**和 **27 个待分析**。')
+    })
+
+    it('does not add spaces #2', () => {
+      expect(
+        normalizeZhMarkdownTextSpacing(
+          '是的，该论文描述了若干**不合规漏洞**的实例，这些漏洞对现有工具来说是“隐藏”的，因为它们不会引发崩溃，且通常涉及复杂的**多方通信逻辑**。'
+        )
+      ).toBe(
+        '是的，该论文描述了若干**不合规漏洞**的实例，这些漏洞对现有工具来说是“隐藏”的，因为它们不会引发崩溃，且通常涉及复杂的**多方通信逻辑**。'
+      )
+    })
+
+    it('real-world #0', () => {
+      expect(
+        normalizeZhMarkdownTextSpacing(
+          '为了发现这类漏洞，MBFuzzer采用**differential testing**——即对比多个代理实现之间的差异——来找出不一致之处，这些不一致表明一个或多个实现未遵守共同的协议规范。'
+        )
+      ).toBe(
+        '为了发现这类漏洞，MBFuzzer 采用 **differential testing**——即对比多个代理实现之间的差异——来找出不一致之处，这些不一致表明一个或多个实现未遵守共同的协议规范。'
+      )
     })
   })
 })

@@ -188,7 +188,7 @@ const HomePage: FC = () => {
       }
 
       if (visibleSet.size === 1) {
-        const onlyId = visibleSet.values().next().value as string | undefined
+        const onlyId = visibleSet.values().next().value
         if (onlyId === undefined || onlyId === activeAssistant.id) {
           return
         }

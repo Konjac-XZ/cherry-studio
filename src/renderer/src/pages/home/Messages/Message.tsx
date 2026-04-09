@@ -201,7 +201,7 @@ const MessageItem: FC<Props> = ({
     }
 
     const latestMessage = state.messages.entities[message.id] ?? message
-    const text = removeTrailingDoubleSpaces(getMainTextContent(latestMessage as Message).trimStart())
+    const text = removeTrailingDoubleSpaces(getMainTextContent(latestMessage).trimStart())
     if (!text) {
       return
     }

@@ -4723,8 +4723,10 @@
         "label": "Target language",
         "russian": "Russian"
       },
-      "user_native_language": "User Native Language",
-      "user_native_language.unspecified": "Unspecified"
+      "user_native_language": {
+        "label": "User Native Language",
+        "unspecified": "Unspecified"
+      }
     },
     "launch": {
       "onboot": "Start Automatically on Boot",

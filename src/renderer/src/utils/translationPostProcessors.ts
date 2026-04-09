@@ -32,14 +32,18 @@ type ProtectedRange = {
   start: number
 }
 
-type ProtectedToken = {
-  placeholder: string
-  original: string
-}
-
 type QuoteState = {
   doubleDepth: number
   singleDepth: number
+}
+
+type InlineSpacingUnit = {
+  end: number
+  firstVisible: string | null
+  lastVisible: string | null
+  raw: string
+  start: number
+  visibleText: string
 }
 
 type TranslationPostProcessor = {
@@ -80,6 +84,7 @@ const CHINESE_TARGET_LANGUAGE_CODES = new Set([SIMPLIFIED_CHINESE_LANGUAGE_CODE,
 
 const CONTAINER_TYPES = new Set(['heading', 'paragraph', 'tableCell'])
 const SKIPPED_NODE_TYPES = new Set(['code', 'definition', 'html', 'inlineCode', 'inlineMath', 'math', 'toml', 'yaml'])
+const OPAQUE_INLINE_NODE_TYPES = new Set(['break', 'image', 'imageReference', 'inlineCode', 'inlineMath'])
 const OPENING_PUNCTUATION = new Set(['(', '<', '[', '{', '«', '“', '‘', '（', '【', '《', '「', '『'])
 const CLOSING_PUNCTUATION = new Set([
   '!',
@@ -106,11 +111,12 @@ const CLOSING_PUNCTUATION = new Set([
   '！',
   '？'
 ])
+const QUOTE_PUNCTUATION = new Set(['"', "'"])
 
 const URL_PATTERN = /\b(?:https?:\/\/|mailto:|www\.)[^\s<>()\]]+/giu
 const WINDOWS_PATH_PATTERN = /\b[a-zA-Z]:\\(?:[^\\\s]+\\)*[^\\\s]+/g
 const UNIX_PATH_PATTERN = /(?:^|\s)(?:\.\.\/|\.\/|\/)(?:[^\s/]+\/)+[^\s/]+/g
-const STRUCTURED_JSON_PATTERN = /^\s*[\[{][\s\S]*[\]}]\s*$/u
+const STRUCTURED_JSON_PATTERN = /^\s*[[{][\s\S]*[\]}]\s*$/u
 const YAML_LINE_PATTERN = /^\s*[A-Za-z0-9_-]+\s*:\s*.+$/u
 const SHELL_COMMAND_PATTERN =
   /^(?:[$>#]\s*)?(?:pnpm|npm|yarn|git|node|python|bash|sh|pwsh|powershell|curl|wget|cd|ls|cat)\b/u
@@ -202,16 +208,14 @@ export function normalizeZhMarkdownTextSpacing(markdown: string): string {
     return markdown
   }
 
-  const spacingProtectedRanges = normalizeRanges([
-    ...protectedRanges,
-    ...collectSpacingProtectedRanges(root, markdown),
-    ...collectInlineProtectedRanges(markdown)
-  ])
-  const { text: placeholderText, tokens } = replaceProtectedRangesWithPlaceholders(markdown, spacingProtectedRanges)
-  const spacedText = cleanupZhMarkdownSpacing(spacingWithPangu(placeholderText))
-  const restoredText = restoreProtectedPlaceholders(spacedText, tokens)
+  const edits: OffsetEdit[] = []
+  collectContainerSpacingEdits(root, markdown, protectedRanges, edits)
 
-  return restoredText === markdown ? markdown : restoredText
+  if (edits.length === 0) {
+    return markdown
+  }
+
+  return applyOffsetEdits(markdown, edits)
 }
 
 function collectContainerEdits(
@@ -240,6 +244,46 @@ function collectContainerEdits(
 
   for (const child of node.children || []) {
     collectContainerEdits(child, markdown, protectedRanges, edits)
+  }
+}
+
+function collectContainerSpacingEdits(
+  node: MarkdownNode,
+  markdown: string,
+  protectedRanges: ProtectedRange[],
+  edits: OffsetEdit[]
+): void {
+  if (!node.type) {
+    for (const child of node.children || []) {
+      collectContainerSpacingEdits(child, markdown, protectedRanges, edits)
+    }
+    return
+  }
+
+  if (CONTAINER_TYPES.has(node.type)) {
+    const nodeRange = getNodeRange(node)
+    if (!nodeRange || isProtectedOffsetRange(nodeRange.start, nodeRange.end, protectedRanges)) {
+      return
+    }
+
+    const visibleText = collectContainerVisibleText(node)
+    if (visibleText && looksLikeStructuredText(visibleText)) {
+      return
+    }
+
+    const spacedContainer = buildSpacedCompositeUnit(node, markdown, protectedRanges)
+    if (spacedContainer && spacedContainer.raw !== markdown.slice(nodeRange.start, nodeRange.end)) {
+      edits.push({
+        deleteCount: nodeRange.end - nodeRange.start,
+        offset: nodeRange.start,
+        replacement: spacedContainer.raw
+      })
+    }
+    return
+  }
+
+  for (const child of node.children || []) {
+    collectContainerSpacingEdits(child, markdown, protectedRanges, edits)
   }
 }
 
@@ -358,6 +402,323 @@ function collectQuoteEdits(buffer: VirtualTextBuffer, markdown: string): OffsetE
   }
 
   return edits
+}
+
+function buildSpacedCompositeUnit(
+  node: MarkdownNode,
+  markdown: string,
+  protectedRanges: ProtectedRange[]
+): InlineSpacingUnit | null {
+  const nodeRange = getNodeRange(node)
+  if (!nodeRange) {
+    return null
+  }
+
+  const childUnits = buildInlineSpacingUnits(node.children || [], markdown, protectedRanges)
+  if (childUnits.length === 0) {
+    const raw = markdown.slice(nodeRange.start, nodeRange.end)
+    return {
+      end: nodeRange.end,
+      firstVisible: findFirstVisibleChar(raw),
+      lastVisible: findLastVisibleChar(raw),
+      raw,
+      start: nodeRange.start,
+      visibleText: raw
+    }
+  }
+
+  let raw = ''
+  let cursor = nodeRange.start
+  let previousVisibleUnit: InlineSpacingUnit | null = null
+
+  for (const childUnit of childUnits) {
+    if (cursor <= childUnit.start) {
+      const gap = markdown.slice(cursor, childUnit.start)
+      raw += normalizeInlineSlotGap(gap, previousVisibleUnit?.lastVisible ?? null, childUnit.firstVisible)
+    }
+
+    raw += childUnit.raw
+    cursor = childUnit.end
+
+    if (childUnit.firstVisible) {
+      previousVisibleUnit = childUnit
+    }
+  }
+
+  if (cursor < nodeRange.end) {
+    raw += markdown.slice(cursor, nodeRange.end)
+  }
+
+  return {
+    end: nodeRange.end,
+    firstVisible: findFirstVisibleChild(childUnits),
+    lastVisible: findLastVisibleChild(childUnits),
+    raw,
+    start: nodeRange.start,
+    visibleText: childUnits.map((childUnit) => childUnit.visibleText).join('')
+  }
+}
+
+function buildInlineSpacingUnits(
+  nodes: MarkdownNode[],
+  markdown: string,
+  protectedRanges: ProtectedRange[]
+): InlineSpacingUnit[] {
+  const units: InlineSpacingUnit[] = []
+
+  for (let index = 0; index < nodes.length; index += 1) {
+    const htmlAtom = matchHtmlInlineAtom(nodes, index, markdown)
+    if (htmlAtom) {
+      units.push(htmlAtom.unit)
+      index = htmlAtom.endIndex
+      continue
+    }
+
+    const unit = buildInlineSpacingUnit(nodes[index], markdown, protectedRanges)
+    if (unit) {
+      units.push(unit)
+    }
+  }
+
+  return units
+}
+
+function buildInlineSpacingUnit(
+  node: MarkdownNode,
+  markdown: string,
+  protectedRanges: ProtectedRange[]
+): InlineSpacingUnit | null {
+  if (!node.type) {
+    return null
+  }
+
+  if (node.type === 'text') {
+    return buildTextSpacingUnit(node, markdown, protectedRanges)
+  }
+
+  if (node.type === 'link' && isAutolinkLikeLink(node)) {
+    return buildOpaqueInlineUnit(node, markdown, collectNodeVisibleText(node))
+  }
+
+  if (OPAQUE_INLINE_NODE_TYPES.has(node.type) || node.type === 'html') {
+    return buildOpaqueInlineUnit(node, markdown, collectNodeVisibleText(node))
+  }
+
+  if (node.children?.length) {
+    return buildSpacedCompositeUnit(node, markdown, protectedRanges)
+  }
+
+  return buildOpaqueInlineUnit(node, markdown, collectNodeVisibleText(node))
+}
+
+function buildTextSpacingUnit(
+  node: MarkdownNode,
+  markdown: string,
+  protectedRanges: ProtectedRange[]
+): InlineSpacingUnit | null {
+  const nodeRange = getNodeRange(node)
+  if (!nodeRange) {
+    return null
+  }
+
+  const raw = markdown.slice(nodeRange.start, nodeRange.end)
+  const spaced = isProtectedOffsetRange(nodeRange.start, nodeRange.end, protectedRanges)
+    ? raw
+    : cleanupZhMarkdownSpacing(applyZhMarkdownSpacing(raw))
+
+  return {
+    end: nodeRange.end,
+    firstVisible: findFirstVisibleChar(spaced),
+    lastVisible: findLastVisibleChar(spaced),
+    raw: spaced,
+    start: nodeRange.start,
+    visibleText: spaced
+  }
+}
+
+function buildOpaqueInlineUnit(node: MarkdownNode, markdown: string, visibleText: string): InlineSpacingUnit | null {
+  const nodeRange = getNodeRange(node)
+  if (!nodeRange) {
+    return null
+  }
+
+  const raw = markdown.slice(nodeRange.start, nodeRange.end)
+  return {
+    end: nodeRange.end,
+    firstVisible: findFirstAtomBoundaryChar(visibleText),
+    lastVisible: findLastAtomBoundaryChar(visibleText),
+    raw,
+    start: nodeRange.start,
+    visibleText
+  }
+}
+
+function matchHtmlInlineAtom(
+  nodes: MarkdownNode[],
+  startIndex: number,
+  markdown: string
+): { endIndex: number; unit: InlineSpacingUnit } | null {
+  const startNode = nodes[startIndex]
+  if (startNode.type !== 'html' || !startNode.value) {
+    return null
+  }
+
+  const tagName = getHtmlTagName(startNode.value)
+  if (!tagName || !isOpeningHtmlTag(startNode.value)) {
+    return buildOpaqueInlineAtomMatch(nodes, startIndex, startIndex, markdown)
+  }
+
+  let depth = 1
+  for (let index = startIndex + 1; index < nodes.length; index += 1) {
+    const currentNode = nodes[index]
+    if (currentNode.type !== 'html' || !currentNode.value || getHtmlTagName(currentNode.value) !== tagName) {
+      continue
+    }
+
+    if (isOpeningHtmlTag(currentNode.value)) {
+      depth += 1
+      continue
+    }
+
+    if (isClosingHtmlTag(currentNode.value)) {
+      depth -= 1
+      if (depth === 0) {
+        return buildOpaqueInlineAtomMatch(nodes, startIndex, index, markdown)
+      }
+    }
+  }
+
+  return buildOpaqueInlineAtomMatch(nodes, startIndex, startIndex, markdown)
+}
+
+function buildOpaqueInlineAtomMatch(
+  nodes: MarkdownNode[],
+  startIndex: number,
+  endIndex: number,
+  markdown: string
+): { endIndex: number; unit: InlineSpacingUnit } | null {
+  const startRange = getNodeRange(nodes[startIndex])
+  const endRange = getNodeRange(nodes[endIndex])
+  if (!startRange || !endRange) {
+    return null
+  }
+
+  const visibleText = nodes
+    .slice(startIndex, endIndex + 1)
+    .map((node) => collectNodeVisibleText(node))
+    .join('')
+  return {
+    endIndex,
+    unit: {
+      end: endRange.end,
+      firstVisible: findFirstAtomBoundaryChar(visibleText),
+      lastVisible: findLastAtomBoundaryChar(visibleText),
+      raw: markdown.slice(startRange.start, endRange.end),
+      start: startRange.start,
+      visibleText
+    }
+  }
+}
+
+function normalizeInlineSlotGap(gap: string, leftVisible: string | null, rightVisible: string | null): string {
+  if (!leftVisible || !rightVisible) {
+    return gap
+  }
+
+  if (gap.includes('\n') || gap.includes('\r') || (gap && !/^\s+$/u.test(gap))) {
+    return gap
+  }
+
+  return shouldInsertSpaceBetween(leftVisible, rightVisible) ? ' ' : ''
+}
+
+function shouldInsertSpaceBetween(leftVisible: string, rightVisible: string): boolean {
+  const leftClass = classifyVisibleBoundary(leftVisible)
+  const rightClass = classifyVisibleBoundary(rightVisible)
+
+  if (
+    leftClass === 'closing-punctuation' ||
+    leftClass === 'dash' ||
+    leftClass === 'opening-punctuation' ||
+    rightClass === 'closing-punctuation' ||
+    rightClass === 'dash' ||
+    rightClass === 'opening-punctuation'
+  ) {
+    return false
+  }
+
+  return spacingWithPangu(`${leftVisible}${rightVisible}`) === `${leftVisible} ${rightVisible}`
+}
+
+function classifyVisibleBoundary(
+  value: string
+): 'cjk' | 'closing-punctuation' | 'dash' | 'digit' | 'latin' | 'opening-punctuation' | 'other' {
+  if (value === '—') {
+    return 'dash'
+  }
+
+  if (OPENING_PUNCTUATION.has(value) || QUOTE_PUNCTUATION.has(value)) {
+    return 'opening-punctuation'
+  }
+
+  if (CLOSING_PUNCTUATION.has(value) || QUOTE_PUNCTUATION.has(value)) {
+    return 'closing-punctuation'
+  }
+
+  if (CJK_PATTERN.test(value)) {
+    return 'cjk'
+  }
+
+  if (DIGIT_PATTERN.test(value)) {
+    return 'digit'
+  }
+
+  if (LATIN_LETTER_PATTERN.test(value)) {
+    return 'latin'
+  }
+
+  return 'other'
+}
+
+function collectContainerVisibleText(node: MarkdownNode): string {
+  return (node.children || []).map((child) => collectNodeVisibleText(child)).join('')
+}
+
+function collectNodeVisibleText(node: MarkdownNode): string {
+  if (node.type === 'html' || node.type === 'break') {
+    return ''
+  }
+
+  if (typeof node.value === 'string') {
+    return node.value
+  }
+
+  return (node.children || []).map((child) => collectNodeVisibleText(child)).join('')
+}
+
+function applyZhMarkdownSpacing(text: string): string {
+  const protectedRanges = normalizeRanges(collectInlineProtectedRanges(text))
+  if (protectedRanges.length === 0) {
+    return spacingWithPangu(text)
+  }
+
+  let result = ''
+  let cursor = 0
+
+  for (const range of protectedRanges) {
+    if (cursor < range.start) {
+      result += spacingWithPangu(text.slice(cursor, range.start))
+    }
+
+    result += text.slice(range.start, range.end)
+    cursor = range.end
+  }
+
+  if (cursor < text.length) {
+    result += spacingWithPangu(text.slice(cursor))
+  }
+
+  return result
 }
 
 function spacingWithPangu(text: string): string {
@@ -515,7 +876,7 @@ function looksLikeStructuredText(text: string): boolean {
     return false
   }
 
-  if (STRUCTURED_JSON_PATTERN.test(trimmed) && /[:\[\]{},]/u.test(trimmed)) {
+  if (STRUCTURED_JSON_PATTERN.test(trimmed) && /[:[\]{},]/u.test(trimmed)) {
     return true
   }
 
@@ -566,122 +927,14 @@ function detectLeadingFrontmatterRanges(markdown: string): ProtectedRange[] {
   ]
 }
 
-function collectSpacingProtectedRanges(root: MarkdownNode, markdown: string): ProtectedRange[] {
-  const ranges: ProtectedRange[] = []
-
-  const visitNode = (node: MarkdownNode) => {
-    if (!node.type) {
-      for (const child of node.children || []) {
-        visitNode(child)
-      }
-      return
-    }
-
-    if (SKIPPED_NODE_TYPES.has(node.type) && hasValidNodeOffsets(node)) {
-      ranges.push(getNodeRange(node)!)
-      return
-    }
-
-    if (node.children?.length) {
-      ranges.push(...collectHtmlElementRanges(node.children, markdown))
-    }
-
-    for (const child of node.children || []) {
-      visitNode(child)
-    }
-  }
-
-  visitNode(root)
-  return ranges
-}
-
-function collectHtmlElementRanges(nodes: MarkdownNode[], markdown: string): ProtectedRange[] {
-  const ranges: ProtectedRange[] = []
-  const stack: Array<{ start: number; tagName: string }> = []
-
-  for (const node of nodes) {
-    if (node.type !== 'html' || !node.value || !hasValidNodeOffsets(node)) {
-      continue
-    }
-
-    const tagName = getHtmlTagName(node.value)
-    if (!tagName) {
-      ranges.push(getNodeRange(node)!)
-      continue
-    }
-
-    if (isOpeningHtmlTag(node.value)) {
-      stack.push({ start: node.position!.start!.offset!, tagName })
-      continue
-    }
-
-    if (!isClosingHtmlTag(node.value)) {
-      ranges.push(getNodeRange(node)!)
-      continue
-    }
-
-    const matchIndex = findLastMatchingHtmlOpenTag(stack, tagName)
-    if (matchIndex === -1) {
-      ranges.push(getNodeRange(node)!)
-      continue
-    }
-
-    const [openingTag] = stack.splice(matchIndex, 1)
-    ranges.push({
-      end: node.position!.end!.offset!,
-      start: openingTag.start
-    })
-  }
-
-  return ranges.filter((range) => range.end > range.start && range.end <= markdown.length)
-}
-
-function replaceProtectedRangesWithPlaceholders(
-  source: string,
-  ranges: ProtectedRange[]
-): { text: string; tokens: ProtectedToken[] } {
-  if (ranges.length === 0) {
-    return { text: source, tokens: [] }
-  }
-
-  const tokens: ProtectedToken[] = []
-  let text = ''
-  let cursor = 0
-
-  for (const [index, range] of ranges.entries()) {
-    if (range.start < cursor) {
-      continue
-    }
-
-    const placeholder = `PHSPACINGTOKEN${index}`
-    tokens.push({
-      original: source.slice(range.start, range.end),
-      placeholder
-    })
-    text += source.slice(cursor, range.start)
-    text += placeholder
-    cursor = range.end
-  }
-
-  text += source.slice(cursor)
-  return { text, tokens }
-}
-
-function restoreProtectedPlaceholders(source: string, tokens: ProtectedToken[]): string {
-  return tokens.reduce((current, token) => current.replaceAll(token.placeholder, token.original), source)
-}
-
 function cleanupZhMarkdownSpacing(text: string): string {
   return text
-    .replace(/(\*\*|__)\s+([^*]+?)\s+(\1)/gu, '$1$2$3')
-    .replace(/(\*\*|__)\s+([^*]+?)(\1)/gu, '$1$2$3')
-    .replace(/(\*\*|__)([^*]+?)\s+(\1)/gu, '$1$2$3')
     .replace(/([\u3400-\u9fff\uf900-\ufaff])\s+(["“‘])/gu, '$1$2')
     .replace(/(["”’])\s+([\u3400-\u9fff\uf900-\ufaff])/gu, '$1$2')
     .replace(/(["”’])\s+([、。！，；：？！])/gu, '$1$2')
-    .replace(/([\u3400-\u9fff\uf900-\ufaff])\s+(“[A-Za-z0-9][^”]*?”)\s+([\u3400-\u9fff\uf900-\ufaff])/gu, '$1$2$3')
-    .replace(/([\u3400-\u9fff\uf900-\ufaff])\s+(‘[A-Za-z0-9][^’]*?’)\s+([\u3400-\u9fff\uf900-\ufaff])/gu, '$1$2$3')
-    .replace(/(\*\*[^*]*[\u3400-\u9fff\uf900-\ufaff][^*]*\*\*)\s+([\u3400-\u9fff\uf900-\ufaff])/gu, '$1$2')
+    .replace(/([^\s])\s+(——)\s+([^\s])/gu, '$1$2$3')
+    .replace(/([^\s])\s+(——)/gu, '$1$2')
+    .replace(/(——)\s+([^\s])/gu, '$1$2')
 }
 
 function applyOffsetEdits(source: string, edits: OffsetEdit[]): string {
@@ -747,10 +1000,6 @@ function isTrailingQuoteAfterAutolink(
   return typeof previousEnd === 'number' && typeof currentStart === 'number' && previousEnd === currentStart
 }
 
-function hasValidNodeOffsets(node: MarkdownNode): boolean {
-  return typeof node.position?.start?.offset === 'number' && typeof node.position?.end?.offset === 'number'
-}
-
 function getNodeRange(node: MarkdownNode): ProtectedRange | null {
   const start = node.position?.start?.offset
   const end = node.position?.end?.offset
@@ -767,21 +1016,11 @@ function getHtmlTagName(value: string): string | null {
 }
 
 function isOpeningHtmlTag(value: string): boolean {
-  return /^<[A-Za-z][\w:-]*\b[^>]*>$/u.test(value) && !/^<\//u.test(value) && !/\/\s*>$/u.test(value)
+  return /^<[A-Za-z][\w:-]*\b[^>]*>$/u.test(value) && !value.startsWith('</') && !/\/\s*>$/u.test(value)
 }
 
 function isClosingHtmlTag(value: string): boolean {
   return /^<\/[A-Za-z][\w:-]*\s*>$/u.test(value)
-}
-
-function findLastMatchingHtmlOpenTag(stack: Array<{ start: number; tagName: string }>, tagName: string): number {
-  for (let index = stack.length - 1; index >= 0; index -= 1) {
-    if (stack[index].tagName === tagName) {
-      return index
-    }
-  }
-
-  return -1
 }
 
 function normalizeUrlLikeValue(value: string): string {
@@ -814,6 +1053,65 @@ function findNextVisibleChar(text: string, index: number): string | null {
   for (let pointer = index + 1; pointer < text.length; pointer += 1) {
     if (!isWhitespace(text[pointer])) {
       return text[pointer]
+    }
+  }
+
+  return null
+}
+
+function findFirstVisibleChar(text: string): string | null {
+  for (let index = 0; index < text.length; index += 1) {
+    if (!isWhitespace(text[index])) {
+      return text[index]
+    }
+  }
+
+  return null
+}
+
+function findLastVisibleChar(text: string): string | null {
+  for (let index = text.length - 1; index >= 0; index -= 1) {
+    if (!isWhitespace(text[index])) {
+      return text[index]
+    }
+  }
+
+  return null
+}
+
+function findFirstAtomBoundaryChar(text: string): string | null {
+  return findSemanticBoundaryChar(text, 0, 1) ?? findFirstVisibleChar(text)
+}
+
+function findLastAtomBoundaryChar(text: string): string | null {
+  return findSemanticBoundaryChar(text, text.length - 1, -1) ?? findLastVisibleChar(text)
+}
+
+function findSemanticBoundaryChar(text: string, startIndex: number, step: 1 | -1): string | null {
+  for (let index = startIndex; index >= 0 && index < text.length; index += step) {
+    const character = text[index]
+    if (CJK_PATTERN.test(character) || DIGIT_PATTERN.test(character) || LATIN_LETTER_PATTERN.test(character)) {
+      return character
+    }
+  }
+
+  return null
+}
+
+function findFirstVisibleChild(units: InlineSpacingUnit[]): string | null {
+  for (const unit of units) {
+    if (unit.firstVisible) {
+      return unit.firstVisible
+    }
+  }
+
+  return null
+}
+
+function findLastVisibleChild(units: InlineSpacingUnit[]): string | null {
+  for (let index = units.length - 1; index >= 0; index -= 1) {
+    if (units[index].lastVisible) {
+      return units[index].lastVisible
     }
   }
 

@@ -4723,8 +4723,10 @@
         "label": "目標語言",
         "russian": "俄文"
       },
-      "user_native_language": "[to be translated]:User Native Language",
-      "user_native_language.unspecified": "[to be translated]:Unspecified"
+      "user_native_language": {
+        "label": "[to be translated]:User Native Language",
+        "unspecified": "[to be translated]:Unspecified"
+      }
     },
     "launch": {
       "onboot": "開機自動啟動",

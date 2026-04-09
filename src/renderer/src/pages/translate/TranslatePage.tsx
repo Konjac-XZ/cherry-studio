@@ -621,7 +621,7 @@ const TranslatePage: FC = () => {
           return
         }
 
-        const actualTargetLanguage = result.language as TranslateLanguage
+        const actualTargetLanguage = result.language
         if (isBidirectional) {
           setTargetLanguage(actualTargetLanguage)
         }

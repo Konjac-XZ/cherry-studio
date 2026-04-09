@@ -1164,6 +1164,46 @@ describe('options utils', () => {
         })
       })
 
+      it('should route newapi gemini custom parameters to google provider options', async () => {
+        const { getCustomParameters } = await import('../reasoning')
+
+        const newApiProvider = {
+          id: 'newapi',
+          name: 'NewAPI',
+          type: 'new-api',
+          apiKey: 'test-key',
+          apiHost: 'https://api.newapi.com',
+          models: [] as Model[]
+        } as Provider
+
+        const geminiModel: Model = {
+          id: 'gemini-3-flash-preview',
+          name: 'Gemini 3 Flash',
+          provider: 'newapi',
+          endpoint_type: 'gemini'
+        } as Model
+
+        vi.mocked(getCustomParameters).mockReturnValue({
+          thinkingConfig: {
+            thinkingBudget: 128
+          }
+        })
+
+        const result = buildProviderOptions(mockAssistant, geminiModel, newApiProvider, {
+          enableReasoning: false,
+          enableWebSearch: false,
+          enableGenerateImage: false
+        })
+
+        expect(result.providerOptions).toHaveProperty('google')
+        expect(result.providerOptions.google).toMatchObject({
+          thinkingConfig: {
+            thinkingBudget: 128
+          }
+        })
+        expect(result.providerOptions).not.toHaveProperty('newapi')
+      })
+
       it('should auto-convert reasoning_effort to reasoningEffort for openai-compatible provider (issue #11987)', async () => {
         const { getCustomParameters } = await import('../reasoning')
 

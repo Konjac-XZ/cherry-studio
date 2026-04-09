@@ -234,6 +234,24 @@ export async function buildStreamTextParams(
     params.system = systemPrompt
   }
 
+  if ('google' in providerOptions) {
+    logger.debug('Gemini streamText parameter flow', {
+      modelId: model.id,
+      standardParams,
+      googleProviderOptions: providerOptions.google,
+      streamTextConfig: {
+        maxOutputTokens: params.maxOutputTokens,
+        temperature: params.temperature,
+        topP: params.topP,
+        topK: params.topK,
+        frequencyPenalty: params.frequencyPenalty,
+        presencePenalty: params.presencePenalty,
+        stopSequences: params.stopSequences,
+        seed: params.seed
+      }
+    })
+  }
+
   logger.debug('params', params)
 
   return {

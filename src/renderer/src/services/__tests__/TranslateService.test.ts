@@ -50,6 +50,13 @@ vi.mock('../AssistantService', () => ({
   getDefaultTranslateAssistant: mocks.getDefaultTranslateAssistant
 }))
 
+vi.mock('../GlossaryService', () => ({
+  GlossaryService: {
+    getByTargetLanguage: vi.fn().mockResolvedValue([])
+  },
+  buildCustomizedDictionary: vi.fn().mockReturnValue('')
+}))
+
 vi.mock('i18next', () => ({
   t: mocks.t
 }))
@@ -171,9 +178,14 @@ describe('TranslateService reusable history', () => {
       reasoningEffort: 'default'
     })
 
-    expect(mocks.getDefaultTranslateAssistant).toHaveBeenCalledWith(targetLanguage, 'hello', {
-      reasoning_effort: 'default'
-    })
+    expect(mocks.getDefaultTranslateAssistant).toHaveBeenCalledWith(
+      targetLanguage,
+      'hello',
+      {
+        reasoning_effort: 'default'
+      },
+      ''
+    )
     expect(result).toBe('你好')
   })
 })
