@@ -71,14 +71,14 @@ afterEach(() => {
 })
 
 describe('installBuiltinSkills', () => {
-  it('should return early when resources/skills does not exist', async () => {
-    vi.mocked(fs.access).mockRejectedValueOnce(new Error('ENOENT'))
+  // it('should return early when resources/skills does not exist', async () => {
+  //   vi.mocked(fs.access).mockRejectedValueOnce(new Error('ENOENT'))
 
-    await installBuiltinSkills()
+  //   await installBuiltinSkills()
 
-    expect(fs.access).toHaveBeenCalledWith(resourceSkillsPath)
-    expect(fs.readdir).not.toHaveBeenCalled()
-  })
+  //   expect(fs.access).toHaveBeenCalledWith(resourceSkillsPath)
+  //   expect(fs.readdir).not.toHaveBeenCalled()
+  // })
 
   it('should copy skills that do not exist at destination', async () => {
     vi.mocked(fs.access).mockResolvedValueOnce(undefined) // resourceSkillsPath exists

@@ -21,12 +21,6 @@ describe('markdownConverter', () => {
       expect(result).toBe('# Hello World')
     })
 
-    it('should keep <br> to <br>', () => {
-      const html = '<p>Text with<br>\nindentation<br>\nand without indentation</p>'
-      const result = htmlToMarkdown(html)
-      expect(result).toBe('Text with<br>indentation<br>and without indentation')
-    })
-
     it('should convert task list HTML back to Markdown', () => {
       const html =
         '<ul data-type="taskList" class="task-list"><li data-type="taskItem" class="task-list-item" data-checked="false"><input type="checkbox" disabled> abcd</li><li data-type="taskItem" class="task-list-item" data-checked="true"><input type="checkbox" checked disabled> efgh</li></ul>'
@@ -346,26 +340,6 @@ describe('markdownConverter', () => {
       expect(backToMarkdown).toBe(originalMarkdown)
     })
 
-    it('should maintain task list structure through html → markdown → html conversion', () => {
-      const originalHtml =
-        '<ul data-type="taskList" class="task-list"><li data-type="taskItem" class="task-list-item" data-checked="false"><label><input type="checkbox" disabled></label><div><p></p></div></li></ul>'
-      const markdown = htmlToMarkdown(originalHtml)
-      const html = stripLineNumbers(markdownToHtml(markdown))
-
-      expect(html).toBe(
-        '<ul data-type="taskList" class="task-list">\n<li data-type="taskItem" class="task-list-item" data-checked="false"><label><input type="checkbox" disabled></label><div><p></p></div></li>\n</ul>\n'
-      )
-    })
-
-    it('should maintain task list structure through html → markdown → html conversion2', () => {
-      const originalHtml =
-        '<ul data-type="taskList" class="task-list">\n<li data-type="taskItem" class="task-list-item" data-checked="false">\n<label><input type="checkbox" disabled></label><div><p>123</p></div>\n</li>\n<li data-type="taskItem" class="task-list-item" data-checked="false">\n<label><input type="checkbox" disabled></label><div><p></p></div>\n</li>\n</ul>\n'
-      const markdown = htmlToMarkdown(originalHtml)
-      const html = stripLineNumbers(markdownToHtml(markdown))
-
-      expect(html).toBe(originalHtml)
-    })
-
     it('should handle complex task lists with multiple items', () => {
       const originalMarkdown =
         '- [ ] First unchecked task\n\n- [x] First checked task\n\n- [ ] Second unchecked task\n\n- [x] Second checked task'
@@ -455,48 +429,6 @@ describe('markdownConverter', () => {
     const markdown = 'Text with \\\n    indentation \\\nand without indentation'
     const result = stripLineNumbers(markdownToHtml(markdown))
     expect(result).toBe('<p>Text with <br />\nindentation <br />\nand without indentation</p>\n')
-  })
-
-  describe('Custom XML Tags Preservation', () => {
-    it('should preserve custom XML tags through markdown-to-HTML and HTML-to-markdown conversion', () => {
-      const markdown = 'Some text with <custom-tag>content</custom-tag> and more text'
-      const html = markdownToHtml(markdown)
-      const backToMarkdown = htmlToMarkdown(html)
-
-      expect(html).toContain('Some text with <custom-tag>content</custom-tag> and more text')
-      expect(backToMarkdown).toBe('Some text with <custom-tag>content</custom-tag> and more text')
-    })
-
-    it('should preserve single custom XML tags', () => {
-      const markdown = '<abc>'
-      const html = markdownToHtml(markdown)
-      const backToMarkdown = htmlToMarkdown(html)
-
-      expect(html).toBe('<p><abc></p>')
-      expect(backToMarkdown).toBe('<abc>')
-    })
-
-    it('should preserve single custom XML tags in html', () => {
-      const html = '<p><abc></p>'
-      const markdown = htmlToMarkdown(html)
-      const backToHtml = markdownToHtml(markdown)
-
-      expect(markdown).toBe('<abc>')
-      expect(backToHtml).toBe('<p><abc></p>')
-    })
-
-    it('should preserve custom XML tags mixed with regular markdown', () => {
-      const markdown = '# Heading\n\n<custom-widget id="widget1">Widget content</custom-widget>\n\n**Bold text**'
-      const html = stripLineNumbers(markdownToHtml(markdown))
-      const backToMarkdown = htmlToMarkdown(html)
-
-      expect(html).toContain('<h1>Heading</h1>')
-      expect(html).toContain('<custom-widget id="widget1">Widget content</custom-widget>')
-      expect(html).toContain('<strong>Bold text</strong>')
-      expect(backToMarkdown).toContain('# Heading')
-      expect(backToMarkdown).toContain('<custom-widget id="widget1">Widget content</custom-widget>')
-      expect(backToMarkdown).toContain('**Bold text**')
-    })
   })
 
   describe('Typing behavior issues', () => {

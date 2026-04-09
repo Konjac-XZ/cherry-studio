@@ -5,6 +5,14 @@ import electronViteConfig from './electron.vite.config'
 
 const mainConfig = (electronViteConfig as any).main
 const rendererConfig = (electronViteConfig as any).renderer
+// CherryClaw is under active upstream development, so exclude its main-process tests unless explicitly opted in.
+const cherryClawTestExclude =
+  process.env.VITEST_INCLUDE_CHERRYCLAW === 'true'
+    ? []
+    : [
+        'src/main/services/agents/services/cherryclaw/**/__tests__/**/*.{test,spec}.{ts,tsx}',
+        'src/main/mcpServers/__tests__/claw.test.ts'
+      ]
 
 export default defineConfig({
   test: {
@@ -21,6 +29,7 @@ export default defineConfig({
           environment: 'node',
           setupFiles: ['tests/main.setup.ts'],
           include: ['src/main/**/*.{test,spec}.{ts,tsx}', 'src/main/**/__tests__/**/*.{test,spec}.{ts,tsx}'],
+          exclude: cherryClawTestExclude,
           benchmark: {
             include: ['src/main/**/*.bench.{ts,tsx}', 'src/main/**/__tests__/**/*.bench.{ts,tsx}']
           }
