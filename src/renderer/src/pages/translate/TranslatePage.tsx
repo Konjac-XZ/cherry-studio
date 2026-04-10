@@ -1697,8 +1697,6 @@ const TranslatePage: FC = () => {
         autoDetectionMethod={autoDetectionMethod}
         setAutoDetectionMethod={updateAutoDetectionMethod}
         fontSize={fontSize}
-        autoDisableThinking={autoDisableThinking}
-        setAutoDisableThinking={setAutoDisableThinking}
         setFontSize={(value) => {
           const nextValue = clampFontSize(value)
           setFontSize(nextValue)

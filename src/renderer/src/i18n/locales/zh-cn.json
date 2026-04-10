@@ -6042,6 +6042,9 @@
       "bidirectional": "双向翻译设置",
       "bidirectional_tip": "开启后，仅支持在源语言和目标语言之间进行双向翻译",
       "font_size": "字体大小",
+      "group_display": "显示",
+      "group_language": "语种",
+      "group_post_processing": "后处理",
       "minimize_thinking": {
         "label": "尽量减少模型思考",
         "tip": "在所选模型支持时，优先为翻译请求关闭或压低额外推理，以获得更快、更节省的翻译结果。关闭后将恢复模型的默认思考行为。"
@@ -6051,10 +6054,10 @@
       "model_placeholder": "选择翻译模型",
       "no_model_warning": "未选择翻译模型",
       "preview": "Markdown 预览",
-      "scroll_sync": "滚动同步设置",
+      "scroll_sync": "滚动同步",
       "title": "翻译设置",
       "zh_cn_smart_quotes": {
-        "label": "简体中文智能引号",
+        "label": "中文智能引号",
         "tip": "仅作用于简体中文 Markdown 输出。会将正文里的英文直引号转换为中文引号或尺寸符号，并尽量跳过代码、链接、URL 和其他结构化片段。"
       },
       "zh_markdown_spacing": {

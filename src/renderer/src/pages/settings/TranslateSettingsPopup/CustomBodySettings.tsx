@@ -1,11 +1,14 @@
 import CodeEditor from '@renderer/components/CodeEditor'
 import { DeleteIcon } from '@renderer/components/Icons'
+import { HStack } from '@renderer/components/Layout'
+import { TRANSLATE_AUTO_DISABLE_THINKING_KEY } from '@renderer/config/translateSettings'
 import { useTheme } from '@renderer/context/ThemeProvider'
+import db from '@renderer/databases'
 import useTranslate from '@renderer/hooks/useTranslate'
 import type { AssistantSettingCustomParameters } from '@renderer/types'
-import { Button, Col, Input, InputNumber, Row, Select } from 'antd'
-import { PlusIcon } from 'lucide-react'
-import { useState } from 'react'
+import { Button, Col, Input, InputNumber, Row, Select, Switch, Tooltip } from 'antd'
+import { HelpCircle, PlusIcon } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { SettingGroup, SettingRow, SettingTitle } from '..'
@@ -15,6 +18,19 @@ const CustomBodySettings = () => {
   const { theme } = useTheme()
   const { settings, updateSettings } = useTranslate()
   const [params, setParams] = useState<AssistantSettingCustomParameters[]>(settings.customParameters ?? [])
+  const [autoDisableThinking, setAutoDisableThinking] = useState(true)
+
+  useEffect(() => {
+    void (async () => {
+      const autoDisableThinkingSetting = await db.settings.get({ id: TRANSLATE_AUTO_DISABLE_THINKING_KEY })
+      if (autoDisableThinkingSetting) {
+        setAutoDisableThinking(Boolean(autoDisableThinkingSetting.value))
+      } else {
+        setAutoDisableThinking(true)
+        await db.settings.put({ id: TRANSLATE_AUTO_DISABLE_THINKING_KEY, value: true })
+      }
+    })()
+  }, [])
 
   const save = (updated: AssistantSettingCustomParameters[]) => {
     setParams(updated)
@@ -38,6 +54,11 @@ const CustomBodySettings = () => {
       next[index] = { ...next[index], [field]: value }
     }
     save(next)
+  }
+
+  const onAutoDisableThinkingChange = async (checked: boolean) => {
+    setAutoDisableThinking(checked)
+    await db.settings.put({ id: TRANSLATE_AUTO_DISABLE_THINKING_KEY, value: checked })
   }
 
   const renderValueInput = (param: AssistantSettingCustomParameters, index: number) => {
@@ -142,6 +163,20 @@ const CustomBodySettings = () => {
           {param.type === 'json' && <div style={{ marginTop: 6 }}>{renderValueInput(param, index)}</div>}
         </div>
       ))}
+
+      <SettingRow style={{ marginTop: 16 }}>
+        <div style={{ fontSize: 14, lineHeight: '18px', color: 'var(--color-text-1)' }}>
+          <HStack alignItems="center" gap={5}>
+            {t('translate.settings.minimize_thinking.label')}
+            <Tooltip title={t('translate.settings.minimize_thinking.tip')}>
+              <span style={{ display: 'flex', alignItems: 'center' }}>
+                <HelpCircle size={14} style={{ color: 'var(--color-text-3)' }} />
+              </span>
+            </Tooltip>
+          </HStack>
+        </div>
+        <Switch checked={autoDisableThinking} onChange={(checked) => void onAutoDisableThinkingChange(checked)} />
+      </SettingRow>
     </SettingGroup>
   )
 }

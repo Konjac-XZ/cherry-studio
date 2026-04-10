@@ -6042,6 +6042,9 @@
       "bidirectional": "Bidirectional Translation Settings",
       "bidirectional_tip": "When enabled, only bidirectional translation between source and target languages is supported",
       "font_size": "Font Size",
+      "group_display": "Display",
+      "group_language": "Languages",
+      "group_post_processing": "Post-processing",
       "minimize_thinking": {
         "label": "Minimize model thinking",
         "tip": "Keeps translation requests on the faster, leaner path by suppressing extra reasoning when the selected model supports it. Turn this off to let the model use its normal thinking behavior."
@@ -6051,10 +6054,10 @@
       "model_placeholder": "Select translation model",
       "no_model_warning": "No translation model selected",
       "preview": "Markdown Preview",
-      "scroll_sync": "Scroll Sync Settings",
+      "scroll_sync": "Scroll Sync",
       "title": "Translation Settings",
       "zh_cn_smart_quotes": {
-        "label": "Simplified Chinese smart quotes",
+        "label": "Chinese smart quotes",
         "tip": "Only affects Simplified Chinese Markdown output. Converts straight quotes in prose to Chinese quotes and measurement primes while skipping code, links, URLs, and other structured fragments."
       },
       "zh_markdown_spacing": {
