@@ -783,7 +783,7 @@ export function getGeminiReasoningParams(
   }
 
   let thinkingLevel: GoogleThinkingLevel | null = null
-  const includeThoughts = reasoningEffort !== 'none'
+  const includeThoughts = isGemini3ThinkingTokenModel(model) ? true : reasoningEffort !== 'none'
 
   // https://ai.google.dev/gemini-api/docs/gemini-3?thinking=high#new_api_features_in_gemini_3
   if (isGemini3ThinkingTokenModel(model)) {
@@ -818,7 +818,7 @@ export function getGeminiReasoningParams(
       return {
         thinkingConfig: {
           includeThoughts,
-          ...(GEMINI_FLASH_MODEL_REGEX.test(model.id) ? { thinkingBudget: 0 } : {})
+          thinkingBudget: 0
         }
       }
     }
