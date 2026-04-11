@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  applyRegexReplacementRules,
   applyTranslationPostProcessors,
   normalizeZhCnMarkdownQuotes,
   normalizeZhMarkdownTextSpacing,
+  type RegexReplacementRule,
   shouldApplyZhCnMarkdownSmartQuotes,
   shouldApplyZhMarkdownTextSpacing,
   type TranslationPostProcessorContext
@@ -239,6 +241,98 @@ describe('translationPostProcessors', () => {
       ).toBe(
         '为了发现这类漏洞，MBFuzzer 采用 **differential testing**——即对比多个代理实现之间的差异——来找出不一致之处，这些不一致表明一个或多个实现未遵守共同的协议规范。'
       )
+    })
+  })
+
+  describe('applyRegexReplacementRules', () => {
+    const rule = (pattern: string, replacement: string, flags = 'g'): RegexReplacementRule => ({
+      id: pattern,
+      pattern,
+      flags,
+      replacement
+    })
+
+    it('returns text unchanged when no rules are provided', () => {
+      expect(applyRegexReplacementRules('hello world', [])).toBe('hello world')
+    })
+
+    it('applies a simple string replacement', () => {
+      expect(applyRegexReplacementRules('foo bar foo', [rule('foo', 'baz')])).toBe('baz bar baz')
+    })
+
+    it('applies replacement with capture groups', () => {
+      expect(applyRegexReplacementRules('2024-01-15', [rule('(\\d{4})-(\\d{2})-(\\d{2})', '$3/$2/$1')])).toBe(
+        '15/01/2024'
+      )
+    })
+
+    it('applies multiple rules sequentially', () => {
+      const rules = [rule('foo', 'bar'), rule('bar', 'baz')]
+      expect(applyRegexReplacementRules('foo', rules)).toBe('baz')
+    })
+
+    it('skips invalid regex patterns without throwing', () => {
+      const badRule = rule('[(', 'replacement')
+      expect(applyRegexReplacementRules('hello', [badRule])).toBe('hello')
+    })
+
+    it('skips invalid flags without throwing', () => {
+      const badRule = rule('hello', 'hi', 'z')
+      expect(applyRegexReplacementRules('hello world', [badRule])).toBe('hello world')
+    })
+
+    it('applies case-insensitive matching when i flag is set', () => {
+      expect(applyRegexReplacementRules('Hello HELLO hello', [rule('hello', 'hi', 'gi')])).toBe('hi hi hi')
+    })
+
+    it('applies only the first match when g flag is absent', () => {
+      expect(applyRegexReplacementRules('foo foo foo', [rule('foo', 'bar', '')])).toBe('bar foo foo')
+    })
+
+    it("leaves other rules's output intact if one rule has invalid pattern", () => {
+      const rules = [rule('[(', 'bad'), rule('world', 'earth')]
+      expect(applyRegexReplacementRules('hello world', rules)).toBe('hello earth')
+    })
+  })
+
+  describe('applyTranslationPostProcessors with regex rules', () => {
+    const regexContext = (rules: RegexReplacementRule[]): TranslationPostProcessorContext => ({
+      features: {
+        zhCnMarkdownSmartQuotes: false,
+        zhMarkdownTextSpacing: false
+      },
+      markdownEnabled: false,
+      targetLanguage: 'en-us',
+      regexReplacementRules: rules
+    })
+
+    it('does not apply regex processor when regexReplacementRules is empty', () => {
+      expect(applyTranslationPostProcessors('hello', regexContext([]))).toBe('hello')
+    })
+
+    it('does not apply regex processor when regexReplacementRules is absent', () => {
+      const ctx: TranslationPostProcessorContext = {
+        features: { zhCnMarkdownSmartQuotes: false, zhMarkdownTextSpacing: false },
+        markdownEnabled: false,
+        targetLanguage: 'en-us'
+      }
+      expect(applyTranslationPostProcessors('hello', ctx)).toBe('hello')
+    })
+
+    it('applies regex rules when provided', () => {
+      const rules: RegexReplacementRule[] = [{ id: '1', pattern: 'foo', flags: 'g', replacement: 'bar' }]
+      expect(applyTranslationPostProcessors('foo baz foo', regexContext(rules))).toBe('bar baz bar')
+    })
+
+    it('applies regex rules after other post-processors', () => {
+      // Both zh spacing and regex operate; regex must run after spacing
+      const ctx: TranslationPostProcessorContext = {
+        features: { zhCnMarkdownSmartQuotes: false, zhMarkdownTextSpacing: true },
+        markdownEnabled: true,
+        targetLanguage: 'zh-cn',
+        regexReplacementRules: [{ id: '1', pattern: 'OpenAI', flags: 'g', replacement: 'AI' }]
+      }
+      expect(applyTranslationPostProcessors('这是OpenAI开发的模型。', ctx)).toBe('这是 AI 开发的模型。')
     })
   })
 })

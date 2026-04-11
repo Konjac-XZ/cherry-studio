@@ -59,8 +59,16 @@ type VirtualTextBuffer = {
 
 export const TRANSLATION_POST_PROCESSOR_SETTING_KEYS = {
   zhCnMarkdownSmartQuotes: 'translate:postprocess:zhQuotes:enabled',
-  zhMarkdownTextSpacing: 'translate:postprocess:zhSpacing:enabled'
+  zhMarkdownTextSpacing: 'translate:postprocess:zhSpacing:enabled',
+  regexReplacementRules: 'translate:postprocess:regex:rules'
 } as const
+
+export type RegexReplacementRule = {
+  id: string
+  pattern: string
+  flags: string
+  replacement: string
+}
 
 export type TranslationPostProcessorFeatures = {
   zhCnMarkdownSmartQuotes: boolean
@@ -71,6 +79,7 @@ export type TranslationPostProcessorContext = {
   features: TranslationPostProcessorFeatures
   markdownEnabled: boolean
   targetLanguage: TranslateLanguageCode
+  regexReplacementRules?: RegexReplacementRule[]
 }
 
 export const DEFAULT_TRANSLATION_POST_PROCESSOR_FEATURES: TranslationPostProcessorFeatures = {
@@ -134,8 +143,24 @@ const translationPostProcessors: TranslationPostProcessor[] = [
     id: 'zh-markdown-text-spacing',
     process: (text) => normalizeZhMarkdownTextSpacing(text),
     shouldApply: shouldApplyZhMarkdownTextSpacing
+  },
+  {
+    id: 'regex-replacement',
+    process: (text, context) => applyRegexReplacementRules(text, context.regexReplacementRules ?? []),
+    shouldApply: (context) => (context.regexReplacementRules?.length ?? 0) > 0
   }
 ]
+
+export function applyRegexReplacementRules(text: string, rules: RegexReplacementRule[]): string {
+  return rules.reduce((current, rule) => {
+    try {
+      const regex = new RegExp(rule.pattern, rule.flags)
+      return current.replace(regex, rule.replacement)
+    } catch {
+      return current
+    }
+  }, text)
+}
 
 export function applyTranslationPostProcessors(text: string, context: TranslationPostProcessorContext): string {
   if (!text) {

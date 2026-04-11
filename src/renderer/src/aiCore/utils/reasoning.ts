@@ -815,10 +815,12 @@ export function getGeminiReasoningParams(
     }
 
     if (reasoningEffort === 'none') {
+      const isProModel =
+        getLowerBaseModelName(model.id).includes('pro') || model.name?.toLowerCase().includes('pro') === true
       return {
         thinkingConfig: {
           includeThoughts,
-          thinkingBudget: 0
+          ...(isProModel ? {} : { thinkingBudget: 0 })
         }
       }
     }

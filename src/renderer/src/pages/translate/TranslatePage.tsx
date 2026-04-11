@@ -47,6 +47,7 @@ import {
 import {
   applyTranslationPostProcessors,
   DEFAULT_TRANSLATION_POST_PROCESSOR_FEATURES,
+  type RegexReplacementRule,
   TRANSLATION_POST_PROCESSOR_SETTING_KEYS
 } from '@renderer/utils/translationPostProcessors'
 import { documentExts, imageExts, MB, textExts } from '@shared/config/constant'
@@ -197,6 +198,7 @@ const TranslatePage: FC = () => {
   const [zhMarkdownTextSpacingEnabled, setZhMarkdownTextSpacingEnabled] = useState(
     DEFAULT_TRANSLATION_POST_PROCESSOR_FEATURES.zhMarkdownTextSpacing
   )
+  const [regexReplacementRules, setRegexReplacementRules] = useState<RegexReplacementRule[]>([])
   const clampFontSize = (value: number) => Math.max(12, Math.min(24, Math.round(value)))
   const [fontSize, setFontSize] = useState<number>(() => {
     try {
@@ -386,17 +388,18 @@ const TranslatePage: FC = () => {
   )
 
   const applyPostProcessorsForTarget = useCallback(
-    (content: string, targetLanguageCode: string) => {
+    (content: string, targetLanguageCode: string, regexRulesOverride?: RegexReplacementRule[]) => {
       return applyTranslationPostProcessors(content, {
         features: {
           zhCnMarkdownSmartQuotes: zhCnMarkdownSmartQuotesEnabled,
           zhMarkdownTextSpacing: zhMarkdownTextSpacingEnabled
         },
         markdownEnabled: enableMarkdown,
-        targetLanguage: targetLanguageCode
+        targetLanguage: targetLanguageCode,
+        regexReplacementRules: regexRulesOverride ?? regexReplacementRules
       })
     },
-    [enableMarkdown, zhCnMarkdownSmartQuotesEnabled, zhMarkdownTextSpacingEnabled]
+    [enableMarkdown, regexReplacementRules, zhCnMarkdownSmartQuotesEnabled, zhMarkdownTextSpacingEnabled]
   )
 
   const effectiveTranslatedContent = useMemo(
@@ -496,7 +499,17 @@ const TranslatePage: FC = () => {
         if (typeof (throttledUpdate as any).flush === 'function') {
           ;(throttledUpdate as any).flush()
         }
-        const finalTranslated = applyPostProcessorsForTarget(translated, actualTargetLanguage.langCode)
+
+        // Load fresh regex rules so edits made while this translation ran are reflected
+        const regexRulesEntry = await db.settings.get({
+          id: TRANSLATION_POST_PROCESSOR_SETTING_KEYS.regexReplacementRules
+        })
+        const freshRegexRules: RegexReplacementRule[] = Array.isArray(regexRulesEntry?.value)
+          ? (regexRulesEntry.value as RegexReplacementRule[])
+          : []
+        setRegexReplacementRules(freshRegexRules)
+
+        const finalTranslated = applyPostProcessorsForTarget(translated, actualTargetLanguage.langCode, freshRegexRules)
         setTranslatedContentTargetLanguageCode(actualTargetLanguage.langCode)
         setTranslatedContent(finalTranslated)
 
@@ -540,6 +553,7 @@ const TranslatePage: FC = () => {
       autoCopy,
       copy,
       dispatch,
+      setRegexReplacementRules,
       setTimeoutTimer,
       setTranslatedContent,
       setTranslating,
@@ -1005,6 +1019,13 @@ const TranslatePage: FC = () => {
           id: TRANSLATION_POST_PROCESSOR_SETTING_KEYS.zhMarkdownTextSpacing,
           value: DEFAULT_TRANSLATION_POST_PROCESSOR_FEATURES.zhMarkdownTextSpacing
         })
+      }
+
+      const regexRulesSetting = await db.settings.get({
+        id: TRANSLATION_POST_PROCESSOR_SETTING_KEYS.regexReplacementRules
+      })
+      if (regexRulesSetting && Array.isArray(regexRulesSetting.value)) {
+        setRegexReplacementRules(regexRulesSetting.value as RegexReplacementRule[])
       }
 
       const layoutOverrideSetting = await db.settings.get({ id: 'translate:layout:override' })

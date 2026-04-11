@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next'
 import { SettingContainer } from '..'
 import CustomBodySettings from './CustomBodySettings'
 import GlossarySettings from './GlossarySettings'
+import RegexReplacementSettings from './RegexReplacementSettings'
 import TranslatePromptSettings from './TranslatePromptSettings'
 
 interface Props {
@@ -46,6 +47,7 @@ const PopupContainer: React.FC<Props> = ({ resolve }) => {
       <SettingContainer theme={theme} style={{ padding: '10px 0', background: 'transparent' }}>
         <TranslatePromptSettings />
         <GlossarySettings />
+        <RegexReplacementSettings />
         <CustomBodySettings />
       </SettingContainer>
     </Modal>

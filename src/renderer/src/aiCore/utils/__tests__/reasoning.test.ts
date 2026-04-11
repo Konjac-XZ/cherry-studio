@@ -986,7 +986,7 @@ describe('reasoning utils', () => {
       })
     })
 
-    it('should disable thinking for non-Flash models when reasoning effort is none (with thinkingBudget=0)', () => {
+    it('should disable thinking for Pro models when reasoning effort is none (without thinkingBudget)', () => {
       vi.mocked(mockModels.isReasoningModel).mockReturnValue(true)
       vi.mocked(mockModels.isSupportedThinkingTokenGeminiModel).mockReturnValue(true)
 
@@ -1007,8 +1007,7 @@ describe('reasoning utils', () => {
       const result = getGeminiReasoningParams(assistant, model)
       expect(result).toEqual({
         thinkingConfig: {
-          includeThoughts: false,
-          thinkingBudget: 0
+          includeThoughts: false
         }
       })
     })
