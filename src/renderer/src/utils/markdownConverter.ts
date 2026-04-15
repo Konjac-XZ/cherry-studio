@@ -521,6 +521,7 @@ const turndownService = new TurndownService({
   bulletListMarker: '-', // Use - for bullet lists
   codeBlockStyle: 'fenced', // Use ``` for code blocks
   fence: '```', // Use ``` for code blocks
+  preformattedCode: true, // Keep pre/code whitespace as-is during conversion
   emDelimiter: '*', // Use * for emphasis
   strongDelimiter: '**', // Use ** for strong
   blankReplacement: (_content, node) => {
@@ -595,6 +596,45 @@ turndownService.addRule('yamlFrontMatter', {
     } else {
       return `---\n${decodedContent}`
     }
+  }
+})
+
+turndownService.addRule('typoraCodeFence', {
+  filter: (node: Element) => {
+    if (node.nodeName !== 'PRE') {
+      return false
+    }
+
+    const element = node as HTMLElement
+    return element.classList?.contains('md-fences') || !!element.querySelector('code')
+  },
+  replacement: (_content: string, node: Node) => {
+    const pre = node as HTMLElement
+    const code = pre.querySelector('code')
+
+    const raw = (code?.textContent ?? pre.textContent ?? '').replace(/\n$/, '')
+
+    const classNames = [
+      ...(code?.classList ? Array.from(code.classList) : []),
+      ...(pre.classList ? Array.from(pre.classList) : [])
+    ]
+
+    const languageFromClass = classNames
+      .map((className) => {
+        const match = className.match(/^(?:language-|lang-)(.+)$/)
+        return match?.[1]
+      })
+      .find(Boolean)
+
+    const language =
+      code?.getAttribute('data-language') ||
+      code?.getAttribute('data-lang') ||
+      pre.getAttribute('data-language') ||
+      pre.getAttribute('data-lang') ||
+      languageFromClass ||
+      ''
+
+    return `\n\n\`\`\`${language}\n${raw}\n\`\`\`\n\n`
   }
 })
 

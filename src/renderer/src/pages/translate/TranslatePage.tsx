@@ -42,6 +42,7 @@ import { abortCompletion, readyToAbort, removeAbortController } from '@renderer/
 import { formatErrorMessageWithPrefix, isAbortError } from '@renderer/utils/error'
 import { getFilesFromDropEvent, getTextFromDropEvent } from '@renderer/utils/input'
 import { processLatexBrackets } from '@renderer/utils/markdown'
+import { htmlToMarkdown } from '@renderer/utils/markdownConverter'
 import {
   createInputScrollHandler,
   createOutputScrollHandler,
@@ -76,7 +77,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
-import TurndownService from 'turndown'
 
 import TranslateHistoryList from './TranslateHistory'
 import TranslateSettings from './TranslateSettings'
@@ -232,6 +232,7 @@ const TranslatePage: FC = () => {
   const textAreaRef = useRef<TextAreaRef>(null)
   const outputTextRef = useRef<HTMLDivElement>(null)
   const isProgrammaticScroll = useRef(false)
+  const forcePlainTextPasteRef = useRef(false)
   // Ensure settings are loaded before acting on global shortcut triggers
   const [settingsReady, setSettingsReady] = useState(false)
   const pendingShortcutRef = useRef<string | null>(null)
@@ -263,18 +264,26 @@ const TranslatePage: FC = () => {
     window.toast.info(t('translate.info.reused_cached', { modifier: isMacLikePlatform() ? 'Cmd' : 'Ctrl' }))
   }, [t])
 
-  const turndownService = useMemo(() => {
-    const service = new TurndownService({
-      codeBlockStyle: 'fenced',
-      fence: '```'
-    })
-    return service
+  const shouldPreferPlainTextCodeBlock = useCallback((html: string, plainText: string) => {
+    if (!html || !plainText?.trim()) {
+      return false
+    }
+
+    // Typora and other rich editors may encode code indentation via HTML structure/styles.
+    // Prefer plain text when code-block HTML is present so original whitespace survives.
+    const hasCodeBlockHtml = /<(pre|code)\b/i.test(html) || /md-fences/i.test(html)
+    if (!hasCodeBlockHtml) {
+      return false
+    }
+
+    const normalizedPlainText = plainText.replace(/\r\n/g, '\n')
+    return /```[\s\S]*```/.test(normalizedPlainText) || /(^|\n)(\t| {2,})\S/.test(normalizedPlainText)
   }, [])
 
   const convertHtmlToMarkdownWithNotification = useCallback(
     (html: string) => {
       try {
-        const converted = turndownService.turndown(html)
+        const converted = htmlToMarkdown(html)
         if (converted && converted.trim()) {
           notifyHtmlConversion()
         }
@@ -284,7 +293,7 @@ const TranslatePage: FC = () => {
         return ''
       }
     },
-    [notifyHtmlConversion, turndownService]
+    [notifyHtmlConversion]
   )
 
   const readClipboardForTranslate = useCallback(async (): Promise<string> => {
@@ -294,9 +303,23 @@ const TranslatePage: FC = () => {
         return ''
       }
 
+      let plainFromNativeClipboard = ''
+      try {
+        const plain = clipboardApi.readText?.()
+        if (plain && plain.trim()) {
+          plainFromNativeClipboard = plain
+        }
+      } catch (error) {
+        logger.debug('Native clipboard text read failed', error as Error)
+      }
+
       try {
         const html = clipboardApi.readHtml?.()
         if (html && html.trim() && isHtmlConversionOnPasteEnabled) {
+          if (shouldPreferPlainTextCodeBlock(html, plainFromNativeClipboard)) {
+            return plainFromNativeClipboard
+          }
+
           const converted = convertHtmlToMarkdownWithNotification(html)
           if (converted.trim()) {
             return converted
@@ -306,13 +329,8 @@ const TranslatePage: FC = () => {
         logger.debug('Native clipboard HTML read failed', error as Error)
       }
 
-      try {
-        const plain = clipboardApi.readText?.()
-        if (plain && plain.trim()) {
-          return plain
-        }
-      } catch (error) {
-        logger.debug('Native clipboard text read failed', error as Error)
+      if (plainFromNativeClipboard) {
+        return plainFromNativeClipboard
       }
 
       return ''
@@ -328,11 +346,27 @@ const TranslatePage: FC = () => {
         try {
           const items = await read.call(navigator.clipboard)
 
+          let plainFromRichClipboard = ''
+          for (const item of items) {
+            if (item.types.includes('text/plain')) {
+              const blob = await item.getType('text/plain')
+              const text = await blob.text()
+              if (text && text.trim()) {
+                plainFromRichClipboard = text
+                break
+              }
+            }
+          }
+
           for (const item of items) {
             if (item.types.includes('text/html')) {
               const blob = await item.getType('text/html')
               const html = await blob.text()
               if (html && html.trim() && isHtmlConversionOnPasteEnabled) {
+                if (shouldPreferPlainTextCodeBlock(html, plainFromRichClipboard)) {
+                  return plainFromRichClipboard
+                }
+
                 const converted = convertHtmlToMarkdownWithNotification(html)
                 if (converted.trim()) {
                   return converted
@@ -377,7 +411,7 @@ const TranslatePage: FC = () => {
     }
 
     return readFromNativeClipboard()
-  }, [convertHtmlToMarkdownWithNotification, isHtmlConversionOnPasteEnabled])
+  }, [convertHtmlToMarkdownWithNotification, isHtmlConversionOnPasteEnabled, shouldPreferPlainTextCodeBlock])
 
   // 控制翻译状态
   const setText = useCallback(
@@ -1147,8 +1181,37 @@ const TranslatePage: FC = () => {
     }
   }
 
+  const insertTextAtCursor = useCallback(
+    (value: string) => {
+      const textarea = textAreaRef.current?.resizableTextArea?.textArea
+      if (!textarea) {
+        setText(text + value)
+        return
+      }
+
+      const start = textarea.selectionStart || 0
+      const end = textarea.selectionEnd || 0
+      const beforeText = text.substring(0, start)
+      const afterText = text.substring(end)
+      setText(beforeText + value + afterText)
+
+      setTimeout(() => {
+        textarea.setSelectionRange(start + value.length, start + value.length)
+        textarea.focus()
+      }, 0)
+    },
+    [setText, text]
+  )
+
   // 控制Enter触发翻译
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const isPrimaryModifierPressed = isMacLikePlatform() ? e.metaKey : e.ctrlKey
+    const isPlainPasteShortcut =
+      isPrimaryModifierPressed && e.shiftKey && (e.key.toLowerCase() === 'v' || e.code === 'KeyV')
+    if (isPlainPasteShortcut) {
+      forcePlainTextPasteRef.current = true
+    }
+
     const isEnterPressed = e.key === 'Enter'
     if (isEnterPressed && !e.nativeEvent.isComposing && !e.shiftKey && e.ctrlKey && !e.metaKey) {
       e.preventDefault()
@@ -1462,6 +1525,22 @@ const TranslatePage: FC = () => {
       // Try to get HTML content from clipboard
       const clipboardHtml = event.clipboardData.getData('text/html')
       const clipboardText = event.clipboardData.getData('text')
+      const forcePlainTextPaste = forcePlainTextPasteRef.current
+      forcePlainTextPasteRef.current = false
+
+      if (forcePlainTextPaste && !isEmpty(clipboardText)) {
+        event.preventDefault()
+        insertTextAtCursor(clipboardText)
+        setIsProcessing(false)
+        return
+      }
+
+      if (shouldPreferPlainTextCodeBlock(clipboardHtml, clipboardText)) {
+        event.preventDefault()
+        insertTextAtCursor(clipboardText)
+        setIsProcessing(false)
+        return
+      }
 
       // If we have HTML content (formatted text), convert it to Markdown
       if (!isEmpty(clipboardHtml) && isHtmlConversionOnPasteEnabled) {
@@ -1469,24 +1548,7 @@ const TranslatePage: FC = () => {
         try {
           const markdown = convertHtmlToMarkdownWithNotification(clipboardHtml)
           if (markdown && markdown.trim()) {
-            // Insert the markdown at current cursor position
-            const textarea = textAreaRef.current?.resizableTextArea?.textArea
-            if (textarea) {
-              const start = textarea.selectionStart || 0
-              const end = textarea.selectionEnd || 0
-              const beforeText = text.substring(0, start)
-              const afterText = text.substring(end)
-              setText(beforeText + markdown + afterText)
-
-              // Set cursor position after the inserted markdown
-              setTimeout(() => {
-                textarea.setSelectionRange(start + markdown.length, start + markdown.length)
-                textarea.focus()
-              }, 0)
-            } else {
-              // Fallback: just append to the end
-              setText(text + markdown)
-            }
+            insertTextAtCursor(markdown)
           }
         } catch (e) {
           logger.error('Failed to convert HTML to Markdown', e as Error)
@@ -1543,12 +1605,12 @@ const TranslatePage: FC = () => {
     [
       convertHtmlToMarkdownWithNotification,
       getSingleFile,
+      insertTextAtCursor,
       isHtmlConversionOnPasteEnabled,
       isProcessing,
       processFile,
-      setText,
-      t,
-      text
+      shouldPreferPlainTextCodeBlock,
+      t
     ]
   )
   return (

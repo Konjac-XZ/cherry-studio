@@ -98,6 +98,25 @@ describe('markdownConverter', () => {
       expect(result).toBe('```javascript\nconsole.log("Hello, world!");\n```')
     })
 
+    it('should convert Typora md-fences pre block to fenced Markdown', () => {
+      const html = '<pre class="md-fences">const a = 1\n  const b = 2\n</pre>'
+      const result = htmlToMarkdown(html)
+      expect(result).toBe('```\nconst a = 1\n  const b = 2\n```')
+    })
+
+    it('should convert Typora md-fences with language metadata to fenced Markdown', () => {
+      const html =
+        '<pre class="md-fences" data-language="typescript"><code class="language-typescript">const add = (a: number, b: number) => a + b\n</code></pre>'
+      const result = htmlToMarkdown(html)
+      expect(result).toBe('```typescript\nconst add = (a: number, b: number) => a + b\n```')
+    })
+
+    it('should preserve indentation in Typora md-fences content', () => {
+      const html = '<pre class="md-fences">if (ok) {\n    console.log("indented")\n}\n</pre>'
+      const result = htmlToMarkdown(html)
+      expect(result).toBe('```\nif (ok) {\n    console.log("indented")\n}\n```')
+    })
+
     it('should convert table to Markdown', () => {
       const html =
         '<table><tbody><tr><th ><p>f</p></th><th ><p></p></th><th ><p></p></th></tr><tr><td ><p></p></td><td ><p>f</p></td><td ><p></p></td></tr><tr><td ><p></p></td><td ><p></p></td><td ><p>f</p></td></tr></tbody></table><p></p>'
