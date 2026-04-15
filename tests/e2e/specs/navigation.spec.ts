@@ -43,4 +43,15 @@ test.describe('Navigation', () => {
     // Home page URL should be either / or empty hash
     expect(currentUrl).toMatch(/#\/?$|#$/)
   })
+
+  test('should navigate back to Home with the keyboard shortcut', async ({ mainWindow }) => {
+    await sidebarPage.goToSettings()
+    await mainWindow.waitForTimeout(1000)
+
+    await mainWindow.keyboard.press(process.platform === 'darwin' ? 'Meta+Shift+H' : 'Control+Shift+H')
+    await mainWindow.waitForTimeout(1000)
+
+    const currentUrl = mainWindow.url()
+    expect(currentUrl).toMatch(/#\/?$|#$/)
+  })
 })

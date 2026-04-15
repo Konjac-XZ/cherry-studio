@@ -3,6 +3,7 @@ import { createSelector } from '@reduxjs/toolkit'
 import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import { appendMessageTrace, pauseTrace, restartTrace } from '@renderer/services/SpanManagerService'
 import { estimateUserPromptUsage } from '@renderer/services/TokenService'
+import { applyTranslationPostProcessingWithLatestSettings } from '@renderer/services/TranslationProcessingService'
 import store, { type RootState, useAppDispatch, useAppSelector } from '@renderer/store'
 import { updateOneBlock } from '@renderer/store/messageBlock'
 import { newMessagesActions, selectMessagesForTopic } from '@renderer/store/newMessage'
@@ -264,7 +265,18 @@ export function useMessageOperations(topic: Topic) {
 
       return throttle(
         (accumulatedText: string, isComplete: boolean = false) => {
-          void dispatch(updateTranslationBlockThunk(blockId, accumulatedText, isComplete))
+          if (!isComplete) {
+            void dispatch(updateTranslationBlockThunk(blockId, accumulatedText, false))
+            return
+          }
+
+          void (async () => {
+            const finalText = await applyTranslationPostProcessingWithLatestSettings(accumulatedText, {
+              markdownEnabled: true,
+              targetLanguage
+            })
+            await dispatch(updateTranslationBlockThunk(blockId, finalText, true))
+          })()
         },
         200,
         { leading: true, trailing: true }

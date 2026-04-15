@@ -2,7 +2,7 @@ import { useMinappPopup } from '@renderer/hooks/useMinappPopup'
 import { useShortcut } from '@renderer/hooks/useShortcuts'
 import { useAppSelector } from '@renderer/store'
 import { IpcChannel } from '@shared/IpcChannel'
-import { useEffect } from 'react'
+import { useCallback, useEffect } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { useLocation, useNavigate } from 'react-router-dom'
 
@@ -30,10 +30,20 @@ const NavigationHandler: React.FC = () => {
     }
   )
 
-  useShortcut('go_home', () => {
+  const goHome = useCallback(() => {
     hideMinappPopup()
     navigate('/')
-  })
+  }, [hideMinappPopup, navigate])
+
+  useShortcut('go_home', goHome)
+
+  useEffect(() => {
+    const removeListener = window.electron.ipcRenderer.on(IpcChannel.Windows_NavigateHome, goHome)
+
+    return () => {
+      removeListener()
+    }
+  }, [goHome])
 
   // Listen for navigate to About page event from macOS menu
   useEffect(() => {

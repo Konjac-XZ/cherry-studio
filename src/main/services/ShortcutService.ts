@@ -16,6 +16,7 @@
  */
 import { loggerService } from '@logger'
 import { handleZoomFactor } from '@main/utils/zoom'
+import { IpcChannel } from '@shared/IpcChannel'
 import type { Shortcut } from '@types'
 import type { BrowserWindow } from 'electron'
 import { globalShortcut } from 'electron'
@@ -171,7 +172,14 @@ function getShortcutHandler(shortcut: Shortcut) {
 
           const mainWindow = windowService.getMainWindow()
           if (!mainWindow || mainWindow.isDestroyed()) return
-          void navigateWhenReady(mainWindow, '/')
+          void (async () => {
+            const isReady = await waitForWebContentsReady(mainWindow)
+            if (!isReady) {
+              return
+            }
+
+            mainWindow.webContents.send(IpcChannel.Windows_NavigateHome)
+          })()
         } catch (error) {
           logger.warn('Failed to handle go_home shortcut')
         }

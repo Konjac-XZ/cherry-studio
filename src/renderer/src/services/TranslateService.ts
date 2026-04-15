@@ -20,7 +20,7 @@ import { t } from 'i18next'
 
 import { fetchChatCompletion } from './ApiService'
 import { getDefaultTranslateAssistant } from './AssistantService'
-import { buildCustomizedDictionary, GlossaryService } from './GlossaryService'
+import { runTranslationPreProcessors } from './TranslationProcessingService'
 
 const logger = loggerService.withContext('TranslateService')
 
@@ -104,8 +104,7 @@ export const translateText = async (
   const reasoningEffort = options?.reasoningEffort ?? (await getTranslateReasoningEffort())
   const assistantSettings: Partial<AssistantSettings> = { reasoning_effort: reasoningEffort }
 
-  const glossaryEntries = await GlossaryService.getByTargetLanguage(targetLanguage.langCode)
-  const dictionary = buildCustomizedDictionary(glossaryEntries, text)
+  const { dictionary } = await runTranslationPreProcessors(text, targetLanguage)
   const assistant = getDefaultTranslateAssistant(targetLanguage, text, assistantSettings, dictionary)
 
   const signal = abortKey ? readyToAbort(abortKey) : undefined
