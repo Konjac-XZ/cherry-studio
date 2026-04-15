@@ -6036,6 +6036,10 @@
       },
       "title": "翻译历史"
     },
+    "html_paste_conversion": {
+      "disable": "禁用粘贴时 HTML 转换",
+      "enable": "启用粘贴时 HTML 转换"
+    },
     "info": {
       "aborted": "翻译中止",
       "html_conversion": "检测到 HTML 格式，已触发转换，请注意检查",

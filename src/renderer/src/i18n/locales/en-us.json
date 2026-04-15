@@ -6036,6 +6036,10 @@
       },
       "title": "Translation History"
     },
+    "html_paste_conversion": {
+      "disable": "Disable HTML conversion on paste",
+      "enable": "Enable HTML conversion on paste"
+    },
     "info": {
       "aborted": "Translation aborted",
       "html_conversion": "HTML format detected, conversion triggered. Please review the results",

@@ -61,6 +61,7 @@ import { isEmpty, throttle } from 'lodash'
 import {
   Check,
   CirclePause,
+  Code2,
   Columns2,
   FolderClock,
   GripVertical,
@@ -92,6 +93,8 @@ const isMacLikePlatform = () =>
 // cache variables
 let _sourceLanguage: TranslateLanguage | 'auto' = 'auto'
 let _targetLanguage = LanguagesEnum.enUS
+const HTML_CONVERSION_ON_PASTE_SETTING_KEY = 'translate:paste:html-conversion:enabled'
+const HTML_CONVERSION_ACTIVE_BLUE = '#2f6df6'
 
 const DraggableDivider: FC<{
   isVertical: boolean
@@ -244,6 +247,7 @@ const TranslatePage: FC = () => {
   const [panelSize, setPanelSize] = useState<number>(50)
   const [isVerticalLayout, setIsVerticalLayout] = useState<boolean>(false)
   const [manualLayoutOverride, setManualLayoutOverride] = useState<'auto' | 'horizontal' | 'vertical'>('auto')
+  const [isHtmlConversionOnPasteEnabled, setIsHtmlConversionOnPasteEnabled] = useState(true)
 
   // 控制翻译模型切换
   const handleModelChange = (model: Model) => {
@@ -292,7 +296,7 @@ const TranslatePage: FC = () => {
 
       try {
         const html = clipboardApi.readHtml?.()
-        if (html && html.trim()) {
+        if (html && html.trim() && isHtmlConversionOnPasteEnabled) {
           const converted = convertHtmlToMarkdownWithNotification(html)
           if (converted.trim()) {
             return converted
@@ -328,7 +332,7 @@ const TranslatePage: FC = () => {
             if (item.types.includes('text/html')) {
               const blob = await item.getType('text/html')
               const html = await blob.text()
-              if (html && html.trim()) {
+              if (html && html.trim() && isHtmlConversionOnPasteEnabled) {
                 const converted = convertHtmlToMarkdownWithNotification(html)
                 if (converted.trim()) {
                   return converted
@@ -373,7 +377,7 @@ const TranslatePage: FC = () => {
     }
 
     return readFromNativeClipboard()
-  }, [convertHtmlToMarkdownWithNotification])
+  }, [convertHtmlToMarkdownWithNotification, isHtmlConversionOnPasteEnabled])
 
   // 控制翻译状态
   const setText = useCallback(
@@ -786,6 +790,12 @@ const TranslatePage: FC = () => {
     void db.settings.put({ id: 'translate:bidirectional:enabled', value })
   }
 
+  const toggleHtmlConversionOnPaste = useCallback(() => {
+    const nextValue = !isHtmlConversionOnPasteEnabled
+    setIsHtmlConversionOnPasteEnabled(nextValue)
+    void db.settings.put({ id: HTML_CONVERSION_ON_PASTE_SETTING_KEY, value: nextValue })
+  }, [isHtmlConversionOnPasteEnabled])
+
   // 控制历史记录点击
   const onHistoryItemClick = (
     history: TranslateHistory & { _sourceLanguage: TranslateLanguage; _targetLanguage: TranslateLanguage }
@@ -1060,6 +1070,15 @@ const TranslatePage: FC = () => {
       } else {
         db.settings.put({ id: 'translate:font:size', value: 16 })
       }
+
+      const htmlConversionOnPasteSetting = await db.settings.get({ id: HTML_CONVERSION_ON_PASTE_SETTING_KEY })
+      if (htmlConversionOnPasteSetting) {
+        setIsHtmlConversionOnPasteEnabled(Boolean(htmlConversionOnPasteSetting.value))
+      } else {
+        setIsHtmlConversionOnPasteEnabled(true)
+        void db.settings.put({ id: HTML_CONVERSION_ON_PASTE_SETTING_KEY, value: true })
+      }
+
       // Mark settings as ready so that global shortcut flows can proceed with correct bidirectional state
       setSettingsReady(true)
     })
@@ -1445,7 +1464,7 @@ const TranslatePage: FC = () => {
       const clipboardText = event.clipboardData.getData('text')
 
       // If we have HTML content (formatted text), convert it to Markdown
-      if (!isEmpty(clipboardHtml)) {
+      if (!isEmpty(clipboardHtml) && isHtmlConversionOnPasteEnabled) {
         event.preventDefault()
         try {
           const markdown = convertHtmlToMarkdownWithNotification(clipboardHtml)
@@ -1521,7 +1540,16 @@ const TranslatePage: FC = () => {
       }
       setIsProcessing(false)
     },
-    [convertHtmlToMarkdownWithNotification, getSingleFile, isProcessing, processFile, setText, t, text]
+    [
+      convertHtmlToMarkdownWithNotification,
+      getSingleFile,
+      isHtmlConversionOnPasteEnabled,
+      isProcessing,
+      processFile,
+      setText,
+      t,
+      text
+    ]
   )
   return (
     <Container
@@ -1615,6 +1643,10 @@ const TranslatePage: FC = () => {
               couldFlip={couldFlip}
               couldTranslate={couldTranslate}
               translating={translating}
+            />
+            <HtmlConversionToggleButton
+              enabled={isHtmlConversionOnPasteEnabled}
+              onToggle={toggleHtmlConversionOnPaste}
             />
           </InnerOperationBar>
           <InnerOperationBar style={{ justifyContent: 'flex-end' }}>
@@ -2088,6 +2120,26 @@ const FlipButton = ({
                 color: '#faad14'
               }
         }
+      />
+    </Tooltip>
+  )
+}
+
+const HtmlConversionToggleButton = ({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) => {
+  const { t } = useTranslation()
+
+  return (
+    <Tooltip
+      title={enabled ? t('translate.html_paste_conversion.disable') : t('translate.html_paste_conversion.enable')}
+      placement="bottom">
+      <Button
+        onClick={onToggle}
+        icon={<Code2 size={14} />}
+        style={{
+          border: `1px solid ${HTML_CONVERSION_ACTIVE_BLUE}`,
+          background: enabled ? HTML_CONVERSION_ACTIVE_BLUE : '#ffffff',
+          color: enabled ? '#ffffff' : HTML_CONVERSION_ACTIVE_BLUE
+        }}
       />
     </Tooltip>
   )

@@ -6036,6 +6036,10 @@
       },
       "title": "翻譯歷史"
     },
+    "html_paste_conversion": {
+      "disable": "停用貼上時 HTML 轉換",
+      "enable": "啟用貼上時 HTML 轉換"
+    },
     "info": {
       "aborted": "翻譯中止",
       "html_conversion": "偵測到 HTML 格式，已觸發轉換，請留意核對",
