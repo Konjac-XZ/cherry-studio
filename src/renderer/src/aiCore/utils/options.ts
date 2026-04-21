@@ -222,6 +222,8 @@ export function buildProviderOptions(
     case SystemProviderIds.ollama:
       providerSpecificOptions = buildOllamaProviderOptions(assistant, model, capabilities)
       break
+    case 'newapi':
+    case 'aihubmix':
     case SystemProviderIds.gateway:
       providerSpecificOptions = buildAIGatewayOptions(assistant, model, capabilities, serviceTier, textVerbosity)
       break
