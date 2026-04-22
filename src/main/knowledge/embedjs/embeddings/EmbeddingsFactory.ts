@@ -23,7 +23,7 @@ export default class EmbeddingsFactory {
         model,
         baseUrl: baseURL.replace(/\/api$/, ''),
         dimensions
-      })
+      } as ConstructorParameters<typeof OllamaEmbeddings>[0])
     }
     // NOTE: Azure OpenAI 也走 OpenAIEmbeddings, baseURL是https://xxxx.openai.azure.com/openai/v1
     return new OpenAiEmbeddings({

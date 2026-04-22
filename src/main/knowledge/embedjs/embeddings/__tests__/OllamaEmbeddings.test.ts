@@ -23,7 +23,7 @@ describe('OllamaEmbeddings', () => {
       model: 'nomic-embed-text',
       baseUrl: 'http://localhost:11434',
       dimensions: 768
-    })
+    } as ConstructorParameters<typeof OllamaEmbeddings>[0])
 
     await expect(embeddings.getDimensions()).resolves.toBe(768)
     expect(fetchMock).not.toHaveBeenCalled()
