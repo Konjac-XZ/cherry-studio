@@ -128,6 +128,7 @@ const ThinkModelTypes = [
   'zhipu',
   'perplexity',
   'deepseek_hybrid',
+  'deepseek_v4',
   'kimi_k2_5',
   'claude',
   'claude46'
