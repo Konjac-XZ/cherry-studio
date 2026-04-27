@@ -107,4 +107,36 @@ describe('AssistantService.getDefaultTranslateAssistant', () => {
 
     expect(assistant.settings?.reasoning_effort).toBe('default')
   })
+
+  it('lets custom request body override minimized thinking defaults', () => {
+    mocks.getModelSupportedReasoningEffortOptions.mockReturnValue(['none', 'low', 'medium'])
+    mocks.getState.mockReturnValue({
+      llm: {
+        defaultModel: { id: 'default-model', provider: 'provider-a' },
+        quickModel: null,
+        translateModel: { id: 'translate-model', provider: 'provider-a' }
+      },
+      settings: {
+        userNativeLanguage: 'en-us',
+        nativeLanguageTranslateModelPrompt: '',
+        otherLanguageTranslateModelPrompt: '',
+        translateModelPrompt: 'translate {{text}} to {{target_language}}'
+      },
+      assistants: {
+        defaultAssistant: {
+          settings: {}
+        }
+      },
+      translate: {
+        settings: {
+          autoCopy: false,
+          customParameters: [{ name: 'reasoningEffort', value: 'high', type: 'string' }]
+        }
+      }
+    })
+
+    const assistant = getDefaultTranslateAssistant({ langCode: 'zh-cn', value: 'Chinese' } as any, 'hello')
+
+    expect(assistant.settings?.reasoning_effort).toBe('default')
+  })
 })

@@ -4725,8 +4725,8 @@
         "russian": "俄文"
       },
       "user_native_language": {
-        "label": "[to be translated]:User Native Language",
-        "unspecified": "[to be translated]:Unspecified"
+        "label": "用户默认语言",
+        "unspecified": "未指定"
       }
     },
     "launch": {
@@ -6044,6 +6044,7 @@
     "info": {
       "aborted": "翻译中止",
       "html_conversion": "检测到 HTML 格式，已触发转换，请注意检查",
+      "minimize_thinking_overridden": "本次翻译中，自定义请求体已覆盖“尽量减少模型思考”设置。",
       "reused_cached": "已复用之前的翻译结果。{{modifier}}+点击“翻译”可强制刷新。"
     },
     "input": {

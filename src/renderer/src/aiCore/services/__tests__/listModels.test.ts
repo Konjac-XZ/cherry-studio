@@ -17,7 +17,33 @@ vi.mock('@ai-sdk/provider-utils', () => ({
 vi.mock('@renderer/utils', () => ({
   formatApiHost: (host: string) => host?.replace(/\/$/, ''),
   withoutTrailingSlash: (s: string) => s?.replace(/\/$/, ''),
-  getLowerBaseModelName: (id: string) => id.toLowerCase()
+  getLowerBaseModelName: (id: string) => id.toLowerCase(),
+  getDefaultGroupName: (id: string, provider?: string) => {
+    const str = id.toLowerCase()
+
+    let firstDelimiters = ['/', ' ', ':']
+    let secondDelimiters = ['-', '_']
+
+    if (provider && ['aihubmix', 'silicon', 'ocoolai', 'o3', 'dmxapi'].includes(provider.toLowerCase())) {
+      firstDelimiters = ['/', ' ', '-', '_', ':']
+      secondDelimiters = []
+    }
+
+    for (const delimiter of firstDelimiters) {
+      if (str.includes(delimiter)) {
+        return str.split(delimiter)[0]
+      }
+    }
+
+    for (const delimiter of secondDelimiters) {
+      if (str.includes(delimiter)) {
+        const parts = str.split(delimiter)
+        return parts.length > 1 ? `${parts[0]}-${parts[1]}` : parts[0]
+      }
+    }
+
+    return str
+  }
 }))
 
 vi.mock('@renderer/utils/provider', () => ({
@@ -304,6 +330,21 @@ describe('listModels', () => {
       const models = await listModels(makeProvider({ id: 'deepseek' }))
       assertValidModels(models)
       expect(models).toMatchSnapshot()
+    })
+
+    it('should derive a heuristic group for slashless ids instead of leaking custom provider UUIDs', async () => {
+      mockGetFromApi.mockResolvedValue({
+        value: {
+          data: [{ id: 'gpt-5.4', object: 'model', owned_by: 'openai' }]
+        }
+      })
+
+      const providerId = '550e8400-e29b-41d4-a716-446655440000'
+      const models = await listModels(makeProvider({ id: providerId, isSystem: false }))
+
+      expect(models).toHaveLength(1)
+      expect(models[0].group).toBe('gpt-5.4')
+      expect(models[0].group).not.toBe(providerId)
     })
   })
 

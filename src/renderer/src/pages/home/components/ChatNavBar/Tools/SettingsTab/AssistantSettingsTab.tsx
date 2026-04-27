@@ -541,7 +541,7 @@ const AssistantSettingsTab = (props: Props) => {
           </SettingRow>
           <SettingDivider />
           <SettingRow>
-            <SettingRowTitleSmall>{t('settings.input.user_native_language')}</SettingRowTitleSmall>
+            <SettingRowTitleSmall>{t('settings.input.user_native_language.label')}</SettingRowTitleSmall>
             <Selector
               value={userNativeLanguage || 'unspecified'}
               onChange={(value) => {

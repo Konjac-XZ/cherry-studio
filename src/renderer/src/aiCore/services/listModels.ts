@@ -13,8 +13,8 @@ import { loggerService } from '@logger'
 import { COPILOT_DEFAULT_HEADERS } from '@renderer/aiCore/provider/constants'
 import store from '@renderer/store'
 import type { EndpointType, Model, Provider } from '@renderer/types'
-import { SystemProviderIds } from '@renderer/types'
-import { formatApiHost, withoutTrailingSlash } from '@renderer/utils'
+import { isSystemProviderId, SystemProviderIds } from '@renderer/types'
+import { formatApiHost, getDefaultGroupName, withoutTrailingSlash } from '@renderer/utils'
 import { isAIGatewayProvider, isGeminiProvider, isOllamaProvider } from '@renderer/utils/provider'
 import { defaultAppHeaders } from '@shared/utils'
 import * as z from 'zod'
@@ -113,7 +113,16 @@ function defaultHeaders(provider: Provider): Record<string, string> {
 
 function defaultGroup(modelId: string, providerId: string): string {
   const parts = modelId.split('/')
-  return parts.length > 1 ? parts[0] : providerId
+
+  if (parts.length > 1) {
+    return parts[0]
+  }
+
+  if (isSystemProviderId(providerId)) {
+    return providerId
+  }
+
+  return getDefaultGroupName(modelId, providerId)
 }
 
 function toModel(id: string, provider: Provider, extra?: Partial<Model>): Model {

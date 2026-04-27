@@ -6044,6 +6044,7 @@
     "info": {
       "aborted": "Translation aborted",
       "html_conversion": "HTML format detected, conversion triggered. Please review the results",
+      "minimize_thinking_overridden": "Custom Request Body overrides Minimize model thinking for this translation.",
       "reused_cached": "Reused a previous translation. {{modifier}}+Click Translate to refresh it."
     },
     "input": {

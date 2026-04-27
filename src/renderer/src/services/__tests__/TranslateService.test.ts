@@ -24,7 +24,8 @@ const mocks = vi.hoisted(() => {
     trackTokenUsage: vi.fn(),
     fetchChatCompletion: vi.fn(),
     getDefaultTranslateAssistant: vi.fn(),
-    t: vi.fn((key: string) => key)
+    t: vi.fn((key: string) => key),
+    toastInfo: vi.fn()
   }
 })
 
@@ -65,6 +66,14 @@ vi.mock('../GlossaryService', () => ({
 vi.mock('i18next', () => ({
   t: mocks.t
 }))
+
+Object.defineProperty(window, 'toast', {
+  value: {
+    info: mocks.toastInfo
+  },
+  writable: true,
+  configurable: true
+})
 
 import {
   createTranslateHistoryCacheKey,
@@ -245,6 +254,27 @@ describe('TranslateService reusable history', () => {
       },
       ''
     )
+    expect(result).toBe('你好')
+  })
+
+  it('shows a toast when custom request body overrides minimized thinking', async () => {
+    const targetLanguage = { langCode: 'zh-cn', value: 'Chinese' } as any
+    mocks.settings.get.mockResolvedValue({ value: true })
+    mocks.getDefaultTranslateAssistant.mockReturnValue({
+      content: 'Translate hello',
+      model: { id: 'model-a' },
+      settings: {
+        reasoning_effort: 'default'
+      }
+    })
+    mocks.fetchChatCompletion.mockImplementation(async ({ onChunkReceived }) => {
+      onChunkReceived?.({ type: ChunkType.TEXT_DELTA, text: '你好' })
+      onChunkReceived?.({ type: ChunkType.TEXT_COMPLETE, text: '你好' })
+    })
+
+    const result = await translateText('hello', targetLanguage)
+
+    expect(mocks.toastInfo).toHaveBeenCalledWith('translate.info.minimize_thinking_overridden')
     expect(result).toBe('你好')
   })
 })

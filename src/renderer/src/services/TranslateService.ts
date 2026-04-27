@@ -41,6 +41,10 @@ type TranslateOptions = {
   reasoningEffort?: ReasoningEffortOption
 }
 
+const notifyTranslateReasoningOverride = () => {
+  window.toast.info(t('translate.info.minimize_thinking_overridden'))
+}
+
 const normalizeTranslateCacheText = (text: string) => text.trim().replace(/\s+/g, ' ')
 
 const shouldAutoDisableTranslateThinking = async (): Promise<boolean> => {
@@ -106,6 +110,10 @@ export const translateText = async (
 
   const { dictionary } = await runTranslationPreProcessors(text, targetLanguage)
   const assistant = getDefaultTranslateAssistant(targetLanguage, text, assistantSettings, dictionary)
+
+  if (reasoningEffort === 'none' && assistant.settings?.reasoning_effort !== 'none') {
+    notifyTranslateReasoningOverride()
+  }
 
   const signal = abortKey ? readyToAbort(abortKey) : undefined
 

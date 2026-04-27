@@ -18,6 +18,7 @@ import type { SettingsState } from '@renderer/store/settings'
 import type {
   Assistant,
   AssistantPreset,
+  AssistantSettingCustomParameters,
   AssistantSettings,
   Model,
   Provider,
@@ -28,6 +29,47 @@ import type {
 import { v4 as uuid } from 'uuid'
 
 const logger = loggerService.withContext('AssistantService')
+
+const TRANSLATE_REASONING_OVERRIDE_PARAM_NAMES = [
+  'reasoningeffort',
+  'reasoning_effort',
+  'reasoning',
+  'thinking',
+  'enable_thinking',
+  'thinking_budget',
+  'disable_reasoning',
+  'extra_body',
+  'chat_template_kwargs'
+] as const
+
+const customParamOverridesTranslateReasoning = (param: AssistantSettingCustomParameters): boolean => {
+  const normalizedName = param.name.trim().toLowerCase()
+  if (!normalizedName) {
+    return false
+  }
+
+  if (
+    TRANSLATE_REASONING_OVERRIDE_PARAM_NAMES.includes(
+      normalizedName as (typeof TRANSLATE_REASONING_OVERRIDE_PARAM_NAMES)[number]
+    )
+  ) {
+    return true
+  }
+
+  // Dot notation is supported by custom request bodies and can target nested reasoning config directly.
+  return (
+    normalizedName.startsWith('reasoning.') ||
+    normalizedName.startsWith('thinking.') ||
+    normalizedName.startsWith('extra_body.') ||
+    normalizedName.startsWith('chat_template_kwargs.')
+  )
+}
+
+export const hasTranslateReasoningCustomOverride = (
+  customParameters: AssistantSettingCustomParameters[] | undefined
+): boolean => {
+  return customParameters?.some(customParamOverridesTranslateReasoning) ?? false
+}
 
 /**
  * Default assistant settings configuration template.
@@ -122,8 +164,12 @@ export function getDefaultTranslateAssistant(
   }
 
   const supportedOptions = getModelSupportedReasoningEffortOptions(model)
+  const customParameters = store.getState().translate.settings.customParameters ?? []
+  const hasReasoningCustomOverride = hasTranslateReasoningCustomOverride(customParameters)
   // Translation defaults still minimize reasoning when supported, unless the caller explicitly overrides it.
-  const reasoningEffort = _settings?.reasoning_effort ?? (supportedOptions?.includes('none') ? 'none' : 'default')
+  const reasoningEffort = hasReasoningCustomOverride
+    ? 'default'
+    : (_settings?.reasoning_effort ?? (supportedOptions?.includes('none') ? 'none' : 'default'))
   const settings = {
     ..._settings,
     reasoning_effort: reasoningEffort
@@ -142,9 +188,6 @@ export function getDefaultTranslateAssistant(
   }
 
   const content = getTranslateContent(model, text, targetLanguage)
-
-  const customParameters = store.getState().translate.settings.customParameters ?? []
-
   const mergedSettings = {
     ...settings,
     customParameters: [...(settings.customParameters || []), ...customParameters]
