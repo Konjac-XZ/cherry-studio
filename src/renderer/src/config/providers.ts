@@ -739,7 +739,9 @@ export const SYSTEM_PROVIDERS_CONFIG: Record<SystemProviderId, SystemProvider> =
   }
 } as const
 
-export const SYSTEM_PROVIDERS: SystemProvider[] = Object.values(SYSTEM_PROVIDERS_CONFIG)
+export const SYSTEM_PROVIDERS: SystemProvider[] = Object.values(SYSTEM_PROVIDERS_CONFIG).filter(
+  (provider) => provider.id !== 'cherryin'
+)
 
 export const PROVIDER_LOGO_MAP: AtLeast<SystemProviderId, string> = {
   cherryin: CherryInProviderLogo,
