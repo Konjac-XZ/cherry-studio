@@ -63,4 +63,26 @@ describe('normalizeZhMarkdownTextSpacing', () => {
       '为了发现这类漏洞，MBFuzzer 采用 **differential testing**——即对比多个代理实现之间的差异——来找出不一致之处，这些不一致表明一个或多个实现未遵守共同的协议规范。'
     )
   })
+
+  it('keeps existing spaces around markdown emphasis boundaries', () => {
+    expect(normalizeZhMarkdownTextSpacing('点击 **Flash** 并等待验证完成。')).toBe('点击 **Flash** 并等待验证完成。')
+  })
+
+  it('does not expand compact slash compounds', () => {
+    expect(normalizeZhMarkdownTextSpacing('安装/打开工具，在 macOS/Linux 上写入/烧录镜像。')).toBe(
+      '安装/打开工具，在 macOS/Linux 上写入/烧录镜像。'
+    )
+  })
+
+  it('adds spaces around file extensions adjacent to Chinese text', () => {
+    expect(normalizeZhMarkdownTextSpacing('镜像是.zip压缩包，选择.img镜像。')).toBe(
+      '镜像是 .zip 压缩包，选择 .img 镜像。'
+    )
+  })
+
+  it('adds boundary spaces around protected slash compounds', () => {
+    expect(normalizeZhMarkdownTextSpacing('在macOS/Linux上使用，插入Zynq/PYNQ开发板。')).toBe(
+      '在 macOS/Linux 上使用，插入 Zynq/PYNQ 开发板。'
+    )
+  })
 })

@@ -35,6 +35,13 @@ type InlineSpacingUnit = {
   visibleText: string
 }
 
+type TextSpacingToken = {
+  firstVisible: string | null
+  lastVisible: string | null
+  raw: string
+  visibleText: string
+}
+
 const CONTAINER_TYPES = new Set(['heading', 'paragraph', 'tableCell'])
 const OPAQUE_INLINE_NODE_TYPES = new Set(['break', 'image', 'imageReference', 'inlineCode', 'inlineMath'])
 const OPENING_PUNCTUATION = new Set(['(', '<', '[', '{', '«', '“', '‘', '（', '【', '《', '「', '『'])
@@ -68,6 +75,9 @@ const QUOTE_PUNCTUATION = new Set(['"', "'"])
 const URL_PATTERN = /\b(?:https?:\/\/|mailto:|www\.)[^\s<>()\]]+/giu
 const WINDOWS_PATH_PATTERN = /\b[a-zA-Z]:\\(?:[^\\\s]+\\)*[^\\\s]+/g
 const UNIX_PATH_PATTERN = /(?:^|\s)(?:\.\.\/|\.\/|\/)(?:[^\s/]+\/)+[^\s/]+/g
+const SLASH_COMPOUND_PATTERN =
+  /(?:[\u3400-\u9fff\uf900-\ufaff]{1,2}\/[\u3400-\u9fff\uf900-\ufaff]{1,2}|[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+)/gu
+const FILE_EXTENSION_PATTERN = /\.[A-Za-z][A-Za-z0-9_-]*/gu
 const STRUCTURED_JSON_PATTERN = /^\s*[[{][\s\S]*[\]}]\s*$/u
 const YAML_LINE_PATTERN = /^\s*[A-Za-z0-9_-]+\s*:\s*.+$/u
 const SHELL_COMMAND_PATTERN =
@@ -174,7 +184,7 @@ function buildSpacedCompositeUnit(
   for (const childUnit of childUnits) {
     if (cursor <= childUnit.start) {
       const gap = markdown.slice(cursor, childUnit.start)
-      raw += normalizeInlineSlotGap(gap, previousVisibleUnit?.lastVisible ?? null, childUnit.firstVisible)
+      raw += normalizeInlineSlotGap(gap, previousVisibleUnit, childUnit)
     }
 
     raw += childUnit.raw
@@ -264,7 +274,7 @@ function buildTextSpacingUnit(
   const raw = markdown.slice(nodeRange.start, nodeRange.end)
   const spaced = isProtectedOffsetRange(nodeRange.start, nodeRange.end, protectedRanges)
     ? raw
-    : cleanupZhMarkdownSpacing(applyZhMarkdownSpacing(raw))
+    : normalizeTextSpacingWithAtoms(raw)
 
   return {
     end: nodeRange.end,
@@ -360,12 +370,18 @@ function buildOpaqueInlineAtomMatch(
   }
 }
 
-function normalizeInlineSlotGap(gap: string, leftVisible: string | null, rightVisible: string | null): string {
+function normalizeInlineSlotGap(gap: string, leftUnit: InlineSpacingUnit | null, rightUnit: InlineSpacingUnit): string {
+  const leftVisible = leftUnit?.lastVisible ?? null
+  const rightVisible = rightUnit.firstVisible
   if (!leftVisible || !rightVisible) {
     return gap
   }
 
   if (gap.includes('\n') || gap.includes('\r') || (gap && !/^\s+$/u.test(gap))) {
+    return gap
+  }
+
+  if (leftUnit && (endsWithWhitespace(leftUnit.raw) || startsWithWhitespace(rightUnit.raw))) {
     return gap
   }
 
@@ -436,31 +452,6 @@ function collectNodeVisibleText(node: MarkdownNode): string {
   return (node.children || []).map((child) => collectNodeVisibleText(child)).join('')
 }
 
-function applyZhMarkdownSpacing(text: string): string {
-  const protectedRanges = normalizeRanges(collectInlineProtectedRanges(text))
-  if (protectedRanges.length === 0) {
-    return spacingWithPangu(text)
-  }
-
-  let result = ''
-  let cursor = 0
-
-  for (const range of protectedRanges) {
-    if (cursor < range.start) {
-      result += spacingWithPangu(text.slice(cursor, range.start))
-    }
-
-    result += text.slice(range.start, range.end)
-    cursor = range.end
-  }
-
-  if (cursor < text.length) {
-    result += spacingWithPangu(text.slice(cursor))
-  }
-
-  return result
-}
-
 function spacingWithPangu(text: string): string {
   try {
     const spaced = pangu.spacingText(text)
@@ -491,25 +482,105 @@ function normalizeRanges(ranges: ProtectedRange[]): ProtectedRange[] {
   return mergedRanges
 }
 
-function collectInlineProtectedRanges(text: string): ProtectedRange[] {
-  return [URL_PATTERN, WINDOWS_PATH_PATTERN, UNIX_PATH_PATTERN].flatMap((pattern) => {
-    const ranges: ProtectedRange[] = []
-    pattern.lastIndex = 0
+function normalizeTextSpacingWithAtoms(text: string): string {
+  const atomRanges = normalizeRanges(collectTextAtomRanges(text))
+  if (atomRanges.length === 0) {
+    return cleanupZhMarkdownSpacing(spacingWithPangu(text))
+  }
 
-    let match: RegExpExecArray | null
-    while ((match = pattern.exec(text)) !== null) {
-      const matchedText = match[0]
-      const start = match.index + (pattern === UNIX_PATH_PATTERN && /^\s/u.test(matchedText) ? 1 : 0)
-      const normalizedText = pattern === UNIX_PATH_PATTERN ? matchedText.trimStart() : matchedText
+  const tokens: TextSpacingToken[] = []
+  let cursor = 0
 
-      ranges.push({
-        end: start + normalizedText.length,
-        start
-      })
+  for (const range of atomRanges) {
+    if (cursor < range.start) {
+      tokens.push(buildMutableTextToken(text.slice(cursor, range.start)))
     }
 
-    return ranges
-  })
+    tokens.push(buildAtomTextToken(text.slice(range.start, range.end)))
+    cursor = range.end
+  }
+
+  if (cursor < text.length) {
+    tokens.push(buildMutableTextToken(text.slice(cursor)))
+  }
+
+  return composeTextSpacingTokens(tokens)
+}
+
+function collectTextAtomRanges(text: string): ProtectedRange[] {
+  return [URL_PATTERN, WINDOWS_PATH_PATTERN, UNIX_PATH_PATTERN, SLASH_COMPOUND_PATTERN, FILE_EXTENSION_PATTERN].flatMap(
+    (pattern) => {
+      const ranges: ProtectedRange[] = []
+      pattern.lastIndex = 0
+
+      let match: RegExpExecArray | null
+      while ((match = pattern.exec(text)) !== null) {
+        const matchedText = match[0]
+        const start = match.index + (pattern === UNIX_PATH_PATTERN && /^\s/u.test(matchedText) ? 1 : 0)
+        const normalizedText = pattern === UNIX_PATH_PATTERN ? matchedText.trimStart() : matchedText
+
+        ranges.push({
+          end: start + normalizedText.length,
+          start
+        })
+      }
+
+      return ranges
+    }
+  )
+}
+
+function buildMutableTextToken(raw: string): TextSpacingToken {
+  const spaced = cleanupZhMarkdownSpacing(spacingWithPangu(raw))
+  return {
+    firstVisible: findFirstVisibleChar(spaced),
+    lastVisible: findLastVisibleChar(spaced),
+    raw: spaced,
+    visibleText: spaced
+  }
+}
+
+function buildAtomTextToken(raw: string): TextSpacingToken {
+  return buildTextSpacingToken(raw, raw)
+}
+
+function buildTextSpacingToken(raw: string, visibleText: string): TextSpacingToken {
+  return {
+    firstVisible: findFirstAtomBoundaryChar(visibleText),
+    lastVisible: findLastAtomBoundaryChar(visibleText),
+    raw,
+    visibleText
+  }
+}
+
+function composeTextSpacingTokens(tokens: TextSpacingToken[]): string {
+  let result = ''
+  let previousVisibleToken: TextSpacingToken | null = null
+
+  for (const token of tokens) {
+    result += normalizeTextTokenBoundary(previousVisibleToken, token)
+    result += token.raw
+
+    if (token.firstVisible) {
+      previousVisibleToken = token
+    }
+  }
+
+  return result
+}
+
+function normalizeTextTokenBoundary(leftToken: TextSpacingToken | null, rightToken: TextSpacingToken): string {
+  const leftVisible = leftToken?.lastVisible ?? null
+  const rightVisible = rightToken.firstVisible
+  if (!leftVisible || !rightVisible) {
+    return ''
+  }
+
+  if (leftToken && (endsWithWhitespace(leftToken.raw) || startsWithWhitespace(rightToken.raw))) {
+    return ''
+  }
+
+  return shouldInsertSpaceBetween(leftVisible, rightVisible) ? ' ' : ''
 }
 
 function looksLikeStructuredText(text: string): boolean {
@@ -714,4 +785,12 @@ function toGlobalPattern(pattern: RegExp): RegExp {
 
 function isWhitespace(value: string | null): boolean {
   return value !== null && /\s/u.test(value)
+}
+
+function startsWithWhitespace(value: string): boolean {
+  return value.length > 0 && isWhitespace(value[0])
+}
+
+function endsWithWhitespace(value: string): boolean {
+  return value.length > 0 && isWhitespace(value[value.length - 1])
 }
