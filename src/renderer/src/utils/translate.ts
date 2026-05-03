@@ -256,6 +256,12 @@ export type DetermineTargetLanguageResult =
       errorType: 'same_language'
     }
 
+export type DetermineFlippedBidirectionalLanguagesResult = {
+  sourceLanguage: TranslateLanguage
+  targetLanguage: TranslateLanguage
+  mode: Extract<DetermineTargetLanguageResult, { success: true }>['mode']
+}
+
 /**
  * 确定翻译的目标语言
  * @param sourceLanguage 检测到的源语言
@@ -291,6 +297,33 @@ export const determineTargetLanguage = (
       return { success: false, errorType: 'same_language' }
     }
     return { success: true, language: targetLanguage, mode: 'manual' }
+  }
+}
+
+export const determineFlippedBidirectionalLanguages = (
+  currentTargetLanguage: TranslateLanguage,
+  bidirectionalPair: [TranslateLanguage, TranslateLanguage],
+  nativeLanguage?: TranslateLanguage
+): DetermineFlippedBidirectionalLanguagesResult => {
+  const flippedSourceLanguage =
+    nativeLanguage && nativeLanguage.langCode !== UNKNOWN.langCode ? nativeLanguage : currentTargetLanguage
+
+  const result = determineTargetLanguage(
+    flippedSourceLanguage,
+    currentTargetLanguage,
+    true,
+    bidirectionalPair,
+    nativeLanguage
+  )
+
+  if (!result.success) {
+    throw new Error('Bidirectional flip should always resolve a target language.')
+  }
+
+  return {
+    sourceLanguage: flippedSourceLanguage,
+    targetLanguage: result.language,
+    mode: result.mode
   }
 }
 
