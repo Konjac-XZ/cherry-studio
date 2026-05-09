@@ -67,7 +67,7 @@ vi.mock('franc-min', () => ({
 
 import { LanguagesEnum, UNKNOWN } from '@renderer/config/translate'
 
-import { determineTargetLanguage } from '../translate'
+import { determineFlippedBidirectionalLanguages, determineTargetLanguage } from '../translate'
 
 describe('utils/translate determineTargetLanguage', () => {
   const bidirectionalPair: [typeof LanguagesEnum.enUS, typeof LanguagesEnum.zhCN] = [
@@ -177,6 +177,43 @@ describe('utils/translate determineTargetLanguage', () => {
     expect(result).toEqual({
       success: false,
       errorType: 'same_language'
+    })
+  })
+})
+
+describe('utils/translate determineFlippedBidirectionalLanguages', () => {
+  const bidirectionalPair: [typeof LanguagesEnum.enUS, typeof LanguagesEnum.zhCN] = [
+    LanguagesEnum.enUS,
+    LanguagesEnum.zhCN
+  ]
+
+  it('prefers the user native language as the flipped source and swaps target to the other pair language', () => {
+    const result = determineFlippedBidirectionalLanguages(LanguagesEnum.zhCN, bidirectionalPair, LanguagesEnum.zhCN)
+
+    expect(result).toEqual({
+      sourceLanguage: LanguagesEnum.zhCN,
+      targetLanguage: LanguagesEnum.enUS,
+      mode: 'pair_swap'
+    })
+  })
+
+  it('falls back to the current target language when native language is unavailable', () => {
+    const result = determineFlippedBidirectionalLanguages(LanguagesEnum.zhCN, bidirectionalPair, UNKNOWN)
+
+    expect(result).toEqual({
+      sourceLanguage: LanguagesEnum.zhCN,
+      targetLanguage: LanguagesEnum.enUS,
+      mode: 'pair_swap'
+    })
+  })
+
+  it('keeps the native language as flipped source and falls back into the pair when native is outside the pair', () => {
+    const result = determineFlippedBidirectionalLanguages(LanguagesEnum.zhCN, bidirectionalPair, LanguagesEnum.jaJP)
+
+    expect(result).toEqual({
+      sourceLanguage: LanguagesEnum.jaJP,
+      targetLanguage: LanguagesEnum.enUS,
+      mode: 'native_fallback'
     })
   })
 })

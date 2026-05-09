@@ -47,6 +47,7 @@ import {
   createInputScrollHandler,
   createOutputScrollHandler,
   detectLanguage,
+  determineFlippedBidirectionalLanguages,
   determineTargetLanguage
 } from '@renderer/utils/translate'
 import {
@@ -905,11 +906,11 @@ const TranslatePage: FC = () => {
 
     // If we have a detected language, flip it with target
     if (detectedLanguage && detectedLanguage.langCode !== UNKNOWN.langCode) {
-      const newSourceLanguage = targetLanguage
-      const newTargetLanguage = detectedLanguage
+      const nativeFallbackLanguage = userNativeLanguage ? getLanguageByLangcode(userNativeLanguage) : undefined
+      const { sourceLanguage: newSourceLanguage, targetLanguage: newTargetLanguage } =
+        determineFlippedBidirectionalLanguages(targetLanguage, bidirectionalPair, nativeFallbackLanguage)
 
-      // Update UI state - keep sourceLanguage as 'auto' but update detectedLanguage
-      // This keeps the dropdown showing "Auto Detect (Language)" instead of switching to the language option
+      // Keep sourceLanguage as 'auto' while showing the flipped source as the detected language.
       setDetectedLanguage(newSourceLanguage)
       setTargetLanguage(newTargetLanguage)
 
@@ -940,7 +941,10 @@ const TranslatePage: FC = () => {
     text,
     translate,
     translateModel,
-    translating
+    translating,
+    bidirectionalPair,
+    getLanguageByLangcode,
+    userNativeLanguage
   ])
 
   useEffect(() => {

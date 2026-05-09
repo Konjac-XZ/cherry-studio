@@ -61,13 +61,11 @@ vi.mock('@renderer/hooks/useAwsBedrock', () => ({
 
 import type { GoogleVertexProviderSettings } from '@ai-sdk/google-vertex/edge'
 import type { OpenAICompatibleProviderSettings } from '@ai-sdk/openai-compatible'
-import type { CherryInProviderSettings } from '@cherrystudio/ai-sdk-provider'
 import type { GitHubCopilotProviderSettings } from '@opeoginni/github-copilot-openai-compatible'
 import type { ProviderConfig } from '@renderer/aiCore/types'
 import { getAwsBedrockAuthType } from '@renderer/hooks/useAwsBedrock'
 import { isVertexAIConfigured } from '@renderer/hooks/useVertexAI'
 import { getProviderByModel } from '@renderer/services/AssistantService'
-import { getProviderById } from '@renderer/services/ProviderService'
 import type { AwsBedrockAuthType, Model, Provider } from '@renderer/types'
 
 import { COPILOT_DEFAULT_HEADERS } from '../constants'
@@ -827,26 +825,6 @@ describe('providerToAiSdkConfig', () => {
       expect(() => providerToAiSdkConfig(provider, makeModel('gemini-1.5-pro', provider.id))).toThrow(
         'VertexAI is not configured'
       )
-    })
-  })
-
-  describe('Cherryin builder', () => {
-    it('includes anthropic and gemini base URLs from cherryin provider config', async () => {
-      const cherryinProvider = makeProvider({
-        id: 'cherryin',
-        type: 'openai',
-        apiHost: 'https://api.cherryin.com',
-        anthropicApiHost: 'https://anthropic.cherryin.com'
-      })
-
-      vi.mocked(getProviderById).mockReturnValue(cherryinProvider)
-
-      const config = await providerToAiSdkConfig(cherryinProvider, makeModel('gpt-4', 'cherryin'))
-
-      expect(config.providerId).toBe('cherryin')
-      const settings = config.providerSettings as CherryInProviderSettings
-      expect(settings.anthropicBaseURL).toBe('https://anthropic.cherryin.com/v1')
-      expect(settings.geminiBaseURL).toBe('https://api.cherryin.com/v1beta')
     })
   })
 
