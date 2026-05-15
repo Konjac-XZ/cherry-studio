@@ -6,11 +6,16 @@ import {
   AvailableTools,
   buildSystemPromptWithThinkTool,
   buildSystemPromptWithTools,
+  containsSupportedVariables,
   replacePromptVariables,
   SYSTEM_PROMPT,
   THINK_TOOL_PROMPT,
   ToolUseExamples
 } from '../prompt'
+
+const mocks = vi.hoisted(() => ({
+  glossaryGetAll: vi.fn()
+}))
 
 // Mock window.api
 const mockApi = {
@@ -36,6 +41,19 @@ vi.mock('@renderer/store', () => {
     __esModule: true
   }
 })
+
+vi.mock('@renderer/services/GlossaryService', () => ({
+  GlossaryService: {
+    getAll: mocks.glossaryGetAll
+  },
+  buildFullCustomizedDictionary: (entries: Array<{ sourcePhrase: string; targetPhrase: string }>) => {
+    if (entries.length === 0) {
+      return '[No glossary entries configured]'
+    }
+    return entries.map((entry) => `${entry.sourcePhrase} -> ${entry.targetPhrase}`).join('\n')
+  },
+  GLOSSARY_LOAD_FAILED_MESSAGE: '[Failed to load glossary entries]'
+}))
 
 // Helper to create a mock MCPTool
 const createMockTool = (id: string, description: string, inputSchema: any = {}): MCPTool => ({
@@ -85,6 +103,7 @@ describe('prompt', () => {
     // 设置默认的 mock 返回值
     mockApi.system.getDeviceType.mockResolvedValue('macOS')
     mockApi.getAppInfo.mockResolvedValue({ arch: 'darwin64' })
+    mocks.glossaryGetAll.mockResolvedValue([])
   })
 
   afterEach(() => {
@@ -165,6 +184,52 @@ describe('prompt', () => {
     it('should handle non-string input gracefully', async () => {
       const result = await replacePromptVariables(null as any)
       expect(result).toBe(null)
+    })
+
+    it('should detect customized dictionary as a supported variable', () => {
+      expect(containsSupportedVariables('Glossary:\n{{customized_dictionary}}')).toBe(true)
+    })
+
+    it('should replace customized dictionary with all glossary entries', async () => {
+      mocks.glossaryGetAll.mockResolvedValue([
+        {
+          id: 'entry-1',
+          sourcePhrase: 'Cherry Studio',
+          targetPhrase: 'Cherry Studio',
+          targetLanguage: 'zh-cn',
+          createdAt: 2,
+          updatedAt: 2
+        },
+        {
+          id: 'entry-2',
+          sourcePhrase: 'prompt',
+          targetPhrase: '提示词',
+          targetLanguage: 'zh-cn',
+          createdAt: 1,
+          updatedAt: 1
+        }
+      ])
+
+      const result = await replacePromptVariables('Glossary:\n{{customized_dictionary}}')
+
+      expect(mocks.glossaryGetAll).toHaveBeenCalledOnce()
+      expect(result).toBe('Glossary:\nCherry Studio -> Cherry Studio\nprompt -> 提示词')
+    })
+
+    it('should replace customized dictionary with an empty-state message when no entries exist', async () => {
+      mocks.glossaryGetAll.mockResolvedValue([])
+
+      const result = await replacePromptVariables('Glossary:\n{{customized_dictionary}}')
+
+      expect(result).toBe('Glossary:\n[No glossary entries configured]')
+    })
+
+    it('should replace customized dictionary with a fallback message when glossary loading fails', async () => {
+      mocks.glossaryGetAll.mockRejectedValue(new Error('DB Error'))
+
+      const result = await replacePromptVariables('Glossary:\n{{customized_dictionary}}')
+
+      expect(result).toBe('Glossary:\n[Failed to load glossary entries]')
     })
   })
 

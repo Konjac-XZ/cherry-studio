@@ -1,5 +1,10 @@
 import { DEFAULT_SYSTEM_PROMPT } from '@cherrystudio/ai-core/built-in/plugins'
 import { loggerService } from '@logger'
+import {
+  buildFullCustomizedDictionary,
+  GLOSSARY_LOAD_FAILED_MESSAGE,
+  GlossaryService
+} from '@renderer/services/GlossaryService'
 import store from '@renderer/store'
 import type { MCPTool } from '@renderer/types'
 
@@ -109,7 +114,8 @@ const supportedVariables = [
   '{{system}}',
   '{{language}}',
   '{{arch}}',
-  '{{model_name}}'
+  '{{model_name}}',
+  '{{customized_dictionary}}'
 ]
 
 export const containsSupportedVariables = (userSystemPrompt: string): boolean => {
@@ -198,6 +204,16 @@ export const replacePromptVariables = async (userSystemPrompt: string, modelName
     } catch (error) {
       logger.error('Failed to get model name:', error as Error)
       userSystemPrompt = userSystemPrompt.replace(/{{model_name}}/g, 'Unknown Model')
+    }
+  }
+
+  if (userSystemPrompt.includes('{{customized_dictionary}}')) {
+    try {
+      const entries = await GlossaryService.getAll()
+      userSystemPrompt = userSystemPrompt.replace(/{{customized_dictionary}}/g, buildFullCustomizedDictionary(entries))
+    } catch (error) {
+      logger.error('Failed to get glossary entries:', error as Error)
+      userSystemPrompt = userSystemPrompt.replace(/{{customized_dictionary}}/g, GLOSSARY_LOAD_FAILED_MESSAGE)
     }
   }
 
