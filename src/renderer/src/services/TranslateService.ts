@@ -41,6 +41,8 @@ type TranslateOptions = {
   reasoningEffort?: ReasoningEffortOption
 }
 
+let translateAutoDisableThinkingCache: boolean | undefined
+
 const notifyTranslateReasoningOverride = () => {
   window.toast.info(t('translate.info.minimize_thinking_overridden'))
 }
@@ -48,13 +50,31 @@ const notifyTranslateReasoningOverride = () => {
 const normalizeTranslateCacheText = (text: string) => text.trim().replace(/\s+/g, ' ')
 
 const shouldAutoDisableTranslateThinking = async (): Promise<boolean> => {
+  if (translateAutoDisableThinkingCache !== undefined) {
+    return translateAutoDisableThinkingCache
+  }
+
   try {
     const autoDisableThinkingSetting = await db.settings.get({ id: TRANSLATE_AUTO_DISABLE_THINKING_KEY })
-    return Boolean(autoDisableThinkingSetting?.value ?? true)
+    translateAutoDisableThinkingCache = Boolean(autoDisableThinkingSetting?.value ?? true)
+    return translateAutoDisableThinkingCache
   } catch (error) {
     logger.warn('Failed to read translate minimize-thinking setting, fallback to enabled.', error as Error)
     return true
   }
+}
+
+export const loadTranslateAutoDisableThinking = async (): Promise<boolean> => {
+  return shouldAutoDisableTranslateThinking()
+}
+
+export const setTranslateAutoDisableThinking = async (value: boolean): Promise<void> => {
+  translateAutoDisableThinkingCache = value
+  await db.settings.put({ id: TRANSLATE_AUTO_DISABLE_THINKING_KEY, value })
+}
+
+export const resetTranslateAutoDisableThinkingCacheForTesting = () => {
+  translateAutoDisableThinkingCache = undefined
 }
 
 export const getTranslateReasoningEffort = async (): Promise<ReasoningEffortOption> => {

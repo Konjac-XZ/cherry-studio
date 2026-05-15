@@ -17,7 +17,8 @@ const mocks = vi.hoisted(() => {
       last
     },
     settings: {
-      get: settingsGet
+      get: settingsGet,
+      put: vi.fn()
     },
     uuid: vi.fn(() => 'history-1'),
     readyToAbort: vi.fn(),
@@ -78,13 +79,17 @@ Object.defineProperty(window, 'toast', {
 import {
   createTranslateHistoryCacheKey,
   findReusableTranslateHistory,
+  getTranslateReasoningEffort,
+  resetTranslateAutoDisableThinkingCacheForTesting,
   saveTranslateHistory,
+  setTranslateAutoDisableThinking,
   translateText
 } from '../TranslateService'
 
 describe('TranslateService reusable history', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    resetTranslateAutoDisableThinkingCacheForTesting()
     mocks.uuid.mockReturnValue('history-1')
     mocks.settings.get.mockResolvedValue({ value: true })
   })
@@ -255,6 +260,16 @@ describe('TranslateService reusable history', () => {
       ''
     )
     expect(result).toBe('你好')
+  })
+
+  it('uses the live minimize-thinking value immediately after it changes', async () => {
+    mocks.settings.get.mockResolvedValue({ value: true })
+    expect(await getTranslateReasoningEffort()).toBe('none')
+
+    await setTranslateAutoDisableThinking(false)
+
+    expect(mocks.settings.put).toHaveBeenCalledWith({ id: 'translate:auto-disable-thinking', value: false })
+    expect(await getTranslateReasoningEffort()).toBe('default')
   })
 
   it('shows a toast when custom request body overrides minimized thinking', async () => {
