@@ -2,7 +2,7 @@ import { splitToSubTrunks } from '@renderer/services/ShikiStreamTokenizer'
 import type { ThemedToken } from 'shiki/types'
 import { describe, expect, it } from 'vitest'
 
-import { getReactStyleFromToken } from '../shiki'
+import { getMarkdownIt, getReactStyleFromToken } from '../shiki'
 
 // FontStyle 常量，避免类型错误
 const FS_ITALIC = 1
@@ -193,6 +193,18 @@ describe('shiki', () => {
       const result = getReactStyleFromToken(token)
 
       expect(result).toEqual({})
+    })
+  })
+
+  describe('getMarkdownIt', () => {
+    it('does not convert straight quotes during markdown rendering', async () => {
+      const renderer = await getMarkdownIt('one-light', 'Claude said "hello" and it\'s fine.')
+      const html = renderer.render('Claude said "hello" and it\'s fine.')
+
+      expect(html).toContain('&quot;hello&quot;')
+      expect(html).toContain("it's fine")
+      expect(html).not.toContain('“hello”')
+      expect(html).not.toContain('it’s fine')
     })
   })
 })

@@ -8,7 +8,6 @@ import LanguageSelect from '@renderer/components/LanguageSelect'
 import ModelSelectButton from '@renderer/components/ModelSelectButton'
 import { isEmbeddingModel, isRerankModel, isTextToImageModel } from '@renderer/config/models'
 import { LanguagesEnum, UNKNOWN } from '@renderer/config/translate'
-import { TRANSLATE_AUTO_DISABLE_THINKING_KEY } from '@renderer/config/translateSettings'
 import { useCodeStyle } from '@renderer/context/CodeStyleProvider'
 import db from '@renderer/databases'
 import { useDefaultModel } from '@renderer/hooks/useAssistant'
@@ -21,7 +20,12 @@ import { useTimer } from '@renderer/hooks/useTimer'
 import useTranslate from '@renderer/hooks/useTranslate'
 import { getTranslatePromptTemplate } from '@renderer/services/AssistantService'
 import { estimateTextTokens } from '@renderer/services/TokenService'
-import { findReusableTranslateHistory, saveTranslateHistory, translateText } from '@renderer/services/TranslateService'
+import {
+  findReusableTranslateHistory,
+  loadTranslateAutoDisableThinking,
+  saveTranslateHistory,
+  translateText
+} from '@renderer/services/TranslateService'
 import {
   applyTranslationPostProcessing,
   loadTranslationPostProcessorSettings
@@ -198,7 +202,6 @@ const TranslatePage: FC = () => {
   )
   const [autoDetectionMethod, setAutoDetectionMethod] = useState<AutoDetectionMethod>('franc')
   const [isProcessing, setIsProcessing] = useState(false)
-  const [autoDisableThinking, setAutoDisableThinking] = useState(true)
   const [zhCnMarkdownSmartQuotesEnabled, setZhCnMarkdownSmartQuotesEnabled] = useState(
     DEFAULT_TRANSLATION_POST_PROCESSOR_FEATURES.zhCnMarkdownSmartQuotes
   )
@@ -525,9 +528,7 @@ const TranslatePage: FC = () => {
         // use a throttled updater for streaming, ensure we flush and set final content afterward
         const throttledUpdate = throttle(setTranslatedContent, 100)
         try {
-          translated = await translateText(text, actualTargetLanguage, throttledUpdate, abortKey, {
-            reasoningEffort: autoDisableThinking ? 'none' : 'default'
-          })
+          translated = await translateText(text, actualTargetLanguage, throttledUpdate, abortKey)
         } catch (e) {
           if (isAbortError(e)) {
             window.toast.info(t('translate.info.aborted'))
@@ -591,7 +592,6 @@ const TranslatePage: FC = () => {
     },
     [
       applyPostProcessorsForTarget,
-      autoDisableThinking,
       autoCopy,
       copy,
       dispatch,
@@ -1038,13 +1038,7 @@ const TranslatePage: FC = () => {
       const markdownSetting = await db.settings.get({ id: 'translate:markdown:enabled' })
       setEnableMarkdown(markdownSetting ? markdownSetting.value : false)
 
-      const autoDisableThinkingSetting = await db.settings.get({ id: TRANSLATE_AUTO_DISABLE_THINKING_KEY })
-      if (autoDisableThinkingSetting) {
-        setAutoDisableThinking(Boolean(autoDisableThinkingSetting.value))
-      } else {
-        setAutoDisableThinking(true)
-        void db.settings.put({ id: TRANSLATE_AUTO_DISABLE_THINKING_KEY, value: true })
-      }
+      void loadTranslateAutoDisableThinking()
 
       const zhCnMarkdownSmartQuotesSetting = await db.settings.get({
         id: TRANSLATION_POST_PROCESSOR_SETTING_KEYS.zhCnMarkdownSmartQuotes

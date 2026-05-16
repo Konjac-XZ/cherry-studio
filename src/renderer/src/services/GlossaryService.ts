@@ -5,6 +5,9 @@ import { v4 as uuidv4 } from 'uuid'
 
 const logger = loggerService.withContext('GlossaryService')
 
+export const EMPTY_FULL_GLOSSARY_MESSAGE = '[No glossary entries configured]'
+export const GLOSSARY_LOAD_FAILED_MESSAGE = '[Failed to load glossary entries]'
+
 export class GlossaryService {
   private static _isInitialized: boolean = false
 
@@ -85,6 +88,13 @@ export function buildCustomizedDictionary(entries: GlossaryEntry[], inputText: s
     return '[No glossary requiring specified translations was found in the original text]'
   }
   return matched.map((entry) => `${entry.sourcePhrase} -> ${entry.targetPhrase}`).join('\n')
+}
+
+export function buildFullCustomizedDictionary(entries: GlossaryEntry[]): string {
+  if (entries.length === 0) {
+    return EMPTY_FULL_GLOSSARY_MESSAGE
+  }
+  return entries.map((entry) => `${entry.sourcePhrase} -> ${entry.targetPhrase}`).join('\n')
 }
 
 export default GlossaryService

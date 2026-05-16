@@ -814,7 +814,7 @@
           "placeholder": "输入提示词",
           "variables": {
             "tip": {
-              "content": "{{date}}:\t日期\n{{time}}:\t时间\n{{datetime}}:\t日期和时间\n{{system}}:\t操作系统\n{{arch}}:\tCPU 架构\n{{language}}:\t语言\n{{model_name}}:\t模型名称\n{{username}}:\t用户名",
+              "content": "{{date}}:\t日期\n{{time}}:\t时间\n{{datetime}}:\t日期和时间\n{{system}}:\t操作系统\n{{arch}}:\tCPU 架构\n{{language}}:\t语言\n{{model_name}}:\t模型名称\n{{username}}:\t用户名\n{{customized_dictionary}}:\t全部翻译词库条目",
               "title": "可用的变量"
             }
           }

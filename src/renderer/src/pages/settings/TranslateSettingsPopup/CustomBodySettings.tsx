@@ -1,10 +1,9 @@
 import CodeEditor from '@renderer/components/CodeEditor'
 import { DeleteIcon } from '@renderer/components/Icons'
 import { HStack } from '@renderer/components/Layout'
-import { TRANSLATE_AUTO_DISABLE_THINKING_KEY } from '@renderer/config/translateSettings'
 import { useTheme } from '@renderer/context/ThemeProvider'
-import db from '@renderer/databases'
 import useTranslate from '@renderer/hooks/useTranslate'
+import { loadTranslateAutoDisableThinking, setTranslateAutoDisableThinking } from '@renderer/services/TranslateService'
 import type { AssistantSettingCustomParameters } from '@renderer/types'
 import { Button, Col, Input, InputNumber, Row, Select, Switch, Tooltip } from 'antd'
 import { HelpCircle, PlusIcon } from 'lucide-react'
@@ -22,13 +21,7 @@ const CustomBodySettings = () => {
 
   useEffect(() => {
     void (async () => {
-      const autoDisableThinkingSetting = await db.settings.get({ id: TRANSLATE_AUTO_DISABLE_THINKING_KEY })
-      if (autoDisableThinkingSetting) {
-        setAutoDisableThinking(Boolean(autoDisableThinkingSetting.value))
-      } else {
-        setAutoDisableThinking(true)
-        await db.settings.put({ id: TRANSLATE_AUTO_DISABLE_THINKING_KEY, value: true })
-      }
+      setAutoDisableThinking(await loadTranslateAutoDisableThinking())
     })()
   }, [])
 
@@ -58,7 +51,7 @@ const CustomBodySettings = () => {
 
   const onAutoDisableThinkingChange = async (checked: boolean) => {
     setAutoDisableThinking(checked)
-    await db.settings.put({ id: TRANSLATE_AUTO_DISABLE_THINKING_KEY, value: checked })
+    await setTranslateAutoDisableThinking(checked)
   }
 
   const renderValueInput = (param: AssistantSettingCustomParameters, index: number) => {
