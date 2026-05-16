@@ -140,7 +140,10 @@ const mdInitializer = new AsyncInitializer(async () => {
   const cjkFriendly = await import('markdown-it-cjk-friendly')
   const instance = md.default({
     linkify: true, // 自动转换 URL 为链接
-    typographer: true // 启用印刷格式优化
+    // Keep rendered text faithful to the source. Typography post-processing,
+    // such as Chinese smart quotes, is handled by explicit translation
+    // post-processors so selection-copy matches raw Markdown copy.
+    typographer: false
   })
   // 使用 CJK 友好插件，改善中日韩文字的换行处理
   instance.use(cjkFriendly.default)
