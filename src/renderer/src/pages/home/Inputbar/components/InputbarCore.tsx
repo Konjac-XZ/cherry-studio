@@ -636,7 +636,7 @@ export const InputbarCore: FC<InputbarCoreProps> = ({
         isLoading={isTranslating}
       />
     )
-    extras.push(<SendMessageButton sendMessage={handleSendMessage} disabled={isSendDisabled} />)
+    extras.push(<SendMessageButton key="send-message" sendMessage={handleSendMessage} disabled={isSendDisabled} />)
 
     if (isLoading) {
       extras.push(
