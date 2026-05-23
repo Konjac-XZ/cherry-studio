@@ -4,7 +4,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => {
   const last = vi.fn()
-  const equals = vi.fn(() => ({ last }))
+  const toArray = vi.fn()
+  const equals = vi.fn(() => ({ last, toArray }))
   const where = vi.fn(() => ({ equals }))
   const settingsGet = vi.fn()
 
@@ -12,6 +13,7 @@ const mocks = vi.hoisted(() => {
     translateHistory: {
       add: vi.fn(),
       put: vi.fn(),
+      toArray,
       where,
       equals,
       last
@@ -78,6 +80,7 @@ Object.defineProperty(window, 'toast', {
 
 import {
   createTranslateHistoryCacheKey,
+  findReusableTranslateHistoriesByText,
   findReusableTranslateHistory,
   getTranslateReasoningEffort,
   resetTranslateAutoDisableThinkingCacheForTesting,
@@ -128,6 +131,51 @@ describe('TranslateService reusable history', () => {
     expect(mocks.translateHistory.where).toHaveBeenCalledWith('cacheKey')
     expect(mocks.translateHistory.equals).toHaveBeenCalledWith('translate:model-a:en-us:zh-cn:hello')
     expect(result).toBe(history)
+  })
+
+  it('finds reusable histories by normalized source text and model before language detection', async () => {
+    const histories = [
+      {
+        id: 'history-old',
+        sourceText: 'hello world',
+        targetText: '旧翻译',
+        sourceLanguage: 'en-us',
+        targetLanguage: 'zh-cn',
+        modelId: 'model-a',
+        cacheKey: 'translate:model-a:en-us:zh-cn:hello world',
+        createdAt: '2024-01-01T00:00:00.000Z'
+      },
+      {
+        id: 'history-new',
+        sourceText: '  hello   world  ',
+        targetText: '新翻译',
+        sourceLanguage: 'en-us',
+        targetLanguage: 'ja-jp',
+        modelId: 'model-a',
+        cacheKey: 'translate:model-a:en-us:ja-jp:hello world',
+        createdAt: '2025-01-01T00:00:00.000Z'
+      },
+      {
+        id: 'history-other-text',
+        sourceText: 'hello',
+        targetText: '你好',
+        sourceLanguage: 'en-us',
+        targetLanguage: 'zh-cn',
+        modelId: 'model-a',
+        cacheKey: 'translate:model-a:en-us:zh-cn:hello',
+        createdAt: '2026-01-01T00:00:00.000Z'
+      }
+    ] satisfies TranslateHistory[]
+    mocks.translateHistory.toArray.mockResolvedValue(histories)
+
+    const result = await findReusableTranslateHistoriesByText({
+      sourceText: 'hello   world',
+      modelId: 'model-a'
+    })
+
+    expect(mocks.translateHistory.where).toHaveBeenCalledWith('modelId')
+    expect(mocks.translateHistory.equals).toHaveBeenCalledWith('model-a')
+    expect(result.map((history) => history.id)).toEqual(['history-new', 'history-old'])
   })
 
   it('saves cache metadata for new history rows', async () => {

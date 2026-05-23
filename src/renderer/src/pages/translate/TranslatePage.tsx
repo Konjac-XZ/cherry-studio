@@ -21,6 +21,7 @@ import useTranslate from '@renderer/hooks/useTranslate'
 import { getTranslatePromptTemplate } from '@renderer/services/AssistantService'
 import { estimateTextTokens } from '@renderer/services/TokenService'
 import {
+  findReusableTranslateHistoriesByText,
   findReusableTranslateHistory,
   loadTranslateAutoDisableThinking,
   saveTranslateHistory,
@@ -635,6 +636,67 @@ const TranslatePage: FC = () => {
       setTranslating(true)
 
       try {
+        const nativeFallbackLanguage = userNativeLanguage ? getLanguageByLangcode(userNativeLanguage) : undefined
+
+        if (sourceLanguage === 'auto' && !options?.forceRefresh) {
+          const reusableHistories = await findReusableTranslateHistoriesByText({
+            sourceText: text,
+            modelId: translateModel.id
+          })
+
+          for (const reusableHistory of reusableHistories) {
+            const reusableSourceLanguage = getLanguageByLangcode(reusableHistory.sourceLanguage)
+            const reusableTargetLanguage = getLanguageByLangcode(reusableHistory.targetLanguage)
+
+            if (
+              reusableSourceLanguage.langCode === UNKNOWN.langCode ||
+              reusableTargetLanguage.langCode === UNKNOWN.langCode
+            ) {
+              continue
+            }
+
+            const reusableTargetResult = determineTargetLanguage(
+              reusableSourceLanguage,
+              targetLanguage,
+              isBidirectional,
+              bidirectionalPair,
+              nativeFallbackLanguage
+            )
+
+            if (!reusableTargetResult.success) {
+              continue
+            }
+
+            if (reusableTargetResult.language.langCode !== reusableTargetLanguage.langCode) {
+              continue
+            }
+
+            setDetectedLanguage(reusableSourceLanguage)
+            setTranslatedContentTargetLanguageCode(reusableTargetLanguage.langCode)
+            setTranslatedContent(reusableHistory.targetText)
+            if (isBidirectional) {
+              setTargetLanguage(reusableTargetLanguage)
+            }
+            notifyReuseHit()
+
+            if (autoCopy) {
+              const reusableTargetText = applyPostProcessorsForTarget(
+                reusableHistory.targetText,
+                reusableTargetLanguage.langCode
+              )
+              setTimeoutTimer(
+                'auto-copy',
+                async () => {
+                  await copy(reusableTargetText)
+                },
+                0
+              )
+            }
+
+            return
+          }
+        }
+
         // 确定源语言：如果用户选择了特定语言，使用用户选择的；如果选择'auto'，则自动检测
         let actualSourceLanguage: TranslateLanguage
         if (sourceLanguage === 'auto') {
@@ -663,7 +725,6 @@ const TranslatePage: FC = () => {
           actualSourceLanguage = sourceLanguage
         }
 
-        const nativeFallbackLanguage = userNativeLanguage ? getLanguageByLangcode(userNativeLanguage) : undefined
         const result = determineTargetLanguage(
           actualSourceLanguage,
           targetLanguage,

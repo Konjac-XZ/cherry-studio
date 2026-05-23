@@ -10,7 +10,6 @@ import type { TranslateHistory, TranslateLanguage } from '@renderer/types'
 import { Button, Drawer, Empty, Flex, Input, Popconfirm } from 'antd'
 import dayjs from 'dayjs'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { isEmpty } from 'lodash'
 import { SearchIcon } from 'lucide-react'
 import type { FC } from 'react'
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
@@ -32,26 +31,61 @@ const logger = loggerService.withContext('TranslateHistory')
 
 // px
 const ITEM_HEIGHT = 160
+const TRANSLATE_HISTORY_RENDER_LIMIT = 200
 
 const TranslateHistoryList: FC<TranslateHistoryProps> = ({ isOpen, onHistoryItemClick, onClose }) => {
   const { t } = useTranslation()
   const { getLanguageByLangcode } = useTranslate()
-  const _translateHistory = useLiveQuery(() => db.translate_history.orderBy('createdAt').reverse().toArray(), [])
   const [search, setSearch] = useState('')
-  const [displayedHistory, setDisplayedHistory] = useState<DisplayedTranslateHistoryItem[]>([])
   const [showStared, setShowStared] = useState<boolean>(false)
   const loggedHistoryIdsRef = useRef<Set<string>>(new Set())
+  const normalizedSearch = search.trim()
+  const hasSearch = normalizedSearch.length > 0
+  const shouldLoadFullHistory = hasSearch || showStared
+  const translateHistoryCount = useLiveQuery(() => db.translate_history.count(), [])
+  const _translateHistory = useLiveQuery(() => {
+    const orderedHistory = db.translate_history.orderBy('createdAt').reverse()
+    return shouldLoadFullHistory
+      ? orderedHistory.toArray()
+      : orderedHistory.limit(TRANSLATE_HISTORY_RENDER_LIMIT).toArray()
+  }, [shouldLoadFullHistory])
 
   const translateHistory: DisplayedTranslateHistoryItem[] = useMemo(() => {
     if (!_translateHistory) return []
 
-    return _translateHistory.map((item) => ({
-      ...item,
-      _sourceLanguage: getLanguageByLangcode(item.sourceLanguage),
-      _targetLanguage: getLanguageByLangcode(item.targetLanguage),
-      createdAt: dayjs(item.createdAt).format('MM/DD HH:mm')
-    }))
-  }, [_translateHistory, getLanguageByLangcode])
+    const displayedHistory: DisplayedTranslateHistoryItem[] = []
+
+    for (const item of _translateHistory) {
+      if (showStared && !item.star) {
+        continue
+      }
+
+      const formattedCreatedAt = dayjs(item.createdAt).format('MM/DD HH:mm')
+      const sourceLanguage = getLanguageByLangcode(item.sourceLanguage)
+      const targetLanguage = getLanguageByLangcode(item.targetLanguage)
+
+      if (hasSearch) {
+        const content = `${sourceLanguage.label()} ${targetLanguage.label()} ${item.sourceText} ${item.targetText} ${formattedCreatedAt}`
+
+        if (!content.includes(normalizedSearch)) {
+          continue
+        }
+      }
+
+      displayedHistory.push({
+        ...item,
+        _sourceLanguage: sourceLanguage,
+        _targetLanguage: targetLanguage,
+        createdAt: formattedCreatedAt
+      })
+
+      if (displayedHistory.length >= TRANSLATE_HISTORY_RENDER_LIMIT) {
+        break
+      }
+    }
+
+    return displayedHistory
+  }, [_translateHistory, getLanguageByLangcode, hasSearch, normalizedSearch, showStared])
 
   useEffect(() => {
     if (!translateHistory.length) return
@@ -76,25 +110,6 @@ const TranslateHistoryList: FC<TranslateHistoryProps> = ({ isOpen, onHistoryItem
     })
   }, [translateHistory])
 
-  const searchFilter = useCallback(
-    (item: DisplayedTranslateHistoryItem) => {
-      if (isEmpty(search)) return true
-      const content = `${item._sourceLanguage.label()} ${item._targetLanguage.label()} ${item.sourceText} ${item.targetText} ${item.createdAt}`
-      return content.includes(search)
-    },
-    [search]
-  )
-
-  const starFilter = useMemo(
-    () => (showStared ? (item: DisplayedTranslateHistoryItem) => !!item.star : () => true),
-    [showStared]
-  )
-
-  const finalFilter = useCallback(
-    (item: DisplayedTranslateHistoryItem) => searchFilter(item) && starFilter(item),
-    [searchFilter, starFilter]
-  )
-
   const handleStar = useCallback(
     (id: string) => {
       const origin = translateHistory.find((item) => item.id === id)
@@ -117,10 +132,6 @@ const TranslateHistoryList: FC<TranslateHistoryProps> = ({ isOpen, onHistoryItem
     [t]
   )
 
-  useEffect(() => {
-    setDisplayedHistory(translateHistory.filter(finalFilter))
-  }, [finalFilter, translateHistory])
-
   const Title = () => {
     return (
       <Flex align="center">
@@ -138,7 +149,7 @@ const TranslateHistoryList: FC<TranslateHistoryProps> = ({ isOpen, onHistoryItem
     )
   }
 
-  const deferredHistory = useDeferredValue(displayedHistory)
+  const deferredHistory = useDeferredValue(translateHistory)
 
   return (
     <Drawer
@@ -149,7 +160,7 @@ const TranslateHistoryList: FC<TranslateHistoryProps> = ({ isOpen, onHistoryItem
       onClose={onClose}
       placement="left"
       extra={
-        !isEmpty(translateHistory) && (
+        !!translateHistoryCount && (
           <Popconfirm
             title={t('translate.history.clear')}
             description={t('translate.history.clear_description')}

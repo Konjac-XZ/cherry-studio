@@ -31,6 +31,8 @@ type TranslateHistoryLookup = {
   modelId?: string
 }
 
+type TranslateHistoryTextLookup = Pick<TranslateHistoryLookup, 'sourceText' | 'modelId'>
+
 type SaveTranslateHistoryOptions = {
   modelId?: string
   overwriteExisting?: boolean
@@ -106,6 +108,20 @@ export const findReusableTranslateHistory = async ({
   })
 
   return db.translate_history.where('cacheKey').equals(cacheKey).last()
+}
+
+export const findReusableTranslateHistoriesByText = async ({
+  sourceText,
+  modelId
+}: TranslateHistoryTextLookup): Promise<TranslateHistory[]> => {
+  const normalizedText = normalizeTranslateCacheText(sourceText)
+  const histories = modelId
+    ? await db.translate_history.where('modelId').equals(modelId).toArray()
+    : await db.translate_history.toArray()
+
+  return histories
+    .filter((history) => normalizeTranslateCacheText(history.sourceText) === normalizedText)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 }
 
 /**
