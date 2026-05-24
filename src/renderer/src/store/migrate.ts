@@ -3416,33 +3416,12 @@ const migrateConfig = {
   },
   '207': (state: RootState) => {
     try {
-      const translateSettings = state.translate.settings as any
-      const oldCustomBody: string = translateSettings.customBody ?? ''
-      delete translateSettings.customBody
-      if (!translateSettings.customParameters) {
-        translateSettings.customParameters = []
-        if (oldCustomBody.trim()) {
-          try {
-            const parsed = JSON.parse(oldCustomBody)
-            if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
-              translateSettings.customParameters = Object.entries(parsed).map(([name, value]) => ({
-                name,
-                value: typeof value === 'object' ? JSON.stringify(value) : (value as string | number | boolean),
-                type:
-                  typeof value === 'object'
-                    ? 'json'
-                    : typeof value === 'number'
-                      ? 'number'
-                      : typeof value === 'boolean'
-                        ? 'boolean'
-                        : 'string'
-              }))
-            }
-          } catch {
-            /* invalid JSON — discard silently */
-          }
+      state.llm.providers.forEach((provider) => {
+        if (provider.id === 'stepfun' && !provider.anthropicApiHost) {
+          provider.anthropicApiHost = 'https://api.stepfun.com'
         }
-      }
+      })
+
       logger.info('migrate 207 success')
       return state
     } catch (error) {
