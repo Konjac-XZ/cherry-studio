@@ -208,26 +208,13 @@ export function buildProviderOptions(
       providerSpecificOptions = buildBedrockProviderOptions(assistant, model, capabilities)
       break
     case 'cherryin':
-      providerSpecificOptions = buildCherryInProviderOptions(
-        assistant,
-        model,
-        capabilities,
-        actualProvider,
-        serviceTier,
-        textVerbosity
-      )
-      break
-    case 'newapi':
-      providerSpecificOptions = buildNewApiProviderOptions(assistant, model, capabilities, serviceTier, textVerbosity)
-      break
-    case SystemProviderIds.ollama:
-      providerSpecificOptions = buildOllamaProviderOptions(assistant, model, capabilities)
-      break
-    case 'cherryin':
     case 'newapi':
     case 'aihubmix':
     case SystemProviderIds.gateway:
       providerSpecificOptions = buildAIGatewayOptions(assistant, model, capabilities, serviceTier, textVerbosity)
+      break
+    case SystemProviderIds.ollama:
+      providerSpecificOptions = buildOllamaProviderOptions(assistant, model, capabilities)
       break
     case 'deepseek':
     case 'openrouter':
@@ -496,35 +483,6 @@ function buildCherryInProviderOptions(
 
     default:
       return buildGenericProviderOptions('cherryin', assistant, model, capabilities)
-  }
-}
-
-function buildNewApiProviderOptions(
-  assistant: Assistant,
-  model: Model,
-  capabilities: Pick<ProviderCapabilities, 'enableReasoning' | 'enableWebSearch' | 'enableGenerateImage'>,
-  serviceTier: OpenAIServiceTier,
-  textVerbosity: OpenAIVerbosity
-): Record<string, OpenAIResponsesProviderOptions | AnthropicProviderOptions | GoogleGenerativeAIProviderOptions> {
-  switch (model.endpoint_type) {
-    case 'anthropic':
-      return buildAnthropicProviderOptions(assistant, model, capabilities)
-    case 'gemini':
-      return buildGeminiProviderOptions(assistant, model, capabilities)
-    case 'openai-response':
-      return buildOpenAIProviderOptions(assistant, model, capabilities, serviceTier, textVerbosity)
-    default: {
-      const providerOptions = buildGenericProviderOptions('newapi', assistant, model, capabilities)
-
-      return {
-        ...providerOptions,
-        newapi: {
-          ...providerOptions.newapi,
-          serviceTier,
-          textVerbosity
-        }
-      }
-    }
   }
 }
 

@@ -13,6 +13,7 @@ import styled from 'styled-components'
 import { SettingGroup, SettingTitle } from '..'
 
 const { Text } = Typography
+const REGEX_REPLACEMENT_RULES_CHANGED_EVENT = 'translate:postprocess:regex-rules-changed'
 
 interface AddFormValues {
   pattern: string
@@ -39,6 +40,7 @@ const RegexReplacementSettings = () => {
   const persistRules = useCallback(async (newRules: RegexReplacementRule[]) => {
     setRules(newRules)
     await db.settings.put({ id: TRANSLATION_POST_PROCESSOR_SETTING_KEYS.regexReplacementRules, value: newRules })
+    window.dispatchEvent(new CustomEvent(REGEX_REPLACEMENT_RULES_CHANGED_EVENT, { detail: newRules }))
   }, [])
 
   const onDelete = useCallback(

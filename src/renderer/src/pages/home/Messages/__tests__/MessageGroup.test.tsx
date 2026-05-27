@@ -86,6 +86,17 @@ vi.mock('@renderer/hooks/useAssistant', () => ({
   })
 }))
 
+vi.mock('@renderer/services/AssistantService', () => ({
+  getDefaultAssistant: vi.fn(() => ({
+    id: 'default',
+    name: 'Default Assistant',
+    settings: {}
+  })),
+  getDefaultTopic: vi.fn(() => ({
+    id: 'default-topic'
+  }))
+}))
+
 vi.mock('@renderer/hooks/useChatContext', () => ({
   useChatContext: () => mocks.useChatContext()
 }))
@@ -112,6 +123,13 @@ vi.mock('@renderer/hooks/useTimer', () => ({
   })
 }))
 
+vi.mock('@renderer/hooks/useTranslate', () => ({
+  default: () => ({
+    getLanguageByLangcode: vi.fn(),
+    isLoaded: false
+  })
+}))
+
 vi.mock('@renderer/services/EventService', () => ({
   EVENT_NAMES: {
     LOCATE_MESSAGE: 'locate-message',
@@ -133,6 +151,20 @@ vi.mock('@renderer/services/TokenService', () => ({
   estimateMessageUsage: vi.fn().mockResolvedValue(0)
 }))
 
+vi.mock('@renderer/store', () => ({
+  default: {
+    dispatch: vi.fn(),
+    getState: vi.fn(() => ({
+      messageBlocks: { entities: {} },
+      messages: {
+        entities: {},
+        messageIdsByTopic: {}
+      }
+    })),
+    subscribe: vi.fn()
+  }
+}))
+
 vi.mock('@renderer/utils/dom', () => ({
   scrollIntoView: mocks.scrollIntoView
 }))
@@ -142,6 +174,10 @@ vi.mock('@renderer/utils/messageUtils/is', () => ({
 }))
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: {
+    type: '3rdParty',
+    init: vi.fn()
+  },
   useTranslation: () => ({
     t: (key: string) => key
   })

@@ -76,7 +76,8 @@ import {
   Rows2,
   Settings2,
   SpellCheck,
-  UploadIcon
+  UploadIcon,
+  Wand2
 } from 'lucide-react'
 import type { FC } from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -101,6 +102,8 @@ let _sourceLanguage: TranslateLanguage | 'auto' = 'auto'
 let _targetLanguage = LanguagesEnum.enUS
 const HTML_CONVERSION_ON_PASTE_SETTING_KEY = 'translate:paste:html-conversion:enabled'
 const HTML_CONVERSION_ACTIVE_BLUE = '#2f6df6'
+const POST_PROCESSING_ACTIVE_COLOR = '#5f6673'
+const REGEX_REPLACEMENT_RULES_CHANGED_EVENT = 'translate:postprocess:regex-rules-changed'
 
 const DraggableDivider: FC<{
   isVertical: boolean
@@ -254,6 +257,7 @@ const TranslatePage: FC = () => {
   const [isVerticalLayout, setIsVerticalLayout] = useState<boolean>(false)
   const [manualLayoutOverride, setManualLayoutOverride] = useState<'auto' | 'horizontal' | 'vertical'>('auto')
   const [isHtmlConversionOnPasteEnabled, setIsHtmlConversionOnPasteEnabled] = useState(true)
+  const [isPostProcessingEnabled, setIsPostProcessingEnabled] = useState(true)
 
   // 控制翻译模型切换
   const handleModelChange = (model: Model) => {
@@ -434,11 +438,17 @@ const TranslatePage: FC = () => {
   )
 
   const applyPostProcessorsForTarget = useCallback(
-    (content: string, targetLanguageCode: string, regexRulesOverride?: RegexReplacementRule[]) => {
+    (
+      content: string,
+      targetLanguageCode: string,
+      regexRulesOverride?: RegexReplacementRule[],
+      enabledOverride = isPostProcessingEnabled
+    ) => {
       return applyTranslationPostProcessing(content, {
         markdownEnabled: enableMarkdown,
         targetLanguage: targetLanguageCode,
         settings: {
+          enabled: enabledOverride,
           features: {
             zhCnMarkdownSmartQuotes: zhCnMarkdownSmartQuotesEnabled,
             zhMarkdownTextSpacing: zhMarkdownTextSpacingEnabled
@@ -447,13 +457,22 @@ const TranslatePage: FC = () => {
         }
       })
     },
-    [enableMarkdown, regexReplacementRules, zhCnMarkdownSmartQuotesEnabled, zhMarkdownTextSpacingEnabled]
+    [
+      enableMarkdown,
+      isPostProcessingEnabled,
+      regexReplacementRules,
+      zhCnMarkdownSmartQuotesEnabled,
+      zhMarkdownTextSpacingEnabled
+    ]
   )
 
-  const effectiveTranslatedContent = useMemo(
-    () => applyPostProcessorsForTarget(translatedContent, translatedContentTargetLanguageCode),
-    [applyPostProcessorsForTarget, translatedContent, translatedContentTargetLanguageCode]
-  )
+  const effectiveTranslatedContent = useMemo(() => {
+    if (translating) {
+      return translatedContent
+    }
+
+    return applyPostProcessorsForTarget(translatedContent, translatedContentTargetLanguageCode)
+  }, [applyPostProcessorsForTarget, translatedContent, translatedContentTargetLanguageCode, translating])
 
   const setTranslating = useCallback(
     (translating: boolean) => {
@@ -547,39 +566,34 @@ const TranslatePage: FC = () => {
         }
 
         const postProcessorSettings = await loadTranslationPostProcessorSettings()
-        setRegexReplacementRules(postProcessorSettings.regexReplacementRules)
-
-        const finalTranslated = applyPostProcessorsForTarget(
+        const finalDisplayText = applyPostProcessorsForTarget(
           translated,
           actualTargetLanguage.langCode,
-          postProcessorSettings.regexReplacementRules
+          postProcessorSettings.regexReplacementRules,
+          postProcessorSettings.enabled
         )
+        setIsPostProcessingEnabled(postProcessorSettings.enabled)
+        setRegexReplacementRules(postProcessorSettings.regexReplacementRules)
         setTranslatedContentTargetLanguageCode(actualTargetLanguage.langCode)
-        setTranslatedContent(finalTranslated)
+        setTranslatedContent(translated)
 
         window.toast.success(t('translate.complete'))
-        if (autoCopy) {
+        if (autoCopy && postProcessorSettings.enabled) {
           // Copy the freshly finished translation immediately (no need to wait for Redux store propagation)
           setTimeoutTimer(
             'auto-copy',
             async () => {
-              await copy(finalTranslated)
+              await copy(finalDisplayText)
             },
             0
           )
         }
 
         try {
-          await saveTranslateHistory(
-            text,
-            finalTranslated,
-            actualSourceLanguage.langCode,
-            actualTargetLanguage.langCode,
-            {
-              modelId: translateModel?.id,
-              overwriteExisting: options?.forceRefresh
-            }
-          )
+          await saveTranslateHistory(text, translated, actualSourceLanguage.langCode, actualTargetLanguage.langCode, {
+            modelId: translateModel?.id,
+            overwriteExisting: options?.forceRefresh
+          })
         } catch (e) {
           logger.error('Failed to save translate history', e as Error)
           window.toast.error(formatErrorMessageWithPrefix(e, t('translate.history.error.save')))
@@ -679,7 +693,7 @@ const TranslatePage: FC = () => {
             }
             notifyReuseHit()
 
-            if (autoCopy) {
+            if (autoCopy && isPostProcessingEnabled) {
               const reusableTargetText = applyPostProcessorsForTarget(
                 reusableHistory.targetText,
                 reusableTargetLanguage.langCode
@@ -755,7 +769,7 @@ const TranslatePage: FC = () => {
             setTranslatedContent(reusableHistory.targetText)
             notifyReuseHit()
 
-            if (autoCopy) {
+            if (autoCopy && isPostProcessingEnabled) {
               const reusableTargetText = applyPostProcessorsForTarget(
                 reusableHistory.targetText,
                 actualTargetLanguage.langCode
@@ -804,6 +818,7 @@ const TranslatePage: FC = () => {
       autoCopy,
       applyPostProcessorsForTarget,
       copy,
+      isPostProcessingEnabled,
       notifyReuseHit,
       setTimeoutTimer,
       setTranslatedContent
@@ -891,6 +906,12 @@ const TranslatePage: FC = () => {
     setIsHtmlConversionOnPasteEnabled(nextValue)
     void db.settings.put({ id: HTML_CONVERSION_ON_PASTE_SETTING_KEY, value: nextValue })
   }, [isHtmlConversionOnPasteEnabled])
+
+  const togglePostProcessing = useCallback(() => {
+    const nextValue = !isPostProcessingEnabled
+    setIsPostProcessingEnabled(nextValue)
+    void db.settings.put({ id: TRANSLATION_POST_PROCESSOR_SETTING_KEYS.enabled, value: nextValue })
+  }, [isPostProcessingEnabled])
 
   // 控制历史记录点击
   const onHistoryItemClick = (
@@ -1015,7 +1036,7 @@ const TranslatePage: FC = () => {
   // Render markdown content when result or enableMarkdown changes
   // 控制Markdown渲染
   useEffect(() => {
-    if (!enableMarkdown || !translatedContent) {
+    if (!enableMarkdown || !effectiveTranslatedContent) {
       setRenderedMarkdown('')
       return
     }
@@ -1134,6 +1155,16 @@ const TranslatePage: FC = () => {
         setRegexReplacementRules(regexRulesSetting.value as RegexReplacementRule[])
       }
 
+      const postProcessingEnabledSetting = await db.settings.get({
+        id: TRANSLATION_POST_PROCESSOR_SETTING_KEYS.enabled
+      })
+      if (postProcessingEnabledSetting) {
+        setIsPostProcessingEnabled(Boolean(postProcessingEnabledSetting.value))
+      } else {
+        setIsPostProcessingEnabled(true)
+        void db.settings.put({ id: TRANSLATION_POST_PROCESSOR_SETTING_KEYS.enabled, value: true })
+      }
+
       const layoutOverrideSetting = await db.settings.get({ id: 'translate:layout:override' })
       setManualLayoutOverride(layoutOverrideSetting ? layoutOverrideSetting.value : 'auto')
 
@@ -1210,6 +1241,18 @@ const TranslatePage: FC = () => {
       // Ignore errors from localStorage access
     }
   }, [panelSize])
+
+  useEffect(() => {
+    const handleRegexReplacementRulesChanged = (event: Event) => {
+      const { detail } = event as CustomEvent<RegexReplacementRule[]>
+      setRegexReplacementRules(Array.isArray(detail) ? detail : [])
+    }
+
+    window.addEventListener(REGEX_REPLACEMENT_RULES_CHANGED_EVENT, handleRegexReplacementRulesChanged)
+    return () => {
+      window.removeEventListener(REGEX_REPLACEMENT_RULES_CHANGED_EVENT, handleRegexReplacementRulesChanged)
+    }
+  }, [])
 
   // Derive layout mode
   useEffect(() => {
@@ -1769,6 +1812,7 @@ const TranslatePage: FC = () => {
               enabled={isHtmlConversionOnPasteEnabled}
               onToggle={toggleHtmlConversionOnPaste}
             />
+            <PostProcessingToggleButton enabled={isPostProcessingEnabled} onToggle={togglePostProcessing} />
           </InnerOperationBar>
           <InnerOperationBar style={{ justifyContent: 'flex-end' }}>
             <ModelSelectButton
@@ -2260,6 +2304,26 @@ const HtmlConversionToggleButton = ({ enabled, onToggle }: { enabled: boolean; o
           border: `1px solid ${HTML_CONVERSION_ACTIVE_BLUE}`,
           background: enabled ? HTML_CONVERSION_ACTIVE_BLUE : '#ffffff',
           color: enabled ? '#ffffff' : HTML_CONVERSION_ACTIVE_BLUE
+        }}
+      />
+    </Tooltip>
+  )
+}
+
+const PostProcessingToggleButton = ({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) => {
+  const { t } = useTranslation()
+
+  return (
+    <Tooltip
+      title={enabled ? t('translate.post_processing.disable') : t('translate.post_processing.enable')}
+      placement="bottom">
+      <Button
+        onClick={onToggle}
+        icon={<Wand2 size={14} />}
+        style={{
+          border: `1px solid ${POST_PROCESSING_ACTIVE_COLOR}`,
+          background: enabled ? POST_PROCESSING_ACTIVE_COLOR : '#ffffff',
+          color: enabled ? '#ffffff' : POST_PROCESSING_ACTIVE_COLOR
         }}
       />
     </Tooltip>
