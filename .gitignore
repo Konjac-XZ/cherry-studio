@@ -67,6 +67,7 @@ CLAUDE.local.md
 coverage
 .vitest-cache
 vitest.config.*.timestamp-*
+electron.vite.config.*.mjs
 .context/vitest-temp/
 
 # TypeScript incremental build
