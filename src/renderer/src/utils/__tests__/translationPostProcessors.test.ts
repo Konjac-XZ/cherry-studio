@@ -18,6 +18,7 @@ const enabledContext = (overrides: TestContextOverrides = {}): TranslationPostPr
   const featureOverrides = overrides.features
 
   return {
+    enabled: overrides.enabled,
     features: {
       zhCnMarkdownSmartQuotes: featureOverrides?.zhCnMarkdownSmartQuotes ?? true,
       zhMarkdownTextSpacing: featureOverrides?.zhMarkdownTextSpacing ?? true
@@ -107,6 +108,15 @@ describe('translationPostProcessors', () => {
   })
 
   describe('applyTranslationPostProcessors', () => {
+    it('does not apply any post-processor when the master switch is disabled', () => {
+      const ctx = enabledContext({
+        enabled: false,
+        regexReplacementRules: [{ id: '1', pattern: 'OpenAI', flags: 'g', replacement: 'AI' }]
+      })
+
+      expect(applyTranslationPostProcessors('他说"OpenAI"很厉害。', ctx)).toBe('他说"OpenAI"很厉害。')
+    })
+
     it('applies the processor only for zh-cn markdown output when enabled', () => {
       expect(applyTranslationPostProcessors('他说"你好"。', enabledContext())).toBe('他说“你好”。')
     })

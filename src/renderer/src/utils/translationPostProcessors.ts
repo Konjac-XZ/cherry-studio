@@ -49,6 +49,7 @@ type VirtualTextBuffer = {
 }
 
 export const TRANSLATION_POST_PROCESSOR_SETTING_KEYS = {
+  enabled: 'translate:postprocess:enabled',
   zhCnMarkdownSmartQuotes: 'translate:postprocess:zhQuotes:enabled',
   zhMarkdownTextSpacing: 'translate:postprocess:zhSpacing:enabled',
   regexReplacementRules: 'translate:postprocess:regex:rules'
@@ -67,6 +68,7 @@ export type TranslationPostProcessorFeatures = {
 }
 
 export type TranslationPostProcessorContext = {
+  enabled?: boolean
   features: TranslationPostProcessorFeatures
   markdownEnabled: boolean
   targetLanguage: TranslateLanguageCode
@@ -155,6 +157,10 @@ export function applyRegexReplacementRules(text: string, rules: RegexReplacement
 
 export function applyTranslationPostProcessors(text: string, context: TranslationPostProcessorContext): string {
   if (!text) {
+    return text
+  }
+
+  if (context.enabled === false) {
     return text
   }
 

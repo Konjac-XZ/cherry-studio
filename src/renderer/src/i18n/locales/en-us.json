@@ -6070,6 +6070,10 @@
     "output": {
       "placeholder": "Translation"
     },
+    "post_processing": {
+      "disable": "Disable translation post-processing",
+      "enable": "Enable translation post-processing"
+    },
     "preferred_target": "Preferred Target",
     "processing": "Translation in progress...",
     "settings": {

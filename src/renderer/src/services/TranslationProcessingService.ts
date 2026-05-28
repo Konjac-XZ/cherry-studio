@@ -32,6 +32,7 @@ type TranslationPreProcessor = {
 }
 
 type TranslationPostProcessorSettings = {
+  enabled: boolean
   features: TranslationPostProcessorFeatures
   regexReplacementRules: RegexReplacementRule[]
 }
@@ -72,7 +73,8 @@ export async function runTranslationPreProcessors(
 
 export async function loadTranslationPostProcessorSettings(): Promise<TranslationPostProcessorSettings> {
   try {
-    const [quotesSetting, spacingSetting, regexSetting] = await Promise.all([
+    const [enabledSetting, quotesSetting, spacingSetting, regexSetting] = await Promise.all([
+      db.settings.get({ id: TRANSLATION_POST_PROCESSOR_SETTING_KEYS.enabled }),
       db.settings.get({ id: TRANSLATION_POST_PROCESSOR_SETTING_KEYS.zhCnMarkdownSmartQuotes }),
       db.settings.get({ id: TRANSLATION_POST_PROCESSOR_SETTING_KEYS.zhMarkdownTextSpacing }),
       db.settings.get({ id: TRANSLATION_POST_PROCESSOR_SETTING_KEYS.regexReplacementRules })
@@ -93,12 +95,14 @@ export async function loadTranslationPostProcessorSettings(): Promise<Translatio
       : []
 
     return {
+      enabled: Boolean(enabledSetting?.value ?? true),
       features,
       regexReplacementRules
     }
   } catch (error) {
     logger.warn('[loadTranslationPostProcessorSettings] Failed to read settings, using defaults.', error as Error)
     return {
+      enabled: true,
       features: DEFAULT_TRANSLATION_POST_PROCESSOR_FEATURES,
       regexReplacementRules: []
     }
@@ -115,6 +119,7 @@ export async function applyTranslationPostProcessingWithLatestSettings(
 
 export function applyTranslationPostProcessing(content: string, options: TranslationPostProcessOptions): string {
   const context: TranslationPostProcessorContext = {
+    enabled: options.settings?.enabled ?? true,
     features: options.settings?.features ?? DEFAULT_TRANSLATION_POST_PROCESSOR_FEATURES,
     markdownEnabled: options.markdownEnabled,
     targetLanguage: options.targetLanguage,

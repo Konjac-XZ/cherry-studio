@@ -6070,6 +6070,10 @@
     "output": {
       "placeholder": "翻译"
     },
+    "post_processing": {
+      "disable": "关闭翻译后处理",
+      "enable": "开启翻译后处理"
+    },
     "preferred_target": "首选目标",
     "processing": "翻译中...",
     "settings": {
