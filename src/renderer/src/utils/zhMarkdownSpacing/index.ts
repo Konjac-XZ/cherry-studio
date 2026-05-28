@@ -643,7 +643,7 @@ function detectLeadingFrontmatterRanges(markdown: string): ProtectedRange[] {
 function cleanupZhMarkdownSpacing(text: string): string {
   return text
     .replace(/(\*\*|__)\s+([\u3400-\u9fff\uf900-\ufaff\p{N}])/gu, '$1$2')
-    .replace(/([\u3400-\u9fff\uf900-\ufaff\p{N}])\s+(\*\*|__)/gu, '$1$2')
+    .replace(/([\u3400-\u9fff\uf900-\ufaff\p{N}])\s+(\*\*|__)(?![A-Za-z])/gu, '$1$2')
     .replace(/([\u3400-\u9fff\uf900-\ufaff])\s+(["“‘])/gu, '$1$2')
     .replace(/(["”’])\s+([\u3400-\u9fff\uf900-\ufaff])/gu, '$1$2')
     .replace(/(["”’])\s+([、。！，；：？！])/gu, '$1$2')
