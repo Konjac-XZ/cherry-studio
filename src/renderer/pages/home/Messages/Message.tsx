@@ -1,0 +1,547 @@
+import { usePreference } from '@data/hooks/usePreference'
+import { loggerService } from '@logger'
+import HorizontalScrollContainer from '@renderer/components/HorizontalScrollContainer'
+import Scrollbar from '@renderer/components/Scrollbar'
+import { UNKNOWN } from '@renderer/config/translate'
+import { useMessageEditing } from '@renderer/context/MessageEditingContext'
+import { useAssistant } from '@renderer/hooks/useAssistant'
+import { useChatContext } from '@renderer/hooks/useChatContext'
+import { useMessageOperations } from '@renderer/hooks/useMessageOperations'
+import { useModel } from '@renderer/hooks/useModel'
+import { useTimer } from '@renderer/hooks/useTimer'
+import useTranslate from '@renderer/hooks/useTranslate'
+import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
+import { getMessageModelId } from '@renderer/services/MessagesService'
+import { getModelUniqId } from '@renderer/services/ModelService'
+import { estimateMessageUsage } from '@renderer/services/TokenService'
+import { translateText } from '@renderer/services/TranslateService'
+import store from '@renderer/store'
+import type { Assistant, Model, Topic } from '@renderer/types'
+import { TopicType } from '@renderer/types'
+import type { Message, MessageBlock } from '@renderer/types/newMessage'
+import { AssistantMessageStatus, MessageBlockType } from '@renderer/types/newMessage'
+import { classNames, cn } from '@renderer/utils'
+import { scrollIntoView } from '@renderer/utils/dom'
+import { removeTrailingDoubleSpaces } from '@renderer/utils/markdown'
+import { getMainTextContent } from '@renderer/utils/messageUtils/find'
+import { isMessageProcessing } from '@renderer/utils/messageUtils/is'
+import { Divider } from 'antd'
+import type { Dispatch, FC, SetStateAction } from 'react'
+import React, { memo, useCallback, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
+import styled from 'styled-components'
+
+import MessageContent from './MessageContent'
+import MessageEditor from './MessageEditor'
+import MessageErrorBoundary from './MessageErrorBoundary'
+import MessageHeader from './MessageHeader'
+import MessageMenubar from './MessageMenubar'
+import MessageOutline from './MessageOutline'
+
+interface Props {
+  message: Message
+  topic: Topic
+  assistant?: Assistant
+  index?: number
+  total?: number
+  hideMenuBar?: boolean
+  style?: React.CSSProperties
+  isGrouped?: boolean
+  isStreaming?: boolean
+  onSetMessages?: Dispatch<SetStateAction<Message[]>>
+  onUpdateUseful?: (msgId: string) => void
+  isGroupContextMessage?: boolean
+  isHorizontalMultiModelLayout?: boolean
+}
+
+const logger = loggerService.withContext('MessageItem')
+
+type StoreState = ReturnType<typeof store.getState>
+
+const buildModelKey = (model?: Pick<Model, 'id' | 'provider'> | null, fallbackId?: string) => {
+  const id = model?.id ?? fallbackId ?? ''
+  const provider = model?.provider ?? ''
+  return `${provider}:${id}`
+}
+
+const getAssistantMessagesForAsk = (state: StoreState, topicId: string, askId: string): Message[] => {
+  const topicMessageIds = state.messages.messageIdsByTopic[topicId] || []
+  const related = topicMessageIds
+    .map((id) => state.messages.entities[id])
+    .filter((msg): msg is Message => !!msg && msg.role === 'assistant' && msg.askId === askId)
+
+  return related.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+}
+
+const isHighestPriorityMessage = (currentMessage: Message, relatedMessages: Message[], userMessage?: Message) => {
+  const mentions = userMessage?.mentions
+  if (!mentions || mentions.length === 0) {
+    return true
+  }
+
+  const mentionKeys = mentions.map((model) => buildModelKey(model))
+  for (const key of mentionKeys) {
+    const candidate = relatedMessages.find((msg) => buildModelKey(msg.model, msg.modelId) === key)
+    if (candidate) {
+      return candidate.id === currentMessage.id
+    }
+  }
+
+  return true
+}
+
+const copyTextWithFallback = async (text: string) => {
+  let lastError: unknown
+
+  if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text)
+      return
+    } catch (error) {
+      lastError = error
+      logger.debug('Navigator clipboard write failed', error as Error)
+    }
+  }
+
+  try {
+    const fallbackWrite = window.api?.clipboard?.writeText
+    if (fallbackWrite) {
+      fallbackWrite(text)
+      return
+    }
+  } catch (error) {
+    lastError = error
+    logger.error('Native clipboard write failed', error as Error)
+  }
+
+  if (lastError) {
+    throw lastError
+  }
+
+  throw new Error('Clipboard write is not available in this environment.')
+}
+
+const WrapperContainer = ({
+  isMultiSelectMode,
+  children
+}: {
+  isMultiSelectMode: boolean
+  children: React.ReactNode
+}) => {
+  return isMultiSelectMode ? <label style={{ cursor: 'pointer' }}>{children}</label> : children
+}
+
+const MessageItem: FC<Props> = ({
+  message,
+  topic,
+  // assistant,
+  index,
+  hideMenuBar = false,
+  isGrouped,
+  onUpdateUseful,
+  isGroupContextMessage,
+  isHorizontalMultiModelLayout = false
+}) => {
+  const { t } = useTranslation()
+  const { assistant, setModel } = useAssistant(message.assistantId)
+  const { isMultiSelectMode } = useChatContext(topic)
+  const model = useModel(getMessageModelId(message), message.model?.provider) || message.model
+
+  const [messageFont] = usePreference('chat.message.font')
+  const [fontSize] = usePreference('chat.message.font_size')
+  const [messageStyle] = usePreference('chat.message.style')
+  const [showMessageOutline] = usePreference('chat.message.show_outline')
+
+  const { editMessageBlocks, resendUserMessageWithEdit, editMessage } = useMessageOperations(topic)
+  const messageContainerRef = useRef<HTMLDivElement>(null)
+  const prevAutomationStatusRef = useRef(message.status)
+  const prevCleanupStatusRef = useRef(message.status)
+  const { editingMessageId, startEditing, stopEditing } = useMessageEditing()
+  const { setTimeoutTimer } = useTimer()
+  const autoCopyEnabled = assistant?.settings?.autoCopy ?? false
+  const autoTranslateEnabled = assistant?.settings?.autoTranslate ?? false
+  const autoCleanupUserMessageEnabled = assistant?.settings?.autoCleanupUserMessage ?? false
+  const { getLanguageByLangcode, isLoaded: translateLanguagesLoaded } = useTranslate()
+  const isEditing = editingMessageId === message.id
+
+  useEffect(() => {
+    if (isEditing && messageContainerRef.current) {
+      scrollIntoView(messageContainerRef.current, {
+        behavior: 'smooth',
+        block: 'center',
+        container: 'nearest'
+      })
+    }
+  }, [isEditing])
+
+  useEffect(() => {
+    const previousStatus = prevAutomationStatusRef.current
+    prevAutomationStatusRef.current = message.status
+
+    // Skip if neither feature is enabled or message is not from assistant
+    if ((!autoCopyEnabled && !autoTranslateEnabled) || message.role !== 'assistant') {
+      return
+    }
+
+    // Only trigger on status transition to SUCCESS
+    if (previousStatus === AssistantMessageStatus.SUCCESS || message.status !== AssistantMessageStatus.SUCCESS) {
+      return
+    }
+
+    const state = store.getState()
+    // Handle multi-model priority check
+    if (message.askId) {
+      const userMessage = state.messages.entities[message.askId]
+      if (userMessage?.mentions?.length) {
+        const relatedMessages = getAssistantMessagesForAsk(state, message.topicId, message.askId)
+        if (!isHighestPriorityMessage(message, relatedMessages, userMessage)) {
+          return
+        }
+      }
+    }
+
+    const latestMessage = state.messages.entities[message.id] ?? message
+    const text = removeTrailingDoubleSpaces(getMainTextContent(latestMessage).trimStart())
+    if (!text) {
+      return
+    }
+
+    // Auto-copy logic
+    if (autoCopyEnabled) {
+      void copyTextWithFallback(text).catch((error) => {
+        logger.error('Failed to auto copy assistant message:', error as Error)
+        window.toast.error(t('common.copy_failed'))
+      })
+    }
+
+    // Auto-translate logic
+    if (
+      autoTranslateEnabled &&
+      userNativeLanguageCode &&
+      userNativeLanguageCode !== UNKNOWN.langCode &&
+      translateLanguagesLoaded
+    ) {
+      // Check if translation already exists
+      let hasTranslation = false
+      if (latestMessage.blocks && latestMessage.blocks.length > 0) {
+        for (const blockId of latestMessage.blocks) {
+          const block = state.messageBlocks.entities[blockId]
+          if (block && block.type === MessageBlockType.TRANSLATION) {
+            hasTranslation = true
+            break
+          }
+        }
+      }
+
+      if (!hasTranslation) {
+        const targetLanguage = getLanguageByLangcode(userNativeLanguageCode)
+        if (targetLanguage) {
+          void (async () => {
+            try {
+              const translationUpdater = await getTranslationUpdater(message.id, targetLanguage.langCode)
+              if (translationUpdater) {
+                await translateText(text, targetLanguage, translationUpdater)
+              }
+            } catch (error) {
+              logger.error('Failed to auto translate assistant message:', error as Error)
+              // Don't show toast for auto-translate failures
+            }
+          })()
+        }
+      }
+    }
+  }, [
+    autoCopyEnabled,
+    autoTranslateEnabled,
+    userNativeLanguageCode,
+    translateLanguagesLoaded,
+    getLanguageByLangcode,
+    getTranslationUpdater,
+    message,
+    message.askId,
+    message.id,
+    message.role,
+    message.status,
+    message.topicId,
+    t
+  ])
+
+  useEffect(() => {
+    const previousStatus = prevCleanupStatusRef.current
+    prevCleanupStatusRef.current = message.status
+
+    if (
+      !autoCleanupUserMessageEnabled ||
+      topic.type === TopicType.Session ||
+      message.role !== 'assistant' ||
+      !message.askId
+    ) {
+      return
+    }
+
+    const terminalStatuses = new Set<Message['status']>([
+      AssistantMessageStatus.SUCCESS,
+      AssistantMessageStatus.ERROR,
+      AssistantMessageStatus.PAUSED
+    ])
+
+    if (previousStatus === message.status || !terminalStatuses.has(message.status)) {
+      return
+    }
+
+    const state = store.getState()
+    const userMessage = state.messages.entities[message.askId]
+    if (!userMessage || userMessage.role !== 'user' || userMessage.hiddenInChat) {
+      return
+    }
+
+    const relatedMessages = getAssistantMessagesForAsk(state, message.topicId, message.askId)
+    if (relatedMessages.length === 0) {
+      return
+    }
+
+    const allRepliesCompleted = relatedMessages.every((relatedMessage) => terminalStatuses.has(relatedMessage.status))
+    const hasSuccessfulReply = relatedMessages.some(
+      (relatedMessage) => relatedMessage.status === AssistantMessageStatus.SUCCESS
+    )
+
+    if (!allRepliesCompleted || !hasSuccessfulReply) {
+      return
+    }
+
+    void editMessage(userMessage.id, { hiddenInChat: true }).catch((error) => {
+      logger.error('Failed to auto clean up user message:', error as Error)
+    })
+  }, [
+    autoCleanupUserMessageEnabled,
+    editMessage,
+    message.askId,
+    message.role,
+    message.status,
+    message.topicId,
+    topic.type
+  ])
+
+  const handleEditSave = useCallback(
+    async (blocks: MessageBlock[]) => {
+      try {
+        await editMessageBlocks(message.id, blocks)
+        const usage = await estimateMessageUsage(message)
+        void editMessage(message.id, { usage: usage })
+        stopEditing()
+      } catch (error) {
+        logger.error('Failed to save message blocks:', error as Error)
+      }
+    },
+    [message, editMessageBlocks, stopEditing, editMessage]
+  )
+
+  const handleEditResend = useCallback(
+    async (blocks: MessageBlock[]) => {
+      try {
+        await resendUserMessageWithEdit(message, blocks, assistant)
+        stopEditing()
+      } catch (error) {
+        logger.error('Failed to resend message:', error as Error)
+      }
+    },
+    [message, resendUserMessageWithEdit, assistant, stopEditing]
+  )
+
+  const handleEditCancel = useCallback(() => {
+    stopEditing()
+  }, [stopEditing])
+
+  const isLastMessage = index === 0 || !!isGrouped
+  const isAssistantMessage = message.role === 'assistant'
+  const isProcessing = isMessageProcessing(message)
+  const showMenubar = !hideMenuBar && !isEditing && !isProcessing
+
+  const messageHighlightHandler = useCallback(
+    (highlight: boolean = true) => {
+      if (messageContainerRef.current) {
+        scrollIntoView(messageContainerRef.current, { behavior: 'smooth', block: 'center', container: 'nearest' })
+        if (highlight) {
+          setTimeoutTimer(
+            'messageHighlightHandler',
+            () => {
+              const classList = messageContainerRef.current?.classList
+              classList?.add('animation-locate-highlight')
+
+              const handleAnimationEnd = () => {
+                classList?.remove('animation-locate-highlight')
+                messageContainerRef.current?.removeEventListener('animationend', handleAnimationEnd)
+              }
+
+              messageContainerRef.current?.addEventListener('animationend', handleAnimationEnd)
+            },
+            500
+          )
+        }
+      }
+    },
+    [setTimeoutTimer]
+  )
+
+  useEffect(() => {
+    const unsubscribes = [EventEmitter.on(EVENT_NAMES.LOCATE_MESSAGE + ':' + message.id, messageHighlightHandler)]
+    return () => unsubscribes.forEach((unsub) => unsub())
+  }, [message.id, messageHighlightHandler])
+
+  // Listen for external edit requests and activate editor for this message if it matches
+  useEffect(() => {
+    const handleEditRequest = (targetId: string) => {
+      if (targetId === message.id) {
+        startEditing(message.id)
+      }
+    }
+    const unsubscribe = EventEmitter.on(EVENT_NAMES.EDIT_MESSAGE, handleEditRequest)
+    return () => {
+      unsubscribe()
+    }
+  }, [message.id, startEditing])
+
+  if (message.type === 'clear') {
+    return (
+      <NewContextMessage
+        isMultiSelectMode={isMultiSelectMode}
+        className="clear-context-divider"
+        onClick={() => {
+          if (isMultiSelectMode) {
+            return
+          }
+          void EventEmitter.emit(EVENT_NAMES.NEW_CONTEXT)
+        }}>
+        <Divider dashed style={{ padding: '0 20px' }} plain>
+          {t('chat.message.new.context')}
+        </Divider>
+      </NewContextMessage>
+    )
+  }
+
+  return (
+    <WrapperContainer isMultiSelectMode={isMultiSelectMode}>
+      <MessageContainer
+        key={message.id}
+        className={classNames({
+          message: true,
+          'message-assistant': isAssistantMessage,
+          'message-user': !isAssistantMessage
+        })}
+        ref={messageContainerRef}>
+        <MessageHeader
+          message={message}
+          assistant={assistant}
+          model={model}
+          key={getModelUniqId(model)}
+          topic={topic}
+          isGroupContextMessage={isGroupContextMessage}
+        />
+        {isEditing && (
+          <MessageEditor
+            message={message}
+            topicId={topic.id}
+            onSave={handleEditSave}
+            onResend={handleEditResend}
+            onCancel={handleEditCancel}
+          />
+        )}
+        {!isEditing && (
+          <>
+            {!isMultiSelectMode && message.role === 'assistant' && showMessageOutline && (
+              <MessageOutline message={message} />
+            )}
+            <MessageContentContainer
+              className="message-content-container"
+              style={{
+                fontFamily: messageFont === 'serif' ? 'var(--font-family-serif)' : 'var(--font-family)',
+                fontSize,
+                overflowY: isHorizontalMultiModelLayout ? 'auto' : 'visible'
+              }}>
+              <MessageErrorBoundary>
+                <MessageContent message={message} />
+              </MessageErrorBoundary>
+            </MessageContentContainer>
+            {showMenubar && (
+              <MessageFooter className="MessageFooter">
+                <HorizontalScrollContainer
+                  classNames={{
+                    content: cn(
+                      'flex-1 items-center justify-between',
+                      isLastMessage && messageStyle === 'plain' ? 'flex-row-reverse' : 'flex-row'
+                    )
+                  }}>
+                  <MessageMenubar
+                    message={message}
+                    assistant={assistant}
+                    model={model}
+                    index={index}
+                    topic={topic}
+                    isLastMessage={isLastMessage}
+                    isAssistantMessage={isAssistantMessage}
+                    isGrouped={isGrouped}
+                    messageContainerRef={messageContainerRef as React.RefObject<HTMLDivElement>}
+                    setModel={setModel}
+                    onUpdateUseful={onUpdateUseful}
+                  />
+                </HorizontalScrollContainer>
+              </MessageFooter>
+            )}
+          </>
+        )}
+      </MessageContainer>
+    </WrapperContainer>
+  )
+}
+
+const MessageContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  position: relative;
+  transition: background-color 0.3s ease;
+  transform: translateZ(0);
+  will-change: transform;
+  padding: 10px;
+  padding-bottom: 0;
+  border-radius: 10px;
+  .menubar {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    transform: translateZ(0);
+    will-change: opacity;
+    &.show {
+      opacity: 1;
+    }
+  }
+  &:hover {
+    .menubar {
+      opacity: 1;
+    }
+  }
+`
+
+const MessageContentContainer = styled(Scrollbar)`
+  max-width: 100%;
+  padding-left: 46px;
+  margin-top: 0;
+  overflow-y: auto;
+`
+
+const MessageFooter = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-left: 46px;
+  margin-top: 3px;
+`
+
+const NewContextMessage = styled.div<{ isMultiSelectMode: boolean }>`
+  cursor: pointer;
+  flex: 1;
+
+  ${({ isMultiSelectMode }) => isMultiSelectMode && 'cursor: default;'}
+`
+
+export default memo(MessageItem)

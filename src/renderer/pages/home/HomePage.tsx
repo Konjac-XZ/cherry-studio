@@ -1,0 +1,300 @@
+import { usePreference } from '@data/hooks/usePreference'
+import { ErrorBoundary } from '@renderer/components/ErrorBoundary'
+import { useAgentSessionInitializer } from '@renderer/hooks/agents/useAgentSessionInitializer'
+import { useAssistants } from '@renderer/hooks/useAssistant'
+import { useNavbarPosition } from '@renderer/hooks/useNavbar'
+import { useShortcut } from '@renderer/hooks/useShortcuts'
+import { useAssistantsTabSortType, useShowAssistants, useShowTopics } from '@renderer/hooks/useStore'
+import { useTags } from '@renderer/hooks/useTags'
+import { useActiveTopic } from '@renderer/hooks/useTopic'
+import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
+import NavigationService from '@renderer/services/NavigationService'
+import { newMessagesActions } from '@renderer/store/newMessage'
+import type { Assistant, Topic } from '@renderer/types'
+import { MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH, SECOND_MIN_WINDOW_WIDTH } from '@shared/config/constant'
+import { useLocation, useNavigate } from '@tanstack/react-router'
+import { AnimatePresence, motion } from 'motion/react'
+import type { FC } from 'react'
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useDispatch } from 'react-redux'
+import styled from 'styled-components'
+
+import Chat from './Chat'
+import Navbar from './Navbar'
+import HomeTabs from './Tabs'
+
+const logger = loggerService.withContext('HomePage')
+
+let _activeAssistant: Assistant
+
+const HomePage: FC = () => {
+  const { assistants } = useAssistants()
+  const navigate = useNavigate()
+  const { isLeftNavbar } = useNavbarPosition()
+
+  // Initialize agent session hook
+  useAgentSessionInitializer()
+
+  const location = useLocation()
+  const state = location.state as { assistant?: Assistant; topic?: Topic } | undefined
+
+  const [activeAssistant, _setActiveAssistant] = useState<Assistant>(
+    state?.assistant || _activeAssistant || assistants[0]
+  )
+
+  const { activeTopic, setActiveTopic: _setActiveTopic } = useActiveTopic(activeAssistant?.id ?? '', state?.topic)
+  const [showAssistants] = usePreference('assistant.tab.show')
+  const [showTopics] = usePreference('topic.tab.show')
+  const [topicPosition] = usePreference('topic.position')
+  const { setShowAssistants, toggleShowAssistants } = useShowAssistants()
+  const { toggleShowTopics } = useShowTopics()
+  const dispatch = useDispatch()
+
+  _activeAssistant = activeAssistant
+
+  // TODO: Replace with sidebar toggle logic once the new sidebar UI is implemented
+  useShortcut('general.toggle_sidebar', () => {
+    if (topicPosition === 'right') {
+      void toggleShowAssistants()
+      return
+    }
+
+    if (!showAssistants) {
+      void setShowAssistants(true)
+      requestAnimationFrame(() => {
+        void EventEmitter.emit(EVENT_NAMES.SHOW_ASSISTANTS)
+      })
+      return
+    }
+
+    void EventEmitter.emit(EVENT_NAMES.SHOW_ASSISTANTS)
+  })
+
+  useShortcut('topic.toggle_show_topics', () => {
+    if (topicPosition === 'right') {
+      void toggleShowTopics()
+      return
+    }
+
+    if (!showAssistants) {
+      void setShowAssistants(true)
+      requestAnimationFrame(() => {
+        void EventEmitter.emit(EVENT_NAMES.SHOW_TOPIC_SIDEBAR)
+      })
+      return
+    }
+
+    void EventEmitter.emit(EVENT_NAMES.SHOW_TOPIC_SIDEBAR)
+  })
+
+  const setActiveAssistant = useCallback(
+    (newAssistant: Assistant) => {
+      if (newAssistant.id === activeAssistant?.id) return
+      const startAt = performance?.now?.() ?? Date.now()
+      assistantSwitchTimingRef.current = {
+        fromId: activeAssistant?.id,
+        toId: newAssistant.id,
+        startAt,
+        fromTopicId: activeTopic?.id,
+        toTopicId: newAssistant.topics?.[0]?.id,
+        toTopicCount: newAssistant.topics?.length ?? 0
+      }
+      logger.info('Assistant switch started', assistantSwitchTimingRef.current)
+      startTransition(() => {
+        _setActiveAssistant(newAssistant)
+        // 同步更新 active topic，避免不必要的重新渲染
+        const newTopic = newAssistant.topics[0]
+        _setActiveTopic((prev) => (newTopic?.id === prev.id ? prev : newTopic))
+      })
+    },
+    [_setActiveTopic, activeAssistant?.id, activeTopic?.id]
+  )
+
+  const setActiveTopic = useCallback(
+    (newTopic: Topic) => {
+      startTransition(() => {
+        _setActiveTopic((prev) => (newTopic?.id === prev.id ? prev : newTopic))
+        dispatch(newMessagesActions.setTopicFulfilled({ topicId: newTopic.id, fulfilled: false }))
+      })
+    },
+    [_setActiveTopic, dispatch]
+  )
+
+  const handleAssistantSwitch = useCallback(
+    (direction: 'previous' | 'next') => {
+      if (!assistants.length || !activeAssistant?.id) {
+        return
+      }
+
+      let order = orderedAssistantIds.length ? orderedAssistantIds : assistants.map((assistant) => assistant.id)
+      if (!order.length) {
+        return
+      }
+
+      const isTagView = assistantsTabSortType === 'tags'
+      const visible = visibleAssistantIds.length || isTagView ? visibleAssistantIds : order
+      const visibleSet = new Set(visible)
+
+      if (visibleSet.size === 0) {
+        return
+      }
+
+      if (visibleSet.size === 1) {
+        const onlyId = visibleSet.values().next().value
+        if (onlyId === undefined || onlyId === activeAssistant.id) {
+          return
+        }
+      }
+
+      let currentIndex = order.indexOf(activeAssistant.id)
+      if (currentIndex === -1) {
+        order = assistants.map((assistant) => assistant.id)
+        if (!order.length) {
+          return
+        }
+        currentIndex = order.indexOf(activeAssistant.id)
+      }
+
+      if (currentIndex === -1) {
+        return
+      }
+
+      const offset = direction === 'next' ? 1 : -1
+      const total = order.length
+      let index = currentIndex
+
+      for (let step = 0; step < total; step++) {
+        index = (index + offset + total) % total
+        const candidateId = order[index]
+
+        if (candidateId === activeAssistant.id) {
+          continue
+        }
+
+        if (visibleSet.has(candidateId)) {
+          const targetAssistant = assistants.find((assistant) => assistant.id === candidateId)
+
+          if (targetAssistant) {
+            setActiveAssistant(targetAssistant)
+          }
+          break
+        }
+      }
+    },
+    [
+      activeAssistant?.id,
+      assistants,
+      assistantsTabSortType,
+      orderedAssistantIds,
+      setActiveAssistant,
+      visibleAssistantIds
+    ]
+  )
+
+  useShortcut('previous_assistant', () => handleAssistantSwitch('previous'))
+  useShortcut('next_assistant', () => handleAssistantSwitch('next'))
+
+  useEffect(() => {
+    NavigationService.setNavigate(navigate)
+  }, [navigate])
+
+  useEffect(() => {
+    state?.assistant && setActiveAssistant(state?.assistant)
+    state?.topic && setActiveTopic(state?.topic)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state])
+
+  useEffect(() => {
+    const timing = assistantSwitchTimingRef.current
+    if (!timing || timing.toId !== activeAssistant?.id) {
+      return
+    }
+
+    const endAt = performance?.now?.() ?? Date.now()
+    logger.info('Assistant switch completed', {
+      fromAssistantId: timing.fromId,
+      toAssistantId: timing.toId,
+      durationMs: Math.round(endAt - timing.startAt),
+      activeTopicId: activeTopic?.id
+    })
+    assistantSwitchTimingRef.current = null
+  }, [activeAssistant?.id, activeTopic?.id])
+
+  useEffect(() => {
+    const canMinimize = topicPosition == 'left' ? !showAssistants : !showAssistants && !showTopics
+    void window.api.window.setMinimumSize(canMinimize ? SECOND_MIN_WINDOW_WIDTH : MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT)
+
+    return () => {
+      void window.api.window.resetMinimumSize()
+    }
+  }, [showAssistants, showTopics, topicPosition])
+
+  return (
+    <Container id="home-page">
+      {isLeftNavbar && (
+        <Navbar
+          activeAssistant={activeAssistant}
+          activeTopic={activeTopic}
+          setActiveTopic={setActiveTopic}
+          setActiveAssistant={setActiveAssistant}
+          position="left"
+        />
+      )}
+      <ContentContainer id={isLeftNavbar ? 'content-container' : undefined}>
+        <AnimatePresence initial={false}>
+          {showAssistants && (
+            <ErrorBoundary>
+              <motion.div
+                initial={{ width: 0, opacity: 0 }}
+                animate={{ width: 'var(--assistants-width)', opacity: 1 }}
+                exit={{ width: 0, opacity: 0 }}
+                transition={{ duration: 0.3, ease: 'easeInOut' }}
+                style={{ overflow: 'hidden' }}>
+                <HomeTabs
+                  activeAssistant={activeAssistant}
+                  activeTopic={activeTopic}
+                  setActiveAssistant={setActiveAssistant}
+                  setActiveTopic={setActiveTopic}
+                  position="left"
+                />
+              </motion.div>
+            </ErrorBoundary>
+          )}
+        </AnimatePresence>
+        <ErrorBoundary>
+          <Chat
+            assistant={activeAssistant}
+            activeTopic={activeTopic}
+            setActiveTopic={setActiveTopic}
+            setActiveAssistant={setActiveAssistant}
+          />
+        </ErrorBoundary>
+      </ContentContainer>
+    </Container>
+  )
+}
+
+const Container = styled.div`
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  [navbar-position='left'] & {
+    max-width: calc(100vw - var(--sidebar-width));
+  }
+  [navbar-position='top'] & {
+    max-width: 100vw;
+  }
+`
+
+const ContentContainer = styled.div`
+  display: flex;
+  flex: 1;
+  flex-direction: row;
+  overflow: hidden;
+
+  [navbar-position='top'] & {
+    max-width: calc(100vw - 12px);
+  }
+`
+
+export default HomePage

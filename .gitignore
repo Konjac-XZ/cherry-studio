@@ -70,8 +70,14 @@ vitest.config.*.timestamp-*
 electron.vite.config.*.mjs
 .context/vitest-temp/
 
+# TanStack Router (generated code-splitting cache)
+.tanstack/
+
 # TypeScript incremental build
 .tsbuildinfo
+
+# Icon generation cache
+.icons-hash.json
 
 # playwright
 playwright-report
