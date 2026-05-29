@@ -5,6 +5,7 @@ export type ShortcutScope = 'main' | 'renderer' | 'both'
 /** Built-in shortcut categories for UI grouping. */
 export type BuiltinShortcutCategory =
   | 'general'
+  | 'assistant'
   | 'chat'
   | 'topic'
   | 'feature.quick_assistant'

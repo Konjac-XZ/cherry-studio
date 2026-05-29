@@ -1,11 +1,12 @@
 import { usePreference } from '@data/hooks/usePreference'
+import { loggerService } from '@logger'
 import { ErrorBoundary } from '@renderer/components/ErrorBoundary'
 import { useAgentSessionInitializer } from '@renderer/hooks/agents/useAgentSessionInitializer'
 import { useAssistants } from '@renderer/hooks/useAssistant'
 import { useNavbarPosition } from '@renderer/hooks/useNavbar'
 import { useShortcut } from '@renderer/hooks/useShortcuts'
 import { useAssistantsTabSortType, useShowAssistants, useShowTopics } from '@renderer/hooks/useStore'
-import { useTags } from '@renderer/hooks/useTags'
+import { useTags } from '@renderer/hooks/useTagsLegacy'
 import { useActiveTopic } from '@renderer/hooks/useTopic'
 import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import NavigationService from '@renderer/services/NavigationService'
@@ -26,6 +27,15 @@ import HomeTabs from './Tabs'
 const logger = loggerService.withContext('HomePage')
 
 let _activeAssistant: Assistant
+
+type AssistantSwitchTiming = {
+  fromId?: string
+  toId: string
+  startAt: number
+  fromTopicId?: string
+  toTopicId?: string
+  toTopicCount: number
+}
 
 const HomePage: FC = () => {
   const { assistants } = useAssistants()
@@ -48,7 +58,25 @@ const HomePage: FC = () => {
   const [topicPosition] = usePreference('topic.position')
   const { setShowAssistants, toggleShowAssistants } = useShowAssistants()
   const { toggleShowTopics } = useShowTopics()
+  const { assistantsTabSortType = 'list' } = useAssistantsTabSortType()
+  const { getGroupedAssistants, collapsedTags } = useTags()
   const dispatch = useDispatch()
+  const assistantSwitchTimingRef = useRef<AssistantSwitchTiming | null>(null)
+
+  const orderedAssistantIds = useMemo(() => assistants.map((assistant) => assistant.id), [assistants])
+  const visibleAssistantIds = useMemo(() => {
+    if (assistantsTabSortType !== 'tags') {
+      return orderedAssistantIds
+    }
+
+    const expandedAssistantIds = new Set(
+      getGroupedAssistants.flatMap(({ tag, assistants }) =>
+        collapsedTags[tag] ? [] : assistants.map((assistant) => assistant.id)
+      )
+    )
+
+    return orderedAssistantIds.filter((id) => expandedAssistantIds.has(id))
+  }, [assistantsTabSortType, collapsedTags, getGroupedAssistants, orderedAssistantIds])
 
   _activeAssistant = activeAssistant
 
@@ -191,8 +219,8 @@ const HomePage: FC = () => {
     ]
   )
 
-  useShortcut('previous_assistant', () => handleAssistantSwitch('previous'))
-  useShortcut('next_assistant', () => handleAssistantSwitch('next'))
+  useShortcut('assistant.previous', () => handleAssistantSwitch('previous'))
+  useShortcut('assistant.next', () => handleAssistantSwitch('next'))
 
   useEffect(() => {
     NavigationService.setNavigate(navigate)

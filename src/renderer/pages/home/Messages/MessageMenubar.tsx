@@ -11,7 +11,6 @@ import { SelectChatModelPopup } from '@renderer/components/Popups/SelectModelPop
 import { isEmbeddingModel, isRerankModel, isVisionModel } from '@renderer/config/models'
 import type { MessageMenubarButtonId, MessageMenubarScope } from '@renderer/config/registry/messageMenubar'
 import { DEFAULT_MESSAGE_MENUBAR_SCOPE, getMessageMenubarConfig } from '@renderer/config/registry/messageMenubar'
-import { UNKNOWN } from '@renderer/config/translate'
 import { useMessageEditing } from '@renderer/context/MessageEditingContext'
 import { useLanguages } from '@renderer/hooks/translate'
 import { useChatContext } from '@renderer/hooks/useChatContext'
@@ -172,6 +171,7 @@ const MessageMenubar: FC<Props> = (props) => {
   } = useMessageOperations(topic)
 
   const [messageStyle] = usePreference('chat.message.style')
+  const [userNativeLanguageCode] = usePreference('feature.translate.page.target_language')
   const [enableDeveloperMode] = usePreference('app.developer_mode.enabled')
   const [confirmDeleteMessage] = usePreference('chat.message.confirm_delete')
   const [confirmRegenerateMessage] = usePreference('chat.message.confirm_regenerate')
@@ -200,9 +200,8 @@ const MessageMenubar: FC<Props> = (props) => {
   // Resolve user's default/native language to TranslateLanguage object
   const userNativeLanguage = useMemo(() => {
     if (!userNativeLanguageCode) return undefined
-    const lang = getLanguageByLangcode(userNativeLanguageCode)
-    return lang.langCode === UNKNOWN.langCode ? undefined : lang
-  }, [getLanguageByLangcode, userNativeLanguageCode])
+    return languages?.find((language) => language.langCode === userNativeLanguageCode)
+  }, [languages, userNativeLanguageCode])
 
   // const processedMessage = useMemo(() => {
   //   if (message.role === 'assistant' && message.model && isReasoningModel(message.model)) {
@@ -844,9 +843,7 @@ const buttonRenderers: Record<MessageMenubarButtonId, MessageMenubarButtonRender
 
     if (userNativeLanguage && !hasTranslationBlocks) {
       return (
-        <Tooltip
-          title={`${t('chat.translate')} (${userNativeLanguage.emoji} ${userNativeLanguage.label()})`}
-          mouseEnterDelay={1.2}>
+        <Tooltip content={`${t('chat.translate')} (${getLanguageLabel(userNativeLanguage)})`} delay={1200}>
           <ActionButton
             className="message-action-button"
             onClick={(e) => {

@@ -16,7 +16,6 @@
  */
 
 import { usePreference } from '@data/hooks/usePreference'
-import { CHERRYAI_PROVIDER } from '@renderer/config/providers'
 import store from '@renderer/store'
 
 export function useShowAssistants() {

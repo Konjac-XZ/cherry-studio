@@ -123,6 +123,18 @@ export const SHORTCUT_DEFINITIONS = [
     category: 'topic',
     labelKey: 'toggle_show_topics'
   }),
+  defineShortcut({
+    key: 'shortcut.assistant.previous',
+    scope: 'renderer',
+    category: 'assistant',
+    labelKey: 'previous_assistant'
+  }),
+  defineShortcut({
+    key: 'shortcut.assistant.next',
+    scope: 'renderer',
+    category: 'assistant',
+    labelKey: 'next_assistant'
+  }),
   // ==================== Feature shortcuts ====================
   defineShortcut({
     key: 'shortcut.feature.quick_assistant.toggle_window',

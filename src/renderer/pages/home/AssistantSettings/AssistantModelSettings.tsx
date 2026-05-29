@@ -496,7 +496,7 @@ const AssistantModelSettings: FC<Props> = ({ assistant, updateAssistant, updateA
         <Label>{t('assistants.settings.auto_copy')}</Label>
         <Switch
           checked={autoCopy}
-          onChange={(checked) => {
+          onCheckedChange={(checked) => {
             updateAssistantSettings({ autoCopy: checked })
           }}
         />
@@ -506,7 +506,7 @@ const AssistantModelSettings: FC<Props> = ({ assistant, updateAssistant, updateA
         <Label>{t('assistants.settings.auto_translate')}</Label>
         <Switch
           checked={autoTranslate}
-          onChange={(checked) => {
+          onCheckedChange={(checked) => {
             updateAssistantSettings({ autoTranslate: checked })
           }}
         />
@@ -516,7 +516,7 @@ const AssistantModelSettings: FC<Props> = ({ assistant, updateAssistant, updateA
         <Label>{t('assistants.settings.auto_cleanup_user_message')}</Label>
         <Switch
           checked={autoCleanupUserMessage}
-          onChange={(checked) => {
+          onCheckedChange={(checked) => {
             updateAssistantSettings({ autoCleanupUserMessage: checked })
           }}
         />

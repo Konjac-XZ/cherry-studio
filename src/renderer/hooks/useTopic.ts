@@ -50,7 +50,7 @@ export function useActiveTopic(assistantId: string, topic?: Topic) {
         .catch((error) => {
           logger.error('Topic switch: load failed', error as Error)
         })
-      EventEmitter.emit(EVENT_NAMES.CHANGE_TOPIC, activeTopic)
+      void EventEmitter.emit(EVENT_NAMES.CHANGE_TOPIC, activeTopic)
     }
   }, [activeTopic, assistant?.id])
 

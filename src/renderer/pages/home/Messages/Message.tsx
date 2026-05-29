@@ -2,14 +2,13 @@ import { usePreference } from '@data/hooks/usePreference'
 import { loggerService } from '@logger'
 import HorizontalScrollContainer from '@renderer/components/HorizontalScrollContainer'
 import Scrollbar from '@renderer/components/Scrollbar'
-import { UNKNOWN } from '@renderer/config/translate'
 import { useMessageEditing } from '@renderer/context/MessageEditingContext'
+import { useLanguages } from '@renderer/hooks/translate'
 import { useAssistant } from '@renderer/hooks/useAssistant'
 import { useChatContext } from '@renderer/hooks/useChatContext'
 import { useMessageOperations } from '@renderer/hooks/useMessageOperations'
 import { useModel } from '@renderer/hooks/useModel'
 import { useTimer } from '@renderer/hooks/useTimer'
-import useTranslate from '@renderer/hooks/useTranslate'
 import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import { getMessageModelId } from '@renderer/services/MessagesService'
 import { getModelUniqId } from '@renderer/services/ModelService'
@@ -25,6 +24,7 @@ import { scrollIntoView } from '@renderer/utils/dom'
 import { removeTrailingDoubleSpaces } from '@renderer/utils/markdown'
 import { getMainTextContent } from '@renderer/utils/messageUtils/find'
 import { isMessageProcessing } from '@renderer/utils/messageUtils/is'
+import { UNKNOWN_LANG_CODE } from '@renderer/utils/translate'
 import { Divider } from 'antd'
 import type { Dispatch, FC, SetStateAction } from 'react'
 import React, { memo, useCallback, useEffect, useRef } from 'react'
@@ -151,8 +151,10 @@ const MessageItem: FC<Props> = ({
   const [fontSize] = usePreference('chat.message.font_size')
   const [messageStyle] = usePreference('chat.message.style')
   const [showMessageOutline] = usePreference('chat.message.show_outline')
+  const [userNativeLanguageCode] = usePreference('feature.translate.page.target_language')
 
-  const { editMessageBlocks, resendUserMessageWithEdit, editMessage } = useMessageOperations(topic)
+  const { editMessageBlocks, resendUserMessageWithEdit, editMessage, getTranslationUpdater } =
+    useMessageOperations(topic)
   const messageContainerRef = useRef<HTMLDivElement>(null)
   const prevAutomationStatusRef = useRef(message.status)
   const prevCleanupStatusRef = useRef(message.status)
@@ -161,7 +163,7 @@ const MessageItem: FC<Props> = ({
   const autoCopyEnabled = assistant?.settings?.autoCopy ?? false
   const autoTranslateEnabled = assistant?.settings?.autoTranslate ?? false
   const autoCleanupUserMessageEnabled = assistant?.settings?.autoCleanupUserMessage ?? false
-  const { getLanguageByLangcode, isLoaded: translateLanguagesLoaded } = useTranslate()
+  const { getLanguage, status: translateLanguagesStatus } = useLanguages()
   const isEditing = editingMessageId === message.id
 
   useEffect(() => {
@@ -218,8 +220,8 @@ const MessageItem: FC<Props> = ({
     if (
       autoTranslateEnabled &&
       userNativeLanguageCode &&
-      userNativeLanguageCode !== UNKNOWN.langCode &&
-      translateLanguagesLoaded
+      userNativeLanguageCode !== UNKNOWN_LANG_CODE &&
+      translateLanguagesStatus === 'ready'
     ) {
       // Check if translation already exists
       let hasTranslation = false
@@ -234,7 +236,7 @@ const MessageItem: FC<Props> = ({
       }
 
       if (!hasTranslation) {
-        const targetLanguage = getLanguageByLangcode(userNativeLanguageCode)
+        const targetLanguage = getLanguage(userNativeLanguageCode)
         if (targetLanguage) {
           void (async () => {
             try {
@@ -254,8 +256,8 @@ const MessageItem: FC<Props> = ({
     autoCopyEnabled,
     autoTranslateEnabled,
     userNativeLanguageCode,
-    translateLanguagesLoaded,
-    getLanguageByLangcode,
+    translateLanguagesStatus,
+    getLanguage,
     getTranslationUpdater,
     message,
     message.askId,

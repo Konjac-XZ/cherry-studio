@@ -24,14 +24,10 @@ import { usePreference } from '@data/hooks/usePreference'
 import { loggerService } from '@logger'
 import db from '@renderer/databases'
 import { useLanguages, useTranslateLanguages } from '@renderer/hooks/translate'
-import {
-  type GlossaryEntry,
-  GlossaryService,
-  GLOSSARY_LOAD_FAILED_MESSAGE
-} from '@renderer/services/GlossaryService'
+import { GLOSSARY_LOAD_FAILED_MESSAGE, type GlossaryEntry, GlossaryService } from '@renderer/services/GlossaryService'
 import { cn } from '@renderer/utils'
-import { UNKNOWN_LANG_CODE } from '@renderer/utils/translate'
 import { uuid } from '@renderer/utils'
+import { UNKNOWN_LANG_CODE } from '@renderer/utils/translate'
 import {
   DEFAULT_TRANSLATION_POST_PROCESSOR_FEATURES,
   type RegexReplacementRule,
@@ -41,8 +37,8 @@ import { TRANSLATE_PROMPT } from '@shared/config/prompts'
 import type {
   AutoDetectionMethod,
   PersistedLangCode,
-  TranslateLangCode,
-  TranslateBidirectionalPair
+  TranslateBidirectionalPair,
+  TranslateLangCode
 } from '@shared/data/preference/preferenceTypes'
 import { parsePersistedLangCode, PersistedLangCodeSchema } from '@shared/data/preference/preferenceTypes'
 import { BUILTIN_TRANSLATE_LANGUAGES } from '@shared/data/presets/translate-languages'

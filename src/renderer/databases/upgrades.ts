@@ -26,6 +26,7 @@ import type {
 import { AssistantMessageStatus, MessageBlockStatus } from '@renderer/types/newMessage'
 import { parseTranslateLangCode, type TranslateLangCode } from '@shared/data/preference/preferenceTypes'
 import { BUILTIN_LANGUAGE } from '@shared/data/presets/translate-languages'
+import type { TranslateHistory } from '@shared/data/types/translate'
 import type { Transaction } from 'dexie'
 import { isEmpty } from 'lodash'
 
@@ -46,8 +47,8 @@ const normalizeTranslateCacheText = (text: string) => text.trim().replace(/\s+/g
 
 const createTranslateHistoryCacheKey = (
   sourceText: string,
-  sourceLanguage: TranslateLanguageCode,
-  targetLanguage: TranslateLanguageCode,
+  sourceLanguage: TranslateLangCode,
+  targetLanguage: TranslateLangCode,
   modelId?: string
 ) => {
   const normalizedText = normalizeTranslateCacheText(sourceText)
@@ -434,6 +435,11 @@ export async function upgradeToV11(tx: Transaction): Promise<void> {
   const histories = (await historiesTable.toArray()) as TranslateHistory[]
 
   for (const history of histories) {
+    if (!history.sourceLanguage || !history.targetLanguage) {
+      logger.warn('Skipping translate history cache key upgrade for history with missing language', { id: history.id })
+      continue
+    }
+
     try {
       await historiesTable.put({
         ...history,
@@ -441,7 +447,7 @@ export async function upgradeToV11(tx: Transaction): Promise<void> {
           history.sourceText,
           history.sourceLanguage,
           history.targetLanguage,
-          history.modelId
+          undefined
         )
       })
     } catch (error) {

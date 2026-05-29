@@ -2560,6 +2560,21 @@
               "defaultValue": {
                 "binding": [
                   "CommandOrControl",
+                  "Shift",
+                  "H"
+                ],
+                "enabled": true
+              },
+              "originalKey": "go_home",
+              "status": "classified",
+              "targetKey": "shortcut.general.go_home",
+              "type": "PreferenceTypes.PreferenceShortcutType"
+            },
+            {
+              "category": "preferences",
+              "defaultValue": {
+                "binding": [
+                  "CommandOrControl",
                   "E"
                 ],
                 "enabled": false
@@ -2567,6 +2582,21 @@
               "originalKey": "mini_window",
               "status": "classified",
               "targetKey": "shortcut.feature.quick_assistant.toggle_window",
+              "type": "PreferenceTypes.PreferenceShortcutType"
+            },
+            {
+              "category": "preferences",
+              "defaultValue": {
+                "binding": [
+                  "CommandOrControl",
+                  "Shift",
+                  "T"
+                ],
+                "enabled": true
+              },
+              "originalKey": "show_translate",
+              "status": "classified",
+              "targetKey": "shortcut.feature.translate.clipboard",
               "type": "PreferenceTypes.PreferenceShortcutType"
             },
             {
@@ -2631,6 +2661,34 @@
               "originalKey": "toggle_show_topics",
               "status": "classified",
               "targetKey": "shortcut.topic.toggle_show_topics",
+              "type": "PreferenceTypes.PreferenceShortcutType"
+            },
+            {
+              "category": "preferences",
+              "defaultValue": {
+                "binding": [
+                  "Ctrl",
+                  "ArrowUp"
+                ],
+                "enabled": true
+              },
+              "originalKey": "previous_assistant",
+              "status": "classified",
+              "targetKey": "shortcut.assistant.previous",
+              "type": "PreferenceTypes.PreferenceShortcutType"
+            },
+            {
+              "category": "preferences",
+              "defaultValue": {
+                "binding": [
+                  "Ctrl",
+                  "ArrowDown"
+                ],
+                "enabled": true
+              },
+              "originalKey": "next_assistant",
+              "status": "classified",
+              "targetKey": "shortcut.assistant.next",
               "type": "PreferenceTypes.PreferenceShortcutType"
             },
             {
