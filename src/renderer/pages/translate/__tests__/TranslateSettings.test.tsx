@@ -12,6 +12,18 @@ const translateLanguageMutationsMock = vi.hoisted(() => ({
   remove: vi.fn()
 }))
 
+const dbMocks = vi.hoisted(() => ({
+  settingsGet: vi.fn(),
+  settingsPut: vi.fn()
+}))
+
+const glossaryMocks = vi.hoisted(() => ({
+  getAll: vi.fn(),
+  add: vi.fn(),
+  update: vi.fn(),
+  delete: vi.fn()
+}))
+
 let mockLanguages: TranslateLanguage[] = []
 
 vi.mock('react-i18next', () => ({
@@ -27,8 +39,23 @@ vi.mock('@renderer/hooks/translate', () => ({
   useTranslateLanguages: () => translateLanguageMutationsMock
 }))
 
+vi.mock('@renderer/databases', () => ({
+  default: {
+    settings: {
+      get: dbMocks.settingsGet,
+      put: dbMocks.settingsPut
+    }
+  }
+}))
+
+vi.mock('@renderer/services/GlossaryService', () => ({
+  GLOSSARY_LOAD_FAILED_MESSAGE: '[Failed to load glossary entries]',
+  GlossaryService: glossaryMocks
+}))
+
 vi.mock('@renderer/utils', () => ({
-  cn: (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(' ')
+  cn: (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(' '),
+  uuid: () => 'rule-1'
 }))
 
 vi.mock('../components/LanguagePicker', () => ({
@@ -172,6 +199,18 @@ describe('TranslateSettings', () => {
   beforeEach(() => {
     MockUsePreferenceUtils.resetMocks()
     mockLanguages = []
+    dbMocks.settingsGet.mockReset()
+    dbMocks.settingsGet.mockResolvedValue(undefined)
+    dbMocks.settingsPut.mockReset()
+    dbMocks.settingsPut.mockResolvedValue(undefined)
+    glossaryMocks.getAll.mockReset()
+    glossaryMocks.getAll.mockResolvedValue([])
+    glossaryMocks.add.mockReset()
+    glossaryMocks.add.mockResolvedValue(undefined)
+    glossaryMocks.update.mockReset()
+    glossaryMocks.update.mockResolvedValue(undefined)
+    glossaryMocks.delete.mockReset()
+    glossaryMocks.delete.mockResolvedValue(undefined)
 
     setBidirectionalPair.mockReset()
     setAutoDetectionMethod.mockReset()
@@ -246,6 +285,18 @@ describe('TranslateSettingsPanelContent', () => {
   beforeEach(() => {
     MockUsePreferenceUtils.resetMocks()
     mockLanguages = []
+    dbMocks.settingsGet.mockReset()
+    dbMocks.settingsGet.mockResolvedValue(undefined)
+    dbMocks.settingsPut.mockReset()
+    dbMocks.settingsPut.mockResolvedValue(undefined)
+    glossaryMocks.getAll.mockReset()
+    glossaryMocks.getAll.mockResolvedValue([])
+    glossaryMocks.add.mockReset()
+    glossaryMocks.add.mockResolvedValue(undefined)
+    glossaryMocks.update.mockReset()
+    glossaryMocks.update.mockResolvedValue(undefined)
+    glossaryMocks.delete.mockReset()
+    glossaryMocks.delete.mockResolvedValue(undefined)
 
     setPersisted.mockReset()
     translateLanguageMutationsMock.add.mockReset()

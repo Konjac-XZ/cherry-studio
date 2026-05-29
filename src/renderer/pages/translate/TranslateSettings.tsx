@@ -22,19 +22,32 @@ import {
 } from '@cherrystudio/ui'
 import { usePreference } from '@data/hooks/usePreference'
 import { loggerService } from '@logger'
+import db from '@renderer/databases'
 import { useLanguages, useTranslateLanguages } from '@renderer/hooks/translate'
+import {
+  type GlossaryEntry,
+  GlossaryService,
+  GLOSSARY_LOAD_FAILED_MESSAGE
+} from '@renderer/services/GlossaryService'
 import { cn } from '@renderer/utils'
 import { UNKNOWN_LANG_CODE } from '@renderer/utils/translate'
+import { uuid } from '@renderer/utils'
+import {
+  DEFAULT_TRANSLATION_POST_PROCESSOR_FEATURES,
+  type RegexReplacementRule,
+  TRANSLATION_POST_PROCESSOR_SETTING_KEYS
+} from '@renderer/utils/translationPostProcessors'
 import { TRANSLATE_PROMPT } from '@shared/config/prompts'
 import type {
   AutoDetectionMethod,
   PersistedLangCode,
+  TranslateLangCode,
   TranslateBidirectionalPair
 } from '@shared/data/preference/preferenceTypes'
 import { parsePersistedLangCode, PersistedLangCodeSchema } from '@shared/data/preference/preferenceTypes'
 import { BUILTIN_TRANSLATE_LANGUAGES } from '@shared/data/presets/translate-languages'
 import type { TranslateLanguage } from '@shared/data/types/translate'
-import { ArrowLeftRight, ChevronDown, PenLine, Plus, X } from 'lucide-react'
+import { ArrowLeftRight, ChevronDown, PenLine, Plus, Trash2, X } from 'lucide-react'
 import type { FC, KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { memo, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -209,6 +222,12 @@ const TranslateSettings: FC<Props> = ({ visible, onClose }) => {
 
         <TranslatePromptField />
 
+        <TranslationPostProcessingSettings />
+
+        <RegexReplacementSettings />
+
+        <GlossarySettings />
+
         <CustomLanguageList />
       </div>
     </PageSidePanel>
@@ -219,6 +238,9 @@ const TranslateSettingsCoreContent: FC = () => {
   return (
     <div className="flex flex-col gap-8">
       <TranslatePromptField />
+      <TranslationPostProcessingSettings />
+      <RegexReplacementSettings />
+      <GlossarySettings />
       <CustomLanguageList />
     </div>
   )
@@ -366,6 +388,504 @@ const CustomLanguageList: FC = () => {
             <Plus size={13} />
             <span>{addLanguageLabel}</span>
           </Button>
+        )}
+      </div>
+    </PageSidePanelSection>
+  )
+}
+
+const TranslationPostProcessingSettings: FC = () => {
+  const { t } = useTranslation()
+  const [enabled, setEnabled] = useState(true)
+  const [zhCnMarkdownSmartQuotes, setZhCnMarkdownSmartQuotes] = useState(
+    DEFAULT_TRANSLATION_POST_PROCESSOR_FEATURES.zhCnMarkdownSmartQuotes
+  )
+  const [zhMarkdownTextSpacing, setZhMarkdownTextSpacing] = useState(
+    DEFAULT_TRANSLATION_POST_PROCESSOR_FEATURES.zhMarkdownTextSpacing
+  )
+
+  const load = useCallback(async () => {
+    try {
+      const [enabledSetting, quotesSetting, spacingSetting] = await Promise.all([
+        db.settings.get({ id: TRANSLATION_POST_PROCESSOR_SETTING_KEYS.enabled }),
+        db.settings.get({ id: TRANSLATION_POST_PROCESSOR_SETTING_KEYS.zhCnMarkdownSmartQuotes }),
+        db.settings.get({ id: TRANSLATION_POST_PROCESSOR_SETTING_KEYS.zhMarkdownTextSpacing })
+      ])
+      setEnabled(Boolean(enabledSetting?.value ?? true))
+      setZhCnMarkdownSmartQuotes(
+        Boolean(quotesSetting?.value ?? DEFAULT_TRANSLATION_POST_PROCESSOR_FEATURES.zhCnMarkdownSmartQuotes)
+      )
+      setZhMarkdownTextSpacing(
+        Boolean(spacingSetting?.value ?? DEFAULT_TRANSLATION_POST_PROCESSOR_FEATURES.zhMarkdownTextSpacing)
+      )
+    } catch (error) {
+      logger.error('Failed to load translation post-processing settings', error as Error)
+    }
+  }, [])
+
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  const persistBoolean = useCallback(
+    async (id: string, value: boolean, setLocal: (value: boolean) => void) => {
+      setLocal(value)
+      try {
+        await db.settings.put({ id, value })
+      } catch (error) {
+        logger.error(`Failed to persist translation post-processing setting ${id}`, error as Error)
+        window.toast.error(t('common.save_failed'))
+        void load()
+      }
+    },
+    [load, t]
+  )
+
+  return (
+    <PageSidePanelSection title={t('translate.postprocess.enable')}>
+      <div className="flex flex-col gap-4">
+        <PageSidePanelItem
+          title={t('translate.postprocess.enable')}
+          action={
+            <Switch
+              size="sm"
+              checked={enabled}
+              onCheckedChange={(next) =>
+                void persistBoolean(TRANSLATION_POST_PROCESSOR_SETTING_KEYS.enabled, next, setEnabled)
+              }
+            />
+          }
+        />
+        <PageSidePanelItem
+          title={t('translate.settings.zh_cn_smart_quotes.label')}
+          action={
+            <Switch
+              size="sm"
+              checked={zhCnMarkdownSmartQuotes}
+              disabled={!enabled}
+              onCheckedChange={(next) =>
+                void persistBoolean(
+                  TRANSLATION_POST_PROCESSOR_SETTING_KEYS.zhCnMarkdownSmartQuotes,
+                  next,
+                  setZhCnMarkdownSmartQuotes
+                )
+              }
+            />
+          }
+        />
+        <PageSidePanelItem
+          title={t('translate.settings.zh_markdown_spacing.label')}
+          action={
+            <Switch
+              size="sm"
+              checked={zhMarkdownTextSpacing}
+              disabled={!enabled}
+              onCheckedChange={(next) =>
+                void persistBoolean(
+                  TRANSLATION_POST_PROCESSOR_SETTING_KEYS.zhMarkdownTextSpacing,
+                  next,
+                  setZhMarkdownTextSpacing
+                )
+              }
+            />
+          }
+        />
+      </div>
+    </PageSidePanelSection>
+  )
+}
+
+type RegexRuleDraft = Pick<RegexReplacementRule, 'pattern' | 'flags' | 'replacement'>
+
+const RegexReplacementSettings: FC = () => {
+  const { t } = useTranslation()
+  const [rules, setRules] = useState<RegexReplacementRule[]>([])
+  const [isAdding, setIsAdding] = useState(false)
+  const [draft, setDraft] = useState<RegexRuleDraft>({ pattern: '', flags: 'g', replacement: '' })
+  const [errorKey, setErrorKey] = useState<string | null>(null)
+  const patternId = useId()
+  const flagsId = useId()
+  const replacementId = useId()
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const entry = await db.settings.get({ id: TRANSLATION_POST_PROCESSOR_SETTING_KEYS.regexReplacementRules })
+        if (entry && Array.isArray(entry.value)) {
+          setRules(entry.value as RegexReplacementRule[])
+        }
+      } catch (error) {
+        logger.error('Failed to load regex replacement rules', error as Error)
+      }
+    })()
+  }, [])
+
+  const persistRules = useCallback(
+    async (nextRules: RegexReplacementRule[]) => {
+      setRules(nextRules)
+      try {
+        await db.settings.put({
+          id: TRANSLATION_POST_PROCESSOR_SETTING_KEYS.regexReplacementRules,
+          value: nextRules
+        })
+      } catch (error) {
+        logger.error('Failed to persist regex replacement rules', error as Error)
+        window.toast.error(t('common.save_failed'))
+      }
+    },
+    [t]
+  )
+
+  const resetDraft = () => {
+    setDraft({ pattern: '', flags: 'g', replacement: '' })
+    setErrorKey(null)
+  }
+
+  const cancelAdd = () => {
+    resetDraft()
+    setIsAdding(false)
+  }
+
+  const submitAdd = async () => {
+    const pattern = draft.pattern.trim()
+    const flags = draft.flags.trim()
+    if (!pattern) {
+      setErrorKey('settings.translate.regex_replacement.error.pattern_required')
+      return
+    }
+
+    try {
+      new RegExp(pattern, flags || undefined)
+    } catch {
+      setErrorKey('settings.translate.regex_replacement.error.invalid_pattern')
+      return
+    }
+
+    await persistRules([...rules, { id: uuid(), pattern, flags, replacement: draft.replacement }])
+    resetDraft()
+    setIsAdding(false)
+  }
+
+  const deleteRule = async (id: string) => {
+    await persistRules(rules.filter((rule) => rule.id !== id))
+  }
+
+  const handleKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      void submitAdd()
+    } else if (event.key === 'Escape') {
+      event.preventDefault()
+      cancelAdd()
+    }
+  }
+
+  return (
+    <PageSidePanelSection
+      title={t('settings.translate.regex_replacement.title')}
+      actions={
+        !isAdding && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            aria-label={`${t('common.add')} ${t('settings.translate.regex_replacement.title')}`}
+            onClick={() => setIsAdding(true)}>
+            <Plus size={13} />
+            <span>{t('common.add')}</span>
+          </Button>
+        )
+      }>
+      <div className="flex flex-col gap-2">
+        {rules.map((rule) => (
+          <div key={rule.id} className="flex items-start gap-2 rounded-md bg-muted/20 px-2 py-2">
+            <div className="min-w-0 flex-1">
+              <div className="truncate font-mono text-foreground text-xs">
+                /{rule.pattern}/{rule.flags}
+              </div>
+              <div className="truncate text-muted-foreground text-xs">{rule.replacement || '""'}</div>
+            </div>
+            <IconButton
+              size="xs"
+              tone="destructive"
+              onClick={() => void deleteRule(rule.id)}
+              aria-label={t('common.delete')}
+              className="shrink-0 text-foreground-muted/70 hover:bg-transparent">
+              <Trash2 size={10} />
+            </IconButton>
+          </div>
+        ))}
+
+        {rules.length === 0 && !isAdding && (
+          <p className="rounded-md bg-muted/30 px-2 py-2 text-center text-muted-foreground text-sm">
+            {t('common.no_results')}
+          </p>
+        )}
+
+        {isAdding && (
+          <div className="space-y-3 rounded-lg bg-muted/20 p-3" onKeyDown={handleKeyDown}>
+            <Field>
+              <FieldLabel htmlFor={patternId} className={customLanguageFieldSubtitleClassName}>
+                {t('settings.translate.regex_replacement.pattern')}
+              </FieldLabel>
+              <Input
+                id={patternId}
+                value={draft.pattern}
+                autoFocus
+                aria-invalid={Boolean(errorKey) || undefined}
+                placeholder={t('settings.translate.regex_replacement.pattern_placeholder')}
+                onChange={(event) => {
+                  setDraft((prev) => ({ ...prev, pattern: event.target.value }))
+                  setErrorKey(null)
+                }}
+              />
+              {errorKey && <FieldDescription className="text-destructive">{t(errorKey)}</FieldDescription>}
+            </Field>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-[88px_1fr]">
+              <Field>
+                <FieldLabel htmlFor={flagsId} className={customLanguageFieldSubtitleClassName}>
+                  {t('settings.translate.regex_replacement.flags')}
+                </FieldLabel>
+                <Input
+                  id={flagsId}
+                  value={draft.flags}
+                  maxLength={10}
+                  placeholder="gi"
+                  onChange={(event) => setDraft((prev) => ({ ...prev, flags: event.target.value }))}
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor={replacementId} className={customLanguageFieldSubtitleClassName}>
+                  {t('settings.translate.regex_replacement.replacement')}
+                </FieldLabel>
+                <Input
+                  id={replacementId}
+                  value={draft.replacement}
+                  placeholder={t('settings.translate.regex_replacement.replacement_placeholder')}
+                  onChange={(event) => setDraft((prev) => ({ ...prev, replacement: event.target.value }))}
+                />
+              </Field>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={cancelAdd}>
+                {t('common.cancel')}
+              </Button>
+              <Button type="button" variant="default" size="sm" onClick={() => void submitAdd()}>
+                {t('common.add')}
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </PageSidePanelSection>
+  )
+}
+
+type GlossaryDraft = Pick<GlossaryEntry, 'sourcePhrase' | 'targetPhrase' | 'targetLanguage'>
+
+const GlossarySettings: FC = () => {
+  const { t } = useTranslation()
+  const [entries, setEntries] = useState<GlossaryEntry[]>([])
+  const [isAdding, setIsAdding] = useState(false)
+  const [editingEntry, setEditingEntry] = useState<GlossaryEntry | null>(null)
+  const [draft, setDraft] = useState<GlossaryDraft>({
+    sourcePhrase: '',
+    targetPhrase: '',
+    targetLanguage: 'zh-cn'
+  })
+  const [errorKey, setErrorKey] = useState<string | null>(null)
+  const sourceId = useId()
+  const targetId = useId()
+
+  const load = useCallback(async () => {
+    try {
+      setEntries(await GlossaryService.getAll())
+    } catch (error) {
+      logger.error('Failed to load glossary entries', error as Error)
+      window.toast.error(GLOSSARY_LOAD_FAILED_MESSAGE)
+    }
+  }, [])
+
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  const resetDraft = () => {
+    setDraft({ sourcePhrase: '', targetPhrase: '', targetLanguage: 'zh-cn' })
+    setEditingEntry(null)
+    setErrorKey(null)
+  }
+
+  const cancelEdit = () => {
+    resetDraft()
+    setIsAdding(false)
+  }
+
+  const startEdit = (entry: GlossaryEntry) => {
+    setEditingEntry(entry)
+    setDraft({
+      sourcePhrase: entry.sourcePhrase,
+      targetPhrase: entry.targetPhrase,
+      targetLanguage: entry.targetLanguage
+    })
+    setErrorKey(null)
+    setIsAdding(true)
+  }
+
+  const submit = async () => {
+    const sourcePhrase = draft.sourcePhrase.trim()
+    const targetPhrase = draft.targetPhrase.trim()
+    if (!sourcePhrase) {
+      setErrorKey('settings.translate.glossary.error.source_empty')
+      return
+    }
+    if (!targetPhrase) {
+      setErrorKey('settings.translate.glossary.error.target_empty')
+      return
+    }
+
+    try {
+      if (editingEntry) {
+        await GlossaryService.update(editingEntry.id, {
+          sourcePhrase,
+          targetPhrase,
+          targetLanguage: draft.targetLanguage
+        })
+      } else {
+        await GlossaryService.add({ sourcePhrase, targetPhrase, targetLanguage: draft.targetLanguage })
+      }
+      await load()
+      cancelEdit()
+    } catch (error) {
+      const messageKey =
+        (error as Error).message === 'DUPLICATE_ENTRY'
+          ? 'settings.translate.glossary.error.duplicate'
+          : 'common.save_failed'
+      window.toast.error(t(messageKey))
+    }
+  }
+
+  const deleteEntry = async (id: string) => {
+    try {
+      await GlossaryService.delete(id)
+      setEntries((prev) => prev.filter((entry) => entry.id !== id))
+    } catch (error) {
+      logger.error('Failed to delete glossary entry', error as Error)
+      window.toast.error(t('settings.translate.glossary.error.delete'))
+    }
+  }
+
+  const handleKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      void submit()
+    } else if (event.key === 'Escape') {
+      event.preventDefault()
+      cancelEdit()
+    }
+  }
+
+  return (
+    <PageSidePanelSection
+      title={t('settings.translate.glossary.title')}
+      actions={
+        !isAdding && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            aria-label={`${t('common.add')} ${t('settings.translate.glossary.title')}`}
+            onClick={() => setIsAdding(true)}>
+            <Plus size={13} />
+            <span>{t('common.add')}</span>
+          </Button>
+        )
+      }>
+      <div className="flex flex-col gap-2">
+        {entries.map((entry) => (
+          <div key={entry.id} className="flex items-start gap-2 rounded-md bg-muted/20 px-2 py-2">
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-foreground text-sm">{entry.sourcePhrase}</div>
+              <div className="truncate text-muted-foreground text-xs">
+                {entry.targetPhrase} · {entry.targetLanguage}
+              </div>
+            </div>
+            <IconButton
+              size="xs"
+              onClick={() => startEdit(entry)}
+              aria-label={t('common.edit')}
+              className="shrink-0 text-foreground-muted/70 hover:bg-transparent">
+              <PenLine size={10} />
+            </IconButton>
+            <IconButton
+              size="xs"
+              tone="destructive"
+              onClick={() => void deleteEntry(entry.id)}
+              aria-label={t('common.delete')}
+              className="shrink-0 text-foreground-muted/70 hover:bg-transparent">
+              <Trash2 size={10} />
+            </IconButton>
+          </div>
+        ))}
+
+        {entries.length === 0 && !isAdding && (
+          <p className="rounded-md bg-muted/30 px-2 py-2 text-center text-muted-foreground text-sm">
+            {t('common.no_results')}
+          </p>
+        )}
+
+        {isAdding && (
+          <div className="space-y-3 rounded-lg bg-muted/20 p-3" onKeyDown={handleKeyDown}>
+            <Field>
+              <FieldLabel htmlFor={sourceId} className={customLanguageFieldSubtitleClassName}>
+                {t('settings.translate.glossary.source')}
+              </FieldLabel>
+              <Input
+                id={sourceId}
+                value={draft.sourcePhrase}
+                autoFocus
+                aria-invalid={errorKey === 'settings.translate.glossary.error.source_empty' || undefined}
+                placeholder={t('settings.translate.glossary.source_placeholder')}
+                onChange={(event) => {
+                  setDraft((prev) => ({ ...prev, sourcePhrase: event.target.value }))
+                  setErrorKey(null)
+                }}
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor={targetId} className={customLanguageFieldSubtitleClassName}>
+                {t('settings.translate.glossary.target')}
+              </FieldLabel>
+              <Input
+                id={targetId}
+                value={draft.targetPhrase}
+                aria-invalid={errorKey === 'settings.translate.glossary.error.target_empty' || undefined}
+                placeholder={t('settings.translate.glossary.target_placeholder')}
+                onChange={(event) => {
+                  setDraft((prev) => ({ ...prev, targetPhrase: event.target.value }))
+                  setErrorKey(null)
+                }}
+              />
+            </Field>
+            <Field>
+              <FieldLabel className={customLanguageFieldSubtitleClassName}>
+                {t('settings.translate.glossary.language')}
+              </FieldLabel>
+              <LanguagePicker
+                value={draft.targetLanguage}
+                onChange={(value: TranslateLangCode) => setDraft((prev) => ({ ...prev, targetLanguage: value }))}
+              />
+            </Field>
+            {errorKey && <FieldDescription className="text-destructive">{t(errorKey)}</FieldDescription>}
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={cancelEdit}>
+                {t('common.cancel')}
+              </Button>
+              <Button type="button" variant="default" size="sm" onClick={() => void submit()}>
+                {editingEntry ? t('common.save') : t('common.add')}
+              </Button>
+            </div>
+          </div>
         )}
       </div>
     </PageSidePanelSection>
