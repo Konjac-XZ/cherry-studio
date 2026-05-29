@@ -11,9 +11,9 @@ import { getModelSupportedReasoningEffortOptions } from '@renderer/config/models
 import { isQwenMTModel } from '@renderer/config/models/qwen'
 import { getStoreProviders } from '@renderer/hooks/useStore'
 import i18n from '@renderer/i18n'
+import { runTranslationPreProcessors } from '@renderer/services/TranslationProcessingService'
 import store from '@renderer/store'
 import { addAssistant } from '@renderer/store/assistants'
-import type { SettingsState } from '@renderer/store/settings'
 import type {
   Assistant,
   AssistantPreset,
@@ -146,7 +146,8 @@ export function getDefaultAssistant(): Assistant {
 export async function getDefaultTranslateAssistant(
   targetLanguage: TranslateLanguage,
   text: string,
-  _settings?: Partial<AssistantSettings>
+  _settings?: Partial<AssistantSettings>,
+  customizedDictionary?: string
 ): Promise<TranslateAssistant> {
   const model = getTranslateModel()
   const assistant: Assistant = getDefaultAssistant()
@@ -167,22 +168,29 @@ export async function getDefaultTranslateAssistant(
     ..._settings,
     reasoning_effort: reasoningEffort
   } satisfies Partial<AssistantSettings>
-  const translateSettings = store.getState().settings
-
   const getTranslateContent = async (
     model: Model,
     text: string,
-    targetLanguage: TranslateLanguage
+    targetLanguage: TranslateLanguage,
+    dictionary: string
   ): Promise<string> => {
     if (isQwenMTModel(model)) {
       return text // QwenMT models handle raw text directly
     }
 
     const translateModelPrompt = await preferenceService.get('feature.translate.model_prompt')
-    return translateModelPrompt.replaceAll('{{target_language}}', targetLanguage.value).replaceAll('{{text}}', text)
+    return translateModelPrompt
+      .replaceAll('{{target_language}}', targetLanguage.value)
+      .replaceAll('{{text}}', text)
+      .replaceAll('{{customized_dictionary}}', dictionary)
   }
 
-  const content = await getTranslateContent(model, text, targetLanguage)
+  const dictionary = customizedDictionary ?? (await runTranslationPreProcessors(text, targetLanguage)).dictionary
+  const content = await getTranslateContent(model, text, targetLanguage, dictionary)
+  const mergedSettings = {
+    ...settings,
+    customParameters: [...(settings.customParameters || []), ...customParameters]
+  }
   const translateAssistant = {
     ...assistant,
     model,
@@ -192,25 +200,6 @@ export async function getDefaultTranslateAssistant(
     content
   } satisfies TranslateAssistant
   return translateAssistant
-}
-
-type TranslatePromptSettings = Pick<
-  SettingsState,
-  | 'translateModelPrompt'
-  | 'nativeLanguageTranslateModelPrompt'
-  | 'otherLanguageTranslateModelPrompt'
-  | 'userNativeLanguage'
->
-
-export function getTranslatePromptTemplate(
-  settings: TranslatePromptSettings,
-  targetLanguage: Pick<TranslateLanguage, 'langCode'>
-): string {
-  if (settings.userNativeLanguage && targetLanguage.langCode === settings.userNativeLanguage) {
-    return settings.nativeLanguageTranslateModelPrompt || TRANSLATE_NATIVE_LANGUAGE_PROMPT
-  }
-
-  return settings.otherLanguageTranslateModelPrompt || settings.translateModelPrompt || TRANSLATE_PROMPT
 }
 
 /**

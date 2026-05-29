@@ -60,6 +60,13 @@ export const SHORTCUT_DEFINITIONS = [
     category: 'general',
     labelKey: 'search_message'
   }),
+  defineShortcut({
+    key: 'shortcut.general.go_home',
+    scope: 'main',
+    category: 'general',
+    labelKey: 'go_home',
+    global: true
+  }),
   // ==================== Chat shortcuts ====================
   defineShortcut({
     key: 'shortcut.chat.clear',
@@ -124,6 +131,13 @@ export const SHORTCUT_DEFINITIONS = [
     labelKey: 'quick_assistant',
     global: true,
     enabledWhen: 'feature.quick_assistant.enabled'
+  }),
+  defineShortcut({
+    key: 'shortcut.feature.translate.clipboard',
+    scope: 'main',
+    category: 'feature.translate',
+    labelKey: 'show_translate',
+    global: true
   }),
   defineShortcut({
     key: 'shortcut.feature.selection.toggle_enabled',

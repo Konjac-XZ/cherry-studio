@@ -3,11 +3,17 @@ import type { PreferenceKeyType } from '@shared/data/preference/preferenceTypes'
 export type ShortcutScope = 'main' | 'renderer' | 'both'
 
 /** Built-in shortcut categories for UI grouping. */
-export type BuiltinShortcutCategory = 'general' | 'chat' | 'topic' | 'feature.quick_assistant' | 'feature.selection'
+export type BuiltinShortcutCategory =
+  | 'general'
+  | 'chat'
+  | 'topic'
+  | 'feature.quick_assistant'
+  | 'feature.selection'
+  | 'feature.translate'
 
 /**
  * Dot-separated namespace for UI grouping in the settings page.
- * Built-in: `general`, `chat`, `topic`, `feature.quick_assistant`, `feature.selection`.
+ * Built-in: `general`, `chat`, `topic`, `feature.quick_assistant`, `feature.selection`, `feature.translate`.
  * Plugins: `plugin.{pluginId}` (e.g. `plugin.translator`).
  */
 export type ShortcutCategory = BuiltinShortcutCategory | `plugin.${string}`

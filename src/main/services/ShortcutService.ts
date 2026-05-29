@@ -17,6 +17,90 @@ type ShortcutHandler = (window?: BrowserWindow) => void
 type RegisteredShortcut = { key: ShortcutPreferenceKey; handler: ShortcutHandler; window: BrowserWindow }
 
 const toAccelerator = (keys: string[]): string => keys.join('+')
+const NAVIGATION_WAIT_TIMEOUT_MS = 4000
+const NAVIGATION_POLL_INTERVAL_MS = 200
+
+const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
+
+async function waitForWebContentsReady(mainWindow: BrowserWindow): Promise<boolean> {
+  const { webContents } = mainWindow
+  if (webContents.isDestroyed()) {
+    return false
+  }
+
+  if (!webContents.isLoading()) {
+    return true
+  }
+
+  return new Promise((resolve) => {
+    let settled = false
+
+    const cleanup = () => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      webContents.removeListener('did-finish-load', onReady)
+      webContents.removeListener('did-fail-load', onReady)
+      webContents.removeListener('render-process-gone', onGone)
+    }
+
+    const onReady = () => {
+      cleanup()
+      resolve(!webContents.isDestroyed())
+    }
+
+    const onGone = () => {
+      cleanup()
+      resolve(false)
+    }
+
+    const timer = setTimeout(() => {
+      cleanup()
+      resolve(!webContents.isDestroyed())
+    }, NAVIGATION_WAIT_TIMEOUT_MS)
+
+    webContents.once('did-finish-load', onReady)
+    webContents.once('did-fail-load', onReady)
+    webContents.once('render-process-gone', onGone)
+  })
+}
+
+async function waitForNavigateReady(mainWindow: BrowserWindow): Promise<boolean> {
+  const startTime = Date.now()
+
+  while (Date.now() - startTime < NAVIGATION_WAIT_TIMEOUT_MS) {
+    if (mainWindow.isDestroyed() || mainWindow.webContents.isDestroyed()) {
+      return false
+    }
+
+    try {
+      const hasNavigate = await mainWindow.webContents.executeJavaScript(`typeof window.navigate === 'function'`)
+      if (hasNavigate) {
+        return true
+      }
+    } catch {
+      return false
+    }
+
+    await delay(NAVIGATION_POLL_INTERVAL_MS)
+  }
+
+  return false
+}
+
+async function navigateWhenReady(mainWindow: BrowserWindow, to: string) {
+  const isReady = await waitForWebContentsReady(mainWindow)
+  if (!isReady) {
+    return
+  }
+
+  const canNavigate = await waitForNavigateReady(mainWindow)
+  if (!canNavigate) {
+    return
+  }
+
+  await mainWindow.webContents.executeJavaScript(`window.navigate({ to: ${JSON.stringify(to)} })`)
+}
 
 const relevantDefinitions = SHORTCUT_DEFINITIONS.filter(
   (d) =>
@@ -58,9 +142,25 @@ export class ShortcutService extends BaseService {
       application.get('SettingsWindowService').open('/settings/provider')
     })
 
+    this.handlers.set('shortcut.general.go_home', () => {
+      const mainWindowService = application.get('MainWindowService')
+      mainWindowService.showMainWindow()
+      const mainWindow = mainWindowService.getMainWindow()
+      if (!mainWindow || mainWindow.isDestroyed()) return
+      void navigateWhenReady(mainWindow, '/')
+    })
+
     this.handlers.set('shortcut.feature.quick_assistant.toggle_window', () => {
       if (!application.get('PreferenceService').get('feature.quick_assistant.enabled')) return
       application.get('QuickAssistantService').toggleQuickAssistant()
+    })
+
+    this.handlers.set('shortcut.feature.translate.clipboard', () => {
+      const mainWindowService = application.get('MainWindowService')
+      mainWindowService.showMainWindow()
+      const mainWindow = mainWindowService.getMainWindow()
+      if (!mainWindow || mainWindow.isDestroyed()) return
+      void navigateWhenReady(mainWindow, `/translate?paste=1&_=${Date.now()}`)
     })
 
     this.handlers.set('shortcut.general.zoom_in', (window) => {

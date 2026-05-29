@@ -1,5 +1,5 @@
-import type { TranslateLanguageCode } from '@renderer/types'
 import { normalizeZhMarkdownTextSpacing } from '@renderer/utils/zhMarkdownSpacing'
+import type { TranslateLangCode } from '@shared/data/preference/preferenceTypes'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import remarkParse from 'remark-parse'
@@ -71,7 +71,7 @@ export type TranslationPostProcessorContext = {
   enabled?: boolean
   features: TranslationPostProcessorFeatures
   markdownEnabled: boolean
-  targetLanguage: TranslateLanguageCode
+  targetLanguage: TranslateLangCode
   regexReplacementRules?: RegexReplacementRule[]
 }
 

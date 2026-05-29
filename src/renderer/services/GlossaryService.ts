@@ -1,12 +1,21 @@
 import { loggerService } from '@logger'
 import db from '@renderer/databases'
-import type { GlossaryEntry, TranslateLanguageCode } from '@renderer/types'
+import type { TranslateLangCode } from '@shared/data/preference/preferenceTypes'
 import { v4 as uuidv4 } from 'uuid'
 
 const logger = loggerService.withContext('GlossaryService')
 
 export const EMPTY_FULL_GLOSSARY_MESSAGE = '[No glossary entries configured]'
 export const GLOSSARY_LOAD_FAILED_MESSAGE = '[Failed to load glossary entries]'
+
+export type GlossaryEntry = {
+  id: string
+  sourcePhrase: string
+  targetLanguage: TranslateLangCode
+  targetPhrase: string
+  createdAt: number
+  updatedAt: number
+}
 
 export class GlossaryService {
   private static _isInitialized: boolean = false
@@ -30,7 +39,7 @@ export class GlossaryService {
     return entries.sort((a, b) => b.createdAt - a.createdAt)
   }
 
-  static async getByTargetLanguage(langCode: TranslateLanguageCode): Promise<GlossaryEntry[]> {
+  static async getByTargetLanguage(langCode: TranslateLangCode): Promise<GlossaryEntry[]> {
     await GlossaryService.init()
     return db.translate_glossary.where('targetLanguage').equals(langCode).toArray()
   }

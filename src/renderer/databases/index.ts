@@ -44,6 +44,15 @@ interface DexieTranslateLanguageRow {
   emoji: string
 }
 
+interface DexieTranslateGlossaryRow {
+  id: string
+  sourcePhrase: string
+  targetLanguage: TranslateLangCode
+  targetPhrase: string
+  createdAt: number
+  updatedAt: number
+}
+
 // Database declaration (move this to its own module also)
 export const db = new Dexie('CherryStudio', {
   chromeTransactionDurability: 'strict'
@@ -56,6 +65,7 @@ export const db = new Dexie('CherryStudio', {
   quick_phrases: EntityTable<QuickPhrase, 'id'>
   message_blocks: EntityTable<MessageBlock, 'id'> // Correct type for message_blocks
   translate_languages: EntityTable<DexieTranslateLanguageRow, 'id'>
+  translate_glossary: EntityTable<DexieTranslateGlossaryRow, 'id'>
 }
 
 db.version(1).stores({

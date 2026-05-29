@@ -1,6 +1,11 @@
 import { DEFAULT_SYSTEM_PROMPT } from '@cherrystudio/ai-core/built-in/plugins'
 import { loggerService } from '@logger'
 import { preferenceService } from '@renderer/data/PreferenceService'
+import {
+  buildFullCustomizedDictionary,
+  GLOSSARY_LOAD_FAILED_MESSAGE,
+  GlossaryService
+} from '@renderer/services/GlossaryService'
 import store from '@renderer/store'
 import type { MCPTool } from '@renderer/types'
 import { defaultLanguage } from '@shared/config/constant'

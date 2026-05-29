@@ -14,6 +14,7 @@ import { useModels } from '@renderer/hooks/useModels'
 import { useOcr } from '@renderer/hooks/useOcr'
 import { useTemporaryValue } from '@renderer/hooks/useTemporaryValue'
 import { useTimer } from '@renderer/hooks/useTimer'
+import { applyTranslationPostProcessingWithLatestSettings } from '@renderer/services/TranslationProcessingService'
 import { translateText } from '@renderer/services/TranslateService'
 import type { FileMetadata, SupportedOcrFile } from '@renderer/types'
 import { isSupportedOcrFile } from '@renderer/types'
@@ -193,8 +194,12 @@ const TranslatePage: FC = () => {
 
       try {
         const translated = await translateText(rawText, actualTargetLanguage, throttledSetOutput, nextAbortKey)
+        const processedText = await applyTranslationPostProcessingWithLatestSettings(translated, {
+          markdownEnabled: enableMarkdown,
+          targetLanguage: actualTargetLanguage
+        })
         throttledSetOutput.cancel()
-        setTranslateOutput(translated)
+        setTranslateOutput(processedText)
 
         window.toast.success(t('translate.complete'))
         if (autoCopy) {
@@ -202,7 +207,7 @@ const TranslatePage: FC = () => {
             'auto-copy',
             async () => {
               try {
-                await copy(translated)
+                await copy(processedText)
               } catch (error) {
                 logger.error('Failed to auto copy translated text', error as Error)
                 window.toast.error(t('translate.error.auto_copy_failed'))
@@ -214,7 +219,7 @@ const TranslatePage: FC = () => {
 
         await addHistory({
           sourceText: rawText,
-          targetText: translated,
+          targetText: processedText,
           sourceLanguage: actualSourceLanguage,
           targetLanguage: actualTargetLanguage
         })
@@ -234,6 +239,7 @@ const TranslatePage: FC = () => {
       addHistory,
       autoCopy,
       copy,
+      enableMarkdown,
       setTimeoutTimer,
       setTranslateOutput,
       setTranslatingState,

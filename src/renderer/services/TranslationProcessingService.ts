@@ -1,6 +1,5 @@
 import { loggerService } from '@logger'
 import { db } from '@renderer/databases'
-import type { TranslateLanguage, TranslateLanguageCode } from '@renderer/types'
 import {
   applyTranslationPostProcessors,
   DEFAULT_TRANSLATION_POST_PROCESSOR_FEATURES,
@@ -9,6 +8,8 @@ import {
   type TranslationPostProcessorContext,
   type TranslationPostProcessorFeatures
 } from '@renderer/utils/translationPostProcessors'
+import type { TranslateLangCode } from '@shared/data/preference/preferenceTypes'
+import type { TranslateLanguage } from '@shared/data/types/translate'
 
 import { buildCustomizedDictionary, GlossaryService } from './GlossaryService'
 
@@ -40,7 +41,7 @@ type TranslationPostProcessorSettings = {
 type TranslationPostProcessOptions = {
   markdownEnabled: boolean
   settings?: TranslationPostProcessorSettings
-  targetLanguage: TranslateLanguageCode
+  targetLanguage: TranslateLangCode
 }
 
 const translationPreProcessors: TranslationPreProcessor[] = [

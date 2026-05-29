@@ -442,8 +442,12 @@ export interface PreferenceSchemas {
     'shortcut.feature.selection.get_text': PreferenceTypes.PreferenceShortcutType
     // redux/shortcuts/shortcuts.selection_assistant_toggle
     'shortcut.feature.selection.toggle_enabled': PreferenceTypes.PreferenceShortcutType
+    // redux/shortcuts/shortcuts.show_translate
+    'shortcut.feature.translate.clipboard': PreferenceTypes.PreferenceShortcutType
     // redux/shortcuts/shortcuts.exit_fullscreen
     'shortcut.general.exit_fullscreen': PreferenceTypes.PreferenceShortcutType
+    // redux/shortcuts/shortcuts.go_home
+    'shortcut.general.go_home': PreferenceTypes.PreferenceShortcutType
     // redux/shortcuts/shortcuts.search_message
     'shortcut.general.search': PreferenceTypes.PreferenceShortcutType
     // redux/shortcuts/shortcuts.show_app
@@ -732,7 +736,9 @@ export const DefaultPreferences: PreferenceSchemas = {
     'shortcut.feature.quick_assistant.toggle_window': { binding: ['CommandOrControl', 'E'], enabled: false },
     'shortcut.feature.selection.get_text': { binding: [], enabled: false },
     'shortcut.feature.selection.toggle_enabled': { binding: [], enabled: false },
+    'shortcut.feature.translate.clipboard': { binding: ['CommandOrControl', 'Shift', 'T'], enabled: true },
     'shortcut.general.exit_fullscreen': { binding: ['Escape'], enabled: true },
+    'shortcut.general.go_home': { binding: ['CommandOrControl', 'Shift', 'H'], enabled: true },
     'shortcut.general.search': { binding: ['CommandOrControl', 'Shift', 'F'], enabled: true },
     'shortcut.general.show_main_window': { binding: [], enabled: false },
     'shortcut.general.show_settings': { binding: ['CommandOrControl', ','], enabled: true },

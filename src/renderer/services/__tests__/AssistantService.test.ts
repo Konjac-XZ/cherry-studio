@@ -17,9 +17,10 @@ vi.mock('@renderer/config/models/qwen', () => ({
   isQwenMTModel: () => false
 }))
 
-vi.mock('@renderer/config/prompts', () => ({
-  TRANSLATE_NATIVE_LANGUAGE_PROMPT: 'native {{text}}',
-  TRANSLATE_PROMPT: 'translate {{text}} to {{target_language}}'
+vi.mock('@data/PreferenceService', () => ({
+  preferenceService: {
+    get: vi.fn(async () => 'translate {{text}} to {{target_language}} {{customized_dictionary}}')
+  }
 }))
 
 vi.mock('@renderer/config/translate', () => ({
@@ -45,6 +46,10 @@ vi.mock('@renderer/store', () => ({
 
 vi.mock('@renderer/store/assistants', () => ({
   addAssistant: mocks.addAssistant
+}))
+
+vi.mock('@renderer/services/TranslationProcessingService', () => ({
+  runTranslationPreProcessors: vi.fn(async () => ({ dictionary: '' }))
 }))
 
 vi.mock('uuid', () => ({
@@ -82,33 +87,33 @@ describe('AssistantService.getDefaultTranslateAssistant', () => {
     })
   })
 
-  it('prefers an explicit reasoning override from the caller', () => {
+  it('prefers an explicit reasoning override from the caller', async () => {
     mocks.getModelSupportedReasoningEffortOptions.mockReturnValue(['none', 'low', 'medium'])
 
-    const assistant = getDefaultTranslateAssistant({ langCode: 'zh-cn', value: 'Chinese' } as any, 'hello', {
+    const assistant = await getDefaultTranslateAssistant({ langCode: 'zh-cn', value: 'Chinese' } as any, 'hello', {
       reasoning_effort: 'default'
     })
 
     expect(assistant.settings?.reasoning_effort).toBe('default')
   })
 
-  it('falls back to none when the model supports disabling reasoning', () => {
+  it('falls back to none when the model supports disabling reasoning', async () => {
     mocks.getModelSupportedReasoningEffortOptions.mockReturnValue(['none', 'low', 'medium'])
 
-    const assistant = getDefaultTranslateAssistant({ langCode: 'zh-cn', value: 'Chinese' } as any, 'hello')
+    const assistant = await getDefaultTranslateAssistant({ langCode: 'zh-cn', value: 'Chinese' } as any, 'hello')
 
     expect(assistant.settings?.reasoning_effort).toBe('none')
   })
 
-  it('falls back to default when the model cannot disable reasoning', () => {
+  it('falls back to default when the model cannot disable reasoning', async () => {
     mocks.getModelSupportedReasoningEffortOptions.mockReturnValue(['low', 'medium'])
 
-    const assistant = getDefaultTranslateAssistant({ langCode: 'zh-cn', value: 'Chinese' } as any, 'hello')
+    const assistant = await getDefaultTranslateAssistant({ langCode: 'zh-cn', value: 'Chinese' } as any, 'hello')
 
     expect(assistant.settings?.reasoning_effort).toBe('default')
   })
 
-  it('lets custom request body override minimized thinking defaults', () => {
+  it('lets custom request body override minimized thinking defaults', async () => {
     mocks.getModelSupportedReasoningEffortOptions.mockReturnValue(['none', 'low', 'medium'])
     mocks.getState.mockReturnValue({
       llm: {
@@ -135,7 +140,7 @@ describe('AssistantService.getDefaultTranslateAssistant', () => {
       }
     })
 
-    const assistant = getDefaultTranslateAssistant({ langCode: 'zh-cn', value: 'Chinese' } as any, 'hello')
+    const assistant = await getDefaultTranslateAssistant({ langCode: 'zh-cn', value: 'Chinese' } as any, 'hello')
 
     expect(assistant.settings?.reasoning_effort).toBe('default')
   })

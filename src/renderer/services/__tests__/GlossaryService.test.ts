@@ -1,7 +1,6 @@
-import type { GlossaryEntry } from '@renderer/types'
 import { describe, expect, it } from 'vitest'
 
-import { buildCustomizedDictionary, buildFullCustomizedDictionary } from '../GlossaryService'
+import { buildCustomizedDictionary, buildFullCustomizedDictionary, type GlossaryEntry } from '../GlossaryService'
 
 const createGlossaryEntry = (sourcePhrase: string, targetPhrase: string, targetLanguage = 'zh-cn'): GlossaryEntry => ({
   id: `${sourcePhrase}-${targetLanguage}`,
