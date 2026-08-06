@@ -845,6 +845,7 @@ export class MessageService {
           WHERE message.deleted_at IS NULL
             AND t.deleted_at IS NULL
             AND message.searchable_text != ''
+            AND COALESCE(json_extract(message.data, '$.presentation.hiddenInChat'), 0) != 1
             AND ${topicConditionForMessageAlias}
             AND ${createdAtConditionForMessageAlias}
             AND ${sql.join(ftsConditions, sql` AND `)}

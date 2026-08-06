@@ -8,6 +8,10 @@
 import * as z from 'zod'
 
 import { PersistedLangCodeSchema } from '../preference/preferenceTypes'
+import { UniqueModelIdSchema } from './model'
+
+export const TranslateOperationSchema = z.enum(['translate', 'polish'])
+export type TranslateOperation = z.infer<typeof TranslateOperationSchema>
 
 // ============================================================================
 // Translate History
@@ -28,6 +32,10 @@ export const TranslateHistorySchema = z.strictObject({
    *  Uses `PersistedLangCodeSchema` (strict) to match the write-side DTOs —
    *  the `'unknown'` UI sentinel is never written and must not appear here. */
   targetLanguage: PersistedLangCodeSchema.nullable(),
+  /** Provider-qualified model identity used to produce this result. */
+  modelId: UniqueModelIdSchema.nullable(),
+  /** Canonical direction/model/text cache identity; nullable for unsafe legacy rows. */
+  cacheKey: z.string().min(1).nullable(),
   /** Whether the record is starred */
   star: z.boolean(),
   /** ISO 8601 datetime */
@@ -57,3 +65,22 @@ export const TranslateLanguageSchema = z.strictObject({
 })
 /** Translate language entity. Both builtin and user-created languages share this schema. */
 export type TranslateLanguage = z.infer<typeof TranslateLanguageSchema>
+
+// ============================================================================
+// Translate Glossary
+// ============================================================================
+
+export const TranslateGlossaryEntrySchema = z.strictObject({
+  /** UUIDv7 (time-ordered), auto-generated. */
+  id: z.uuidv7(),
+  /** Source phrase matched case-insensitively against the input text. */
+  sourcePhrase: z.string().trim().min(1).max(500),
+  /** Required target rendering for the source phrase. */
+  targetPhrase: z.string().trim().min(1).max(500),
+  /** Only inject this entry when translating to this language. */
+  targetLanguage: PersistedLangCodeSchema,
+  enabled: z.boolean(),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime()
+})
+export type TranslateGlossaryEntry = z.infer<typeof TranslateGlossaryEntrySchema>

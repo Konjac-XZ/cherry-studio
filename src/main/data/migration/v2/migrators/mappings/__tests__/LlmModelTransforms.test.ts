@@ -10,12 +10,13 @@ describe('LlmModelTransforms', () => {
   })
 
   describe('transformLlmModelIds', () => {
-    it('transforms all 4 model fields to UniqueModelIds', () => {
+    it('transforms all model fields to UniqueModelIds', () => {
       const sources = {
         defaultModel: { id: 'gpt-4', provider: 'openai', name: 'GPT-4' },
         topicNamingModel: { id: 'gpt-3.5-turbo', provider: 'openai', name: 'GPT-3.5' },
         quickModel: { id: 'claude-3-haiku', provider: 'anthropic', name: 'Haiku' },
-        translateModel: { id: 'qwen-max', provider: 'qwen', name: 'Qwen Max' }
+        translateModel: { id: 'qwen-max', provider: 'qwen', name: 'Qwen Max' },
+        polishModel: { id: 'qwen-plus', provider: 'qwen', name: 'Qwen Plus' }
       }
 
       const result = transformLlmModelIds(sources)
@@ -24,7 +25,8 @@ describe('LlmModelTransforms', () => {
         'chat.default_model_id': 'openai::gpt-4',
         'topic.naming.model_id': 'openai::gpt-3.5-turbo',
         'feature.quick_assistant.model_id': 'anthropic::claude-3-haiku',
-        'feature.translate.model_id': 'qwen::qwen-max'
+        'feature.translate.model_id': 'qwen::qwen-max',
+        'feature.translate.model.polish_global_id': 'qwen::qwen-plus'
       })
     })
 
@@ -35,7 +37,8 @@ describe('LlmModelTransforms', () => {
         'chat.default_model_id': CHERRYAI_DEFAULT_UNIQUE_MODEL_ID,
         'topic.naming.model_id': CHERRYAI_DEFAULT_UNIQUE_MODEL_ID,
         'feature.quick_assistant.model_id': CHERRYAI_DEFAULT_UNIQUE_MODEL_ID,
-        'feature.translate.model_id': CHERRYAI_DEFAULT_UNIQUE_MODEL_ID
+        'feature.translate.model_id': CHERRYAI_DEFAULT_UNIQUE_MODEL_ID,
+        'feature.translate.model.polish_global_id': CHERRYAI_DEFAULT_UNIQUE_MODEL_ID
       })
     })
 
@@ -52,6 +55,7 @@ describe('LlmModelTransforms', () => {
       expect(result['topic.naming.model_id']).toBe(CHERRYAI_DEFAULT_UNIQUE_MODEL_ID)
       expect(result['feature.quick_assistant.model_id']).toBe(CHERRYAI_DEFAULT_UNIQUE_MODEL_ID)
       expect(result['feature.translate.model_id']).toBe(CHERRYAI_DEFAULT_UNIQUE_MODEL_ID)
+      expect(result['feature.translate.model.polish_global_id']).toBe(CHERRYAI_DEFAULT_UNIQUE_MODEL_ID)
     })
 
     it('handles model with incomplete data (missing provider)', () => {
@@ -78,7 +82,8 @@ describe('LlmModelTransforms', () => {
         'chat.default_model_id': 'openai::gpt-4',
         'topic.naming.model_id': 'openai::gpt-4o-mini',
         'feature.quick_assistant.model_id': CHERRYAI_DEFAULT_UNIQUE_MODEL_ID,
-        'feature.translate.model_id': CHERRYAI_DEFAULT_UNIQUE_MODEL_ID
+        'feature.translate.model_id': CHERRYAI_DEFAULT_UNIQUE_MODEL_ID,
+        'feature.translate.model.polish_global_id': CHERRYAI_DEFAULT_UNIQUE_MODEL_ID
       })
       expect(mockMainLoggerService.warn).toHaveBeenCalledWith(
         'Legacy model preference could not be parsed; falling back to managed CherryAI default model',
@@ -103,14 +108,16 @@ describe('LlmModelTransforms', () => {
         defaultModel: { id: 'old-default', provider: 'cherryai' },
         topicNamingModel: { id: 'old-topic', provider: 'cherryai' },
         quickModel: { id: 'old-quick', provider: 'cherryai' },
-        translateModel: { id: 'old-translate', provider: 'cherryai' }
+        translateModel: { id: 'old-translate', provider: 'cherryai' },
+        polishModel: { id: 'old-polish', provider: 'cherryai' }
       })
 
       expect(result).toEqual({
         'chat.default_model_id': CHERRYAI_DEFAULT_UNIQUE_MODEL_ID,
         'topic.naming.model_id': CHERRYAI_DEFAULT_UNIQUE_MODEL_ID,
         'feature.quick_assistant.model_id': CHERRYAI_DEFAULT_UNIQUE_MODEL_ID,
-        'feature.translate.model_id': CHERRYAI_DEFAULT_UNIQUE_MODEL_ID
+        'feature.translate.model_id': CHERRYAI_DEFAULT_UNIQUE_MODEL_ID,
+        'feature.translate.model.polish_global_id': CHERRYAI_DEFAULT_UNIQUE_MODEL_ID
       })
     })
 

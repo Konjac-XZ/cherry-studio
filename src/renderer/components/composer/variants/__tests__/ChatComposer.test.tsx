@@ -1,6 +1,7 @@
 import { cacheService } from '@data/CacheService'
 import { MessageEditingProvider, useMessageEditing } from '@renderer/components/chat/editing/MessageEditingContext'
 import { toast } from '@renderer/services/toast'
+import type * as TranslateUtils from '@renderer/utils/translate'
 import type { KnowledgeBase } from '@shared/data/types/knowledge'
 import { type Model, MODEL_CAPABILITY } from '@shared/data/types/model'
 import { IpcChannel } from '@shared/IpcChannel'
@@ -137,9 +138,15 @@ const modelBWithFunctionCall = {
 } satisfies Model
 
 const ipcRequestMock = vi.hoisted(() => vi.fn())
+const translateTextMock = vi.hoisted(() => vi.fn())
 
 // Send-time attachment metadata (buildFileParts) resolves through IpcApi.
 vi.mock('@renderer/ipc', () => ({ ipcApi: { request: ipcRequestMock } }))
+
+vi.mock('@renderer/utils/translate', async (importActual) => ({
+  ...(await importActual<typeof TranslateUtils>()),
+  translateText: translateTextMock
+}))
 
 vi.mock('@renderer/components/composer/ComposerSurface', () => {
   function MockComposerSurface(props: ComposerSurfaceProps) {
@@ -466,6 +473,7 @@ vi.mock('@renderer/data/hooks/usePreference', () => ({
       'chat.message.font_size': 14,
       'chat.narrow_mode': false,
       'chat.input.send_message_shortcut': 'Enter',
+      'chat.input.translate.target_language': 'en-us',
       'chat.input.toolbar.pinned_tools': mocks.pinnedToolIds,
       'topic.tab.display_mode': mocks.topicLayout === 'classic' ? 'assistant' : 'time'
     }
@@ -676,6 +684,8 @@ describe('ChatComposer', () => {
     mocks.updateAssistantSettings.mockReset()
     mocks.updateAssistantSettings.mockResolvedValue(undefined)
     mocks.focusComposer.mockReset()
+    translateTextMock.mockReset()
+    translateTextMock.mockResolvedValue('Hello')
     mocks.insertToken.mockReset()
     mocks.replaceDraft.mockReset()
     mocks.toggleExpanded.mockReset()
@@ -799,6 +809,23 @@ describe('ChatComposer', () => {
       within(screen.getByTestId('composer-send-accessory')).queryByRole('button', { name: 'tool menu' })
     ).not.toBeInTheDocument()
     expect(mocks.surfaceProps?.narrowMode).toBe(false)
+  })
+
+  it('translates the current draft through the V2 surface and restores focus after completion', async () => {
+    mocks.pinnedToolIds = ['composer:translate-input']
+    mocks.getDraft.mockReturnValue({ text: '你好', tokens: [] })
+    render(<ChatComposer topic={topic} onSend={vi.fn()} />)
+
+    act(() => mocks.surfaceProps?.onTextChange('你好'))
+    fireEvent.click(
+      within(screen.getByTestId('composer-left-controls')).getByRole('button', { name: 'translate.title' })
+    )
+
+    await waitFor(() =>
+      expect(translateTextMock).toHaveBeenCalledWith('你好', 'en-us', undefined, expect.any(AbortSignal))
+    )
+    await waitFor(() => expect(mocks.replaceDraft).toHaveBeenCalledWith({ text: 'Hello', tokens: [] }))
+    await waitFor(() => expect(mocks.focusComposer).toHaveBeenCalledWith('end'))
   })
 
   it('uses page-owned context without querying or rendering duplicate context controls', async () => {
@@ -1783,6 +1810,33 @@ describe('ChatComposer', () => {
         mentionedModels: [modelB.id]
       })
     )
+  })
+
+  it('restores the provider-qualified multi-model selection owned by the assistant', async () => {
+    mocks.assistant.settings.mentionedModelIds = [model.id, modelB.id]
+
+    render(<ChatHomeComposer topic={topic} onSend={vi.fn()} />)
+
+    await waitFor(() => expect(mocks.mentionedModels).toEqual([model, modelB]))
+    expect(screen.getByTestId('selected-models-trigger')).toHaveAttribute('data-model-count', '2')
+  })
+
+  it('persists multi-model selection as IDs rather than model snapshots', async () => {
+    render(<ChatHomeComposer topic={topic} onSend={vi.fn()} />)
+
+    fireEvent.click(screen.getByText('toggle model multi select'))
+    fireEvent.click(screen.getByText('select models 1 and 2'))
+
+    expect(mocks.updateAssistantSettings).toHaveBeenCalledWith({ mentionedModelIds: [model.id, modelB.id] })
+  })
+
+  it('drops unavailable persisted model IDs and repairs the assistant setting', async () => {
+    mocks.assistant.settings.mentionedModelIds = [model.id, 'provider::deleted-model']
+
+    render(<ChatHomeComposer topic={topic} onSend={vi.fn()} />)
+
+    await waitFor(() => expect(mocks.mentionedModels).toEqual([model]))
+    expect(mocks.updateAssistantSettings).toHaveBeenCalledWith({ mentionedModelIds: [model.id] })
   })
 
   it('blocks sends for missing-assistant topics until a new assistant is selected', async () => {

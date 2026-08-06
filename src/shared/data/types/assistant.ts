@@ -80,6 +80,20 @@ export const AssistantSettingsSchema = z.object({
     ])
   ),
 
+  /** Provider-qualified model IDs selected in the chat multi-model control. */
+  mentionedModelIds: z.array(UniqueModelIdSchema).optional(),
+
+  /** Copy the selected assistant reply after it reaches a successful terminal state. */
+  autoCopy: z.boolean().optional(),
+  /** Translate the selected assistant reply to the configured native language. */
+  autoTranslate: z.boolean().optional(),
+  /** Hide a successful turn's user bubble without removing it from context. */
+  autoCleanupUserMessage: z.boolean().optional(),
+  /** Apply Simplified Chinese Markdown smart quotes to successful replies. */
+  zhCnMarkdownSmartQuotes: z.boolean().optional(),
+  /** Apply Chinese/Latin Markdown spacing to successful replies. */
+  zhMarkdownTextSpacing: z.boolean().optional(),
+
   /** Per-assistant context-settings override (P2-D assistant layer). Absent or
    *  `null` = inherit the global `chat.context_settings.*` preferences. `null`
    *  is the wire form for "clear the override" — JSON drops `undefined` keys,

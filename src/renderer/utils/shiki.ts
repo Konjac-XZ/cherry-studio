@@ -180,8 +180,8 @@ export function getReactStyleFromToken(
  * concurrent renders / theme switches.
  */
 const mdInitializer = new AsyncInitializer(async () => {
-  const md = await import('markdown-it')
-  return md.default
+  const [md, cjkFriendly] = await Promise.all([import('markdown-it'), import('markdown-it-cjk-friendly')])
+  return { MarkdownIt: md.default, cjkFriendly: cjkFriendly.default }
 })
 
 /**
@@ -193,11 +193,14 @@ export async function getMarkdownIt(theme: string, markdown: string) {
   const highlighter = await getHighlighter()
   await loadMarkdownLanguage(markdown, highlighter)
   // Create an independent markdown-it instance per render so a shared instance's options.highlight can't cross-contaminate under concurrency
-  const MarkdownIt = await mdInitializer.get()
+  const { MarkdownIt, cjkFriendly } = await mdInitializer.get()
   const md = MarkdownIt({
     linkify: true, // auto-convert URLs to links
-    typographer: true // enable typographic replacements
+    // Explicit translation post-processors own quote/spacing normalization;
+    // keep rendered selection and raw Markdown text faithful to one another.
+    typographer: false
   })
+  md.use(cjkFriendly)
   const { fromHighlighter } = await import('@shikijs/markdown-it/core')
 
   let actualTheme = theme

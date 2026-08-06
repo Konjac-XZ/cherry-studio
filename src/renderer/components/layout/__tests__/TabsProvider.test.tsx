@@ -429,14 +429,14 @@ describe('TabsProvider', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Seed tabs' }))
-    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,b,c,d'))
+    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,translate,b,c,d'))
 
     fireEvent.click(screen.getByRole('button', { name: 'Activate C' }))
     await waitFor(() => expect(screen.getByTestId('active-tab-id')).toHaveTextContent('c'))
 
     fireEvent.click(screen.getByRole('button', { name: 'Close B and C' }))
 
-    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,d'))
+    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,translate,d'))
     // Chrome-style: the surviving right neighbor takes over the active slot.
     expect(screen.getByTestId('active-tab-id')).toHaveTextContent('d')
   })
@@ -449,7 +449,7 @@ describe('TabsProvider', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Seed tabs' }))
-    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,b,c,d'))
+    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,translate,b,c,d'))
 
     // Active tab (home) sits left of the designated survivor (c) with the
     // pinned files tab further left — without activateId the nearest-left rule
@@ -459,7 +459,7 @@ describe('TabsProvider', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Close others around C' }))
 
-    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,c'))
+    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,translate,c'))
     expect(screen.getByTestId('active-tab-id')).toHaveTextContent('c')
   })
 
@@ -471,7 +471,7 @@ describe('TabsProvider', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Seed tabs' }))
-    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,b,c,d'))
+    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,translate,b,c,d'))
 
     fireEvent.click(screen.getByRole('button', { name: 'Hibernate C' }))
     await waitFor(() => expect(screen.getByTestId('dormant-ids')).toHaveTextContent('c'))
@@ -484,8 +484,8 @@ describe('TabsProvider', () => {
     // The dormant survivor must be woken, not just pointed at — a dormant tab
     // is not rendered, so activating without waking would blank the content.
     await waitFor(() => expect(screen.getByTestId('active-tab-id')).toHaveTextContent('c'))
-    expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,c')
-    expect(screen.getByTestId('dormant-ids')).toHaveTextContent(/^$/)
+    expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,translate,c')
+    expect(screen.getByTestId('dormant-ids')).toHaveTextContent('translate')
   })
 
   it('wakes the active tab when it is unexpectedly dormant', async () => {
@@ -514,7 +514,7 @@ describe('TabsProvider', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Seed tabs' }))
-    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,b,c,d'))
+    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,translate,b,c,d'))
 
     fireEvent.click(screen.getByRole('button', { name: 'Activate C' }))
     await waitFor(() => expect(screen.getByTestId('active-tab-id')).toHaveTextContent('c'))
@@ -523,7 +523,7 @@ describe('TabsProvider', () => {
     // Chrome-style fallback selects the right neighbor that slides into place.
     fireEvent.click(screen.getByRole('button', { name: 'Close B and C keeping C' }))
 
-    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,d'))
+    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,translate,d'))
     expect(screen.getByTestId('active-tab-id')).toHaveTextContent('d')
   })
 
@@ -535,13 +535,13 @@ describe('TabsProvider', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Seed tabs' }))
-    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,b,c,d'))
+    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,translate,b,c,d'))
 
     fireEvent.click(screen.getByRole('button', { name: 'Activate D' }))
     await waitFor(() => expect(screen.getByTestId('active-tab-id')).toHaveTextContent('d'))
     fireEvent.click(screen.getByRole('button', { name: 'Close D' }))
 
-    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,b,c'))
+    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,translate,b,c'))
     expect(screen.getByTestId('active-tab-id')).toHaveTextContent('c')
   })
 
@@ -555,7 +555,7 @@ describe('TabsProvider', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Seed tabs' }))
-    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,b,c,d'))
+    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,translate,b,c,d'))
 
     fireEvent.click(screen.getByRole('button', { name: 'Activate Home' }))
     await waitFor(() => expect(screen.getByTestId('active-tab-id')).toHaveTextContent('home'))
@@ -595,6 +595,18 @@ describe('TabsProvider', () => {
     expect(screen.getByTestId('tab-urls')).toHaveTextContent('/app/agents')
     expect(screen.getByTestId('tab-urls')).not.toHaveTextContent('/app/launchpad')
     expect(screen.getByTestId('active-tab-id')).toHaveTextContent('agents')
+  })
+
+  it('restores and refuses to close the protected Translate tab', async () => {
+    render(
+      <TabsProvider initialDefaultTab={HOME_TAB}>
+        <CloseTabOnMount tabId="translate" />
+      </TabsProvider>
+    )
+
+    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('translate'))
+    expect(screen.getByTestId('tab-urls')).toHaveTextContent('/app/translate')
+    expect(screen.getByTestId('tab-urls')).not.toHaveTextContent('/app/launchpad')
   })
 
   it('creates a second tab for an already-open URL when forceNew is set', async () => {
@@ -637,6 +649,7 @@ describe('TabsProvider session restore', () => {
     const dump = screen.getByTestId('session-tabs').textContent ?? ''
     expect(dump).toContain('a:dormant')
     expect(dump).toContain('b:awake')
+    expect(dump).toContain('translate:dormant')
     expect(dump.split(',').filter((tab) => tab.endsWith(':awake'))).toHaveLength(1)
   })
 

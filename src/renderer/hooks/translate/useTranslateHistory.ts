@@ -1,3 +1,4 @@
+import { dataApiService } from '@data/DataApiService'
 import { useMutation } from '@data/hooks/useDataApi'
 import { loggerService } from '@logger'
 import type { CreateTranslateHistoryDto, UpdateTranslateHistoryDto } from '@shared/data/api/schemas/translate'
@@ -6,6 +7,7 @@ import {
   type PersistedLangCode,
   type TranslateLangCode
 } from '@shared/data/preference/preferenceTypes'
+import type { UniqueModelId } from '@shared/data/types/model'
 import { useCallback } from 'react'
 
 import { type MutationFeedbackOptions, useMutationFeedback } from './useMutationFeedback'
@@ -22,6 +24,8 @@ export type AddTranslateHistoryInput = {
   targetText: string
   sourceLanguage: TranslateLangCode | null
   targetLanguage: TranslateLangCode | null
+  modelId?: UniqueModelId | null
+  cacheKey?: string
 }
 
 export type UpdateTranslateHistoryInput = {
@@ -29,6 +33,7 @@ export type UpdateTranslateHistoryInput = {
   targetText?: string
   sourceLanguage?: TranslateLangCode | null
   targetLanguage?: TranslateLangCode | null
+  modelId?: UniqueModelId | null
   star?: boolean
 }
 
@@ -58,7 +63,9 @@ export const useTranslateHistory = (options?: {
           sourceText: data.sourceText,
           targetText: data.targetText,
           sourceLanguage: toPersistedLangCodeOrNull(data.sourceLanguage),
-          targetLanguage: toPersistedLangCodeOrNull(data.targetLanguage)
+          targetLanguage: toPersistedLangCodeOrNull(data.targetLanguage),
+          modelId: data.modelId,
+          cacheKey: data.cacheKey
         }
         return addTrigger({ body })
       },
@@ -86,6 +93,7 @@ export const useTranslateHistory = (options?: {
         if ('targetLanguage' in data) {
           body.targetLanguage = toPersistedLangCodeOrNull(data.targetLanguage)
         }
+        if ('modelId' in data) body.modelId = data.modelId
         if (data.star !== undefined) body.star = data.star
         return updateTrigger({ params: { id }, body })
       },
@@ -129,6 +137,14 @@ export const useTranslateHistory = (options?: {
     add: addMutation,
     update: updateMutation,
     remove: removeMutation,
-    clear: clearMutation
+    clear: clearMutation,
+    findCached: useCallback(async (cacheKey: string) => {
+      const response = await dataApiService.get('/translate/histories', { query: { cacheKey, limit: 1 } })
+      return response.items[0]
+    }, []),
+    findBySourceText: useCallback(async (sourceText: string) => {
+      const response = await dataApiService.get('/translate/histories', { query: { sourceText, limit: 100 } })
+      return response.items
+    }, [])
   }
 }

@@ -29,11 +29,14 @@ The `TranslateMigrator` handles migration of translate history and custom langua
 | `targetText` | `targetText` | Direct copy |
 | `sourceLanguage` | `sourceLanguage` | Direct copy |
 | `targetLanguage` | `targetLanguage` | Direct copy |
+| `modelId` | `modelId` | JSON `{ provider, id }` is normalized to V2 `provider::model`; invalid values become `null` |
+| `cacheKey` | `cacheKey` | Rebuilt with normalized model identity and V1 whitespace semantics; disabled for dangling languages |
 | `star` | `star` | Default `false` if missing |
 | `createdAt` | `createdAt` | ISO string → integer timestamp, fallback `Date.now()` |
 | (none) | `updatedAt` | Generated, same value as createdAt |
 
-**Dropped fields**: None
+**Dropped fields**: None. A malformed legacy model reference is not exposed as a current V2 model identity; its
+old cache key is retained as migration evidence but cannot be matched as a current-model cache entry.
 
 ## Translate Languages
 

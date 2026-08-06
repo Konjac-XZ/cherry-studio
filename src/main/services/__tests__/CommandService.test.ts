@@ -16,6 +16,7 @@ vi.mock('@data/PreferenceService', async () => {
 
 const {
   windowServiceMock,
+  openRouteInMainWindowMock,
   openSettingsInMainWindowMock,
   quickAssistantServiceMock,
   selectionServiceMock,
@@ -27,6 +28,7 @@ const {
     toggleMainWindow: vi.fn()
   },
   openSettingsInMainWindowMock: vi.fn(),
+  openRouteInMainWindowMock: vi.fn(),
   quickAssistantServiceMock: {
     toggleQuickAssistant: vi.fn()
   },
@@ -79,6 +81,7 @@ vi.mock('@main/services/nativePopupMenu', () => ({
 }))
 
 vi.mock('@main/services/mainWindowNavigation', () => ({
+  openRouteInMainWindow: openRouteInMainWindowMock,
   openSettingsInMainWindow: openSettingsInMainWindowMock
 }))
 
@@ -125,6 +128,18 @@ describe('CommandService', () => {
     service.execute('app.settings.open')
 
     expect(openSettingsInMainWindowMock).toHaveBeenCalledWith('/settings/provider')
+  })
+
+  it('raises the main window on the reusable home route through the navigation helper', () => {
+    service.execute('app.home')
+
+    expect(openRouteInMainWindowMock).toHaveBeenCalledWith('/app/chat')
+  })
+
+  it('opens a nonce-scoped Translate Clipboard route', () => {
+    service.execute('translate.clipboard')
+
+    expect(openRouteInMainWindowMock).toHaveBeenCalledWith(expect.stringMatching(/^\/app\/translate\?paste=1&_=/))
   })
 
   it('passes the target window to zoom commands', () => {

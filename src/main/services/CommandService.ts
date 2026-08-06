@@ -2,7 +2,7 @@ import { application } from '@application'
 import { loggerService } from '@logger'
 import { BaseService, type Disposable, Injectable, Phase, ServicePhase, toDisposable } from '@main/core/lifecycle'
 import { WindowType } from '@main/core/window/types'
-import { openSettingsInMainWindow } from '@main/services/mainWindowNavigation'
+import { openRouteInMainWindow, openSettingsInMainWindow } from '@main/services/mainWindowNavigation'
 import { showNativePopupMenu } from '@main/services/nativePopupMenu'
 import { handleZoomFactor } from '@main/utils/zoom'
 import { IpcChannel } from '@shared/IpcChannel'
@@ -17,6 +17,13 @@ type MainCommandHandler = (window?: BrowserWindow) => void | Promise<void>
 const getMainWindows = (): BrowserWindow[] => application.get('WindowManager').getWindowsByType(WindowType.Main)
 
 const getCommandTargetWindows = (window?: BrowserWindow): BrowserWindow[] => (window ? [window] : getMainWindows())
+
+let translateClipboardRequestId = 0
+
+const nextTranslateClipboardRoute = (): string => {
+  translateClipboardRequestId += 1
+  return `/app/translate?paste=1&_=${Date.now().toString(36)}-${translateClipboardRequestId.toString(36)}`
+}
 
 @Injectable('CommandService')
 @ServicePhase(Phase.WhenReady)
@@ -78,6 +85,14 @@ export class CommandService extends BaseService {
   private registerBuiltInHandlers(): void {
     this.registerHandler('app.window.show', () => {
       application.get('MainWindowService').toggleMainWindow()
+    })
+
+    this.registerHandler('app.home', () => {
+      openRouteInMainWindow('/app/chat')
+    })
+
+    this.registerHandler('translate.clipboard', () => {
+      openRouteInMainWindow(nextTranslateClipboardRoute())
     })
 
     this.registerHandler('app.settings.open', () => {

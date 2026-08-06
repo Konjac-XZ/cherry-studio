@@ -8,4 +8,4 @@
  * - `agent`: agent-entry hint; currently shares the `all` provider set because
  *   non-Anthropic chat models route through the local API gateway
  */
-export type ProviderFilterMode = 'enabled' | 'disabled' | 'all' | 'agent'
+export type ProviderFilterMode = 'enabled' | 'disabled' | 'hidden' | 'all' | 'agent'

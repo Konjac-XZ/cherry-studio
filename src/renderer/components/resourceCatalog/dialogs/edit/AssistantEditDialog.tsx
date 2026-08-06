@@ -83,6 +83,11 @@ type AssistantEditFormValues = {
   maxTokens: number
   enableMaxTokens: boolean
   streamOutput: boolean
+  autoCopy: boolean
+  autoTranslate: boolean
+  autoCleanupUserMessage: boolean
+  zhCnMarkdownSmartQuotes: boolean
+  zhMarkdownTextSpacing: boolean
   maxToolCalls: number
   enableMaxToolCalls: boolean
   customParameters: AssistantFormState['customParameters']
@@ -123,6 +128,11 @@ function defaultValuesForAssistant(resource: AssistantEditDialogResource): Assis
     maxTokens: form.maxTokens,
     enableMaxTokens: form.enableMaxTokens,
     streamOutput: form.streamOutput,
+    autoCopy: form.autoCopy,
+    autoTranslate: form.autoTranslate,
+    autoCleanupUserMessage: form.autoCleanupUserMessage,
+    zhCnMarkdownSmartQuotes: form.zhCnMarkdownSmartQuotes,
+    zhMarkdownTextSpacing: form.zhMarkdownTextSpacing,
     maxToolCalls: form.maxToolCalls,
     enableMaxToolCalls: form.enableMaxToolCalls,
     customParameters: form.customParameters.map((parameter) => ({ ...parameter })),
@@ -161,6 +171,11 @@ function buildAssistantFormState(baseline: AssistantFormState, values: Assistant
     maxTokens: values.maxTokens,
     enableMaxTokens: values.enableMaxTokens,
     streamOutput: values.streamOutput,
+    autoCopy: values.autoCopy,
+    autoTranslate: values.autoTranslate,
+    autoCleanupUserMessage: values.autoCleanupUserMessage,
+    zhCnMarkdownSmartQuotes: values.zhCnMarkdownSmartQuotes,
+    zhMarkdownTextSpacing: values.zhMarkdownTextSpacing,
     maxToolCalls: values.maxToolCalls,
     enableMaxToolCalls: values.enableMaxToolCalls,
     customParameters: values.customParameters,
@@ -776,6 +791,8 @@ function AssistantAdvancedFields({
         )}
       />
 
+      <AssistantReplyAutomationFields form={form} />
+
       <ToggleFieldGroup
         label={t('library.config.basic.max_tool_calls')}
         valueLabel={
@@ -837,6 +854,61 @@ function AssistantAdvancedFields({
           />
         )}
       />
+    </div>
+  )
+}
+
+function AssistantReplyAutomationFields({ form }: { form: UseFormReturn<AssistantEditFormValues> }) {
+  const { t } = useTranslation()
+  const fields = [
+    {
+      name: 'autoCopy',
+      label: t('library.config.basic.autoCopy'),
+      help: t('library.config.basic.field.autoCopy.hint')
+    },
+    {
+      name: 'autoTranslate',
+      label: t('library.config.basic.autoTranslate'),
+      help: t('library.config.basic.field.autoTranslate.hint')
+    },
+    {
+      name: 'autoCleanupUserMessage',
+      label: t('library.config.basic.autoCleanupUserMessage'),
+      help: t('library.config.basic.field.autoCleanupUserMessage.hint')
+    },
+    {
+      name: 'zhCnMarkdownSmartQuotes',
+      label: t('library.config.basic.zhCnMarkdownSmartQuotes'),
+      help: t('library.config.basic.field.zhCnMarkdownSmartQuotes.hint')
+    },
+    {
+      name: 'zhMarkdownTextSpacing',
+      label: t('library.config.basic.zhMarkdownTextSpacing'),
+      help: t('library.config.basic.field.zhMarkdownTextSpacing.hint')
+    }
+  ] as const
+
+  return (
+    <div className="grid gap-4">
+      <div className="font-medium text-sm">{t('library.config.basic.reply_automation')}</div>
+      {fields.map(({ name, label, help }) => (
+        <FormField
+          key={name}
+          control={form.control}
+          name={name}
+          render={({ field }) => (
+            <FormItem>
+              <div className="flex items-center justify-between gap-3">
+                <FieldLabelWithHelp label={label} help={help} />
+                <FormControl>
+                  <Switch size="sm" checked={field.value} onCheckedChange={field.onChange} aria-label={label} />
+                </FormControl>
+              </div>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      ))}
     </div>
   )
 }

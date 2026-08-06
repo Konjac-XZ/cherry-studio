@@ -190,6 +190,20 @@ describe('kb_search', () => {
   })
 
   describe('applies', () => {
+    it('defaults an assistant without the legacy recognition toggle to enabled for an effective knowledge scope', () => {
+      const assistant = makeAssistant({ knowledgeBaseIds: ['kb-1'] })
+
+      expect('knowledgeRecognition' in assistant).toBe(false)
+      expect(
+        entry.applies!({
+          assistant,
+          mcpToolIds: new Set(),
+          hasAnyKnowledgeBase: true,
+          knowledgeBaseIds: ['kb-1']
+        })
+      ).toBe(true)
+    })
+
     it('returns true only when a base exists AND at least one is in the effective scope', () => {
       const applies = entry.applies!
       // No base in the system → never applies, even with bound ids.

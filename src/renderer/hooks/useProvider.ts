@@ -1,8 +1,10 @@
 import { useMutation, useQuery } from '@data/hooks/useDataApi'
+import { usePreference } from '@data/hooks/usePreference'
 import { loggerService } from '@logger'
 import { getProviderLabelKey } from '@renderer/i18n/label'
 import i18n from '@renderer/i18n/resolver'
 import { isSystemProviderId } from '@renderer/types/provider'
+import { filterRuntimeVisibleProviders } from '@renderer/utils/providerVisibility'
 import type {
   CreateProviderDto,
   ListProvidersQuery,
@@ -17,6 +19,7 @@ import { useCallback } from 'react'
 import type { SWRConfiguration } from 'swr'
 
 const EMPTY_PROVIDERS: Provider[] = []
+const EMPTY_HIDDEN_PROVIDER_IDS: string[] = []
 const logger = loggerService.withContext('useProviders')
 
 /**
@@ -39,8 +42,10 @@ function providerRefreshPaths(providerId: string): ConcreteApiPaths[] {
 // ─── Layer 1: List + Create ────────────────────────────────────────────
 export function useProviders(
   query?: ListProvidersQuery,
-  options?: { enabled?: boolean; swrOptions?: SWRConfiguration }
+  options?: { enabled?: boolean; includeHiddenBuiltIns?: boolean; swrOptions?: SWRConfiguration }
 ) {
+  const [storedHiddenBuiltInIds] = usePreference('settings.provider.hidden_builtin_ids')
+  const hiddenBuiltInIds = Array.isArray(storedHiddenBuiltInIds) ? storedHiddenBuiltInIds : EMPTY_HIDDEN_PROVIDER_IDS
   const filtered = query ? (omitBy(query, isUndefined) as ListProvidersQuery) : undefined
   const hasQuery = filtered && Object.keys(filtered).length > 0
   const queryOptions =
@@ -74,7 +79,11 @@ export function useProviders(
     [createTrigger]
   )
 
-  const providers = data ?? EMPTY_PROVIDERS
+  const allProviders = data ?? EMPTY_PROVIDERS
+  const providers =
+    options?.includeHiddenBuiltIns || hiddenBuiltInIds.length === 0
+      ? allProviders
+      : filterRuntimeVisibleProviders(allProviders, hiddenBuiltInIds)
 
   return {
     providers,

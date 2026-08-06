@@ -47,6 +47,7 @@ import {
   isOpenAIWebSearchModel,
   resolveReasoningEffortForModel
 } from '@renderer/utils/model'
+import { coordinateComposerInputTranslation, translateText } from '@renderer/utils/translate'
 import type { ComposerQueuedMessagePayload } from '@shared/ai/transport'
 import type { KnowledgeBase } from '@shared/data/types/knowledge'
 import type { CherryMessagePart } from '@shared/data/types/message'
@@ -54,7 +55,7 @@ import type { Model, UniqueModelId } from '@shared/data/types/model'
 import type { Provider } from '@shared/data/types/provider'
 import { getKnowledgeBaseIdsFromParts, withKnowledgeScopePart } from '@shared/data/types/uiParts'
 import type { ReasoningEffortOption } from '@shared/types/aiSdk'
-import { Eraser } from 'lucide-react'
+import { Eraser, Languages } from 'lucide-react'
 import React, { useCallback, useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -99,7 +100,9 @@ const logger = loggerService.withContext('ChatComposer')
 const CHAT_MANAGED_TOKEN_KINDS = ['file', 'knowledge'] as const satisfies readonly ComposerDraftToken['kind'][]
 const CHAT_NEW_CONVERSATION_TOOL_ID = 'composer:new-conversation'
 const CHAT_CLEAR_CONTEXT_TOOL_ID = 'composer:clear-context'
+const CHAT_TRANSLATE_INPUT_TOOL_ID = 'composer:translate-input'
 const EMPTY_MODELS: Model[] = []
+const EMPTY_MODEL_IDS: UniqueModelId[] = []
 const CHAT_TOOLBAR_CUSTOM_TOOLS: readonly ComposerToolbarCustomTool[] = [
   {
     id: ComposerPanelSymbol.McpStatus,
@@ -444,6 +447,7 @@ const ChatComposerInner = ({
   } = resolvedContext ?? loadedContext
   const { updateTopic } = useTopicMutations()
   const [sendMessageShortcut] = usePreference('chat.input.send_message_shortcut')
+  const [translateInputTargetLanguage] = usePreference('chat.input.translate.target_language')
   const [enableSpellCheck] = usePreference('app.spell_check.enabled')
   const {
     pinnedIds: pinnedToolIds,
@@ -469,6 +473,7 @@ const ChatComposerInner = ({
   const staleEditingMessage = editingMessage && !editingMessageForCurrentTopic
   const { isPending, isFulfilled, markSeen } = useTopicStreamStatus(streamScopeKey)
   const [isSending, setIsSending] = useState(false)
+  const [isTranslatingInput, setIsTranslatingInput] = useState(false)
   const [isStartingNewContext, setIsStartingNewContext] = useState(false)
   const [savingEditingSessionId, setSavingEditingSessionId] = useState<number | null>(null)
   const [text, setText] = useState(() => initialDraft.text)
@@ -477,6 +482,10 @@ const ChatComposerInner = ({
   )
   const [draftTokenRevision, setDraftTokenRevision] = useState(0)
   const quickPanel = useOptionalQuickPanel()
+  const isActiveTab = useIsActiveTab()
+  const currentScopeKeyRef = useLatest(streamScopeKey)
+  const isActiveTabRef = useLatest(isActiveTab)
+  const inputTranslationControllerRef = useRef<AbortController | null>(null)
   const rootPanelVisible = Boolean(quickPanel?.isVisible && quickPanel.symbol === ComposerPanelSymbol.Root)
   const knowledgeBasePanelVisible = Boolean(
     quickPanel?.isVisible && quickPanel.symbol === ComposerPanelSymbol.KnowledgeBase
@@ -569,6 +578,19 @@ const ChatComposerInner = ({
   const reasoningEffort =
     reasoningOverride?.assistantId === selectedAssistantId ? reasoningOverride.value : canonicalReasoningEffort
   const [fastMode, setFastMode] = useState(false)
+  const persistedMentionedModelIds = assistant?.settings.mentionedModelIds ?? EMPTY_MODEL_IDS
+  const shouldResolvePersistedMentionedModels = Boolean(
+    useMentionedModelSelector && assistant && persistedMentionedModelIds.length > 0
+  )
+  const { models: persistedMentionedModelCandidates, isLoading: persistedMentionedModelsPending } = useModels(
+    { enabled: true },
+    { fetchEnabled: shouldResolvePersistedMentionedModels }
+  )
+  const persistMentionedModelIds = useCallback(
+    (modelIds: UniqueModelId[]) =>
+      assistant ? updateAssistantSettings({ mentionedModelIds: modelIds }) : Promise.resolve(undefined),
+    [assistant, updateAssistantSettings]
+  )
 
   // A local override only bridges the latest PATCH/revalidation window. Do
   // not retire it on an intermediate refresh from an older mutation.
@@ -629,6 +651,10 @@ const ChatComposerInner = ({
     topicId: scopeKey,
     mentionedModels,
     setMentionedModels,
+    persistedModelIds: persistedMentionedModelIds,
+    availableModels: persistedMentionedModelCandidates,
+    availableModelsPending: shouldResolvePersistedMentionedModels && persistedMentionedModelsPending,
+    onPersistModelIds: assistant ? persistMentionedModelIds : undefined,
     preserveExplicitSelectionOnRuntimeChange: !assistant && !assistantId,
     onModelSelect: handleModelSelect
   })
@@ -1003,6 +1029,57 @@ const ChatComposerInner = ({
     }
   }, [actionsRef, chatWrite, clearContextDisabled, t])
 
+  const handleTranslateInput = useCallback(() => {
+    const activeController = inputTranslationControllerRef.current
+    if (activeController) {
+      activeController.abort()
+      return
+    }
+
+    const draft = actionsRef.current.getDraft()
+    if (!draft.text.trim()) return
+
+    const controller = new AbortController()
+    const startedScopeKey = streamScopeKey
+    inputTranslationControllerRef.current = controller
+    setIsTranslatingInput(true)
+
+    const isCurrent = () =>
+      inputTranslationControllerRef.current === controller && currentScopeKeyRef.current === startedScopeKey
+
+    void coordinateComposerInputTranslation({
+      text: draft.text,
+      targetLanguage: translateInputTargetLanguage,
+      signal: controller.signal,
+      translate: (sourceText, targetLanguage, signal) => translateText(sourceText, targetLanguage, undefined, signal),
+      isCurrent,
+      onTranslated: (translatedText) => {
+        actionsRef.current.replaceDraft({ ...draft, text: translatedText })
+        setText(translatedText)
+      },
+      onError: (error) => {
+        logger.warn('Failed to translate composer input', { error, scopeKey: startedScopeKey })
+        toast.error(t('translate.error.failed'))
+      },
+      onSettledFocus: () => {
+        if (!isActiveTabRef.current) return
+        window.requestAnimationFrame(() => {
+          if (currentScopeKeyRef.current === startedScopeKey && isActiveTabRef.current) {
+            actionsRef.current.focus('end')
+          }
+        })
+      }
+    }).finally(() => {
+      if (inputTranslationControllerRef.current !== controller) return
+      inputTranslationControllerRef.current = null
+      setIsTranslatingInput(false)
+    })
+  }, [actionsRef, currentScopeKeyRef, isActiveTabRef, streamScopeKey, t, translateInputTargetLanguage])
+
+  useEffect(() => {
+    return () => inputTranslationControllerRef.current?.abort()
+  }, [streamScopeKey])
+
   const rootPanelLeadingItems = useMemo<QuickPanelListItem[]>(() => {
     const items: QuickPanelListItem[] = []
 
@@ -1052,9 +1129,30 @@ const ChatComposerInner = ({
             }
           ]
         : []),
+      {
+        id: CHAT_TRANSLATE_INPUT_TOOL_ID,
+        label: isTranslatingInput ? t('common.cancel') : t('translate.title'),
+        icon: <Languages size={18} aria-hidden />,
+        disabled: !isTranslatingInput && !text.trim(),
+        customizePlacement: 'leading' as const,
+        requiresPanel: false,
+        availableWithoutModel: true,
+        onSelect: handleTranslateInput
+      },
       ...CHAT_TOOLBAR_CUSTOM_TOOLS
     ],
-    [addNewTopic, chatWrite, clearContextDisabled, handleStartNewContext, hasNewTopicAction, newTopicDisabled, t]
+    [
+      addNewTopic,
+      chatWrite,
+      clearContextDisabled,
+      handleStartNewContext,
+      handleTranslateInput,
+      hasNewTopicAction,
+      isTranslatingInput,
+      newTopicDisabled,
+      t,
+      text
+    ]
   )
 
   const rootPanelAdditionalItems = useMemo<QuickPanelListItem[]>(() => {
@@ -1095,7 +1193,6 @@ const ChatComposerInner = ({
 
   useComposerQuoteInsertion(actionsRef)
 
-  const isActiveTab = useIsActiveTab()
   useCommandHandler('topic.create', handleNewTopicShortcut, { enabled: isActiveTab })
   useCommandHandler('chat.context.toggle_new', () => void handleStartNewContext(), {
     enabled: isActiveTab && Boolean(chatWrite) && !clearContextDisabled
@@ -1518,6 +1615,7 @@ const ChatComposerInner = ({
             (text.trim().length === 0 && files.length === 0) ||
             (loading && !canSteer) ||
             isSavingEdit ||
+            isTranslatingInput ||
             sendDisabled ||
             searching ||
             runtimeModelPending ||

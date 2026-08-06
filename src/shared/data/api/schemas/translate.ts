@@ -11,6 +11,8 @@
 import * as z from 'zod'
 
 import {
+  type TranslateGlossaryEntry,
+  TranslateGlossaryEntrySchema,
   type TranslateHistory,
   TranslateHistorySchema,
   type TranslateLanguage,
@@ -27,6 +29,10 @@ export const CreateTranslateHistorySchema = TranslateHistorySchema.pick({
   targetText: true,
   sourceLanguage: true,
   targetLanguage: true
+}).extend({
+  modelId: TranslateHistorySchema.shape.modelId.optional(),
+  /** Optional caller-computed mode-aware cache identity (e.g. polish + translate). */
+  cacheKey: TranslateHistorySchema.shape.cacheKey.unwrap().max(4096).optional()
 })
 /**
  * DTO for creating a translate history record. Uses `.strict()` — unknown
@@ -40,6 +46,7 @@ export const UpdateTranslateHistorySchema = TranslateHistorySchema.pick({
   targetText: true,
   sourceLanguage: true,
   targetLanguage: true,
+  modelId: true,
   star: true
 }).partial()
 /**
@@ -66,6 +73,12 @@ export const TranslateHistoryQuerySchema = z
      * unbounded value can't be used to push expensive scans.
      */
     search: z.string().min(1).max(TRANSLATE_HISTORY_SEARCH_MAX_LENGTH).optional(),
+    /** Language codes whose localized renderer labels match the active search text. */
+    languageCodes: z.array(TranslateLanguageSchema.shape.langCode).max(50).optional(),
+    /** Exact indexed lookup used by the translation flow cache. */
+    cacheKey: z.string().min(1).max(4096).optional(),
+    /** Exact source-text lookup used to restore a compatible language decision before auto-detection. */
+    sourceText: TranslateHistorySchema.shape.sourceText.optional(),
     /** Filter by starred status */
     star: z.boolean().optional()
   })
@@ -104,6 +117,33 @@ export const UpdateTranslateLanguageSchema = TranslateLanguageSchema.pick({
  * (including `langCode`) are rejected, not silently stripped.
  */
 export type UpdateTranslateLanguageDto = z.infer<typeof UpdateTranslateLanguageSchema>
+
+// ============================================================================
+// Translate Glossary DTOs
+// ============================================================================
+
+export const CreateTranslateGlossaryEntrySchema = TranslateGlossaryEntrySchema.pick({
+  sourcePhrase: true,
+  targetPhrase: true,
+  targetLanguage: true
+})
+export type CreateTranslateGlossaryEntryDto = z.infer<typeof CreateTranslateGlossaryEntrySchema>
+
+export const UpdateTranslateGlossaryEntrySchema = TranslateGlossaryEntrySchema.pick({
+  sourcePhrase: true,
+  targetPhrase: true,
+  targetLanguage: true,
+  enabled: true
+}).partial()
+export type UpdateTranslateGlossaryEntryDto = z.infer<typeof UpdateTranslateGlossaryEntrySchema>
+
+export const TranslateGlossaryQuerySchema = z
+  .object({
+    targetLanguage: TranslateGlossaryEntrySchema.shape.targetLanguage.optional(),
+    enabled: z.boolean().optional()
+  })
+  .strict()
+export type TranslateGlossaryQuery = z.infer<typeof TranslateGlossaryQuerySchema>
 
 // ============================================================================
 // API Schema Definitions
@@ -173,6 +213,33 @@ export type TranslateSchemas = {
     /** Delete a translate language */
     DELETE: {
       params: { langCode: string }
+      response: void
+    }
+  }
+
+  '/translate/glossary': {
+    GET: {
+      query?: TranslateGlossaryQuery
+      response: TranslateGlossaryEntry[]
+    }
+    POST: {
+      body: CreateTranslateGlossaryEntryDto
+      response: TranslateGlossaryEntry
+    }
+  }
+
+  '/translate/glossary/:id': {
+    GET: {
+      params: { id: string }
+      response: TranslateGlossaryEntry
+    }
+    PATCH: {
+      params: { id: string }
+      body: UpdateTranslateGlossaryEntryDto
+      response: TranslateGlossaryEntry
+    }
+    DELETE: {
+      params: { id: string }
       response: void
     }
   }

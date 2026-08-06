@@ -15,8 +15,16 @@ vi.mock('@application', async () => {
 })
 
 const getByKeyMock = vi.fn()
+const listModelsMock = vi.fn()
 vi.mock('@main/data/services/ModelService', () => ({
-  modelService: { getByKey: getByKeyMock }
+  modelService: { getByKey: getByKeyMock, list: listModelsMock }
+}))
+
+const glossaryListMock = vi.fn()
+vi.mock('@main/data/services/TranslateGlossaryService', () => ({
+  translateGlossaryService: { list: glossaryListMock },
+  buildCustomizedDictionary: (entries: Array<{ sourcePhrase: string; targetPhrase: string }>) =>
+    entries.map((entry) => `${entry.sourcePhrase} -> ${entry.targetPhrase}`).join('\n')
 }))
 
 const getByLangCodeMock = vi.fn()
@@ -56,6 +64,10 @@ const fakeSender = { id: 1 } as unknown as Electron.WebContents
 beforeEach(() => {
   MockMainPreferenceServiceUtils.resetMocks()
   getByKeyMock.mockReset()
+  listModelsMock.mockReset()
+  listModelsMock.mockReturnValue([])
+  glossaryListMock.mockReset()
+  glossaryListMock.mockReturnValue([])
   getByLangCodeMock.mockReset()
   messageGetByIdMock.mockReset()
   messageUpdateMock.mockReset()
@@ -67,10 +79,16 @@ describe('translateService.resolveTranslatePayload', () => {
   it('interpolates {{target_language}} and {{text}} into the configured prompt', async () => {
     MockMainPreferenceServiceUtils.setPreferenceValue('feature.translate.model_id', 'openai::gpt-4o')
     MockMainPreferenceServiceUtils.setPreferenceValue(
-      'feature.translate.model_prompt',
+      'feature.translate.prompt.native_to_other',
       'Translate to {{target_language}}: {{text}}'
     )
-    getByKeyMock.mockReturnValue({ id: 'openai::gpt-4o', providerId: 'openai', apiModelId: 'gpt-4o', name: 'GPT-4o' })
+    getByKeyMock.mockReturnValue({
+      id: 'openai::gpt-4o',
+      providerId: 'openai',
+      apiModelId: 'gpt-4o',
+      name: 'GPT-4o',
+      capabilities: []
+    })
 
     const payload = translateService.resolveTranslatePayload('hello', TARGET)
 
@@ -79,23 +97,125 @@ describe('translateService.resolveTranslatePayload', () => {
     expect(getByKeyMock).toHaveBeenCalledWith('openai', 'gpt-4o')
   })
 
+  it('injects target-language glossary terms only when the prompt requests the dictionary', () => {
+    MockMainPreferenceServiceUtils.setPreferenceValue('feature.translate.model_id', 'openai::gpt-4o')
+    MockMainPreferenceServiceUtils.setPreferenceValue(
+      'feature.translate.prompt.native_to_other',
+      'Glossary:\n{{customized_dictionary}}\nTranslate {{text}}'
+    )
+    getByKeyMock.mockReturnValue({
+      id: 'openai::gpt-4o',
+      providerId: 'openai',
+      apiModelId: 'gpt-4o',
+      name: 'GPT-4o',
+      capabilities: []
+    })
+    glossaryListMock.mockReturnValue([{ sourcePhrase: 'OpenAI', targetPhrase: '开放人工智能' }])
+
+    const payload = translateService.resolveTranslatePayload('OpenAI model', TARGET)
+
+    expect(glossaryListMock).toHaveBeenCalledWith({ targetLanguage: 'en-us', enabled: true })
+    expect(payload.content).toContain('OpenAI -> 开放人工智能')
+  })
+
   it('skips interpolation for Qwen MT models — passes raw source text', async () => {
     MockMainPreferenceServiceUtils.setPreferenceValue('feature.translate.model_id', 'dashscope::qwen-mt-turbo')
     MockMainPreferenceServiceUtils.setPreferenceValue(
-      'feature.translate.model_prompt',
+      'feature.translate.prompt.native_to_other',
       'Translate to {{target_language}}: {{text}}'
     )
     getByKeyMock.mockReturnValue({
       id: 'dashscope::qwen-mt-turbo',
       providerId: 'dashscope',
       apiModelId: 'qwen-mt-turbo',
-      name: 'Qwen MT Turbo'
+      name: 'Qwen MT Turbo',
+      capabilities: []
     })
 
     const payload = translateService.resolveTranslatePayload('原文', TARGET)
 
     expect(payload.uniqueModelId).toBe('dashscope::qwen-mt-turbo')
     expect(payload.content).toBe('原文')
+  })
+
+  it('uses the other-to-native override for equivalent Chinese variants', () => {
+    MockMainPreferenceServiceUtils.setPreferenceValue('feature.translate.native_language', 'zh-cn')
+    MockMainPreferenceServiceUtils.setPreferenceValue('feature.translate.model_id', 'openai::global')
+    MockMainPreferenceServiceUtils.setPreferenceValue('feature.translate.model.other_to_native_follows_global', false)
+    MockMainPreferenceServiceUtils.setPreferenceValue(
+      'feature.translate.model.other_to_native_id',
+      'anthropic::directional'
+    )
+    MockMainPreferenceServiceUtils.setPreferenceValue(
+      'feature.translate.prompt.other_to_native',
+      'TO {{target_language}}: {{text}}'
+    )
+    getByKeyMock.mockImplementation((providerId: string, modelId: string) => ({
+      id: `${providerId}::${modelId}`,
+      providerId,
+      apiModelId: modelId,
+      name: modelId,
+      capabilities: []
+    }))
+
+    const payload = translateService.resolveTranslatePayload('hello', {
+      ...TARGET,
+      langCode: 'zh-tw',
+      value: '繁體中文'
+    } as TranslateLanguage)
+
+    expect(payload.uniqueModelId).toBe('anthropic::directional')
+    expect(payload.content).toBe('TO 繁體中文: hello')
+    expect(getByKeyMock).toHaveBeenCalledWith('anthropic', 'directional')
+  })
+
+  it('falls back from a stale directional override to the global translate model', () => {
+    MockMainPreferenceServiceUtils.setPreferenceValue('feature.translate.model_id', 'openai::global')
+    MockMainPreferenceServiceUtils.setPreferenceValue('feature.translate.model.native_to_other_follows_global', false)
+    MockMainPreferenceServiceUtils.setPreferenceValue('feature.translate.model.native_to_other_id', 'missing::gone')
+    getByKeyMock.mockImplementation((providerId: string, modelId: string) => {
+      if (providerId === 'missing') throw new Error('deleted')
+      return {
+        id: `${providerId}::${modelId}`,
+        providerId,
+        apiModelId: modelId,
+        name: modelId,
+        capabilities: []
+      }
+    })
+
+    expect(translateService.resolveTranslatePayload('hello', TARGET).uniqueModelId).toBe('openai::global')
+  })
+
+  it('resolves polish override, prompt, custom parameters, and custom reasoning precedence', () => {
+    MockMainPreferenceServiceUtils.setPreferenceValue('feature.translate.model_id', 'openai::translate')
+    MockMainPreferenceServiceUtils.setPreferenceValue(
+      'feature.translate.model.polish_global_id',
+      'openai::polish-global'
+    )
+    MockMainPreferenceServiceUtils.setPreferenceValue('feature.translate.model.polish_id', 'anthropic::polish-override')
+    MockMainPreferenceServiceUtils.setPreferenceValue('feature.translate.prompt.polish', 'Polish: {{text}}')
+    MockMainPreferenceServiceUtils.setPreferenceValue('feature.translate.reasoning.polish_auto_disable', true)
+    MockMainPreferenceServiceUtils.setPreferenceValue('feature.translate.request.polish_custom_parameters', [
+      { name: 'temperature', type: 'number', value: 0.1 },
+      { name: 'enable_thinking', type: 'boolean', value: false }
+    ])
+    getByKeyMock.mockImplementation((providerId: string, modelId: string) => ({
+      id: `${providerId}::${modelId}`,
+      providerId,
+      apiModelId: modelId,
+      name: modelId,
+      capabilities: []
+    }))
+
+    const payload = translateService.resolveTranslatePayload('draft', TARGET, 'polish')
+
+    expect(payload).toMatchObject({
+      uniqueModelId: 'anthropic::polish-override',
+      content: 'Polish: draft',
+      reasoningEffort: 'default',
+      customParameters: { temperature: 0.1, enable_thinking: false }
+    })
   })
 
   it('throws translate.error.not_configured when the translate model preference is unset', async () => {
@@ -119,10 +239,16 @@ describe('translateService.open', () => {
   beforeEach(() => {
     MockMainPreferenceServiceUtils.setPreferenceValue('feature.translate.model_id', 'openai::gpt-4o')
     MockMainPreferenceServiceUtils.setPreferenceValue(
-      'feature.translate.model_prompt',
+      'feature.translate.prompt.native_to_other',
       'Translate to {{target_language}}: {{text}}'
     )
-    getByKeyMock.mockReturnValue({ id: 'openai::gpt-4o', providerId: 'openai', apiModelId: 'gpt-4o', name: 'GPT-4o' })
+    getByKeyMock.mockReturnValue({
+      id: 'openai::gpt-4o',
+      providerId: 'openai',
+      apiModelId: 'gpt-4o',
+      name: 'GPT-4o',
+      capabilities: []
+    })
     getByLangCodeMock.mockReturnValue(TARGET)
   })
 
@@ -158,6 +284,25 @@ describe('translateService.open', () => {
     const listeners = Array.isArray(arg.listener) ? arg.listener : [arg.listener]
     expect(listeners).toHaveLength(1)
     expect(listeners[0].id).toBe(`wc:test:${streamId}`)
+  })
+
+  it('forwards operation-specific custom parameters at call scope', () => {
+    MockMainPreferenceServiceUtils.setPreferenceValue('feature.translate.request.custom_parameters', [
+      { name: 'temperature', type: 'number', value: 0.25 }
+    ])
+
+    translateService.open(fakeSender, {
+      streamId: 'translate:custom-parameters',
+      text: 'hello',
+      targetLangCode: 'en-us'
+    })
+
+    expect(streamPromptMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        callOverrides: { customParameters: { temperature: 0.25 } },
+        reasoningEffort: 'none'
+      })
+    )
   })
 
   it('stacks a PersistenceListener when the request carries a messageId', async () => {

@@ -30,6 +30,27 @@ const LLM_INPUT_MAX_TOKENS = 100
  * longer texts try franc first and fall back to LLM on failure.
  */
 const AUTO_MODE_LLM_THRESHOLD = 100
+const HANGUL_REGEX = /[\u1100-\u11ff\u3130-\u318f\uac00-\ud7af\ua960-\ua97f\ud7b0-\ud7ff]/u
+const JAPANESE_SPECIFIC_REGEX = /[\u3040-\u30ff\u31f0-\u31ff\uff66-\uff9f]/u
+const HAN_REGEX = /\p{Script=Han}/u
+
+const abortError = (signal: AbortSignal) =>
+  signal.reason instanceof Error ? signal.reason : new DOMException('Language detection aborted', 'AbortError')
+
+const throwIfAborted = (signal?: AbortSignal) => {
+  if (signal?.aborted) throw abortError(signal)
+}
+
+const awaitWithAbort = async <T>(promise: Promise<T>, signal?: AbortSignal): Promise<T> => {
+  if (!signal) return promise
+  throwIfAborted(signal)
+
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => reject(abortError(signal))
+    signal.addEventListener('abort', onAbort, { once: true })
+    void promise.then(resolve, reject).finally(() => signal.removeEventListener('abort', onAbort))
+  })
+}
 
 // ---------------------------------------------------------------------------
 // Pure helpers (no React dependency)
@@ -43,8 +64,10 @@ const AUTO_MODE_LLM_THRESHOLD = 100
 export const detectLanguageByLLM = async (
   inputText: string,
   langCodes: TranslateLangCode[],
-  model: Model | undefined
+  model: Model | undefined,
+  signal?: AbortSignal
 ): Promise<TranslateLangCode> => {
+  throwIfAborted(signal)
   logger.info('Detect language by LLM')
   const text = sliceByTokens(inputText, 0, LLM_INPUT_MAX_TOKENS)
   const listLangText = JSON.stringify(langCodes)
@@ -59,11 +82,15 @@ export const detectLanguageByLLM = async (
 
   const systemPrompt = LANG_DETECT_PROMPT.replace('{{list_lang}}', listLangText).replace('{{input}}', text)
 
-  const { text: result } = await ipcApi.request('ai.text.generate', {
-    uniqueModelId: model.id,
-    system: systemPrompt,
-    prompt: 'follow system prompt'
-  })
+  const { text: result } = await awaitWithAbort(
+    ipcApi.request('ai.text.generate', {
+      uniqueModelId: model.id,
+      system: systemPrompt,
+      prompt: 'follow system prompt'
+    }),
+    signal
+  )
+  throwIfAborted(signal)
 
   const trimmed = result.trim()
   if (!trimmed) {
@@ -118,6 +145,20 @@ export const detectLanguageByFranc = (inputText: string): TranslateLangCode => {
   return mapped
 }
 
+export const detectLanguageByHeuristic = (
+  inputText: string,
+  candidates: TranslateLangCode[] = []
+): TranslateLangCode => {
+  const resolveCandidate = (langCode: TranslateLangCode) =>
+    candidates.length === 0 || candidates.includes(langCode) ? langCode : undefined
+  const fallback = candidates.find((langCode) => langCode !== UNKNOWN_LANG_CODE)
+
+  if (HANGUL_REGEX.test(inputText)) return resolveCandidate('ko-kr') ?? fallback ?? UNKNOWN_LANG_CODE
+  if (JAPANESE_SPECIFIC_REGEX.test(inputText)) return resolveCandidate('ja-jp') ?? fallback ?? UNKNOWN_LANG_CODE
+  if (HAN_REGEX.test(inputText)) return resolveCandidate('zh-cn') ?? fallback ?? UNKNOWN_LANG_CODE
+  return resolveCandidate('en-us') ?? fallback ?? UNKNOWN_LANG_CODE
+}
+
 /**
  * Run detection with the given method and language candidate list.
  *
@@ -127,26 +168,31 @@ export const detectWithMethod = async (
   text: string,
   method: AutoDetectionMethod,
   langCodes: TranslateLangCode[],
-  model: Model | undefined
+  model: Model | undefined,
+  signal?: AbortSignal
 ): Promise<TranslateLangCode> => {
+  throwIfAborted(signal)
   switch (method) {
     case 'auto':
       if (estimateTokenCount(text) < AUTO_MODE_LLM_THRESHOLD) {
-        return detectLanguageByLLM(text, langCodes, model)
+        return detectLanguageByLLM(text, langCodes, model, signal)
       } else {
         const francResult = detectLanguageByFranc(text)
+        throwIfAborted(signal)
         if (francResult === UNKNOWN_LANG_CODE) {
           // Auto mode's contract is "pick what works"; we fall back silently from
           // the user's perspective but log so `auto` → LLM quota bursts are traceable.
           logger.info('franc returned UNKNOWN, falling back to LLM detection')
-          return detectLanguageByLLM(text, langCodes, model)
+          return detectLanguageByLLM(text, langCodes, model, signal)
         }
         return francResult
       }
     case 'franc':
       return detectLanguageByFranc(text)
+    case 'heuristic':
+      return detectLanguageByHeuristic(text, langCodes)
     case 'llm':
-      return detectLanguageByLLM(text, langCodes, model)
+      return detectLanguageByLLM(text, langCodes, model, signal)
     default:
       throw new Error('Invalid detection method.')
   }
@@ -154,12 +200,14 @@ export const detectWithMethod = async (
 
 export const detectLanguageOrUnknown = async (
   text: string,
-  detectLanguage: (text: string) => Promise<TranslateLangCode>,
-  onError: (error: unknown) => void
+  detectLanguage: (text: string, signal?: AbortSignal) => Promise<TranslateLangCode>,
+  onError: (error: unknown) => void,
+  signal?: AbortSignal
 ): Promise<TranslateLangCode> => {
   try {
-    return await detectLanguage(text)
+    return await (signal ? detectLanguage(text, signal) : detectLanguage(text))
   } catch (error) {
+    if (signal?.aborted || (error instanceof DOMException && error.name === 'AbortError')) throw error
     onError(error)
     return UNKNOWN_LANG_CODE
   }
@@ -187,7 +235,8 @@ export const useDetectLang = () => {
   const toastedEmptyRef = useRef(false)
 
   const detectLanguage = useCallback(
-    async (inputText: string): Promise<TranslateLangCode> => {
+    async (inputText: string, signal?: AbortSignal): Promise<TranslateLangCode> => {
+      throwIfAborted(signal)
       const text = inputText.trim()
       if (!text) return UNKNOWN_LANG_CODE
 
@@ -220,7 +269,8 @@ export const useDetectLang = () => {
 
       const langCodes = languages.map((l) => l.langCode)
       logger.info(`Auto detection method: ${method}`)
-      const result = await detectWithMethod(text, method, langCodes, quickModel)
+      const result = await detectWithMethod(text, method, langCodes, quickModel, signal)
+      throwIfAborted(signal)
       logger.info(`Detected language: ${result}`)
       return result
     },

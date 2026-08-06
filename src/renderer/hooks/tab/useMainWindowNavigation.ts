@@ -12,6 +12,11 @@ function isSettingsTabUrl(url: string) {
   return url === '/settings' || url.startsWith('/settings/') || url.startsWith('/settings?')
 }
 
+function normalizeTranslateTabUrl(url: string): string | null {
+  const normalized = url === '/translate' || url.startsWith('/translate?') ? `/app${url}` : url
+  return normalized === '/app/translate' || normalized.startsWith('/app/translate?') ? normalized : null
+}
+
 function useOpenSettingsRoute() {
   const { tabs, openTab, setActiveTab, updateTab } = useTabs()
   const settingsTabIdRef = useRef<string | null>(null)
@@ -69,6 +74,51 @@ function useOpenSettingsRoute() {
   )
 }
 
+function useOpenTranslateRoute() {
+  const { tabs, openTab, setActiveTab, updateTab } = useTabs()
+  const translateTabIdRef = useRef<string | null>(null)
+  const pendingTranslatePathRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    const translateTab = tabs.find((tab) => tab.type === 'route' && normalizeTranslateTabUrl(tab.url))
+    if (!translateTab) {
+      translateTabIdRef.current = null
+      return
+    }
+
+    translateTabIdRef.current = translateTab.id
+    const pendingPath = pendingTranslatePathRef.current
+    if (!pendingPath) return
+
+    pendingTranslatePathRef.current = null
+    updateTab(translateTab.id, { url: pendingPath, lastAccessTime: Date.now() })
+    setActiveTab(translateTab.id)
+  }, [setActiveTab, tabs, updateTab])
+
+  return useCallback(
+    (path: string) => {
+      const targetPath = normalizeTranslateTabUrl(path)
+      if (!targetPath) return false
+
+      const translateTab = tabs.find((tab) => tab.type === 'route' && normalizeTranslateTabUrl(tab.url))
+      if (translateTab) {
+        updateTab(translateTab.id, { url: targetPath, lastAccessTime: Date.now() })
+        setActiveTab(translateTab.id)
+        return true
+      }
+
+      if (translateTabIdRef.current) {
+        pendingTranslatePathRef.current = targetPath
+        return true
+      }
+
+      translateTabIdRef.current = openTab(targetPath, { id: 'translate' })
+      return true
+    },
+    [openTab, setActiveTab, tabs, updateTab]
+  )
+}
+
 function useMainRouteEventBridge(handleRoute: (path: string) => void) {
   useEffect(() => {
     const handleOpenMainRoute = (event: Event) => {
@@ -100,6 +150,7 @@ function useMainRouteEventBridge(handleRoute: (path: string) => void) {
  */
 export function useMainWindowNavigation() {
   const openSettingsRoute = useOpenSettingsRoute()
+  const openTranslateRoute = useOpenTranslateRoute()
   const { openTab } = useTabs()
   const initData = useWindowInitData<MainWindowInitData>()
   const handledNavigationRequestIdRef = useRef<number | null>(null)
@@ -108,11 +159,13 @@ export function useMainWindowNavigation() {
     (to: string) => {
       if (isSettingsPath(to)) {
         openSettingsRoute(to)
+      } else if (openTranslateRoute(to)) {
+        return
       } else {
         openTab(to)
       }
     },
-    [openSettingsRoute, openTab]
+    [openSettingsRoute, openTab, openTranslateRoute]
   )
 
   useIpcOn('navigation.open_route_requested', ({ to }) => handleRoute(to))

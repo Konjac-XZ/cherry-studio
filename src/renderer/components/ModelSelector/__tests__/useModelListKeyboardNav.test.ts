@@ -73,6 +73,14 @@ describe('useModelListKeyboardNav', () => {
     expect(up.onFocusItem).toHaveBeenCalledWith('item-0')
   })
 
+  it('moves by 25 items when no page size is supplied', () => {
+    const nav = renderNav({ items: makeItems(40), focusedItemKey: 'item-2' })
+
+    dispatchKey('PageDown')
+
+    expect(nav.onFocusItem).toHaveBeenCalledWith('item-27')
+  })
+
   it('selects the focused item on Enter', () => {
     const { onSelectItem } = renderNav({ items: makeItems(3), focusedItemKey: 'item-1' })
 

@@ -2,6 +2,10 @@ import type { TranslateBidirectionalPair, TranslateLangCode } from '@shared/data
 import type { TranslateLanguage } from '@shared/data/types/translate'
 
 export const UNKNOWN_LANG_CODE = 'unknown' satisfies TranslateLangCode
+const CHINESE_VARIANTS = new Set<TranslateLangCode>(['zh-cn', 'zh-tw'])
+
+export const isEquivalentBidirectionalLanguage = (left: TranslateLangCode, right: TranslateLangCode) =>
+  left === right || (CHINESE_VARIANTS.has(left) && CHINESE_VARIANTS.has(right))
 
 export const pickBidirectionalTarget = (
   sourceLanguageCode: TranslateLangCode,
@@ -34,8 +38,8 @@ export const getTargetLanguageForBidirectional = (
   sourceLanguage: TranslateLangCode,
   languagePair: TranslateBidirectionalPair
 ): TranslateLangCode => {
-  if (sourceLanguage === languagePair[0]) return languagePair[1]
-  if (sourceLanguage === languagePair[1]) return languagePair[0]
+  if (isEquivalentBidirectionalLanguage(sourceLanguage, languagePair[0])) return languagePair[1]
+  if (isEquivalentBidirectionalLanguage(sourceLanguage, languagePair[1])) return languagePair[0]
   throw new Error(
     `Unreachable: sourceLanguage '${sourceLanguage}' is not in pair [${languagePair[0]}, ${languagePair[1]}]`
   )
@@ -48,7 +52,7 @@ export const getTargetLanguageForBidirectional = (
  * @returns 是否在语言对中
  */
 const isLanguageInPair = (sourceLanguage: TranslateLangCode, languagePair: TranslateBidirectionalPair): boolean => {
-  return [languagePair[0], languagePair[1]].includes(sourceLanguage)
+  return languagePair.some((language) => isEquivalentBidirectionalLanguage(sourceLanguage, language))
 }
 
 /**

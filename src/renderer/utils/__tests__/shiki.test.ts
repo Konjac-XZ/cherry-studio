@@ -225,6 +225,18 @@ describe('shiki', () => {
   })
 
   describe('getMarkdownIt', () => {
+    it('keeps straight quotes faithful during markdown rendering', async () => {
+      const renderer = await getMarkdownIt('one-light', 'Claude said "hello" and it\'s fine.')
+      const html = renderer.render('Claude said "hello" and it\'s fine.')
+
+      expect(html).toContain('&quot;hello&quot;')
+      expect(html).toContain("it's fine")
+      expect(html).not.toContain('“hello”')
+      expect(html).not.toContain('it’s fine')
+    })
+  })
+
+  describe('getMarkdownIt', () => {
     const markdownWithWhiteToken = '```json\n{,}\n```'
 
     it('rewrites white token colors to the readable color in light themes', async () => {

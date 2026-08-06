@@ -201,6 +201,26 @@ describe('QuickPanelView', () => {
     vi.useRealTimers()
   })
 
+  it('uses 14 rows as the provider and open fallback page size', async () => {
+    let quickPanel: QuickPanelContextType | undefined
+
+    render(
+      <QuickPanelProvider>
+        <CaptureQuickPanel onCapture={(context) => (quickPanel = context)} />
+      </QuickPanelProvider>
+    )
+
+    await waitFor(() => expect(quickPanel?.pageSize).toBe(14))
+
+    act(() => quickPanel!.open({ list: [], pageSize: 6, symbol: '/' }))
+
+    await waitFor(() => expect(quickPanel?.pageSize).toBe(6))
+
+    act(() => quickPanel!.open({ list: [], symbol: '/' }))
+
+    await waitFor(() => expect(quickPanel?.pageSize).toBe(14))
+  })
+
   it('ignores stale close callbacks after the provider unmounts', () => {
     vi.useFakeTimers()
 
@@ -604,7 +624,7 @@ describe('QuickPanelView', () => {
         isVisible: true,
         collapsed: false,
         readOnly: false,
-        pageSize: 7,
+        pageSize: 14,
         itemCount: measuredItems.length,
         availableHeight: null,
         fill: false
@@ -648,7 +668,7 @@ describe('QuickPanelView', () => {
         isVisible: true,
         collapsed: false,
         readOnly: false,
-        pageSize: 7,
+        pageSize: 14,
         itemCount: compactItems.length,
         availableHeight: panelBottom - dockTop - QUICK_PANEL_SAFE_MARGIN,
         fill: true
@@ -715,7 +735,7 @@ describe('QuickPanelView', () => {
         isVisible: true,
         collapsed: false,
         readOnly: false,
-        pageSize: 7,
+        pageSize: 14,
         itemCount: measuredItems.length,
         availableHeight,
         fill: true,
@@ -785,7 +805,7 @@ describe('QuickPanelView', () => {
         isVisible: true,
         collapsed: false,
         readOnly: false,
-        pageSize: 7,
+        pageSize: 14,
         itemCount: measuredItems.length,
         availableHeight,
         fill: true,
@@ -795,7 +815,7 @@ describe('QuickPanelView', () => {
         isVisible: true,
         collapsed: false,
         readOnly: false,
-        pageSize: 7,
+        pageSize: 14,
         itemCount: measuredItems.length,
         availableHeight: null,
         fill: false
@@ -846,7 +866,7 @@ describe('QuickPanelView', () => {
         isVisible: true,
         collapsed: false,
         readOnly: true,
-        pageSize: 7,
+        pageSize: 14,
         itemCount: measuredItems.length,
         availableHeight: null,
         fill: false
@@ -1220,7 +1240,7 @@ describe('QuickPanelView', () => {
       isVisible: true,
       collapsed: true,
       readOnly: false,
-      pageSize: 7,
+      pageSize: 14,
       itemCount: items.length,
       availableHeight: null,
       fill: false

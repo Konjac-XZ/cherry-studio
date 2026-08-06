@@ -11,7 +11,8 @@ const FILTER_MENU_OPTIONS: { mode: ProviderFilterMode; labelKey: string }[] = [
   { mode: 'all', labelKey: 'settings.provider.filter.all' },
   { mode: 'agent', labelKey: 'settings.provider.filter.agent' },
   { mode: 'enabled', labelKey: 'settings.provider.filter.enabled' },
-  { mode: 'disabled', labelKey: 'settings.provider.filter.disabled' }
+  { mode: 'disabled', labelKey: 'settings.provider.filter.disabled' },
+  { mode: 'hidden', labelKey: 'settings.provider.filter.hidden_builtin' }
 ]
 
 interface ProviderListHeaderFilterMenuProps {

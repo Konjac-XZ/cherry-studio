@@ -80,6 +80,11 @@ export interface OldAssistantSettings {
   qwenThinkMode?: boolean
   maxToolCalls?: number
   enableMaxToolCalls?: boolean
+  autoCopy?: boolean
+  autoTranslate?: boolean
+  autoCleanupUserMessage?: boolean
+  zhCnMarkdownSmartQuotes?: boolean
+  zhMarkdownTextSpacing?: boolean
 }
 
 /** Old KnowledgeBase reference from Redux state */
@@ -119,6 +124,7 @@ export interface OldAssistant {
   type?: string | null
   model?: OldModel | null
   defaultModel?: OldModel | null
+  persistedMentionedModels?: OldModel[] | null
   settings?: Partial<OldAssistantSettings> | null
   mcpMode?: string | null
   mcpServers?: OldMcpServer[] | null
@@ -204,6 +210,13 @@ export function transformAssistant(source: OldAssistant): AssistantTransformResu
   // Migrate top-level fields into settings (skip null/undefined)
   if (source.mcpMode != null) legacySettings.mcpMode = source.mcpMode
   if (source.enableWebSearch != null) legacySettings.enableWebSearch = source.enableWebSearch
+  if (Array.isArray(source.persistedMentionedModels)) {
+    legacySettings.mentionedModelIds = Array.from(
+      new Set(
+        source.persistedMentionedModels.map((model) => legacyChatModelToUniqueId(model)).filter((id) => id !== null)
+      )
+    )
+  }
 
   // Migrator bypasses AssistantService.create(), so it mirrors the same defaults that the
   // service would supply: '🌟' for emoji, DEFAULT_ASSISTANT_SETTINGS for settings, and the

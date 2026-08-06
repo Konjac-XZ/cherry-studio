@@ -22,6 +22,16 @@ export const COMMAND_DEFINITIONS = [
     }
   }),
   defineCommand({
+    id: 'app.home',
+    titleKey: 'settings.shortcuts.go_home',
+    categoryKey: 'settings.shortcuts.general',
+    scope: 'main',
+    keybinding: {
+      defaultBinding: ['CommandOrControl', 'Shift', 'H'],
+      global: true
+    }
+  }),
+  defineCommand({
     id: 'app.search',
     titleKey: 'settings.shortcuts.search_message',
     categoryKey: 'settings.shortcuts.general',
@@ -65,6 +75,16 @@ export const COMMAND_DEFINITIONS = [
     scope: 'main',
     keybinding: {
       defaultBinding: [],
+      global: true
+    }
+  }),
+  defineCommand({
+    id: 'translate.clipboard',
+    titleKey: 'settings.shortcuts.translate_clipboard',
+    categoryKey: 'settings.shortcuts.general',
+    scope: 'main',
+    keybinding: {
+      defaultBinding: ['CommandOrControl', 'Shift', 'T'],
       global: true
     }
   }),
@@ -181,6 +201,24 @@ export const COMMAND_DEFINITIONS = [
       global: true,
       when: 'feature.selection.enabled',
       supportedPlatforms: ['darwin', 'win32', 'linux']
+    }
+  }),
+  defineCommand({
+    id: 'assistant.previous',
+    titleKey: 'settings.shortcuts.previous_assistant',
+    categoryKey: 'settings.shortcuts.topic',
+    scope: 'renderer',
+    keybinding: {
+      defaultBinding: ['CommandOrControl', 'Up']
+    }
+  }),
+  defineCommand({
+    id: 'assistant.next',
+    titleKey: 'settings.shortcuts.next_assistant',
+    categoryKey: 'settings.shortcuts.topic',
+    scope: 'renderer',
+    keybinding: {
+      defaultBinding: ['CommandOrControl', 'Down']
     }
   }),
   defineCommand({

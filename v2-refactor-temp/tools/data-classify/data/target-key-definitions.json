@@ -125,6 +125,13 @@
       "description": "Web search excluded domains (from complex migration)"
     },
     {
+      "targetKey": "settings.provider.hidden_builtin_ids",
+      "type": "string[]",
+      "defaultValue": [],
+      "status": "classified",
+      "description": "Canonical built-in provider IDs hidden by the user from runtime and normal settings views"
+    },
+    {
       "targetKey": "chat.web_search.max_results",
       "type": "number",
       "defaultValue": 5,
@@ -250,6 +257,48 @@
       "description": "Translate model UniqueModelId (provider::modelId, from complex mapping llm_model_ids_to_unique)"
     },
     {
+      "targetKey": "feature.translate.model.native_to_other_follows_global",
+      "type": "boolean",
+      "defaultValue": true,
+      "status": "classified",
+      "description": "Use the global translate model for native-to-other translation"
+    },
+    {
+      "targetKey": "feature.translate.model.native_to_other_id",
+      "type": "string",
+      "defaultValue": null,
+      "status": "classified",
+      "description": "Native-to-other translation model UniqueModelId"
+    },
+    {
+      "targetKey": "feature.translate.model.other_to_native_follows_global",
+      "type": "boolean",
+      "defaultValue": true,
+      "status": "classified",
+      "description": "Use the global translate model for other-to-native translation"
+    },
+    {
+      "targetKey": "feature.translate.model.other_to_native_id",
+      "type": "string",
+      "defaultValue": null,
+      "status": "classified",
+      "description": "Other-to-native translation model UniqueModelId"
+    },
+    {
+      "targetKey": "feature.translate.model.polish_id",
+      "type": "string",
+      "defaultValue": null,
+      "status": "classified",
+      "description": "Polish-stage model UniqueModelId"
+    },
+    {
+      "targetKey": "feature.translate.model.polish_global_id",
+      "type": "string",
+      "defaultValue": null,
+      "status": "classified",
+      "description": "Global polish model UniqueModelId migrated from llm.polishModel"
+    },
+    {
       "targetKey": "feature.paintings.default_model_id",
       "type": "string",
       "defaultValue": null,
@@ -273,14 +322,14 @@
     {
       "targetKey": "feature.translate.action.preferred_lang",
       "type": "PreferenceTypes.TranslateLangCode",
-      "defaultValue": "zh-cn",
+      "defaultValue": "en-us",
       "status": "classified",
       "description": "ActionTranslate preferred language"
     },
     {
       "targetKey": "feature.translate.action.alter_lang",
       "type": "PreferenceTypes.TranslateLangCode",
-      "defaultValue": "en-us",
+      "defaultValue": "zh-cn",
       "status": "classified",
       "description": "ActionTranslate alternate language"
     },
@@ -292,11 +341,18 @@
       "description": "TranslateWindow target language"
     },
     {
+      "targetKey": "feature.translate.native_language",
+      "type": "PreferenceTypes.TranslateLangCode",
+      "defaultValue": null,
+      "status": "classified",
+      "description": "User-configured native language for prompt and directional model policy"
+    },
+    {
       "targetKey": "feature.translate.page.bidirectional_pair",
       "type": "PreferenceTypes.TranslateBidirectionalPair",
       "defaultValue": [
-        "zh-cn",
-        "en-us"
+        "en-us",
+        "zh-cn"
       ],
       "status": "classified",
       "description": "Translate page bidirectional language pair (from complex migration)"
@@ -314,6 +370,146 @@
       "defaultValue": "zh-cn",
       "status": "classified",
       "description": "Translate page target language (from complex migration)"
+    },
+    {
+      "targetKey": "feature.translate.page.enable_markdown",
+      "type": "boolean",
+      "defaultValue": false,
+      "status": "classified",
+      "description": "Render translation output as Markdown"
+    },
+    {
+      "targetKey": "feature.translate.page.font_size",
+      "type": "number",
+      "defaultValue": 16,
+      "status": "classified",
+      "description": "Translation input and output font size in pixels"
+    },
+    {
+      "targetKey": "feature.translate.page.html_conversion_on_paste",
+      "type": "boolean",
+      "defaultValue": true,
+      "status": "classified",
+      "description": "Convert supported clipboard HTML to Markdown when pasting"
+    },
+    {
+      "targetKey": "feature.translate.page.json_structure_copy_blank_line",
+      "type": "boolean",
+      "defaultValue": false,
+      "status": "classified",
+      "description": "Insert blank lines between structured JSON rows when copying"
+    },
+    {
+      "targetKey": "feature.translate.page.json_structure_copy_separator",
+      "type": "PreferenceTypes.TranslateJsonCopySeparator",
+      "defaultValue": "colon-space",
+      "status": "classified",
+      "description": "Separator used when copying structured JSON rows"
+    },
+    {
+      "targetKey": "feature.translate.page.json_structure_view",
+      "type": "boolean",
+      "defaultValue": true,
+      "status": "classified",
+      "description": "Show valid JSON translation output as structured rows"
+    },
+    {
+      "targetKey": "feature.translate.page.layout_override",
+      "type": "PreferenceTypes.TranslateLayoutOverride",
+      "defaultValue": "auto",
+      "status": "classified",
+      "description": "Automatic, horizontal, or vertical translation page layout"
+    },
+    {
+      "targetKey": "feature.translate.polish.enabled",
+      "type": "boolean",
+      "defaultValue": false,
+      "status": "classified",
+      "description": "Persistently route translation through the polish stage"
+    },
+    {
+      "targetKey": "feature.translate.post_processing.enabled",
+      "type": "boolean",
+      "defaultValue": true,
+      "status": "classified",
+      "description": "Apply translation post-processing"
+    },
+    {
+      "targetKey": "feature.translate.post_processing.english_straight_quotes",
+      "type": "boolean",
+      "defaultValue": false,
+      "status": "classified",
+      "description": "Normalize English Markdown smart quotes to straight quotes"
+    },
+    {
+      "targetKey": "feature.translate.post_processing.regex_rules",
+      "type": "PreferenceTypes.TranslateRegexReplacementRule[]",
+      "defaultValue": "VALUE: [] as PreferenceTypes.TranslateRegexReplacementRule[]",
+      "status": "classified",
+      "description": "Ordered custom regex replacement rules"
+    },
+    {
+      "targetKey": "feature.translate.post_processing.zh_smart_quotes",
+      "type": "boolean",
+      "defaultValue": false,
+      "status": "classified",
+      "description": "Normalize Simplified Chinese Markdown quotes"
+    },
+    {
+      "targetKey": "feature.translate.post_processing.zh_text_spacing",
+      "type": "boolean",
+      "defaultValue": false,
+      "status": "classified",
+      "description": "Normalize spacing between Chinese and Latin text"
+    },
+    {
+      "targetKey": "feature.translate.prompt.native_to_other",
+      "type": "string",
+      "defaultValue": "VALUE: TRANSLATE_PROMPT",
+      "status": "classified",
+      "description": "Prompt used for native-to-other translation"
+    },
+    {
+      "targetKey": "feature.translate.prompt.other_to_native",
+      "type": "string",
+      "defaultValue": "VALUE: TRANSLATE_PROMPT",
+      "status": "classified",
+      "description": "Prompt used for other-to-native translation"
+    },
+    {
+      "targetKey": "feature.translate.prompt.polish",
+      "type": "string",
+      "defaultValue": "VALUE: POLISH_PROMPT",
+      "status": "classified",
+      "description": "Prompt used by the polish stage"
+    },
+    {
+      "targetKey": "feature.translate.reasoning.polish_auto_disable",
+      "type": "boolean",
+      "defaultValue": true,
+      "status": "classified",
+      "description": "Disable controllable reasoning for polish requests by default"
+    },
+    {
+      "targetKey": "feature.translate.reasoning.translate_auto_disable",
+      "type": "boolean",
+      "defaultValue": true,
+      "status": "classified",
+      "description": "Disable controllable reasoning for translation requests by default"
+    },
+    {
+      "targetKey": "feature.translate.request.custom_parameters",
+      "type": "PreferenceTypes.TranslateCustomParameters",
+      "defaultValue": "VALUE: [] as PreferenceTypes.TranslateCustomParameters",
+      "status": "classified",
+      "description": "Custom request parameters for translation"
+    },
+    {
+      "targetKey": "feature.translate.request.polish_custom_parameters",
+      "type": "PreferenceTypes.TranslateCustomParameters",
+      "defaultValue": "VALUE: [] as PreferenceTypes.TranslateCustomParameters",
+      "status": "classified",
+      "description": "Custom request parameters for the polish stage"
     },
     {
       "targetKey": "feature.binary.install_settings",
@@ -346,6 +542,20 @@
       },
       "status": "classified",
       "description": "Command shortcut: app.fullscreen.exit (unified command system)"
+    },
+    {
+      "targetKey": "shortcut.app.home",
+      "type": "PreferenceTypes.PreferenceShortcutType",
+      "defaultValue": {
+        "binding": [
+          "CommandOrControl",
+          "Shift",
+          "H"
+        ],
+        "enabled": true
+      },
+      "status": "classified",
+      "description": "Command shortcut: app.home (unified command system)"
     },
     {
       "targetKey": "shortcut.app.print",
@@ -409,6 +619,20 @@
       },
       "status": "classified",
       "description": "Command shortcut: app.window.show (unified command system)"
+    },
+    {
+      "targetKey": "shortcut.translate.clipboard",
+      "type": "PreferenceTypes.PreferenceShortcutType",
+      "defaultValue": {
+        "binding": [
+          "CommandOrControl",
+          "Shift",
+          "T"
+        ],
+        "enabled": true
+      },
+      "status": "classified",
+      "description": "Command shortcut: translate.clipboard (unified command system)"
     },
     {
       "targetKey": "shortcut.app.zoom.in",
@@ -575,6 +799,32 @@
       },
       "status": "classified",
       "description": "Command shortcut: topic.create (unified command system)"
+    },
+    {
+      "targetKey": "shortcut.assistant.previous",
+      "type": "PreferenceTypes.PreferenceShortcutType",
+      "defaultValue": {
+        "binding": [
+          "CommandOrControl",
+          "Up"
+        ],
+        "enabled": true
+      },
+      "status": "classified",
+      "description": "Command shortcut: assistant.previous (unified command system)"
+    },
+    {
+      "targetKey": "shortcut.assistant.next",
+      "type": "PreferenceTypes.PreferenceShortcutType",
+      "defaultValue": {
+        "binding": [
+          "CommandOrControl",
+          "Down"
+        ],
+        "enabled": true
+      },
+      "status": "classified",
+      "description": "Command shortcut: assistant.next (unified command system)"
     },
     {
       "targetKey": "shortcut.topic.rename",

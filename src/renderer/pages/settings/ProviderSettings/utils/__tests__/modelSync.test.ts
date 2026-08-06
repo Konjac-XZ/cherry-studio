@@ -68,6 +68,47 @@ describe('fetchResolvedProviderModels', () => {
       endpointTypes: [ENDPOINT_TYPE.ANTHROPIC_MESSAGES]
     })
   })
+
+  it('infers a readable name when the provider returns only a raw model ID', async () => {
+    listModelsMock.mockResolvedValueOnce([
+      {
+        id: 'custom::deepseek/deepseek-v4-flash',
+        providerId: 'custom',
+        apiModelId: 'deepseek/deepseek-v4-flash',
+        name: 'deepseek/deepseek-v4-flash'
+      }
+    ])
+
+    const models = await fetchResolvedProviderModels('custom')
+
+    expect(models[0]).toMatchObject({
+      apiModelId: 'deepseek/deepseek-v4-flash',
+      name: 'DeepSeek V4 Flash'
+    })
+  })
+
+  it('preserves an explicit upstream name when registry metadata is available', async () => {
+    listModelsMock.mockResolvedValueOnce([
+      {
+        id: 'custom::model-v2',
+        providerId: 'custom',
+        apiModelId: 'model-v2',
+        name: 'My Server Label'
+      }
+    ])
+    dataApiGetMock.mockResolvedValueOnce([
+      {
+        id: 'custom::model-v2',
+        providerId: 'custom',
+        apiModelId: 'model-v2',
+        name: 'Registry Label'
+      }
+    ])
+
+    await expect(fetchResolvedProviderModels('custom')).resolves.toEqual([
+      expect.objectContaining({ name: 'My Server Label' })
+    ])
+  })
 })
 
 describe('fetchProviderCatalogModels', () => {
@@ -175,5 +216,23 @@ describe('toCreateModelDto', () => {
       modelId: 'bge-reranker-v2-m3',
       endpointTypes: [ENDPOINT_TYPE.OPENAI_CHAT_COMPLETIONS]
     })
+  })
+
+  it('infers raw-ID names but preserves explicit names', () => {
+    const rawNameDto = toCreateModelDto('custom', {
+      id: 'custom::claude-opus-4-6' as UniqueModelId,
+      providerId: 'custom',
+      apiModelId: 'claude-opus-4-6',
+      name: 'claude-opus-4-6'
+    } as Model)
+    const explicitNameDto = toCreateModelDto('custom', {
+      id: 'custom::claude-opus-4-6' as UniqueModelId,
+      providerId: 'custom',
+      apiModelId: 'claude-opus-4-6',
+      name: 'My Claude'
+    } as Model)
+
+    expect(rawNameDto.name).toBe('Claude Opus 4.6')
+    expect(explicitNameDto.name).toBe('My Claude')
   })
 })

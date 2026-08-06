@@ -1,5 +1,7 @@
+import { dataApiService } from '@data/DataApiService'
 import type * as ToolApprovalOverridesModule from '@renderer/components/composer/useToolApprovalComposerOverrides'
 import type { CherryMessagePart, CherryUIMessage } from '@shared/data/types/message'
+import { MockDataApiUtils } from '@test-mocks/renderer/DataApiService'
 import { mockUseInvalidateCache, mockUseMutation } from '@test-mocks/renderer/useDataApi'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { act, type ReactNode } from 'react'
@@ -32,6 +34,7 @@ const mockExecutionOverlay = vi.hoisted(() => ({ current: null as any }))
 const mockUseExecutionOverlay = vi.hoisted(() =>
   vi.fn<(...args: unknown[]) => unknown>(() => mockExecutionOverlay.current)
 )
+const mockAssistantSettings = vi.hoisted(() => ({ current: { enableWebSearch: false } as Record<string, unknown> }))
 type ToolApprovalOverridesModuleType = typeof ToolApprovalOverridesModule
 type ToolApprovalOverridesOptions = Parameters<ToolApprovalOverridesModuleType['useToolApprovalComposerOverrides']>[0]
 const mockToolApprovalOverridesOptions = vi.hoisted(() => ({
@@ -90,7 +93,7 @@ vi.mock('@renderer/hooks/useAssistant', () => ({
     assistant: {
       id: 'assistant-1',
       knowledgeBaseIds: [],
-      settings: { enableWebSearch: false }
+      settings: mockAssistantSettings.current
     },
     model: undefined,
     setModel: vi.fn()
@@ -247,6 +250,12 @@ describe('ChatContent', () => {
   let streamOpen: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
+    MockDataApiUtils.resetMocks()
+    mockAssistantSettings.current = { enableWebSearch: false }
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: vi.fn().mockResolvedValue(undefined) }
+    })
     streamOpen = vi.fn().mockResolvedValue({ mode: 'started', userMessageId: 'user-1' })
     // Route ai.stream.open through the spy; other stream routes/events are inert here
     // (useChatWithHistory is mocked, so the real transport never runs).
@@ -1421,6 +1430,95 @@ describe('ChatContent', () => {
     await waitFor(() => {
       expect(onBranchLiveStateChange).toHaveBeenLastCalledWith(null)
     })
+  })
+
+  it('runs reply processing and presentation cleanup once at the successful terminal boundary', async () => {
+    mockAssistantSettings.current = {
+      enableWebSearch: false,
+      autoCopy: true,
+      autoCleanupUserMessage: true,
+      zhCnMarkdownSmartQuotes: true,
+      zhMarkdownTextSpacing: true
+    }
+    const user = {
+      ...createUiMessage('user-terminal', 'user'),
+      metadata: { parentId: 'root', status: 'success' }
+    } as CherryUIMessage
+    const assistant = {
+      ...createUiMessage('assistant-terminal', 'assistant'),
+      parts: [],
+      metadata: {
+        parentId: user.id,
+        modelId: 'provider::model',
+        status: 'pending',
+        createdAt: '2026-01-01T00:00:01.000Z'
+      }
+    } as CherryUIMessage
+    const refresh = vi.fn().mockResolvedValue([])
+    mockUseTopicMessages.mockReturnValue({
+      uiMessages: [user, assistant],
+      siblingsMap: {},
+      isLoading: false,
+      refresh,
+      activeNodeId: assistant.id,
+      loadOlder: vi.fn(),
+      hasOlder: false,
+      mutate: vi.fn().mockResolvedValue(undefined)
+    })
+    mockUseChatWithHistory.mockReturnValue({
+      regenerate: vi.fn(),
+      stop: vi.fn(),
+      setMessages: vi.fn(),
+      activeExecutions: [{ executionId: 'provider::model', anchorMessageId: assistant.id }]
+    })
+    vi.mocked(dataApiService.get).mockImplementation(async (path) => {
+      if (path === `/messages/${assistant.id}`) {
+        return {
+          id: assistant.id,
+          data: { parts: [{ type: 'text', text: '他说 "hello世界"。' }] }
+        } as never
+      }
+      return {
+        id: user.id,
+        data: { parts: user.parts }
+      } as never
+    })
+
+    render(
+      <ChatContent
+        topic={topic}
+        assistantContext={{ assistant: { id: 'assistant-1', settings: mockAssistantSettings.current } } as never}
+      />
+    )
+    const overlayCall = mockUseExecutionOverlay.mock.calls.at(-1)
+    const finish = (overlayCall![3] as any).onFinish as (
+      executionId: string,
+      event: { message: CherryUIMessage; isAbort: boolean; isError: boolean }
+    ) => void
+
+    act(() => {
+      finish('provider::model', {
+        message: { ...assistant, parts: [{ type: 'text', text: '他说 "hello世界"。' }] },
+        isAbort: false,
+        isError: false
+      })
+    })
+
+    await waitFor(() => {
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith('他说“hello 世界”。')
+      expect(dataApiService.patch).toHaveBeenCalledWith(`/messages/${assistant.id}`, {
+        body: { data: { parts: [{ type: 'text', text: '他说“hello 世界”。' }] } }
+      })
+      expect(dataApiService.patch).toHaveBeenCalledWith(`/messages/${user.id}`, {
+        body: {
+          data: {
+            parts: user.parts,
+            presentation: { hiddenInChat: true }
+          }
+        }
+      })
+    })
+    expect(refresh).toHaveBeenCalled()
   })
 
   it('regenerate within multi-model group keeps sibling bubbles in the list', async () => {

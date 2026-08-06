@@ -27,6 +27,26 @@ describe('transformShortcuts', () => {
           enabled: true
         },
         {
+          key: 'show_translate',
+          shortcut: ['CommandOrControl', 'Shift', 'T'],
+          enabled: true
+        },
+        {
+          key: 'go_home',
+          shortcut: ['CommandOrControl', 'Shift', 'H'],
+          enabled: true
+        },
+        {
+          key: 'previous_assistant',
+          shortcut: ['CommandOrControl', 'ArrowUp'],
+          enabled: true
+        },
+        {
+          key: 'next_assistant',
+          shortcut: ['CommandOrControl', 'ArrowDown'],
+          enabled: true
+        },
+        {
           key: 'selection_assistant_toggle',
           shortcut: [],
           enabled: false
@@ -46,6 +66,22 @@ describe('transformShortcuts', () => {
       },
       'shortcut.app.settings.open': {
         binding: ['CommandOrControl', ','],
+        enabled: true
+      },
+      'shortcut.translate.clipboard': {
+        binding: ['CommandOrControl', 'Shift', 'T'],
+        enabled: true
+      },
+      'shortcut.app.home': {
+        binding: ['CommandOrControl', 'Shift', 'H'],
+        enabled: true
+      },
+      'shortcut.assistant.previous': {
+        binding: ['CommandOrControl', 'Up'],
+        enabled: true
+      },
+      'shortcut.assistant.next': {
+        binding: ['CommandOrControl', 'Down'],
         enabled: true
       },
       'shortcut.selection.toggle': {

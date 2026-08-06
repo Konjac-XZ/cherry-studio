@@ -44,7 +44,7 @@ import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import type { ResourceListRevealPayload } from '@renderer/services/resourceListRevealEvents'
 import { toast } from '@renderer/services/toast'
 import type { Topic } from '@renderer/types/topic'
-import { getTopicAssistantDisplayGroupId } from '@renderer/utils/chat/topicsHelpers'
+import { getTopicAssistantDisplayGroupId, getTopicAssistantGroupId } from '@renderer/utils/chat/topicsHelpers'
 import { formatErrorMessageWithPrefix } from '@renderer/utils/error'
 import { findLatestUpdated } from '@renderer/utils/resourceEntity'
 import { getDefaultRouteTitle } from '@renderer/utils/routeTitle'
@@ -490,6 +490,28 @@ const HomePage: FC = () => {
       topicReuseCandidates
     ]
   )
+
+  const switchAssistantByOffset = useCallback(
+    (offset: -1 | 1) => {
+      const collapsedGroupIds = new Set(cacheService.getPersist('ui.topic.expansion.assistant') ?? [])
+      const visibleAssistants = assistants.filter(
+        (assistant) => !collapsedGroupIds.has(getTopicAssistantGroupId(assistant.id))
+      )
+      if (visibleAssistants.length === 0) return
+
+      const currentIndex = visibleAssistants.findIndex((assistant) => assistant.id === visibleAssistantId)
+      const baseIndex = currentIndex >= 0 ? currentIndex : offset > 0 ? -1 : 0
+      const nextIndex = (baseIndex + offset + visibleAssistants.length) % visibleAssistants.length
+      const nextAssistant = visibleAssistants[nextIndex]
+      if (!nextAssistant) return
+
+      void handleAssistantConversationSelect({ type: 'assistant', assistantId: nextAssistant.id })
+    },
+    [assistants, handleAssistantConversationSelect, visibleAssistantId]
+  )
+
+  useCommandHandler('assistant.previous', () => switchAssistantByOffset(-1), { enabled: isActiveTab })
+  useCommandHandler('assistant.next', () => switchAssistantByOffset(1), { enabled: isActiveTab })
 
   const createAndActivateEmptyTopic = useCallback(
     async (payload?: AddNewTopicWithReusePayload, options?: NewTopicAssistantTargetOptions): Promise<Topic | null> => {

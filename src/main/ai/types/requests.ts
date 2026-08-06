@@ -46,6 +46,13 @@ export interface CallOverrides {
   topP?: number
   topK?: number
   stopSequences?: string[]
+  /**
+   * Arbitrary model request parameters using the same names and routing rules as
+   * assistant custom parameters. This is intentionally in-process only: callers
+   * such as translation can supply their own persisted parameter profile without
+   * manufacturing a transient Assistant entity.
+   */
+  customParameters?: Record<string, unknown>
   /** Client tool definitions WITHOUT `execute` — the model emits the call and the gateway forwards it. */
   tools?: ToolSet
   toolChoice?: ToolChoice<ToolSet>

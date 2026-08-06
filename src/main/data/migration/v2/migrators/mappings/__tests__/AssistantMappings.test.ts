@@ -209,6 +209,41 @@ describe('AssistantMappings', () => {
       })
     })
 
+    it('preserves the isolated V1 reply-automation settings during migration', () => {
+      const result = transformAssistant({
+        id: 'ast-reply-automation',
+        settings: {
+          autoCopy: true,
+          autoTranslate: true,
+          autoCleanupUserMessage: true,
+          zhCnMarkdownSmartQuotes: true,
+          zhMarkdownTextSpacing: true
+        }
+      })
+
+      expect(result.assistant.settings).toMatchObject({
+        autoCopy: true,
+        autoTranslate: true,
+        autoCleanupUserMessage: true,
+        zhCnMarkdownSmartQuotes: true,
+        zhMarkdownTextSpacing: true
+      })
+    })
+
+    it('migrates persisted mentioned-model snapshots to provider-qualified IDs', () => {
+      const result = transformAssistant({
+        id: 'ast-mentioned-models',
+        persistedMentionedModels: [
+          { id: 'model-a', provider: 'provider-a', name: 'Model A' },
+          { id: 'model-b', provider: 'provider-b', name: 'Model B' },
+          { id: 'model-a', provider: 'provider-a', name: 'Duplicate' },
+          { id: 'invalid-without-provider', name: 'Invalid' }
+        ]
+      })
+
+      expect(result.assistant.settings.mentionedModelIds).toEqual(['provider-a::model-a', 'provider-b::model-b'])
+    })
+
     it('drops invalid legacy field values and falls back to v2 defaults', () => {
       // v1's "disabled = use model default" pattern stored maxTokens=0 alongside
       // enableMaxTokens=false — the 0 violates v2's `.positive()` rule.

@@ -1,6 +1,7 @@
 import { dataApiService } from '@data/DataApiService'
 import { loggerService } from '@logger'
 import { ipcApi } from '@renderer/ipc'
+import { inferModelNameFromId } from '@renderer/utils/naming'
 import type { CreateModelDto } from '@shared/data/api/schemas/models'
 import type { ProviderPreset } from '@shared/data/api/schemas/providers'
 import type { ConcreteApiPaths } from '@shared/data/api/types'
@@ -47,6 +48,13 @@ function getRawModelId(model: Pick<Partial<Model>, 'apiModelId' | 'id'>): string
   return model.apiModelId ?? (model.id ? parseUniqueModelId(model.id).modelId : '')
 }
 
+function resolveModelDisplayName(model: Pick<Partial<Model>, 'apiModelId' | 'id' | 'name'>): string {
+  const rawId = getRawModelId(model)
+  const name = model.name?.trim()
+  if (name && name !== rawId && name !== model.id) return name
+  return inferModelNameFromId(rawId)
+}
+
 export function toCreateModelDto(
   providerId: string,
   model: Model,
@@ -58,7 +66,7 @@ export function toCreateModelDto(
   return {
     providerId,
     modelId,
-    name: model.name,
+    name: resolveModelDisplayName(model),
     group: model.group,
     ...(resolvedEndpointTypes?.length ? { endpointTypes: [...resolvedEndpointTypes] } : {})
   }
@@ -72,7 +80,7 @@ export function toCreateModelDto(
  * available from the upstream provider SDK.
  */
 async function enrichFetchedModels(providerId: string, fetchedModels: Partial<Model>[]): Promise<Model[]> {
-  const filteredModels = fetchedModels.filter((model) => !isEmpty(model.name))
+  const filteredModels = fetchedModels.filter((model) => !isEmpty(getRawModelId(model)))
   if (filteredModels.length === 0) {
     return []
   }
@@ -117,12 +125,13 @@ async function enrichFetchedModels(providerId: string, fetchedModels: Partial<Mo
       resolvedMap.get(apiId.includes('/') ? apiId.substring(apiId.lastIndexOf('/') + 1) : apiId) ??
       resolvedMap.get((apiId.includes('/') ? apiId.substring(apiId.lastIndexOf('/') + 1) : apiId).replaceAll('.', '-'))
 
-    if (!registry) {
-      return base
-    }
+    if (!registry) return { ...base, name: resolveModelDisplayName(base) }
 
     const merged = { ...base }
     for (const field of REGISTRY_FIELDS) {
+      if (field === 'name' && resolveModelDisplayName(base) === base.name?.trim()) {
+        continue
+      }
       if (field === 'endpointTypes' && base.endpointTypes?.length) {
         continue
       }
@@ -132,6 +141,8 @@ async function enrichFetchedModels(providerId: string, fetchedModels: Partial<Mo
         ;(merged as Record<string, unknown>)[field] = value
       }
     }
+
+    merged.name = resolveModelDisplayName(merged)
 
     return merged
   })

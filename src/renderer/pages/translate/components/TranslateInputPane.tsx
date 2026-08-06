@@ -1,4 +1,4 @@
-import { Button, Scrollbar } from '@cherrystudio/ui'
+import { Button, NormalTooltip, Scrollbar } from '@cherrystudio/ui'
 import uploadExcelIcon from '@renderer/assets/images/translate/upload-excel.svg'
 import uploadImageIcon from '@renderer/assets/images/translate/upload-image.svg'
 import uploadPdfIcon from '@renderer/assets/images/translate/upload-pdf.svg'
@@ -6,11 +6,12 @@ import uploadPptIcon from '@renderer/assets/images/translate/upload-ppt.svg'
 import uploadTextIcon from '@renderer/assets/images/translate/upload-text.svg'
 import uploadWordIcon from '@renderer/assets/images/translate/upload-word.svg'
 import { useDrag } from '@renderer/hooks/useDrag'
-import { Copy, LoaderCircle, X } from 'lucide-react'
+import { ClipboardPaste, CodeXml, Copy, LoaderCircle, X } from 'lucide-react'
 import type { KeyboardEvent, Ref } from 'react'
 import { useCallback, useLayoutEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import FloatingActionBar from './FloatingActionBar'
 import IconButton from './IconButton'
 
 type Props = {
@@ -23,10 +24,16 @@ type Props = {
   onDrop: (event: React.DragEvent<HTMLDivElement>) => void
   onSelectFile: () => void
   onCopy: () => void
+  onPasteFromClipboard: () => Promise<string>
+  htmlConversionEnabled: boolean
+  onToggleHtmlConversion: () => void
   onCancelOcr: () => void
   disabled: boolean
   ocrProcessing: boolean
   selecting: boolean
+  fontSize?: number
+  tokenCount?: number
+  wordCount?: number
 }
 
 const TranslateInputPane = ({
@@ -39,10 +46,16 @@ const TranslateInputPane = ({
   onDrop,
   onSelectFile,
   onCopy,
+  onPasteFromClipboard,
+  htmlConversionEnabled,
+  onToggleHtmlConversion,
   onCancelOcr,
   disabled,
   ocrProcessing,
-  selecting
+  selecting,
+  fontSize = 16,
+  tokenCount = 0,
+  wordCount = 0
 }: Props) => {
   const { t } = useTranslation()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -57,7 +70,22 @@ const TranslateInputPane = ({
 
   const handleClear = useCallback(() => {
     onTextChange('')
+    requestAnimationFrame(() => textareaRef.current?.focus())
   }, [onTextChange])
+
+  const handlePasteFromClipboard = useCallback(async () => {
+    const value = await onPasteFromClipboard()
+    if (!value) return
+    const textarea = textareaRef.current
+    const start = textarea?.selectionStart ?? text.length
+    const end = textarea?.selectionEnd ?? start
+    onTextChange(text.slice(0, start) + value + text.slice(end))
+    requestAnimationFrame(() => {
+      const nextCaret = start + value.length
+      textarea?.focus()
+      textarea?.setSelectionRange(nextCaret, nextCaret)
+    })
+  }, [onPasteFromClipboard, onTextChange, text])
 
   useLayoutEffect(() => {
     const textarea = textareaRef.current
@@ -86,18 +114,36 @@ const TranslateInputPane = ({
             onPaste={onPaste}
             disabled={disabled}
             spellCheck={false}
+            style={{ fontSize }}
             placeholder={t('translate.input.placeholder')}
             className="min-h-full w-full resize-none overflow-hidden bg-transparent p-4 pr-12 text-base text-foreground leading-relaxed outline-none placeholder:font-normal placeholder:text-muted-foreground"
           />
         </Scrollbar>
-        <IconButton
-          size="sm"
-          onClick={onCopy}
-          disabled={!text}
-          aria-label={t('common.copy')}
-          className="absolute top-4 right-3">
-          <Copy size={14} />
-        </IconButton>
+        <FloatingActionBar
+          actions={[
+            {
+              key: 'clear',
+              label: t('common.clear'),
+              onClick: handleClear,
+              disabled: disabled || !text,
+              icon: <X size={14} />
+            },
+            {
+              key: 'paste',
+              label: t('translate.paste'),
+              onClick: () => void handlePasteFromClipboard(),
+              disabled,
+              icon: <ClipboardPaste size={14} />
+            },
+            {
+              key: 'copy',
+              label: t('common.copy'),
+              onClick: onCopy,
+              disabled: disabled || !text,
+              icon: <Copy size={14} />
+            }
+          ]}
+        />
       </div>
       {!text && (
         <button
@@ -114,15 +160,21 @@ const TranslateInputPane = ({
           </span>
         </button>
       )}
-      {text && !disabled && (
-        <div className="flex shrink-0 items-center px-3 py-3">
-          <button
-            type="button"
-            onClick={handleClear}
-            className="flex h-8 items-center gap-1.5 rounded-md px-2 text-muted-foreground text-sm transition-colors hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground focus-visible:outline-none">
-            <X size={14} className="lucide-custom" />
-            <span>{t('common.clear')}</span>
-          </button>
+      {!disabled && (
+        <div className="flex shrink-0 items-center gap-1 px-3 py-3">
+          <IconButton
+            size="sm"
+            onClick={onToggleHtmlConversion}
+            aria-label={t('translate.html_conversion')}
+            aria-pressed={htmlConversionEnabled}
+            className={htmlConversionEnabled ? 'text-foreground' : 'text-foreground-tertiary'}>
+            <CodeXml size={14} />
+          </IconButton>
+          <NormalTooltip content={t('translate.counter.tip')} side="top">
+            <span className="ml-auto text-foreground-tertiary text-xs tabular-nums">
+              {wordCount} {t('translate.counter.words')} / {tokenCount} {t('translate.counter.tokens')}
+            </span>
+          </NormalTooltip>
         </div>
       )}
       {isDragging && (

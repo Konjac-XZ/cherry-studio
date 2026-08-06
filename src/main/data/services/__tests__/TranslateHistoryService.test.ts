@@ -1,6 +1,8 @@
 import { translateHistoryTable } from '@data/db/schemas/translateHistory'
+import { translateLanguageTable } from '@data/db/schemas/translateLanguage'
 import { translateHistoryService } from '@data/services/TranslateHistoryService'
 import type { CreateTranslateHistoryDto, UpdateTranslateHistoryDto } from '@shared/data/api/schemas/translate'
+import { parsePersistedLangCode } from '@shared/data/preference/preferenceTypes'
 import { setupTestDatabase } from '@test-helpers/db'
 import { describe, expect, it } from 'vitest'
 
@@ -14,6 +16,8 @@ describe('TranslateHistoryService', () => {
       targetText: 'Bonjour',
       sourceLanguage: null,
       targetLanguage: null,
+      modelId: null,
+      cacheKey: null,
       star: false,
       ...overrides
     }
@@ -73,6 +77,44 @@ describe('TranslateHistoryService', () => {
       expect(result.items.some((i) => i.sourceText.includes('Hello'))).toBe(true)
     })
 
+    it('should search by localized date text and renderer-resolved language codes', async () => {
+      await dbh.db.insert(translateLanguageTable).values({ langCode: 'en-us', value: 'English', emoji: '🇺🇸' })
+      await seedHistory({
+        sourceLanguage: 'en-us',
+        createdAt: new Date(2026, 0, 2, 3, 4).getTime(),
+        updatedAt: new Date(2026, 0, 2, 3, 4).getTime()
+      })
+
+      expect(
+        translateHistoryService.list({
+          limit: 20,
+          search: 'English',
+          languageCodes: [parsePersistedLangCode('en-us')]
+        }).items
+      ).toHaveLength(1)
+      expect(translateHistoryService.list({ limit: 20, search: '01/02 03:04' }).items).toHaveLength(1)
+    })
+
+    it('should find histories by exact source text for pre-detection reuse', async () => {
+      translateHistoryService.create({
+        sourceText: 'exact source',
+        targetText: 'target one',
+        sourceLanguage: null,
+        targetLanguage: null
+      })
+      translateHistoryService.create({
+        sourceText: 'exact source extended',
+        targetText: 'target two',
+        sourceLanguage: null,
+        targetLanguage: null
+      })
+
+      const result = translateHistoryService.list({ limit: 20, sourceText: 'exact source' })
+
+      expect(result.items).toHaveLength(1)
+      expect(result.items[0].sourceText).toBe('exact source')
+    })
+
     it('should escape LIKE wildcards in search', async () => {
       expect(translateHistoryService.list({ limit: 20, search: '100% off_sale\\test' })).toBeDefined()
     })
@@ -116,6 +158,20 @@ describe('TranslateHistoryService', () => {
       const rows = await dbh.db.select().from(translateHistoryTable)
       expect(rows).toHaveLength(1)
     })
+
+    it('persists the provider-qualified model and canonical cache key', async () => {
+      const dto: CreateTranslateHistoryDto = {
+        sourceText: '  Hello\n world ',
+        targetText: '你好',
+        sourceLanguage: null,
+        targetLanguage: null,
+        modelId: 'openai::gpt-5'
+      }
+
+      const withoutLanguages = translateHistoryService.create(dto)
+      expect(withoutLanguages.modelId).toBe('openai::gpt-5')
+      expect(withoutLanguages.cacheKey).toBeNull()
+    })
   })
 
   describe('update', () => {
@@ -135,6 +191,23 @@ describe('TranslateHistoryService', () => {
 
       const result = translateHistoryService.update(seeded.id!, {})
       expect(result.id).toBe(seeded.id)
+    })
+
+    it('recomputes cache identity when the source text or model changes', async () => {
+      const seeded = await seedHistory({
+        sourceLanguage: null,
+        targetLanguage: null,
+        modelId: 'openai::gpt-4.1',
+        cacheKey: 'old-key'
+      })
+
+      const result = translateHistoryService.update(seeded.id!, {
+        sourceText: 'Updated',
+        modelId: 'openai::gpt-5'
+      })
+
+      expect(result.modelId).toBe('openai::gpt-5')
+      expect(result.cacheKey).toBeNull()
     })
   })
 

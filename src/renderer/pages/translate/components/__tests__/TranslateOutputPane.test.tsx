@@ -56,6 +56,36 @@ describe('TranslateOutputPane', () => {
     expect(screen.getByText('translate.processing')).toBeInTheDocument()
   })
 
+  it('shows completed structured JSON ahead of Markdown when explicitly enabled', () => {
+    const props = baseProps()
+    props.translatedContent = '{"message":"line 1\\nline 2"}'
+    props.renderedMarkdown = '<strong>markdown</strong>'
+    props.enableMarkdown = true
+
+    render(
+      <TranslateOutputPane
+        {...props}
+        enableJsonStructure
+        jsonStructureCopyBlankLineBetweenRows={false}
+        jsonStructureCopySeparator="colon-space"
+      />
+    )
+
+    expect(screen.getByTestId('json-structure-view')).toBeInTheDocument()
+    expect(screen.queryByText('markdown')).not.toBeInTheDocument()
+  })
+
+  it('keeps rendering streaming JSON as text until translation completes', () => {
+    const props = baseProps()
+    props.translatedContent = '{"value":1}'
+    props.translating = true
+
+    render(<TranslateOutputPane {...props} enableJsonStructure />)
+
+    expect(screen.queryByTestId('json-structure-view')).not.toBeInTheDocument()
+    expect(screen.getByText('{"value":1}')).toBeInTheDocument()
+  })
+
   it('shows an export-to-notes button in the bottom-right footer and calls it for translated content', () => {
     const props = baseProps()
     props.translatedContent = 'translated output'

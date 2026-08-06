@@ -98,6 +98,7 @@ const _MERGE_RULES_COVERED = {
   type: 'pickPrimary',
   model: 'pickPrimary',
   defaultModel: 'pickPrimary',
+  persistedMentionedModels: 'pickPrimary',
   settings: 'shallowMerge',
   mcpMode: 'pickPrimary',
   mcpServers: 'pickPrimary',

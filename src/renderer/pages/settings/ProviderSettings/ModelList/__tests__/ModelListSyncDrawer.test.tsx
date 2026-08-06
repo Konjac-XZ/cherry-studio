@@ -165,7 +165,9 @@ describe('ModelListSyncDrawer', () => {
 
     expect(screen.getByText('OpenAI common.models')).toBeInTheDocument()
     expect(screen.getAllByTestId('model-icon')).not.toHaveLength(0)
+    expect(screen.getByText('GPT 5')).toBeInTheDocument()
     expect(screen.getByText('gpt-5')).toBeInTheDocument()
+    expect(screen.getByText('Claude Sonnet')).toBeInTheDocument()
     expect(screen.getByText('claude-sonnet')).toBeInTheDocument()
     expect(screen.getByText('legacy-model')).toBeInTheDocument()
   })

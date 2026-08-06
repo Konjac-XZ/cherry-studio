@@ -997,6 +997,23 @@ describe('getTabCapabilities', () => {
     })
   })
 
+  it('protects the stable Translate application tab from close, pin, detach, and reorder actions', () => {
+    expect(
+      getTabCapabilities(
+        { id: 'translate', isPinned: false, type: 'route', url: '/app/translate?paste=1&_=nonce' },
+        ctx({ normalCount: 3, normalIndex: 1 })
+      )
+    ).toEqual({
+      menu: true,
+      reorder: false,
+      togglePin: false,
+      detach: false,
+      close: false,
+      closeOthers: true,
+      closeToRight: true
+    })
+  })
+
   it('unlocks every normal action once a second normal tab exists', () => {
     expect(getTabCapabilities({ id: 'a', isPinned: false }, ctx({ normalCount: 2, normalIndex: 0 }))).toEqual({
       menu: true,

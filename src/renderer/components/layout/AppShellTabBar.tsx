@@ -4,6 +4,7 @@ import type { OpenTabOptions, Tab } from '@renderer/hooks/tab'
 import useMacTransparentWindow from '@renderer/hooks/useMacTransparentWindow'
 import { isMac } from '@renderer/utils/platform'
 import { cn } from '@renderer/utils/style'
+import { isProtectedAppTab } from '@renderer/utils/translateTabPolicy'
 import { Plus, X } from 'lucide-react'
 import {
   cloneElement,
@@ -331,9 +332,20 @@ interface TabCapabilities {
  * right"; for a pinned tab every normal tab counts as being to its right.
  */
 export function getTabCapabilities(
-  tab: Pick<Tab, 'id' | 'isPinned'>,
+  tab: Pick<Tab, 'id' | 'isPinned'> & Partial<Pick<Tab, 'type' | 'url'>>,
   ctx: { pinnedCount: number; normalCount: number; canDetach: boolean; normalIndex?: number }
 ): TabCapabilities {
+  if (tab.type && tab.url && isProtectedAppTab(tab as Pick<Tab, 'type' | 'url'>)) {
+    return {
+      menu: true,
+      reorder: false,
+      togglePin: false,
+      detach: false,
+      close: false,
+      closeOthers: ctx.normalCount > 1,
+      closeToRight: ctx.normalIndex !== undefined && ctx.normalIndex < ctx.normalCount - 1
+    }
+  }
   const detach = ctx.canDetach
   if (tab.isPinned) {
     const hasSiblings = ctx.pinnedCount > 1

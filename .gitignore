@@ -74,6 +74,7 @@ AGENTS.override.md
 coverage
 .vitest-cache
 vitest.config.*.timestamp-*
+electron.vite.config.*.mjs
 .context/vitest-temp/
 
 # TanStack Router (generated code-splitting cache)
@@ -94,3 +95,5 @@ YOUR_MEMORY_FILE_PATH
 .sessions/
 .devtools
 .omo/
+.serena
+.tmp

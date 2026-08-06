@@ -1,3 +1,5 @@
+import type * as PathModule from 'node:path'
+
 import type * as LifecycleModule from '@main/core/lifecycle'
 import { getPhase } from '@main/core/lifecycle/decorators'
 import { Phase } from '@main/core/lifecycle/types'
@@ -68,6 +70,20 @@ vi.mock('@main/core/lifecycle', async (importOriginal) => {
 vi.mock('node:fs', () => ({ default: mockFs }))
 
 vi.mock('node:fs/promises', () => ({ default: mockFsp }))
+
+// This suite models a non-Windows filesystem unless a test explicitly flips
+// platformMock.isWin. Keep the virtual filesystem's path semantics independent
+// of the Windows host running Vitest; Windows-specific path behavior is covered
+// separately by binaryEnv.windows.test.ts.
+vi.mock('node:path', async (importOriginal) => {
+  const actual = await importOriginal<typeof PathModule>()
+  return { ...actual, ...actual.posix, default: actual.posix }
+})
+
+vi.mock('path', async (importOriginal) => {
+  const actual = await importOriginal<typeof PathModule>()
+  return { ...actual, ...actual.posix, default: actual.posix }
+})
 
 vi.mock('node:os', () => ({
   default: { tmpdir: () => '/tmp' }

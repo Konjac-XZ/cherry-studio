@@ -11,10 +11,10 @@ import {
   SettingsContentColumn,
   SettingTitle
 } from '@renderer/components/SettingsPrimitives'
+import { TranslateSettingsPanelContent } from '@renderer/components/translate/TranslateSettings'
 import { useDefaultModel } from '@renderer/hooks/useModel'
 import { useProviders } from '@renderer/hooks/useProvider'
 import { useTheme } from '@renderer/hooks/useTheme'
-import { TranslateSettingsPanelContent } from '@renderer/pages/translate/TranslateSettings'
 import { toast } from '@renderer/services/toast'
 import { cn } from '@renderer/utils/style'
 import { TRANSLATE_PROMPT } from '@shared/ai/prompts'

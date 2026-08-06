@@ -43,10 +43,11 @@ vi.mock('@renderer/components/VirtualList', () => ({
 
 vi.mock('@renderer/hooks/translate', () => ({
   useLanguages: () => ({
+    languages,
     getLanguage: (langCode: string) => languages.find((language) => language.langCode === langCode),
     getLabel: (language: TranslateLanguage | null) => language?.value
   }),
-  useTranslateHistories: () => translateHistoryMock.useTranslateHistories(),
+  useTranslateHistories: (options: unknown) => translateHistoryMock.useTranslateHistories(options),
   useTranslateHistory: () => translateHistoryMock.useTranslateHistory()
 }))
 
@@ -64,6 +65,7 @@ vi.mock('@cherrystudio/ui', () => ({
     return <div>{props.title}</div>
   },
   EmptyState: ({ title }: { title: string }) => <div>{title}</div>,
+  Input: (props: React.ComponentProps<'input'>) => <input {...props} />,
   NormalTooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   PageSidePanel: ({
     children,
@@ -95,6 +97,8 @@ const histories: TranslateHistoryItem[] = [
     targetText: '你好',
     sourceLanguage: english.langCode,
     targetLanguage: chinese.langCode,
+    modelId: null,
+    cacheKey: null,
     star: false,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z'
@@ -105,6 +109,8 @@ const histories: TranslateHistoryItem[] = [
     targetText: '再见',
     sourceLanguage: english.langCode,
     targetLanguage: chinese.langCode,
+    modelId: null,
+    cacheKey: null,
     star: true,
     createdAt: '2026-01-02T00:00:00.000Z',
     updatedAt: '2026-01-02T00:00:00.000Z'
@@ -165,6 +171,22 @@ describe('TranslateHistory', () => {
     expect(screen.getByText('hello')).toBeInTheDocument()
     expect(screen.getByText('bye')).toBeInTheDocument()
     expect(translateHistoryMock.useTranslateHistory).toHaveBeenCalledTimes(1)
+  })
+
+  it('queries text plus localized language matches and caps the rendered history', () => {
+    renderHistory()
+
+    fireEvent.change(screen.getByPlaceholderText('translate.history.search.placeholder'), {
+      target: { value: 'English' }
+    })
+
+    expect(translateHistoryMock.useTranslateHistories).toHaveBeenLastCalledWith({
+      search: 'English',
+      star: undefined,
+      languageCodes: [english.langCode],
+      pageSize: 100,
+      maxItems: 200
+    })
   })
 
   it('localizes compact header spacing to the translate history drawer', () => {

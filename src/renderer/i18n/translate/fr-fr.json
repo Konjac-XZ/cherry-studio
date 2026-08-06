@@ -758,6 +758,13 @@
         "placeholder": "Que doit faire l'agent lors de l'exécution de cette tâche ?"
       },
       "resume": "Reprendre",
+      "reuseSession": {
+        "bound": "[to be translated]:View session",
+        "description": "[to be translated]:Continue every run in the same session instead of starting a new one.",
+        "label": "[to be translated]:Reuse session",
+        "pending": "[to be translated]:Waiting for the first run",
+        "warning": "[to be translated]:A reused session keeps accumulating context, which raises token cost over time and can overflow the model's context window. To rebind a clean session, disable and save, then enable and save."
+      },
       "run": "Exécuter",
       "runTriggered": "Tâche déclenchée",
       "save": "Enregistrer",
@@ -1419,6 +1426,11 @@
         "placeholder": "Rechercher"
       }
     },
+    "compaction": {
+      "compacted": "[to be translated]:Context compacted, ~{{count}} tokens saved",
+      "compacted_plain": "[to be translated]:Context compacted",
+      "compacting": "[to be translated]:Compacting context…"
+    },
     "conversation": {
       "new": "Nouveau chat"
     },
@@ -1484,6 +1496,13 @@
       },
       "new_session": "Nouvelle Session {{Command}}",
       "new_topic": "Nouveau sujet {{Command}}",
+      "note_reference": {
+        "description": "[to be translated]:Attach a note from Notes",
+        "empty": "[to be translated]:No notes found",
+        "load_failed": "[to be translated]:Failed to load notes",
+        "loading": "[to be translated]:Loading notes...",
+        "title": "[to be translated]:Reference Note"
+      },
       "paste_text_file": "Coller dans l'entrée",
       "pasted_text_file_name": "Texte collé.txt",
       "pause": "Pause",
@@ -1614,6 +1633,10 @@
           "description": "Ne pas activer la fonction de recherche web",
           "label": "Pas de recherche web"
         },
+        "route": {
+          "builtin": "[to be translated]:Searches with the model's built-in tool",
+          "client": "[to be translated]:Searches with {{provider}}"
+        },
         "settings": "Paramètres de recherche en ligne"
       }
     },
@@ -1623,6 +1646,11 @@
       }
     },
     "message": {
+      "beautify": {
+        "empty": "[to be translated]:There is no reply text to beautify",
+        "label": "[to be translated]:Beautify reply",
+        "unchanged": "[to be translated]:The reply already uses the selected typography"
+      },
       "cache_stats": {
         "inline": "Cache {{hit_rate}}%",
         "tooltip": "Lecture du cache {{cache_read}} / écriture {{cache_write}} / pas de cache {{no_cache}} · {{saved}} jetons d'entrée économisés"
@@ -1684,6 +1712,7 @@
         "usage": "Utilisation des jetons",
         "waiting_first_token": "En attente"
       },
+      "translate_native": "[to be translated]:Translate to {{language}}",
       "useful": {
         "label": "Définir comme contexte",
         "tip": "Dans ce groupe de messages, ce message sera sélectionné pour être inclus dans le contexte"
@@ -1696,6 +1725,9 @@
       }
     },
     "navigation": {
+      "anchor": {
+        "jump_to_turn": "[to be translated]:Jump to turn {{number}}"
+      },
       "bottom": "Retour en bas",
       "close": "Fermer",
       "first": "Déjà premier message",
@@ -3165,6 +3197,7 @@
         "threshold": "Seuil de similarité pour filtrer les fragments peu pertinents. Des valeurs plus élevées rendent la récupération plus stricte."
       },
       "processor": "Fournisseur de traitement",
+      "processor_not_configured": "[to be translated]:Not configured",
       "rerank_disabled": "Désactivé",
       "rerank_model": "Modèle de reranking",
       "reset_action": "Restaurer les paramètres par défaut",
@@ -3415,7 +3448,15 @@
         }
       },
       "basic": {
+        "autoCleanupUserMessage": "[to be translated]:Hide completed user messages",
+        "autoCopy": "[to be translated]:Copy successful replies",
+        "autoTranslate": "[to be translated]:Translate successful replies to native language",
+        "context_compress_enabled": "[to be translated]:Auto-compress",
+        "context_compress_model": "[to be translated]:Compression model",
+        "context_compress_model_follow": "[to be translated]:Default",
         "context_count": "Nombre de contextes",
+        "context_management": "[to be translated]:Context management",
+        "context_truncate_threshold": "[to be translated]:Tool-output truncation threshold (chars)",
         "creative": "Créatif",
         "custom_params": "Paramètres personnalisés",
         "custom_params_add": "Ajouter le paramètre",
@@ -3424,11 +3465,29 @@
         "desc": "Configurez l'identité de l'assistant et les paramètres du modèle",
         "description_label": "Description",
         "field": {
+          "autoCleanupUserMessage": {
+            "hint": "[to be translated]:Hides the user bubble only after every sibling reply finishes and at least one succeeds; the message remains in context"
+          },
+          "autoCopy": {
+            "hint": "[to be translated]:Copies the selected or highest-priority successful reply after typography processing"
+          },
+          "autoTranslate": {
+            "hint": "[to be translated]:Adds one translation using the native language configured in Translate settings"
+          },
           "avatar": {
             "hint": "Utilisé pour identifier l’assistant dans la bibliothèque et les discussions"
           },
+          "context_compress_enabled": {
+            "hint": "[to be translated]:Summarize older turns automatically when nearing the context window"
+          },
           "context_count": {
             "hint": "Nombre de messages récents conservés comme contexte"
+          },
+          "context_management": {
+            "hint": "[to be translated]:Override global context-management settings for this assistant; off inherits the global settings"
+          },
+          "context_truncate_threshold": {
+            "hint": "[to be translated]:Tool outputs beyond this many characters are offloaded and truncated"
           },
           "custom_params": {
             "hint": "Paramètres supplémentaires du fournisseur envoyés avec les requêtes"
@@ -3461,6 +3520,12 @@
           },
           "top_p": {
             "hint": "Limite la plage d'échantillonnage des jetons lorsqu'elle est activée"
+          },
+          "zhCnMarkdownSmartQuotes": {
+            "hint": "[to be translated]:Applies the Translate page's Simplified Chinese Markdown quote processor"
+          },
+          "zhMarkdownTextSpacing": {
+            "hint": "[to be translated]:Applies the Translate page's Chinese and Latin Markdown spacing processor"
           }
         },
         "group": "Groupe",
@@ -3477,6 +3542,7 @@
         "model_pick": "+ Choisir le modèle",
         "pick_avatar": "Choisir un avatar",
         "precise": "Précis",
+        "reply_automation": "[to be translated]:Successful reply automation",
         "stream_output": "Sortie de flux",
         "tag_empty": "Aucune étiquette disponible",
         "tag_hint": "Pour ajouter une nouvelle balise, utilisez l'entrée \"+ Balise\" dans la barre supérieure de la bibliothèque",
@@ -3485,7 +3551,9 @@
         "tags": "Étiquettes",
         "temperature": "Température",
         "title": "Paramètres de base",
-        "top_p": "Top-P"
+        "top_p": "Top-P",
+        "zhCnMarkdownSmartQuotes": "[to be translated]:Chinese smart quotes",
+        "zhMarkdownTextSpacing": "[to be translated]:Chinese and Latin spacing"
       },
       "breadcrumb": "Bibliothèque",
       "dialogs": {
@@ -4273,6 +4341,7 @@
       "cutoff": "Troncature du contenu de recherche en cours...",
       "fetch_complete": "{{count}} résultats de recherche",
       "fetch_empty": "Aucun résultat de recherche trouvé",
+      "fetch_opaque": "[to be translated]:Searched by the model",
       "partial_failure": "{{count}} résultats de recherche, certaines recherches ont échoué"
     }
   },
@@ -5145,6 +5214,7 @@
     "reset": "Réinitialiser",
     "rotate_left": "Rotation vers la gauche",
     "rotate_right": "Rotation vers la droite",
+    "save_as": "[to be translated]:Save As",
     "source": "Voir le code source",
     "zoom_in": "agrandir",
     "zoom_out": "réduire"
@@ -5783,7 +5853,25 @@
         "title": "Entreprise"
       },
       "feedback": {
+        "agent": {
+          "description": "[to be translated]:Chat with Cherry Assistant to share feedback.",
+          "title": "[to be translated]:Use Agent"
+        },
+        "agent_error": "[to be translated]:Unable to open Cherry Assistant for feedback. Please try again.",
         "button": "Faire un retour",
+        "dialog": {
+          "description": "[to be translated]:Choose how to share feedback and help us make Cherry Studio better.",
+          "title": "[to be translated]:Choose a feedback channel"
+        },
+        "github": {
+          "description": "[to be translated]:Create a bug report or feature request on GitHub.",
+          "title": "[to be translated]:GitHub Issue"
+        },
+        "recommended": "[to be translated]:Recommended",
+        "survey": {
+          "description": "[to be translated]:Share feedback through our Feishu survey.",
+          "title": "[to be translated]:Feedback survey"
+        },
         "title": "Retour d'information"
       },
       "label": "À propos de nous",
@@ -7309,6 +7397,7 @@
       "topic_naming": {
         "auto": "Renommage automatique des sujets",
         "label": "Nom de sujet",
+        "model": "[to be translated]:Naming Model",
         "prompt": "Mot-clé de renommage des sujets"
       },
       "translate_model": "Modèle de traduction",
@@ -7647,6 +7736,7 @@
         "all": "Tous les fournisseurs",
         "disabled": "Uniquement pour personnes handicapées",
         "enabled": "Activé uniquement",
+        "hidden_builtin": "[to be translated]:Hidden Built-in Providers",
         "label": "Fournisseurs de filtres"
       },
       "filter_agent": "Fournisseurs pris en charge par l'agent de filtrage",
@@ -7659,6 +7749,11 @@
         "sign_in_failed": "La connexion a échoué. Veuillez réessayer.",
         "sign_in_success": "Connecté à Grok CLI",
         "signing_in": "En attente du navigateur…"
+      },
+      "hide": {
+        "action": "[to be translated]:Hide",
+        "content": "[to be translated]:This built-in provider will be disabled and hidden from normal provider lists and model selectors. You can restore it from the Hidden Built-in Providers filter.",
+        "title": "[to be translated]:Hide Built-in Provider"
       },
       "image_endpoints": {
         "image_edit_base_url": {
@@ -7731,6 +7826,7 @@
       "reorder_failed": "Échec de la réorganisation des fournisseurs",
       "request_configuration": "Configuration de la requête",
       "request_configuration_tooltip": "Configurer l'hôte de l'API et les en-têtes de requête personnalisés",
+      "restore": "[to be translated]:Restore",
       "save_failed": "Échec de l'enregistrement des paramètres du fournisseur",
       "search": "Rechercher une plateforme de modèles...",
       "search_placeholder": "Rechercher un ID ou un nom de modèle",
@@ -7883,13 +7979,16 @@
       "enabled": "activer",
       "exit_fullscreen": "Quitter le plein écran",
       "filter": "Filtre",
+      "go_home": "[to be translated]:Go to Home",
       "label": "Touche",
       "move_tab_to_first": "Déplacer l'onglet en premier",
       "new_topic": "Nouveau sujet",
+      "next_assistant": "[to be translated]:Next Assistant",
       "occupied_by_other_application": "Ce raccourci est déjà utilisé par le système ou une autre application",
       "open_tab_in_new_window": "Ouvrir l'onglet dans une nouvelle fenêtre",
       "pin_tab": "Épingler/Désépingler l'onglet",
       "press_shortcut": "Appuyer sur raccourci clavier",
+      "previous_assistant": "[to be translated]:Previous Assistant",
       "print": "Imprimer",
       "quick_assistant": "Assistant rapide",
       "rename_topic": "Renommer le sujet",
@@ -7914,6 +8013,7 @@
       "toggle_right_sidebar": "Basculer la barre latérale droite",
       "toggle_show_topics": "Basculer l'affichage des sujets",
       "toggle_sidebar": "Basculer la barre latérale",
+      "translate_clipboard": "[to be translated]:Translate Clipboard",
       "zoom_in": "Agrandir l'interface",
       "zoom_out": "Réduire l'interface",
       "zoom_reset": "Réinitialiser le zoom"
@@ -8071,6 +8171,10 @@
         "check": "Vérifier",
         "check_failed": "Échec de la vérification",
         "check_success": "Vérification réussie",
+        "client_tools_preferred": {
+          "description": "[to be translated]:Use the search and URL-fetch services configured above even when the model has built-in search. When off, the model handles it.",
+          "label": "[to be translated]:Prefer configured search services"
+        },
         "compression": {
           "cutoff": {
             "limit": {
@@ -8193,6 +8297,22 @@
           "label": "Nom de la langue",
           "placeholder": "français"
         }
+      },
+      "glossary": {
+        "delete": {
+          "description": "[to be translated]:Delete this glossary entry?",
+          "title": "[to be translated]:Delete glossary entry"
+        },
+        "error": {
+          "add": "[to be translated]:Failed to add glossary entry",
+          "required": "[to be translated]:Source and target phrases are required"
+        },
+        "hint": "[to be translated]:Matched enabled terms are injected through {{customized_dictionary}} in a translation prompt.",
+        "source": "[to be translated]:Source phrase",
+        "source_placeholder": "[to be translated]:Term in the source text",
+        "target": "[to be translated]:Required translation",
+        "target_placeholder": "[to be translated]:Required target wording",
+        "title": "[to be translated]:Translation glossary"
       },
       "prompt": "suivez l'invite du système",
       "title": "Paramètres de traduction"
@@ -8383,8 +8503,10 @@
       "language": "langue arbitraire"
     },
     "button": {
+      "polish_and_translate": "[to be translated]:Polish then translate",
       "translate": "traduire"
     },
+    "clipboard_watch": "[to be translated]:Watch clipboard and translate changes",
     "close": "fermer",
     "closed": "La traduction est désactivée",
     "complete": "La traduction est terminée",
@@ -8393,6 +8515,11 @@
       "title": "Confirmation de traduction"
     },
     "copied": "Le contenu traduit a été copié",
+    "counter": {
+      "tip": "[to be translated]:Estimated tokens include the active translation prompt.",
+      "tokens": "[to be translated]:tokens",
+      "words": "[to be translated]:words"
+    },
     "custom": {
       "label": "Langue personnalisée"
     },
@@ -8405,6 +8532,10 @@
         "auto": {
           "label": "automatique",
           "tip": "Sélection automatique de la méthode de détection appropriée"
+        },
+        "heuristic": {
+          "label": "[to be translated]:Heuristic",
+          "tip": "[to be translated]:Use fast script and character-pattern detection"
         },
         "label": "Méthode de détection automatique",
         "llm": {
@@ -8456,6 +8587,11 @@
       "reading": "Lecture du contenu du fichier en cours...",
       "upload": "Déposez ou cliquez pour télécharger une image/un document"
     },
+    "flip": {
+      "label": "[to be translated]:Correct detected direction and retranslate",
+      "native_language_not_in_pair": "[to be translated]:The native language is not included in the bidirectional pair.",
+      "success": "[to be translated]:Translation direction corrected"
+    },
     "history": {
       "back": "Retour à la liste",
       "clear": "Effacer l'historique",
@@ -8489,6 +8625,7 @@
       "target": "Cible",
       "title": "Historique des traductions"
     },
+    "html_conversion": "[to be translated]:Convert rich HTML clipboard content to Markdown",
     "info": {
       "aborted": "Traduction annulée"
     },
@@ -8509,20 +8646,71 @@
     "output": {
       "placeholder": "traduction"
     },
+    "paste": "[to be translated]:Paste from clipboard",
+    "post_processing": {
+      "enable": "[to be translated]:Enable post-processing",
+      "english_straight_quotes": "[to be translated]:Normalize English straight quotes",
+      "zh_smart_quotes": "[to be translated]:Use Chinese smart quotes",
+      "zh_text_spacing": "[to be translated]:Add Chinese/Latin text spacing"
+    },
     "preferred_target": "Cible préférée",
     "processing": "en cours de traduction...",
     "settings": {
       "autoCopy": "Copié automatiquement après la traduction",
       "bidirectional": "Paramètres de traduction bidirectionnelle",
       "bidirectional_tip": "Une fois activé, seul la traduction bidirectionnelle entre la langue source et la langue cible est prise en charge",
+      "custom_body": {
+        "polish": "[to be translated]:Polish request",
+        "reasoning_override": "[to be translated]:Reasoning-related custom parameters override the Minimize reasoning switch for this request type.",
+        "title": "[to be translated]:Custom request parameters",
+        "translate": "[to be translated]:Translate request"
+      },
       "error": {
         "save": "Échec de l'enregistrement des paramètres de traduction"
+      },
+      "font_size": "[to be translated]:Font size",
+      "global_translate_model": "[to be translated]:Global translation model",
+      "group_model": "[to be translated]:Models",
+      "group_post_processing": "[to be translated]:Post-processing",
+      "json_structure_view": {
+        "copy_blank_line_between_rows": "[to be translated]:Blank line between copied rows",
+        "copy_separator": {
+          "chinese_colon": "[to be translated]:Chinese colon",
+          "chinese_colon_newline": "[to be translated]:Chinese colon + newline",
+          "colon_newline": "[to be translated]:Colon + newline",
+          "colon_space": "[to be translated]:Colon + space",
+          "label": "[to be translated]:Selection copy separator"
+        },
+        "label": "[to be translated]:JSON structure view"
+      },
+      "layout": {
+        "auto": "[to be translated]:Auto",
+        "horizontal": "[to be translated]:Horizontal",
+        "label": "[to be translated]:Panel layout",
+        "vertical": "[to be translated]:Vertical"
+      },
+      "minimize_thinking": {
+        "label": "[to be translated]:Minimize reasoning",
+        "tip": "[to be translated]:Disable reasoning unless custom parameters explicitly control it"
       },
       "model": "Paramètres du modèle",
       "model_desc": "Modèle utilisé par le service de traduction",
       "model_placeholder": "Choisissez le modèle de traduction",
+      "native_language": "[to be translated]:Native language",
+      "native_to_other_model": "[to be translated]:Native to other languages",
       "no_model_warning": "Aucun modèle de traduction sélectionné",
+      "other_to_native_model": "[to be translated]:Other languages to native",
+      "polish_enabled": "[to be translated]:Polish before translation",
+      "polish_model": "[to be translated]:Polish model",
       "preview": "Aperçu Markdown",
+      "prompt": {
+        "native_to_other": "[to be translated]:Native-to-other prompt",
+        "other_to_native": "[to be translated]:Other-to-native prompt",
+        "polish": "[to be translated]:Polish prompt"
+      },
+      "regex_rules": {
+        "title": "[to be translated]:Regex replacements"
+      },
       "scroll_sync": "Paramètres de synchronisation du défilement",
       "title": "Paramètres de traduction"
     },

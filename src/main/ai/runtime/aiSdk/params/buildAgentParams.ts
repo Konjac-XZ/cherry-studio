@@ -171,7 +171,10 @@ export async function buildAgentParams(input: BuildAgentParamsInput): Promise<Bu
   const invocationModel = reasoningProfile.support
     ? { ...model, reasoning: projectRuntimeReasoning(reasoningProfile.support, reasoningProfile.wire) }
     : model
-  const customParameters = extractAiSdkStandardParams(assistant ? getCustomParameters(assistant) : {})
+  const customParameters = extractAiSdkStandardParams({
+    ...(assistant ? getCustomParameters(assistant) : {}),
+    ...request.callOverrides?.customParameters
+  })
   customParameters.standardParams = filterStandardParams(customParameters.standardParams, model)
   const requestedMaxOutputTokens = resolveRequestedMaxOutputTokens(
     request.callOverrides?.maxOutputTokens,
@@ -505,7 +508,7 @@ function buildAgentOptions(
             reasoning
           }) as Record<string, Record<string, JSONValue>>)
         : {}
-  let standardParams: Partial<Record<string, unknown>> = {}
+  let standardParams: Partial<Record<string, unknown>> = assistant ? {} : { ...customParameters.standardParams }
   if (assistant) {
     const temperature = getTemperature(assistant, model, reasoning)
     const topP = getTopP(assistant, model, reasoning)
@@ -514,21 +517,26 @@ function buildAgentOptions(
       ...(topP !== undefined && { topP }),
       ...customParameters.standardParams
     }
+  }
 
-    if (Object.keys(customParameters.providerParams).length > 0) {
-      const customBodyParams = selectCustomBodyParameters(customParameters.providerParams, providerOptions, provider.id)
-      providerOptions = mergeCustomProviderParameters(
-        providerOptions,
-        customParameters.providerParams,
-        provider.id,
-        sdkConfig.providerId === 'google-vertex-maas' ? 'openai-compatible' : aiSdkProviderId
+  if (Object.keys(customParameters.providerParams).length > 0) {
+    const customBodyParams = selectCustomBodyParameters(customParameters.providerParams, providerOptions, provider.id)
+    // `mergeCustomProviderParameters` needs a concrete primary namespace. An
+    // assistant-less request with no generic reasoning options starts from an
+    // empty object, so seed the endpoint-resolved namespace before merging.
+    const providerOptionsBase =
+      Object.keys(providerOptions).length > 0 ? providerOptions : { [sdkConfig.providerOptionsKey]: {} }
+    providerOptions = mergeCustomProviderParameters(
+      providerOptionsBase,
+      customParameters.providerParams,
+      provider.id,
+      sdkConfig.providerId === 'google-vertex-maas' ? 'openai-compatible' : aiSdkProviderId
+    )
+    if (Object.keys(customBodyParams).length > 0) {
+      sdkConfig.providerSettings.fetch = createCustomParamsFetch(
+        sdkConfig.providerSettings.fetch ?? globalThis.fetch,
+        customBodyParams
       )
-      if (Object.keys(customBodyParams).length > 0) {
-        sdkConfig.providerSettings.fetch = createCustomParamsFetch(
-          sdkConfig.providerSettings.fetch ?? globalThis.fetch,
-          customBodyParams
-        )
-      }
     }
   }
 

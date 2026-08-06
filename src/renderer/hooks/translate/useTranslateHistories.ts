@@ -2,6 +2,7 @@ import { useInfiniteFlatItems, useInfiniteQuery } from '@data/hooks/useDataApi'
 import { loggerService } from '@logger'
 import { toast } from '@renderer/services/toast'
 import { TRANSLATE_HISTORY_DEFAULT_LIMIT } from '@shared/data/api/schemas/translate'
+import type { TranslateLangCode } from '@shared/data/preference/preferenceTypes'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -14,16 +15,26 @@ interface UseTranslateHistoriesOptions {
   star?: boolean
   /** Items per fetched page. Defaults to {@link TRANSLATE_HISTORY_DEFAULT_LIMIT}. */
   pageSize?: number
+  /** Localized language-label matches supplied by the renderer. */
+  languageCodes?: TranslateLangCode[]
+  /** Hard cap for rows exposed to the virtual list. */
+  maxItems?: number
 }
 
 export const useTranslateHistories = ({
   search,
   star,
-  pageSize = TRANSLATE_HISTORY_DEFAULT_LIMIT
+  pageSize = TRANSLATE_HISTORY_DEFAULT_LIMIT,
+  languageCodes,
+  maxItems = Number.POSITIVE_INFINITY
 }: UseTranslateHistoriesOptions = {}) => {
   const searchKey = search?.trim() || undefined
   const starKey = star || undefined
-  const query = useMemo(() => ({ search: searchKey, star: starKey }), [searchKey, starKey])
+  const languageKey = languageCodes?.length ? languageCodes : undefined
+  const query = useMemo(
+    () => ({ search: searchKey, star: starKey, languageCodes: languageKey }),
+    [languageKey, searchKey, starKey]
+  )
 
   const {
     pages,
@@ -39,7 +50,8 @@ export const useTranslateHistories = ({
     limit: pageSize,
     swrOptions: { keepPreviousData: false }
   })
-  const histories = useInfiniteFlatItems(pages)
+  const allHistories = useInfiniteFlatItems(pages)
+  const histories = useMemo(() => allHistories.slice(0, maxItems), [allHistories, maxItems])
   const total = pages[0]?.total ?? 0
 
   const resetRef = useRef(reset)
@@ -47,7 +59,7 @@ export const useTranslateHistories = ({
 
   useEffect(() => {
     resetRef.current()
-  }, [pageSize, searchKey, starKey])
+  }, [languageKey, maxItems, pageSize, searchKey, starKey])
 
   const { t } = useTranslation()
   // One-shot UX surface: mirror useLanguages — only notify the user once per
@@ -61,7 +73,7 @@ export const useTranslateHistories = ({
     }
   }, [error, t])
 
-  const hasMore = hasNext
+  const hasMore = hasNext && histories.length < maxItems
   const isLoadingMore = isRefreshing && pages.length > 0
 
   const loadMore = useCallback(() => {

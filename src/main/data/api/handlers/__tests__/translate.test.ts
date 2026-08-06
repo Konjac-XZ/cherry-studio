@@ -1,7 +1,9 @@
 import {
+  CreateTranslateGlossaryEntrySchema,
   CreateTranslateHistorySchema,
   CreateTranslateLanguageSchema,
   TranslateHistoryQuerySchema,
+  UpdateTranslateGlossaryEntrySchema,
   UpdateTranslateHistorySchema,
   UpdateTranslateLanguageSchema
 } from '@shared/data/api/schemas/translate'
@@ -43,9 +45,11 @@ describe('Translate handler validation (Zod schemas)', () => {
         sourceText: 'Hello',
         targetText: 'Bonjour',
         sourceLanguage: 'en-us',
-        targetLanguage: 'fr-fr'
+        targetLanguage: 'fr-fr',
+        modelId: 'openai::gpt-5'
       })
       expect(result.sourceText).toBe('Hello')
+      expect(result.modelId).toBe('openai::gpt-5')
     })
 
     it('should reject empty sourceText', () => {
@@ -70,6 +74,18 @@ describe('Translate handler validation (Zod schemas)', () => {
           targetText: 'Bonjour',
           sourceLanguage: 'INVALID',
           targetLanguage: 'fr-fr'
+        })
+      ).toThrow()
+    })
+
+    it('should reject an unqualified model id', () => {
+      expect(() =>
+        CreateTranslateHistorySchema.parse({
+          sourceText: 'Hello',
+          targetText: 'Bonjour',
+          sourceLanguage: 'en-us',
+          targetLanguage: 'fr-fr',
+          modelId: 'gpt-5'
         })
       ).toThrow()
     })
@@ -137,6 +153,25 @@ describe('Translate handler validation (Zod schemas)', () => {
 
     it('should reject empty value', () => {
       expect(() => UpdateTranslateLanguageSchema.parse({ value: '' })).toThrow()
+    })
+  })
+
+  describe('translate glossary schemas', () => {
+    it('accepts a normalized create payload', () => {
+      expect(
+        CreateTranslateGlossaryEntrySchema.parse({
+          sourcePhrase: ' OpenAI ',
+          targetPhrase: ' 开放人工智能 ',
+          targetLanguage: 'zh-cn'
+        })
+      ).toEqual({ sourcePhrase: 'OpenAI', targetPhrase: '开放人工智能', targetLanguage: 'zh-cn' })
+    })
+
+    it('rejects empty phrases and immutable ids', () => {
+      expect(() =>
+        CreateTranslateGlossaryEntrySchema.parse({ sourcePhrase: '', targetPhrase: 'x', targetLanguage: 'zh-cn' })
+      ).toThrow()
+      expect(() => UpdateTranslateGlossaryEntrySchema.parse({ id: 'x', enabled: false })).toThrow()
     })
   })
 })

@@ -1,5 +1,5 @@
 /**
- * Translate Migrator - Migrates translate history and custom languages from Dexie to SQLite
+ * Translate Migrator - Migrates translate history, custom languages, and glossary from Dexie to SQLite
  *
  * Handles two tables in a single migrator since they belong to the same feature domain:
  *
@@ -13,6 +13,7 @@
  *    - All other fields preserved as-is
  */
 
+import { translateGlossaryTable } from '@data/db/schemas/translateGlossary'
 import { translateHistoryTable } from '@data/db/schemas/translateHistory'
 import { translateLanguageTable } from '@data/db/schemas/translateLanguage'
 import { TranslateLanguageSeeder } from '@data/db/seeding/seeders/translateLanguageSeeder'
@@ -22,22 +23,17 @@ import { sql } from 'drizzle-orm'
 
 import type { MigrationContext } from '../core/MigrationContext'
 import { BaseMigrator } from './BaseMigrator'
+import {
+  type LegacyTranslateHistoryRecord,
+  type MigratedTranslateHistoryRecord,
+  transformTranslateHistoryRecord
+} from './transformers/TranslateTransformers'
 
 const logger = loggerService.withContext('TranslateMigrator')
 
 const HISTORY_BATCH_SIZE = 100
 
 // ─── Old data interfaces ────────────────────────────────────────────
-
-interface OldTranslateHistory {
-  id: string
-  sourceText: string
-  targetText: string
-  sourceLanguage: string
-  targetLanguage: string
-  createdAt: string
-  star?: boolean
-}
 
 interface OldCustomTranslateLanguage {
   id: string
@@ -46,18 +42,17 @@ interface OldCustomTranslateLanguage {
   emoji: string
 }
 
-// ─── New data interfaces ────────────────────────────────────────────
-
-interface NewTranslateHistory {
+interface OldGlossaryEntry {
   id: string
-  sourceText: string
-  targetText: string
-  sourceLanguage: string | null
-  targetLanguage: string | null
-  star: boolean
+  sourcePhrase: string
+  targetPhrase: string
+  targetLanguage: string
+  enabled?: boolean
   createdAt: number
   updatedAt: number
 }
+
+// ─── New data interfaces ────────────────────────────────────────────
 
 interface NewTranslateLanguage {
   id: string
@@ -69,26 +64,6 @@ interface NewTranslateLanguage {
 }
 
 // ─── Transform functions ────────────────────────────────────────────
-
-function parseTimestamp(value: string): number {
-  if (!value) return Date.now()
-  const parsed = new Date(value).getTime()
-  return !parsed || Number.isNaN(parsed) ? Date.now() : parsed
-}
-
-function transformHistoryRecord(old: OldTranslateHistory, validLangCodes: Set<string>): NewTranslateHistory {
-  const createdAt = parseTimestamp(old.createdAt)
-  return {
-    id: old.id,
-    sourceText: old.sourceText,
-    targetText: old.targetText,
-    sourceLanguage: validLangCodes.has(old.sourceLanguage) ? old.sourceLanguage : null,
-    targetLanguage: validLangCodes.has(old.targetLanguage) ? old.targetLanguage : null,
-    star: old.star ?? false,
-    createdAt,
-    updatedAt: createdAt
-  }
-}
 
 function transformLanguageRecord(old: OldCustomTranslateLanguage, now: number): NewTranslateLanguage {
   return {
@@ -111,11 +86,15 @@ export class TranslateMigrator extends BaseMigrator {
 
   private historySourceCount = 0
   private historySkippedCount = 0
-  private cachedHistoryRecords: OldTranslateHistory[] = []
+  private cachedHistoryRecords: LegacyTranslateHistoryRecord[] = []
 
   private languageSourceCount = 0
   private languageSkippedCount = 0
   private cachedLanguageRecords: OldCustomTranslateLanguage[] = []
+
+  private glossarySourceCount = 0
+  private glossarySkippedCount = 0
+  private cachedGlossaryRecords: OldGlossaryEntry[] = []
 
   override reset(): void {
     this.historySourceCount = 0
@@ -124,6 +103,9 @@ export class TranslateMigrator extends BaseMigrator {
     this.languageSourceCount = 0
     this.languageSkippedCount = 0
     this.cachedLanguageRecords = []
+    this.glossarySourceCount = 0
+    this.glossarySkippedCount = 0
+    this.cachedGlossaryRecords = []
   }
 
   async prepare(ctx: MigrationContext): Promise<PrepareResult> {
@@ -136,7 +118,8 @@ export class TranslateMigrator extends BaseMigrator {
         logger.warn('translate_history.json not found, skipping')
         warnings.push('translate_history.json not found - no translate history to migrate')
       } else {
-        this.cachedHistoryRecords = await ctx.sources.dexieExport.readTable<OldTranslateHistory>('translate_history')
+        this.cachedHistoryRecords =
+          await ctx.sources.dexieExport.readTable<LegacyTranslateHistoryRecord>('translate_history')
         this.historySourceCount = this.cachedHistoryRecords.length
         logger.info(`Found ${this.historySourceCount} translate history records to migrate`)
       }
@@ -153,9 +136,18 @@ export class TranslateMigrator extends BaseMigrator {
         logger.info(`Found ${this.languageSourceCount} custom translate languages to migrate`)
       }
 
+      const glossaryExists = await ctx.sources.dexieExport.tableExists('translate_glossary')
+      if (!glossaryExists) {
+        warnings.push('translate_glossary.json not found - no glossary entries to migrate')
+      } else {
+        this.cachedGlossaryRecords = await ctx.sources.dexieExport.readTable<OldGlossaryEntry>('translate_glossary')
+        this.glossarySourceCount = this.cachedGlossaryRecords.length
+        logger.info(`Found ${this.glossarySourceCount} translate glossary entries to migrate`)
+      }
+
       return {
         success: true,
-        itemCount: this.historySourceCount + this.languageSourceCount,
+        itemCount: this.historySourceCount + this.languageSourceCount + this.glossarySourceCount,
         warnings: warnings.length > 0 ? warnings : undefined
       }
     } catch (error) {
@@ -169,7 +161,7 @@ export class TranslateMigrator extends BaseMigrator {
   }
 
   async execute(ctx: MigrationContext): Promise<ExecuteResult> {
-    const totalCount = this.historySourceCount + this.languageSourceCount
+    const totalCount = this.historySourceCount + this.languageSourceCount + this.glossarySourceCount
     if (totalCount === 0) {
       return { success: true, processedCount: 0 }
     }
@@ -213,6 +205,39 @@ export class TranslateMigrator extends BaseMigrator {
       // ── Seed builtin languages (history FK requires them to exist) ──
       new TranslateLanguageSeeder().run(db)
 
+      // ── Migrate glossary (target language FK requires seeded languages) ──
+      if (this.glossarySourceCount > 0) {
+        const existingLangs = db
+          .select({ langCode: translateLanguageTable.langCode })
+          .from(translateLanguageTable)
+          .all()
+        const validLangCodes = new Set(existingLangs.map((row) => row.langCode))
+        const records: Array<typeof translateGlossaryTable.$inferInsert> = []
+        for (const old of this.cachedGlossaryRecords) {
+          if (
+            !old.id ||
+            !old.sourcePhrase?.trim() ||
+            !old.targetPhrase?.trim() ||
+            !validLangCodes.has(old.targetLanguage)
+          ) {
+            logger.warn(`Skipping invalid translate glossary record: ${old.id}`)
+            this.glossarySkippedCount++
+            continue
+          }
+          records.push({
+            id: old.id,
+            sourcePhrase: old.sourcePhrase.trim(),
+            targetPhrase: old.targetPhrase.trim(),
+            targetLanguage: old.targetLanguage,
+            enabled: old.enabled !== false,
+            createdAt: Number.isFinite(old.createdAt) ? old.createdAt : Date.now(),
+            updatedAt: Number.isFinite(old.updatedAt) ? old.updatedAt : Date.now()
+          })
+        }
+        if (records.length > 0) db.insert(translateGlossaryTable).values(records).run()
+        processedCount += records.length
+      }
+
       // ── Migrate translate history (batched) ──
       if (this.historySourceCount > 0) {
         // Query all valid language codes to null-out dangling FK references
@@ -221,14 +246,14 @@ export class TranslateMigrator extends BaseMigrator {
           .from(translateLanguageTable)
         const validLangCodes = new Set(existingLangs.map((r) => r.langCode))
 
-        const newHistoryRecords: NewTranslateHistory[] = []
+        const newHistoryRecords: MigratedTranslateHistoryRecord[] = []
         for (const old of this.cachedHistoryRecords) {
           if (!old.id || !old.sourceText || !old.targetText) {
             logger.warn(`Skipping invalid translate history record: ${old.id}`)
             this.historySkippedCount++
             continue
           }
-          newHistoryRecords.push(transformHistoryRecord(old, validLangCodes))
+          newHistoryRecords.push(transformTranslateHistoryRecord(old, validLangCodes))
         }
 
         db.transaction((tx) => {
@@ -296,6 +321,16 @@ export class TranslateMigrator extends BaseMigrator {
         })
       }
 
+      const glossaryResult = db.select({ count: sql<number>`count(*)` }).from(translateGlossaryTable).get()
+      const glossaryTargetCount = glossaryResult?.count ?? 0
+      const expectedGlossaryCount = this.glossarySourceCount - this.glossarySkippedCount
+      if (glossaryTargetCount < expectedGlossaryCount) {
+        errors.push({
+          key: 'glossary_count_mismatch',
+          message: `Expected ${expectedGlossaryCount} glossary records, got ${glossaryTargetCount}`
+        })
+      }
+
       logger.info('Validation completed', {
         historySourceCount: this.historySourceCount,
         historyTargetCount,
@@ -309,9 +344,9 @@ export class TranslateMigrator extends BaseMigrator {
         success: errors.length === 0,
         errors,
         stats: {
-          sourceCount: this.historySourceCount + this.languageSourceCount,
-          targetCount: historyTargetCount + languageTargetCount,
-          skippedCount: this.historySkippedCount + this.languageSkippedCount
+          sourceCount: this.historySourceCount + this.languageSourceCount + this.glossarySourceCount,
+          targetCount: historyTargetCount + languageTargetCount + glossaryTargetCount,
+          skippedCount: this.historySkippedCount + this.languageSkippedCount + this.glossarySkippedCount
         }
       }
     } catch (error) {

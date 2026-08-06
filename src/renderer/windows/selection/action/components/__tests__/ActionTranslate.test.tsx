@@ -55,12 +55,14 @@ vi.mock('@data/hooks/usePreference', () => ({
 vi.mock('@renderer/hooks/translate', () => ({
   detectLanguageOrUnknown: async (
     text: string,
-    detectLanguage: (text: string) => Promise<TranslateLangCode>,
-    onError: (error: unknown) => void
+    detectLanguage: (text: string, signal?: AbortSignal) => Promise<TranslateLangCode>,
+    onError: (error: unknown) => void,
+    signal?: AbortSignal
   ) => {
     try {
-      return await detectLanguage(text)
+      return await detectLanguage(text, signal)
     } catch (error) {
+      if (signal?.aborted) throw error
       onError(error)
       return 'unknown'
     }
@@ -154,12 +156,38 @@ describe('ActionTranslate', () => {
     expect(state.translate).not.toHaveBeenCalled()
   })
 
+  it('aborts the shared detection identity when the selection window unmounts', async () => {
+    let detectionSignal: AbortSignal | undefined
+    state.detectLanguage.mockImplementation((_text: string, signal?: AbortSignal) => {
+      detectionSignal = signal
+      return new Promise<TranslateLangCode>((_resolve, reject) => {
+        signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true })
+      })
+    })
+
+    const { unmount } = render(<ActionTranslate action={createAction()} scrollToBottom={state.scrollToBottom} />)
+    await waitFor(() => expect(detectionSignal).toBeDefined())
+
+    unmount()
+
+    expect(detectionSignal?.aborted).toBe(true)
+    expect(state.cancel).toHaveBeenCalled()
+    expect(state.translate).not.toHaveBeenCalled()
+  })
+
   it('continues translating to the target language when source detection throws', async () => {
     state.detectLanguage.mockRejectedValue(new Error('detect exploded'))
 
     render(<ActionTranslate action={createAction()} scrollToBottom={state.scrollToBottom} />)
 
-    await waitFor(() => expect(state.translate).toHaveBeenCalledWith('There is no default export.', state.chinese))
+    await waitFor(() =>
+      expect(state.translate).toHaveBeenCalledWith(
+        'There is no default export.',
+        state.chinese,
+        undefined,
+        expect.any(AbortSignal)
+      )
+    )
     expect(screen.queryByText('detect exploded')).not.toBeInTheDocument()
   })
 
@@ -168,7 +196,14 @@ describe('ActionTranslate', () => {
 
     render(<ActionTranslate action={createAction()} scrollToBottom={state.scrollToBottom} />)
 
-    await waitFor(() => expect(state.translate).toHaveBeenCalledWith('There is no default export.', state.chinese))
+    await waitFor(() =>
+      expect(state.translate).toHaveBeenCalledWith(
+        'There is no default export.',
+        state.chinese,
+        undefined,
+        expect.any(AbortSignal)
+      )
+    )
     expect(screen.getByText('translate.detected.language')).toBeInTheDocument()
     expect(screen.queryByText('translate.detected_source')).not.toBeInTheDocument()
   })
@@ -184,7 +219,14 @@ describe('ActionTranslate', () => {
 
     render(<ActionTranslate action={createAction()} scrollToBottom={state.scrollToBottom} />)
 
-    await waitFor(() => expect(state.translate).toHaveBeenCalledWith('There is no default export.', state.chinese))
+    await waitFor(() =>
+      expect(state.translate).toHaveBeenCalledWith(
+        'There is no default export.',
+        state.chinese,
+        undefined,
+        expect.any(AbortSignal)
+      )
+    )
     expect(screen.queryByText('translate.detecting')).not.toBeInTheDocument()
     expect(screen.getByText('English')).toBeInTheDocument()
 
@@ -208,7 +250,14 @@ describe('ActionTranslate', () => {
 
     render(<ActionTranslate action={createAction()} scrollToBottom={state.scrollToBottom} />)
 
-    await waitFor(() => expect(state.translate).toHaveBeenCalledWith('There is no default export.', state.chinese))
+    await waitFor(() =>
+      expect(state.translate).toHaveBeenCalledWith(
+        'There is no default export.',
+        state.chinese,
+        undefined,
+        expect.any(AbortSignal)
+      )
+    )
 
     const detectedLabel = await screen.findByText('English')
     const detectedBadge = detectedLabel.parentElement as HTMLElement
@@ -241,7 +290,14 @@ describe('ActionTranslate', () => {
 
     render(<ActionTranslate action={createAction()} scrollToBottom={state.scrollToBottom} />)
 
-    await waitFor(() => expect(state.translate).toHaveBeenCalledWith('There is no default export.', state.chinese))
+    await waitFor(() =>
+      expect(state.translate).toHaveBeenCalledWith(
+        'There is no default export.',
+        state.chinese,
+        undefined,
+        expect.any(AbortSignal)
+      )
+    )
 
     fireEvent.click(
       screen.getByRole('button', {
@@ -263,7 +319,14 @@ describe('ActionTranslate', () => {
 
     render(<ActionTranslate action={createAction()} scrollToBottom={state.scrollToBottom} />)
 
-    await waitFor(() => expect(state.translate).toHaveBeenCalledWith('There is no default export.', state.chinese))
+    await waitFor(() =>
+      expect(state.translate).toHaveBeenCalledWith(
+        'There is no default export.',
+        state.chinese,
+        undefined,
+        expect.any(AbortSignal)
+      )
+    )
 
     const settingsButton = document.querySelector('.lucide-settings-2')?.closest('button')
     expect(settingsButton).toBeInTheDocument()

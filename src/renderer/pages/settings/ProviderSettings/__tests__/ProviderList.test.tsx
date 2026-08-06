@@ -11,6 +11,7 @@ const useProviderActionsMock = vi.fn()
 const useModelsMock = vi.fn()
 const useReorderMock = vi.fn()
 const useOvmsSupportMock = vi.fn()
+const setHiddenBuiltInIdsMock = vi.fn()
 const deleteProviderMock = vi.fn()
 const scrollIntoViewMock = vi.fn()
 const { providerEditorDrawerSpy } = vi.hoisted(() => ({
@@ -18,6 +19,11 @@ const { providerEditorDrawerSpy } = vi.hoisted(() => ({
 }))
 let providerItemRects: Record<string, { bottom: number; top: number }> = {}
 let scrollerRect = { bottom: 100, top: 0 }
+let hiddenBuiltInIds: string[] = []
+
+vi.mock('@renderer/data/hooks/usePreference', () => ({
+  usePreference: () => [hiddenBuiltInIds, setHiddenBuiltInIdsMock]
+}))
 
 vi.mock('@cherrystudio/ui', async (importOriginal) => {
   const actual = await importOriginal<any>()
@@ -88,7 +94,16 @@ vi.mock('../ProviderList/useProviderDelete', () => ({
 }))
 
 vi.mock('../ProviderList/ProviderListItemWithContextMenu', () => ({
-  default: ({ provider, selected, onSelect, onDelete, showManagementActions, onSetListItemRef }: any) => (
+  default: ({
+    provider,
+    selected,
+    onSelect,
+    onDelete,
+    onHide,
+    onRestore,
+    showManagementActions,
+    onSetListItemRef
+  }: any) => (
     <div
       data-testid={`provider-list-item-${provider.id}`}
       data-selected={selected ? 'true' : 'false'}
@@ -112,6 +127,16 @@ vi.mock('../ProviderList/ProviderListItemWithContextMenu', () => ({
       <button type="button" data-testid={`provider-list-delete-${provider.id}`} onClick={onDelete}>
         delete
       </button>
+      {onHide ? (
+        <button type="button" data-testid={`provider-list-hide-${provider.id}`} onClick={onHide}>
+          hide
+        </button>
+      ) : null}
+      {onRestore ? (
+        <button type="button" data-testid={`provider-list-restore-${provider.id}`} onClick={onRestore}>
+          restore
+        </button>
+      ) : null}
       <span data-testid={`provider-list-manage-${provider.id}`}>{showManagementActions ? 'true' : 'false'}</span>
     </div>
   )
@@ -177,6 +202,8 @@ describe('ProviderList', () => {
     useOvmsSupportMock.mockReturnValue({ isSupported: true })
     useModelsMock.mockReturnValue({ models: [] })
     deleteProviderMock.mockResolvedValue(undefined)
+    setHiddenBuiltInIdsMock.mockResolvedValue(undefined)
+    hiddenBuiltInIds = []
     providerItemRects = {}
     scrollerRect = { bottom: 100, top: 0 }
     Object.defineProperty(window, 'requestAnimationFrame', {
@@ -447,5 +474,44 @@ describe('ProviderList', () => {
     fireEvent.click(screen.getByTestId('provider-list-delete-openai'))
 
     await vi.waitFor(() => expect(deleteProviderMock).toHaveBeenCalledWith('openai'))
+  })
+
+  it('disables and hides a canonical built-in provider after confirmation', async () => {
+    const updateProviderById = vi.fn().mockResolvedValue(undefined)
+    const onSelectProvider = vi.fn()
+    useProviderActionsMock.mockReturnValue({ updateProviderById, deleteProviderById: vi.fn() })
+
+    render(<ProviderList selectedProviderId="openai" onSelectProvider={onSelectProvider} />)
+    fireEvent.click(screen.getByTestId('provider-list-hide-openai'))
+
+    await waitFor(() => expect(updateProviderById).toHaveBeenCalledWith('openai', { isEnabled: false }))
+    expect(setHiddenBuiltInIdsMock).toHaveBeenCalledWith(['openai'])
+    expect(onSelectProvider).toHaveBeenCalledWith('anthropic')
+  })
+
+  it('exposes only hidden canonical providers in the recovery filter and restores them disabled', async () => {
+    hiddenBuiltInIds = ['openai']
+
+    render(<ProviderList selectedProviderId="anthropic" onSelectProvider={vi.fn()} />)
+    expect(screen.queryByTestId('provider-list-item-openai')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '筛选服务商' }))
+    fireEvent.click(screen.getByText('已隐藏的内置服务商'))
+
+    expect(screen.getByTestId('provider-list-item-openai')).toBeInTheDocument()
+    expect(screen.queryByTestId('provider-list-item-anthropic')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByTestId('provider-list-restore-openai'))
+
+    await waitFor(() => expect(setHiddenBuiltInIdsMock).toHaveBeenCalledWith([]))
+  })
+
+  it('does not offer built-in hiding for custom provider instances', () => {
+    useProvidersMock.mockReturnValue({
+      providers: [...providers, { id: 'openai-work', name: 'Work', presetProviderId: 'openai', isEnabled: true }]
+    })
+
+    render(<ProviderList selectedProviderId="openai-work" onSelectProvider={vi.fn()} />)
+
+    expect(screen.queryByTestId('provider-list-hide-openai-work')).not.toBeInTheDocument()
   })
 })

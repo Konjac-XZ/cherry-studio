@@ -1,7 +1,7 @@
 import { Button } from '@cherrystudio/ui'
 import { useModelMutations, useModels } from '@renderer/hooks/useModel'
 import { useProvider } from '@renderer/hooks/useProvider'
-import { getDefaultGroupName } from '@renderer/utils/naming'
+import { getDefaultGroupName, inferModelNameFromId } from '@renderer/utils/naming'
 import { ENDPOINT_TYPE, type EndpointType } from '@shared/data/types/model'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import type { FormEvent } from 'react'
@@ -118,12 +118,18 @@ export default function AddModelFormPanel({
         return
       }
 
-      setFormState((current) => ({
-        ...current,
-        modelId: value,
-        name: value,
-        group: getDefaultGroupName(value, provider.id)
-      }))
+      setFormState((current) => {
+        const previousInferredName = inferModelNameFromId(current.modelId)
+        const shouldRefreshInferredName =
+          !current.name.trim() || current.name === current.modelId || current.name === previousInferredName
+
+        return {
+          ...current,
+          modelId: value,
+          name: shouldRefreshInferredName ? inferModelNameFromId(value) : current.name,
+          group: getDefaultGroupName(value, provider.id)
+        }
+      })
       setSubmitError(null)
       if (value.trim()) {
         setModelIdTouched(false)
@@ -166,7 +172,7 @@ export default function AddModelFormPanel({
       await createModel({
         providerId,
         modelId,
-        name: values.name ? values.name : modelId.toUpperCase(),
+        name: values.name.trim() || inferModelNameFromId(modelId),
         group: values.group || getDefaultGroupName(modelId),
         endpointTypes:
           submittedPurposeFields != null
@@ -226,7 +232,7 @@ export default function AddModelFormPanel({
         for (const singleId of splitModelIds(normalizedId)) {
           const added = await addSingleModel({
             modelId: singleId,
-            name: singleId,
+            name: inferModelNameFromId(singleId),
             group: '',
             contextWindow: '',
             maxInputTokens: '',

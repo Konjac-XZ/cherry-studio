@@ -1,4 +1,6 @@
 import type { BootConfigPreferenceKeys } from '@shared/data/bootConfig/bootConfigTypes'
+import type { AssistantSettings } from '@shared/data/types/assistant'
+import type { UniqueModelId } from '@shared/data/types/model'
 import type { ShortcutBinding } from '@shared/utils/shortcut'
 import * as z from 'zod'
 
@@ -147,7 +149,17 @@ export type MultiModelGridPopoverTrigger = 'hover' | 'click'
 // Translate Types
 // ============================================================================
 
-export type AutoDetectionMethod = 'franc' | 'llm' | 'auto'
+export type AutoDetectionMethod = 'franc' | 'heuristic' | 'llm' | 'auto'
+export type TranslateLayoutOverride = 'auto' | 'horizontal' | 'vertical'
+export type TranslateJsonCopySeparator = 'chinese-colon' | 'chinese-colon-newline' | 'colon-newline' | 'colon-space'
+export type TranslateCustomParameters = AssistantSettings['customParameters']
+export type TranslateRegexReplacementRule = {
+  id: string
+  pattern: string
+  flags: string
+  replacement: string
+  enabled?: boolean
+}
 
 /**
  * Strict language code pattern — only real codes such as "en-us" / "zh-cn" / "ja".
@@ -266,7 +278,6 @@ export interface WebSearchProvider {
 // CodeCLI Types
 // ============================================================================
 
-import type { UniqueModelId } from '@shared/data/types/model'
 import { CodeCli } from '@shared/types/codeCli'
 
 export const CODE_CLI_IDS = Object.values(CodeCli) as unknown as readonly [

@@ -98,6 +98,131 @@ export const getLowerBaseModelName = (id: string, delimiter: string = '/'): stri
   return baseModelName
 }
 
+const MODEL_NAME_WORDS: Record<string, string> = {
+  ai: 'AI',
+  api: 'API',
+  chatgpt: 'ChatGPT',
+  claude: 'Claude',
+  codex: 'Codex',
+  dall: 'DALL',
+  deepseek: 'DeepSeek',
+  flux: 'FLUX',
+  gemini: 'Gemini',
+  gemma: 'Gemma',
+  glm: 'GLM',
+  gpt: 'GPT',
+  grok: 'Grok',
+  kimi: 'Kimi',
+  llama: 'Llama',
+  minimax: 'MiniMax',
+  mistral: 'Mistral',
+  mixtral: 'Mixtral',
+  omni: 'Omni',
+  qwen: 'Qwen',
+  r: 'R',
+  tts: 'TTS',
+  vl: 'VL',
+  yi: 'Yi'
+}
+
+const VERSION_FAMILY_WORDS = new Set(['claude'])
+const HYPHENATED_VERSION_FAMILY_WORDS = new Set(['glm', 'gpt'])
+const SPACED_VERSION_FAMILY_WORDS = new Set(['qwen'])
+
+const preserveKnownWord = (word: string): string | undefined => MODEL_NAME_WORDS[word.toLowerCase()]
+const toTitleCase = (word: string): string => (word ? word.charAt(0).toUpperCase() + word.slice(1).toLowerCase() : word)
+
+const formatAlphaNumericToken = (word: string): string => {
+  if (/^o\d+$/i.test(word)) return word.toLowerCase()
+
+  const knownPrefix = Object.keys(MODEL_NAME_WORDS)
+    .sort((a, b) => b.length - a.length)
+    .find((prefix) => {
+      const rest = word.slice(prefix.length)
+      return word.toLowerCase().startsWith(prefix) && /^(?:\d|\.\d)/.test(rest)
+    })
+
+  if (knownPrefix) {
+    const rest = word.slice(knownPrefix.length)
+    if (HYPHENATED_VERSION_FAMILY_WORDS.has(knownPrefix)) return `${MODEL_NAME_WORDS[knownPrefix]}-${rest}`
+    if (SPACED_VERSION_FAMILY_WORDS.has(knownPrefix)) return `${MODEL_NAME_WORDS[knownPrefix]} ${rest}`
+    return `${MODEL_NAME_WORDS[knownPrefix]}${rest}`
+  }
+
+  const alphaNumericMatch = word.match(/^([a-z]+)(\d+(?:\.\d+)?)([a-z]*)$/i)
+  if (alphaNumericMatch) {
+    const [, prefix, number, suffix] = alphaNumericMatch
+    const formattedPrefix = preserveKnownWord(prefix) ?? toTitleCase(prefix)
+    if (!suffix) return `${formattedPrefix}${number}`
+    return `${formattedPrefix}${number}${suffix.toLowerCase() === 'o' ? 'o' : suffix.toUpperCase()}`
+  }
+
+  const numericSuffixMatch = word.match(/^(\d+(?:\.\d+)?)([a-z]+)$/i)
+  if (numericSuffixMatch) {
+    const [, number, suffix] = numericSuffixMatch
+    return `${number}${suffix.toLowerCase() === 'o' ? 'o' : suffix.toUpperCase()}`
+  }
+
+  return toTitleCase(word)
+}
+
+const formatModelNameToken = (word: string): string => {
+  const knownWord = preserveKnownWord(word)
+  if (knownWord) return knownWord
+  if (/^o\d+$/i.test(word)) return word.toLowerCase()
+  if (/^\d+[bkmt]$/i.test(word)) return word.slice(0, -1) + word.slice(-1).toUpperCase()
+  if (/[a-z]/i.test(word) && /\d/.test(word)) return formatAlphaNumericToken(word)
+  if (/^[a-z]+$/i.test(word)) return toTitleCase(word)
+  return word
+}
+
+const shouldMergeVersionPair = (tokens: string[], index: number): boolean =>
+  tokens.slice(0, index).some((token) => VERSION_FAMILY_WORDS.has(token.toLowerCase())) &&
+  /^\d+$/.test(tokens[index]) &&
+  /^\d{1,2}$/.test(tokens[index + 1])
+
+const shouldMergeDatePair = (tokens: string[], index: number): boolean =>
+  /^\d{2,4}$/.test(tokens[index]) && /^\d{2}$/.test(tokens[index + 1]) && index >= tokens.length - 2
+
+const shouldMergeDateTriple = (tokens: string[], index: number): boolean =>
+  /^\d{4}$/.test(tokens[index]) &&
+  /^\d{2}$/.test(tokens[index + 1]) &&
+  /^\d{2}$/.test(tokens[index + 2]) &&
+  index === tokens.length - 3
+
+/** Infer a readable label from an API model id without changing its identity. */
+export function inferModelNameFromId(id: string): string {
+  const normalized = getBaseModelName(id.trim()).replace(/[:_]+/g, '-').replace(/\s+/g, '-')
+
+  if (!normalized) return ''
+
+  const rawTokens = normalized.split('-').filter(Boolean)
+  const result: string[] = []
+
+  for (let i = 0; i < rawTokens.length; i++) {
+    const token = rawTokens[i]
+
+    if (/^\d{8}$/.test(token)) {
+      result.push(`${token.slice(0, 4)}-${token.slice(4, 6)}-${token.slice(6)}`)
+    } else if (/^\d{4}$/.test(token) && i === rawTokens.length - 1) {
+      result.push(`${token.slice(0, 2)}-${token.slice(2)}`)
+    } else if (shouldMergeVersionPair(rawTokens, i)) {
+      result.push(`${token}.${rawTokens[++i]}`)
+    } else if (shouldMergeDateTriple(rawTokens, i)) {
+      result.push(`${token}-${rawTokens[i + 1]}-${rawTokens[i + 2]}`)
+      i += 2
+    } else if (shouldMergeDatePair(rawTokens, i)) {
+      result.push(`${token}-${rawTokens[++i]}`)
+    } else if (HYPHENATED_VERSION_FAMILY_WORDS.has(token.toLowerCase()) && /^\d/.test(rawTokens[i + 1])) {
+      result.push(`${formatModelNameToken(token)}-${formatModelNameToken(rawTokens[++i])}`)
+    } else {
+      result.push(formatModelNameToken(token))
+    }
+  }
+
+  return result.join(' ')
+}
+
 /**
  * 获取模型服务商名称，根据是否内置服务商来决定要不要翻译
  * @param provider 服务商

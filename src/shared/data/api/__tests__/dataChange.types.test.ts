@@ -54,6 +54,7 @@ describe('endpoint classification', () => {
       | '/topics/:topicId/messages'
       | '/topics/:topicId/path'
       | '/translate/histories'
+      | '/translate/glossary'
       | '/translate/languages'
       | '/ai-usage-records'
     >()

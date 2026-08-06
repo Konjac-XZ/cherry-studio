@@ -758,6 +758,13 @@
         "placeholder": "Τι πρέπει να κάνει ο πράκτορας όταν εκτελείται αυτή η εργασία;"
       },
       "resume": "Συνέχιση",
+      "reuseSession": {
+        "bound": "[to be translated]:View session",
+        "description": "[to be translated]:Continue every run in the same session instead of starting a new one.",
+        "label": "[to be translated]:Reuse session",
+        "pending": "[to be translated]:Waiting for the first run",
+        "warning": "[to be translated]:A reused session keeps accumulating context, which raises token cost over time and can overflow the model's context window. To rebind a clean session, disable and save, then enable and save."
+      },
       "run": "Εκτέλεση",
       "runTriggered": "Η εργασία ενεργοποιήθηκε",
       "save": "Αποθήκευση",
@@ -1419,6 +1426,11 @@
         "placeholder": "Αναζήτηση"
       }
     },
+    "compaction": {
+      "compacted": "[to be translated]:Context compacted, ~{{count}} tokens saved",
+      "compacted_plain": "[to be translated]:Context compacted",
+      "compacting": "[to be translated]:Compacting context…"
+    },
     "conversation": {
       "new": "Νέα Συνομιλία"
     },
@@ -1484,6 +1496,13 @@
       },
       "new_session": "Νέα Συνεδρία {{Command}}",
       "new_topic": "Νέο θέμα {{Command}}",
+      "note_reference": {
+        "description": "[to be translated]:Attach a note from Notes",
+        "empty": "[to be translated]:No notes found",
+        "load_failed": "[to be translated]:Failed to load notes",
+        "loading": "[to be translated]:Loading notes...",
+        "title": "[to be translated]:Reference Note"
+      },
       "paste_text_file": "Επικόλληση στην είσοδο",
       "pasted_text_file_name": "Pasted text.txt",
       "pause": "Παύση",
@@ -1614,6 +1633,10 @@
           "description": "Να μην ενεργοποιηθεί η δυνατότητα διαδικτυακής αναζήτησης",
           "label": "Χωρίς διαδίκτυο"
         },
+        "route": {
+          "builtin": "[to be translated]:Searches with the model's built-in tool",
+          "client": "[to be translated]:Searches with {{provider}}"
+        },
         "settings": "Ρυθμίσεις αναζήτησης στο διαδίκτυο"
       }
     },
@@ -1623,6 +1646,11 @@
       }
     },
     "message": {
+      "beautify": {
+        "empty": "[to be translated]:There is no reply text to beautify",
+        "label": "[to be translated]:Beautify reply",
+        "unchanged": "[to be translated]:The reply already uses the selected typography"
+      },
       "cache_stats": {
         "inline": "Cache {{hit_rate}}%",
         "tooltip": "Ανάγνωση cache {{cache_read}} / εγγραφή {{cache_write}} / χωρίς cache {{no_cache}} · εξοικονομήθηκαν {{saved}} tokens εισόδου"
@@ -1684,6 +1712,7 @@
         "usage": "Χρήση token",
         "waiting_first_token": "Αναμονή"
       },
+      "translate_native": "[to be translated]:Translate to {{language}}",
       "useful": {
         "label": "Ορισμός ως πλαίσιο αναφοράς",
         "tip": "Σε αυτή την ομάδα μηνυμάτων, αυτό το μήνυμα θα επιλεγεί για να συμπεριληφθεί στο πλαίσιο"
@@ -1696,6 +1725,9 @@
       }
     },
     "navigation": {
+      "anchor": {
+        "jump_to_turn": "[to be translated]:Jump to turn {{number}}"
+      },
       "bottom": "Επιστροφή στο κάτω μέρος",
       "close": "Κλείσιμο",
       "first": "Ήδη το πρώτο μήνυμα",
@@ -3165,6 +3197,7 @@
         "threshold": "Κατώφλι ομοιότητας για φιλτράρισμα κομματιών χαμηλής συνάφειας. Υψηλότερες τιμές κάνουν την ανάκτηση αυστηρότερη."
       },
       "processor": "Πάροχος Επεξεργασίας",
+      "processor_not_configured": "[to be translated]:Not configured",
       "rerank_disabled": "Απενεργοποιημένο",
       "rerank_model": "Μοντέλο Ανατάξης",
       "reset_action": "Επαναφορά Προεπιλογών",
@@ -3415,7 +3448,15 @@
         }
       },
       "basic": {
+        "autoCleanupUserMessage": "[to be translated]:Hide completed user messages",
+        "autoCopy": "[to be translated]:Copy successful replies",
+        "autoTranslate": "[to be translated]:Translate successful replies to native language",
+        "context_compress_enabled": "[to be translated]:Auto-compress",
+        "context_compress_model": "[to be translated]:Compression model",
+        "context_compress_model_follow": "[to be translated]:Default",
         "context_count": "Καταμέτρηση πλαισίου",
+        "context_management": "[to be translated]:Context management",
+        "context_truncate_threshold": "[to be translated]:Tool-output truncation threshold (chars)",
         "creative": "Δημιουργικό",
         "custom_params": "Προσαρμοσμένες παράμετροι",
         "custom_params_add": "Προσθήκη παραμέτρου",
@@ -3424,11 +3465,29 @@
         "desc": "Διαμόρφωσε την ταυτότητα του βοηθού και τις παραμέτρους του μοντέλου",
         "description_label": "Περιγραφή",
         "field": {
+          "autoCleanupUserMessage": {
+            "hint": "[to be translated]:Hides the user bubble only after every sibling reply finishes and at least one succeeds; the message remains in context"
+          },
+          "autoCopy": {
+            "hint": "[to be translated]:Copies the selected or highest-priority successful reply after typography processing"
+          },
+          "autoTranslate": {
+            "hint": "[to be translated]:Adds one translation using the native language configured in Translate settings"
+          },
           "avatar": {
             "hint": "Χρησιμοποιείται για την αναγνώριση του βοηθού στη βιβλιοθήκη και στις συνομιλίες"
           },
+          "context_compress_enabled": {
+            "hint": "[to be translated]:Summarize older turns automatically when nearing the context window"
+          },
           "context_count": {
             "hint": "Αριθμός πρόσφατων μηνυμάτων που διατηρούνται ως συμφραζόμενα"
+          },
+          "context_management": {
+            "hint": "[to be translated]:Override global context-management settings for this assistant; off inherits the global settings"
+          },
+          "context_truncate_threshold": {
+            "hint": "[to be translated]:Tool outputs beyond this many characters are offloaded and truncated"
           },
           "custom_params": {
             "hint": "Επιπλέον παράμετροι παρόχου που αποστέλλονται με τα αιτήματα"
@@ -3461,6 +3520,12 @@
           },
           "top_p": {
             "hint": "Περιορίζει το εύρος δειγματοληψίας διακριτικών όταν είναι ενεργοποιημένο"
+          },
+          "zhCnMarkdownSmartQuotes": {
+            "hint": "[to be translated]:Applies the Translate page's Simplified Chinese Markdown quote processor"
+          },
+          "zhMarkdownTextSpacing": {
+            "hint": "[to be translated]:Applies the Translate page's Chinese and Latin Markdown spacing processor"
           }
         },
         "group": "Ομάδα",
@@ -3477,6 +3542,7 @@
         "model_pick": "+ Επιλέξτε μοντέλο",
         "pick_avatar": "Επιλέξτε άβαταρ",
         "precise": "Ακριβής",
+        "reply_automation": "[to be translated]:Successful reply automation",
         "stream_output": "Έξοδος ροής",
         "tag_empty": "Δεν υπάρχουν διαθέσιμες ετικέτες",
         "tag_hint": "Για να προσθέσετε μια νέα ετικέτα, χρησιμοποιήστε την επιλογή \"+ Ετικέτα\" στη γραμμή κορυφής της βιβλιοθήκης.",
@@ -3485,7 +3551,9 @@
         "tags": "Ετικέτες",
         "temperature": "Θερμοκρασία",
         "title": "Βασικές ρυθμίσεις",
-        "top_p": "Top-P"
+        "top_p": "Top-P",
+        "zhCnMarkdownSmartQuotes": "[to be translated]:Chinese smart quotes",
+        "zhMarkdownTextSpacing": "[to be translated]:Chinese and Latin spacing"
       },
       "breadcrumb": "Βιβλιοθήκη",
       "dialogs": {
@@ -4273,6 +4341,7 @@
       "cutoff": "Περικόπτεται η αναζήτηση...",
       "fetch_complete": "{{count}} αποτελέσματα αναζήτησης",
       "fetch_empty": "Δεν βρέθηκαν αποτελέσματα αναζήτησης",
+      "fetch_opaque": "[to be translated]:Searched by the model",
       "partial_failure": "{{count}} αποτελέσματα αναζήτησης, ορισμένες αναζητήσεις απέτυχαν"
     }
   },
@@ -5145,6 +5214,7 @@
     "reset": "Επαναφορά",
     "rotate_left": "Περιστροφή Αριστερά",
     "rotate_right": "Περιστροφή Δεξιά",
+    "save_as": "[to be translated]:Save As",
     "source": "Προβολή πηγαίου κώδικα",
     "zoom_in": "Μεγέθυνση",
     "zoom_out": "συρρίκνωση"
@@ -5783,7 +5853,25 @@
         "title": "Επιχείρηση"
       },
       "feedback": {
+        "agent": {
+          "description": "[to be translated]:Chat with Cherry Assistant to share feedback.",
+          "title": "[to be translated]:Use Agent"
+        },
+        "agent_error": "[to be translated]:Unable to open Cherry Assistant for feedback. Please try again.",
         "button": "Σχόλια και Παρατηρήσεις",
+        "dialog": {
+          "description": "[to be translated]:Choose how to share feedback and help us make Cherry Studio better.",
+          "title": "[to be translated]:Choose a feedback channel"
+        },
+        "github": {
+          "description": "[to be translated]:Create a bug report or feature request on GitHub.",
+          "title": "[to be translated]:GitHub Issue"
+        },
+        "recommended": "[to be translated]:Recommended",
+        "survey": {
+          "description": "[to be translated]:Share feedback through our Feishu survey.",
+          "title": "[to be translated]:Feedback survey"
+        },
         "title": "Αποστολή σχολίων"
       },
       "label": "Περί μας",
@@ -7309,6 +7397,7 @@
       "topic_naming": {
         "auto": "Αυτόματη αναδόμηση θεμάτων",
         "label": "Ονομασία θέματος",
+        "model": "[to be translated]:Naming Model",
         "prompt": "Προσδιορισμός προκαθορισμένου θέματος"
       },
       "translate_model": "Μοντέλο μετάφρασης",
@@ -7647,6 +7736,7 @@
         "all": "Όλοι οι Πάροχοι",
         "disabled": "Μόνο για άτομα με αναπηρία",
         "enabled": "Ενεργοποιημένο Μόνο",
+        "hidden_builtin": "[to be translated]:Hidden Built-in Providers",
         "label": "Φίλτρο παρόχων"
       },
       "filter_agent": "Υποστηριζόμενοι Πάροχοι του Φίλτρου Πράκτορα",
@@ -7659,6 +7749,11 @@
         "sign_in_failed": "Η σύνδεση απέτυχε. Παρακαλώ δοκιμάστε ξανά.",
         "sign_in_success": "Συνδεδεμένος στο Grok CLI",
         "signing_in": "Αναμονή για πρόγραμμα περιήγησης…"
+      },
+      "hide": {
+        "action": "[to be translated]:Hide",
+        "content": "[to be translated]:This built-in provider will be disabled and hidden from normal provider lists and model selectors. You can restore it from the Hidden Built-in Providers filter.",
+        "title": "[to be translated]:Hide Built-in Provider"
       },
       "image_endpoints": {
         "image_edit_base_url": {
@@ -7731,6 +7826,7 @@
       "reorder_failed": "Αποτυχία αναδιάταξης παρόχων",
       "request_configuration": "Διαμόρφωση αιτήματος",
       "request_configuration_tooltip": "Διαμόρφωση διακομιστή API και προσαρμοσμένων κεφαλίδων αιτήματος",
+      "restore": "[to be translated]:Restore",
       "save_failed": "Αποτυχία αποθήκευσης ρυθμίσεων παρόχου",
       "search": "Αναζήτηση πλατφόρμας μονάδων...",
       "search_placeholder": "Αναζήτηση ID ή ονόματος μονάδας",
@@ -7883,13 +7979,16 @@
       "enabled": "ενεργοποίηση",
       "exit_fullscreen": "Έξοδος από πλήρη οθόνη",
       "filter": "Φίλτρο",
+      "go_home": "[to be translated]:Go to Home",
       "label": "Πλήκτρο",
       "move_tab_to_first": "Μετακίνηση Καρτέλας στην Αρχή",
       "new_topic": "Νέο θέμα",
+      "next_assistant": "[to be translated]:Next Assistant",
       "occupied_by_other_application": "Αυτή η συντόμευση χρησιμοποιείται ήδη από το σύστημα ή από άλλη εφαρμογή",
       "open_tab_in_new_window": "Άνοιγμα καρτέλας σε νέο παράθυρο",
       "pin_tab": "Εναλλαγή Καρφίτσωμα Καρτέλας",
       "press_shortcut": "Πάτησε το συντομού πλήκτρου",
+      "previous_assistant": "[to be translated]:Previous Assistant",
       "print": "Εκτύπωση",
       "quick_assistant": "Συντομεύστε επιχειρηματικά",
       "rename_topic": "Μετονομασία θέματος",
@@ -7914,6 +8013,7 @@
       "toggle_right_sidebar": "Εναλλαγή δεξιάς πλευρικής γραμμής",
       "toggle_show_topics": "Εναλλαγή εμφάνισης θεμάτων",
       "toggle_sidebar": "Εναλλαγή πλευρικής γραμμής",
+      "translate_clipboard": "[to be translated]:Translate Clipboard",
       "zoom_in": "Μεγέθυνση εμφάνισης",
       "zoom_out": "Σμικρύνση εμφάνισης",
       "zoom_reset": "Επαναφορά εμφάνισης"
@@ -8071,6 +8171,10 @@
         "check": "Έλεγχος",
         "check_failed": "Αποτυχία επαλήθευσης",
         "check_success": "Επιτυχής επαλήθευση",
+        "client_tools_preferred": {
+          "description": "[to be translated]:Use the search and URL-fetch services configured above even when the model has built-in search. When off, the model handles it.",
+          "label": "[to be translated]:Prefer configured search services"
+        },
         "compression": {
           "cutoff": {
             "limit": {
@@ -8193,6 +8297,22 @@
           "label": "Όνομα γλώσσας",
           "placeholder": "Ελληνικά"
         }
+      },
+      "glossary": {
+        "delete": {
+          "description": "[to be translated]:Delete this glossary entry?",
+          "title": "[to be translated]:Delete glossary entry"
+        },
+        "error": {
+          "add": "[to be translated]:Failed to add glossary entry",
+          "required": "[to be translated]:Source and target phrases are required"
+        },
+        "hint": "[to be translated]:Matched enabled terms are injected through {{customized_dictionary}} in a translation prompt.",
+        "source": "[to be translated]:Source phrase",
+        "source_placeholder": "[to be translated]:Term in the source text",
+        "target": "[to be translated]:Required translation",
+        "target_placeholder": "[to be translated]:Required target wording",
+        "title": "[to be translated]:Translation glossary"
       },
       "prompt": "Ακολουθήστε την οδηγία συστήματος",
       "title": "Ρυθμίσεις μετάφρασης"
@@ -8383,8 +8503,10 @@
       "language": " οποιαδήποτε γλώσσα"
     },
     "button": {
+      "polish_and_translate": "[to be translated]:Polish then translate",
       "translate": "Μετάφραση"
     },
+    "clipboard_watch": "[to be translated]:Watch clipboard and translate changes",
     "close": "Κλείσιμο",
     "closed": "Η μετάφραση έχει απενεργοποιηθεί",
     "complete": "Η μετάφραση ολοκληρώθηκε",
@@ -8393,6 +8515,11 @@
       "title": "Επιβεβαίωση μετάφρασης"
     },
     "copied": "Το μεταφρασμένο κείμενο αντιγράφηκε",
+    "counter": {
+      "tip": "[to be translated]:Estimated tokens include the active translation prompt.",
+      "tokens": "[to be translated]:tokens",
+      "words": "[to be translated]:words"
+    },
     "custom": {
       "label": "Προσαρμοσμένη γλώσσα"
     },
@@ -8405,6 +8532,10 @@
         "auto": {
           "label": "αυτόματα",
           "tip": "Αυτόματη επιλογή της κατάλληλης μεθόδου ανίχνευσης"
+        },
+        "heuristic": {
+          "label": "[to be translated]:Heuristic",
+          "tip": "[to be translated]:Use fast script and character-pattern detection"
         },
         "label": "Αυτόματη μέθοδος ανίχνευσης",
         "llm": {
@@ -8456,6 +8587,11 @@
       "reading": "Διαβάζοντας το περιεχόμενο του αρχείου...",
       "upload": "Αποθέστε ή κάντε κλικ για μεταφόρτωση εικόνας/εγγράφου"
     },
+    "flip": {
+      "label": "[to be translated]:Correct detected direction and retranslate",
+      "native_language_not_in_pair": "[to be translated]:The native language is not included in the bidirectional pair.",
+      "success": "[to be translated]:Translation direction corrected"
+    },
     "history": {
       "back": "Επιστροφή στη λίστα",
       "clear": "Καθαρισμός ιστορικού",
@@ -8489,6 +8625,7 @@
       "target": "Στόχος",
       "title": "Ιστορικό μετάφρασης"
     },
+    "html_conversion": "[to be translated]:Convert rich HTML clipboard content to Markdown",
     "info": {
       "aborted": "Η μετάφραση διακόπηκε"
     },
@@ -8509,20 +8646,71 @@
     "output": {
       "placeholder": "Μετάφραση"
     },
+    "paste": "[to be translated]:Paste from clipboard",
+    "post_processing": {
+      "enable": "[to be translated]:Enable post-processing",
+      "english_straight_quotes": "[to be translated]:Normalize English straight quotes",
+      "zh_smart_quotes": "[to be translated]:Use Chinese smart quotes",
+      "zh_text_spacing": "[to be translated]:Add Chinese/Latin text spacing"
+    },
     "preferred_target": "Προτιμώμενος Στόχος",
     "processing": "Μεταφράζεται...",
     "settings": {
       "autoCopy": "Μετά τη μετάφραση, αντιγράφεται αυτόματα",
       "bidirectional": "Ρύθμιση διπλής κατεύθυνσης μετάφρασης",
       "bidirectional_tip": "Όταν ενεργοποιηθεί, υποστηρίζεται μόνο διπλής κατεύθυνσης μετάφραση μεταξύ της πηγαίας και της στόχου γλώσσας",
+      "custom_body": {
+        "polish": "[to be translated]:Polish request",
+        "reasoning_override": "[to be translated]:Reasoning-related custom parameters override the Minimize reasoning switch for this request type.",
+        "title": "[to be translated]:Custom request parameters",
+        "translate": "[to be translated]:Translate request"
+      },
       "error": {
         "save": "Αποτυχία αποθήκευσης ρυθμίσεων μετάφρασης"
+      },
+      "font_size": "[to be translated]:Font size",
+      "global_translate_model": "[to be translated]:Global translation model",
+      "group_model": "[to be translated]:Models",
+      "group_post_processing": "[to be translated]:Post-processing",
+      "json_structure_view": {
+        "copy_blank_line_between_rows": "[to be translated]:Blank line between copied rows",
+        "copy_separator": {
+          "chinese_colon": "[to be translated]:Chinese colon",
+          "chinese_colon_newline": "[to be translated]:Chinese colon + newline",
+          "colon_newline": "[to be translated]:Colon + newline",
+          "colon_space": "[to be translated]:Colon + space",
+          "label": "[to be translated]:Selection copy separator"
+        },
+        "label": "[to be translated]:JSON structure view"
+      },
+      "layout": {
+        "auto": "[to be translated]:Auto",
+        "horizontal": "[to be translated]:Horizontal",
+        "label": "[to be translated]:Panel layout",
+        "vertical": "[to be translated]:Vertical"
+      },
+      "minimize_thinking": {
+        "label": "[to be translated]:Minimize reasoning",
+        "tip": "[to be translated]:Disable reasoning unless custom parameters explicitly control it"
       },
       "model": "Ρύθμιση μοντέλου",
       "model_desc": "Μοντέλο που χρησιμοποιείται από την υπηρεσία μετάφρασης",
       "model_placeholder": "Επιλέξτε μοντέλο μετάφρασης",
+      "native_language": "[to be translated]:Native language",
+      "native_to_other_model": "[to be translated]:Native to other languages",
       "no_model_warning": "Δεν έχει επιλεγεί μοντέλο μετάφρασης",
+      "other_to_native_model": "[to be translated]:Other languages to native",
+      "polish_enabled": "[to be translated]:Polish before translation",
+      "polish_model": "[to be translated]:Polish model",
       "preview": "Προεπισκόπηση Markdown",
+      "prompt": {
+        "native_to_other": "[to be translated]:Native-to-other prompt",
+        "other_to_native": "[to be translated]:Other-to-native prompt",
+        "polish": "[to be translated]:Polish prompt"
+      },
+      "regex_rules": {
+        "title": "[to be translated]:Regex replacements"
+      },
       "scroll_sync": "Ρύθμιση συγχρονισμού κύλισης",
       "title": "Ρυθμίσεις μετάφρασης"
     },

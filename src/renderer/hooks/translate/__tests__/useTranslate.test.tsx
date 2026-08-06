@@ -146,6 +146,29 @@ describe('useTranslate', () => {
       expect(handedSignal.aborted).toBe(true)
     })
 
+    it('links an external flow signal to the actual translate stream and discards a late result', async () => {
+      const pending = pendingTranslateText()
+      const flowController = new AbortController()
+      const { result } = renderHook(() => useTranslate())
+
+      let translatePromise!: Promise<string | undefined>
+      act(() => {
+        translatePromise = result.current.translate('源', TARGET, undefined, flowController.signal)
+      })
+      const handedSignal = translateTextMock.mock.calls[0][3] as AbortSignal
+
+      act(() => flowController.abort())
+      expect(handedSignal.aborted).toBe(true)
+      expect(result.current.isTranslating).toBe(false)
+
+      let translated: string | undefined
+      await act(async () => {
+        pending.resolve('late result')
+        translated = await translatePromise
+      })
+      expect(translated).toBeUndefined()
+    })
+
     it('aborts the previous signal when a new translate() supersedes', () => {
       pendingTranslateText()
       translateTextMock.mockResolvedValueOnce('second')

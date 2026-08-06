@@ -43,6 +43,10 @@ import type { Topic } from '@renderer/types/topic'
 import { formatErrorMessageWithPrefix, isAbortError } from '@renderer/utils/error'
 import type { DiagnosisResult } from '@renderer/utils/errorDiagnosis'
 import { updateCodeBlock } from '@renderer/utils/markdown'
+import {
+  ASSISTANT_REPLY_BEAUTIFY_SETTINGS,
+  postProcessAssistantReplyParts
+} from '@renderer/utils/message/assistantReplyPostProcessing'
 import { createComposerRichClipboardContentFromParts } from '@renderer/utils/message/composerClipboard'
 import { getComposerTextFromParts } from '@renderer/utils/message/composerTokens'
 import { isVisionModel } from '@renderer/utils/model'
@@ -102,6 +106,7 @@ export function useHomeMessageListProviderValue({
   const topicId = topic.id
   const assistantId = topic.assistantId
   const [messageNavigation] = usePreference('chat.message.navigation_mode')
+  const [nativeLanguageCode] = usePreference('feature.translate.native_language')
   const { t } = useTranslation()
   const normalInteractionsEnabled = imageActionConsumer !== 'capture'
   const [translationLanguagesRequested, setTranslationLanguagesRequested] = useState(false)
@@ -663,6 +668,18 @@ export function useHomeMessageListProviderValue({
     [requireChatWrite]
   )
 
+  const beautifyMessage = useCallback<NonNullable<MessageListActions['beautifyMessage']>>(
+    async (messageId) => {
+      const persisted = await dataApiService.get(`/messages/${messageId}`)
+      const processed = postProcessAssistantReplyParts(persisted.data.parts ?? [], ASSISTANT_REPLY_BEAUTIFY_SETTINGS)
+      if (!processed.text.trim()) return 'empty'
+      if (!processed.changed) return 'unchanged'
+      await requireChatWrite('beautifyMessage').editMessage(messageId, processed.parts)
+      return 'changed'
+    },
+    [requireChatWrite]
+  )
+
   const getMessageSiblings = useCallback(
     (messageId: string) => {
       const group = siblingsContext?.siblingsMap[messageId]
@@ -799,6 +816,7 @@ export function useHomeMessageListProviderValue({
       editingMessageId,
       translationLanguages: translationLanguages ?? [],
       translationLanguagesStatus,
+      nativeTranslationLanguage: translationLanguages?.find((language) => language.langCode === nativeLanguageCode),
       getMessageUiState: messageUiStateCache.getMessageUiState,
       getMessageSiblings,
       getMessageActivityState,
@@ -827,7 +845,8 @@ export function useHomeMessageListProviderValue({
       streamingLayers,
       topic,
       translationLanguages,
-      translationLanguagesStatus
+      translationLanguagesStatus,
+      nativeLanguageCode
     ]
   )
 
@@ -865,6 +884,7 @@ export function useHomeMessageListProviderValue({
       requestTranslationLanguages: normalInteractionsEnabled ? requestTranslationLanguages : undefined,
       retryTranslationLanguages: normalInteractionsEnabled ? retryTranslationLanguages : undefined,
       translateMessage,
+      beautifyMessage,
       abortMessageTranslation,
       removeMessageTranslation,
       renderRegenerateModelPicker
@@ -905,6 +925,7 @@ export function useHomeMessageListProviderValue({
       startNewContext,
       selectionController.actions,
       translateMessage,
+      beautifyMessage,
       removeMessageTranslation,
       updateRenderConfig
     ]

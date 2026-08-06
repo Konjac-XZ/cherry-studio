@@ -147,6 +147,105 @@ describe('PreferencesMigrator', () => {
       expect(rows[0].value).toBe(true)
     })
 
+    it('migrates the complete customized translate preference contract', async () => {
+      const customParameters = [{ name: 'temperature', type: 'number', value: 0.2 }]
+      const polishCustomParameters = [{ name: 'top_p', type: 'number', value: 0.8 }]
+      const regexRules = [{ id: 'rule-1', pattern: 'foo', flags: 'g', replacement: 'bar', enabled: true }]
+      const ctx = createTestContext(
+        {
+          redux: {
+            settings: {
+              nativeLanguageTranslateModelPrompt: 'native prompt',
+              otherLanguageTranslateModelPrompt: 'other prompt',
+              polishPrompt: 'polish prompt',
+              userNativeLanguage: 'zh-cn'
+            },
+            translate: {
+              settings: {
+                autoCopy: true,
+                customParameters,
+                polishCustomParameters
+              }
+            }
+          },
+          dexieSettings: [
+            { id: 'translate:detect:method', value: 'heuristic' },
+            { id: 'translate:markdown:enabled', value: true },
+            { id: 'translate:scroll:sync', value: true },
+            { id: 'translate:bidirectional:enabled', value: true },
+            { id: 'translate:json-structure-view:enabled', value: false },
+            { id: 'translate:json-structure-view:copy-blank-line-between-rows', value: true },
+            { id: 'translate:json-structure-view:copy-separator', value: 'chinese-colon-newline' },
+            { id: 'translate:postprocess:enStraightQuotes:enabled', value: true },
+            { id: 'translate:postprocess:zhQuotes:enabled', value: true },
+            { id: 'translate:postprocess:zhSpacing:enabled', value: true },
+            { id: 'translate:postprocess:regex:rules', value: regexRules },
+            { id: 'translate:postprocess:enabled', value: false },
+            { id: 'translate:layout:override', value: 'vertical' },
+            { id: 'translate:font:size', value: 22 },
+            { id: 'translate:paste:html-conversion:enabled', value: false },
+            { id: 'translate:polish:enabled', value: true },
+            { id: 'translate:auto-disable-thinking', value: false },
+            { id: 'translate:polish:auto-disable-thinking', value: false },
+            {
+              id: 'translate:model:native-to-other',
+              value: JSON.stringify({ provider: 'openai', id: 'gpt-4.1' })
+            },
+            {
+              id: 'translate:model:other-to-native',
+              value: JSON.stringify({ provider: 'anthropic', id: 'claude-sonnet-4-5' })
+            },
+            { id: 'translate:model:polish', value: JSON.stringify({ provider: 'qwen', id: 'qwen-max' }) },
+            { id: 'translate:model:follow-global', value: false },
+            { id: 'translate:model:native-to-other:follow-global', value: true }
+          ]
+        },
+        dbh.db
+      )
+
+      await migrator.prepare(ctx)
+      await migrator.execute(ctx)
+
+      const expected: Record<string, unknown> = {
+        'feature.translate.auto_detection_method': 'heuristic',
+        'feature.translate.model.native_to_other_follows_global': true,
+        'feature.translate.model.native_to_other_id': 'openai::gpt-4.1',
+        'feature.translate.model.other_to_native_follows_global': false,
+        'feature.translate.model.other_to_native_id': 'anthropic::claude-sonnet-4-5',
+        'feature.translate.model.polish_id': 'qwen::qwen-max',
+        'feature.translate.native_language': 'zh-cn',
+        'feature.translate.page.auto_copy': true,
+        'feature.translate.page.bidirectional_enabled': true,
+        'feature.translate.page.enable_markdown': true,
+        'feature.translate.page.font_size': 22,
+        'feature.translate.page.html_conversion_on_paste': false,
+        'feature.translate.page.json_structure_copy_blank_line': true,
+        'feature.translate.page.json_structure_copy_separator': 'chinese-colon-newline',
+        'feature.translate.page.json_structure_view': false,
+        'feature.translate.page.layout_override': 'vertical',
+        'feature.translate.page.scroll_sync': true,
+        'feature.translate.polish.enabled': true,
+        'feature.translate.post_processing.enabled': false,
+        'feature.translate.post_processing.english_straight_quotes': true,
+        'feature.translate.post_processing.regex_rules': regexRules,
+        'feature.translate.post_processing.zh_smart_quotes': true,
+        'feature.translate.post_processing.zh_text_spacing': true,
+        'feature.translate.prompt.native_to_other': 'native prompt',
+        'feature.translate.prompt.other_to_native': 'other prompt',
+        'feature.translate.prompt.polish': 'polish prompt',
+        'feature.translate.reasoning.polish_auto_disable': false,
+        'feature.translate.reasoning.translate_auto_disable': false,
+        'feature.translate.request.custom_parameters': customParameters,
+        'feature.translate.request.polish_custom_parameters': polishCustomParameters
+      }
+
+      for (const [key, value] of Object.entries(expected)) {
+        const rows = await selectByKey(dbh.db, key)
+        expect(rows, key).toHaveLength(1)
+        expect(rows[0].value, key).toEqual(value)
+      }
+    })
+
     it('falls back to DefaultPreferences when source value is missing', async () => {
       const ctx = createTestContext({}, dbh.db)
       await migrator.prepare(ctx)
@@ -165,6 +264,8 @@ describe('PreferencesMigrator', () => {
       expect(dataCollection[0]?.value).toBe(true)
       const clientId = await selectByKey(dbh.db, 'app.user.id')
       expect(clientId[0]?.value).toBe('')
+      const translateMarkdown = await selectByKey(dbh.db, 'feature.translate.page.enable_markdown')
+      expect(translateMarkdown[0]?.value).toBe(false)
     })
 
     it.each(['20260531', '20240101'])(

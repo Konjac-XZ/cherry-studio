@@ -758,6 +758,13 @@
         "placeholder": "Đại lý nên làm gì khi nhiệm vụ này chạy?"
       },
       "resume": "Sơ yếu lý lịch",
+      "reuseSession": {
+        "bound": "[to be translated]:View session",
+        "description": "[to be translated]:Continue every run in the same session instead of starting a new one.",
+        "label": "[to be translated]:Reuse session",
+        "pending": "[to be translated]:Waiting for the first run",
+        "warning": "[to be translated]:A reused session keeps accumulating context, which raises token cost over time and can overflow the model's context window. To rebind a clean session, disable and save, then enable and save."
+      },
       "run": "Chạy",
       "runTriggered": "Nhiệm vụ được kích hoạt",
       "save": "Lưu",
@@ -1419,6 +1426,11 @@
         "placeholder": "Tìm kiếm"
       }
     },
+    "compaction": {
+      "compacted": "[to be translated]:Context compacted, ~{{count}} tokens saved",
+      "compacted_plain": "[to be translated]:Context compacted",
+      "compacting": "[to be translated]:Compacting context…"
+    },
     "conversation": {
       "new": "Cuộc trò chuyện mới"
     },
@@ -1484,6 +1496,13 @@
       },
       "new_session": "Phiên mới {{Command}}",
       "new_topic": "Chủ đề mới {{Command}}",
+      "note_reference": {
+        "description": "[to be translated]:Attach a note from Notes",
+        "empty": "[to be translated]:No notes found",
+        "load_failed": "[to be translated]:Failed to load notes",
+        "loading": "[to be translated]:Loading notes...",
+        "title": "[to be translated]:Reference Note"
+      },
       "paste_text_file": "Dán vào ô nhập",
       "pasted_text_file_name": "Pasted text.txt",
       "pause": "Tạm dừng",
@@ -1614,6 +1633,10 @@
           "description": "Không bật tìm kiếm web",
           "label": "Tắt tìm kiếm web"
         },
+        "route": {
+          "builtin": "[to be translated]:Searches with the model's built-in tool",
+          "client": "[to be translated]:Searches with {{provider}}"
+        },
         "settings": "Cài đặt Tìm kiếm Web"
       }
     },
@@ -1623,6 +1646,11 @@
       }
     },
     "message": {
+      "beautify": {
+        "empty": "[to be translated]:There is no reply text to beautify",
+        "label": "[to be translated]:Beautify reply",
+        "unchanged": "[to be translated]:The reply already uses the selected typography"
+      },
       "cache_stats": {
         "inline": "Tỷ lệ trúng bộ nhớ đệm {{hit_rate}}%",
         "tooltip": "Đọc cache {{cache_read}} / ghi cache {{cache_write}} / không cache {{no_cache}} · đã tiết kiệm {{saved}} token đầu vào"
@@ -1684,6 +1712,7 @@
         "usage": "Sử dụng token",
         "waiting_first_token": "Đang chờ"
       },
+      "translate_native": "[to be translated]:Translate to {{language}}",
       "useful": {
         "label": "Đặt làm ngữ cảnh",
         "tip": "Trong nhóm tin nhắn này, tin nhắn này sẽ được chọn để tham gia vào ngữ cảnh"
@@ -1696,6 +1725,9 @@
       }
     },
     "navigation": {
+      "anchor": {
+        "jump_to_turn": "[to be translated]:Jump to turn {{number}}"
+      },
       "bottom": "Quay lại đầu trang",
       "close": "Đóng",
       "first": "Đã ngay từ tin nhắn đầu tiên",
@@ -3165,6 +3197,7 @@
         "threshold": "Ngưỡng độ tương đồng để lọc các đoạn có độ liên quan thấp. Giá trị cao hơn sẽ làm cho việc truy xuất trở nên nghiêm ngặt hơn."
       },
       "processor": "Nhà cung cấp xử lý",
+      "processor_not_configured": "[to be translated]:Not configured",
       "rerank_disabled": "Vô hiệu hóa",
       "rerank_model": "Mô hình xếp hạng lại",
       "reset_action": "Khôi phục mặc định",
@@ -3415,7 +3448,15 @@
         }
       },
       "basic": {
+        "autoCleanupUserMessage": "[to be translated]:Hide completed user messages",
+        "autoCopy": "[to be translated]:Copy successful replies",
+        "autoTranslate": "[to be translated]:Translate successful replies to native language",
+        "context_compress_enabled": "[to be translated]:Auto-compress",
+        "context_compress_model": "[to be translated]:Compression model",
+        "context_compress_model_follow": "[to be translated]:Default",
         "context_count": "Số lượng ngữ cảnh",
+        "context_management": "[to be translated]:Context management",
+        "context_truncate_threshold": "[to be translated]:Tool-output truncation threshold (chars)",
         "creative": "Sáng tạo",
         "custom_params": "Các tham số tùy chỉnh",
         "custom_params_add": "Thêm tham số",
@@ -3424,11 +3465,29 @@
         "desc": "Cấu hình danh tính của trợ lý và các tham số mô hình",
         "description_label": "Mô tả",
         "field": {
+          "autoCleanupUserMessage": {
+            "hint": "[to be translated]:Hides the user bubble only after every sibling reply finishes and at least one succeeds; the message remains in context"
+          },
+          "autoCopy": {
+            "hint": "[to be translated]:Copies the selected or highest-priority successful reply after typography processing"
+          },
+          "autoTranslate": {
+            "hint": "[to be translated]:Adds one translation using the native language configured in Translate settings"
+          },
           "avatar": {
             "hint": "Dùng để xác định trợ lý trong thư viện và các cuộc trò chuyện"
           },
+          "context_compress_enabled": {
+            "hint": "[to be translated]:Summarize older turns automatically when nearing the context window"
+          },
           "context_count": {
             "hint": "Số lượng tin nhắn gần đây được giữ lại làm ngữ cảnh"
+          },
+          "context_management": {
+            "hint": "[to be translated]:Override global context-management settings for this assistant; off inherits the global settings"
+          },
+          "context_truncate_threshold": {
+            "hint": "[to be translated]:Tool outputs beyond this many characters are offloaded and truncated"
           },
           "custom_params": {
             "hint": "Các tham số bổ sung của nhà cung cấp được gửi kèm theo yêu cầu"
@@ -3461,6 +3520,12 @@
           },
           "top_p": {
             "hint": "Giới hạn phạm vi lấy mẫu token khi được bật"
+          },
+          "zhCnMarkdownSmartQuotes": {
+            "hint": "[to be translated]:Applies the Translate page's Simplified Chinese Markdown quote processor"
+          },
+          "zhMarkdownTextSpacing": {
+            "hint": "[to be translated]:Applies the Translate page's Chinese and Latin Markdown spacing processor"
           }
         },
         "group": "Nhóm",
@@ -3477,6 +3542,7 @@
         "model_pick": "+ Chọn mô hình",
         "pick_avatar": "Chọn avatar",
         "precise": "Chính xác",
+        "reply_automation": "[to be translated]:Successful reply automation",
         "stream_output": "Đầu ra luồng",
         "tag_empty": "Không có thẻ nào",
         "tag_hint": "Để thêm một thẻ mới, hãy sử dụng mục \"+ Thẻ\" trong thanh trên cùng của thư viện",
@@ -3485,7 +3551,9 @@
         "tags": "Thẻ",
         "temperature": "Nhiệt độ",
         "title": "Cài đặt cơ bản",
-        "top_p": "Top-P"
+        "top_p": "Top-P",
+        "zhCnMarkdownSmartQuotes": "[to be translated]:Chinese smart quotes",
+        "zhMarkdownTextSpacing": "[to be translated]:Chinese and Latin spacing"
       },
       "breadcrumb": "Thư viện",
       "dialogs": {
@@ -4273,6 +4341,7 @@
       "cutoff": "Đang cắt ngắn nội dung tìm kiếm...",
       "fetch_complete": "{{count}} kết quả tìm kiếm",
       "fetch_empty": "Không tìm thấy kết quả tìm kiếm",
+      "fetch_opaque": "[to be translated]:Searched by the model",
       "partial_failure": "{{count}} kết quả tìm kiếm, một số tìm kiếm thất bại"
     }
   },
@@ -5145,6 +5214,7 @@
     "reset": "Đặt lại",
     "rotate_left": "Xoay Trái",
     "rotate_right": "Xoay phải",
+    "save_as": "[to be translated]:Save As",
     "source": "Ver Código Fuente",
     "zoom_in": "Phóng to",
     "zoom_out": "Zum Herauszoomen"
@@ -5783,7 +5853,25 @@
         "title": "Doanh nghiệp"
       },
       "feedback": {
+        "agent": {
+          "description": "[to be translated]:Chat with Cherry Assistant to share feedback.",
+          "title": "[to be translated]:Use Agent"
+        },
+        "agent_error": "[to be translated]:Unable to open Cherry Assistant for feedback. Please try again.",
         "button": "Phản hồi",
+        "dialog": {
+          "description": "[to be translated]:Choose how to share feedback and help us make Cherry Studio better.",
+          "title": "[to be translated]:Choose a feedback channel"
+        },
+        "github": {
+          "description": "[to be translated]:Create a bug report or feature request on GitHub.",
+          "title": "[to be translated]:GitHub Issue"
+        },
+        "recommended": "[to be translated]:Recommended",
+        "survey": {
+          "description": "[to be translated]:Share feedback through our Feishu survey.",
+          "title": "[to be translated]:Feedback survey"
+        },
         "title": "Phản hồi"
       },
       "label": "Giới thiệu & Phản hồi",
@@ -7309,6 +7397,7 @@
       "topic_naming": {
         "auto": "Tự động đặt tên chủ đề",
         "label": "Đặt tên chủ đề",
+        "model": "[to be translated]:Naming Model",
         "prompt": "Prompt zur Themenbenennung"
       },
       "translate_model": "Mô hình Dịch",
@@ -7647,6 +7736,7 @@
         "all": "Tất cả nhà cung cấp",
         "disabled": "Chỉ dành cho người khuyết tật",
         "enabled": "Chỉ được kích hoạt",
+        "hidden_builtin": "[to be translated]:Hidden Built-in Providers",
         "label": "Lọc nhà cung cấp"
       },
       "filter_agent": "Các nhà cung cấp được Hỗ trợ bởi Agent Lọc",
@@ -7659,6 +7749,11 @@
         "sign_in_failed": "Đăng nhập không thành công. Vui lòng thử lại.",
         "sign_in_success": "Đã đăng nhập vào Grok CLI",
         "signing_in": "Đang chờ trình duyệt…"
+      },
+      "hide": {
+        "action": "[to be translated]:Hide",
+        "content": "[to be translated]:This built-in provider will be disabled and hidden from normal provider lists and model selectors. You can restore it from the Hidden Built-in Providers filter.",
+        "title": "[to be translated]:Hide Built-in Provider"
       },
       "image_endpoints": {
         "image_edit_base_url": {
@@ -7731,6 +7826,7 @@
       "reorder_failed": "Không thể sắp xếp lại các nhà cung cấp",
       "request_configuration": "Cấu hình yêu cầu",
       "request_configuration_tooltip": "Cấu hình Máy chủ API và tiêu đề yêu cầu tùy chỉnh",
+      "restore": "[to be translated]:Restore",
       "save_failed": "Không lưu được cài đặt nhà cung cấp",
       "search": "Nhà cung cấp tìm kiếm...",
       "search_placeholder": "Tìm kiếm mã hoặc tên mô hình",
@@ -7883,13 +7979,16 @@
       "enabled": "Kích hoạt",
       "exit_fullscreen": "Thoát toàn màn hình",
       "filter": "Lọc",
+      "go_home": "[to be translated]:Go to Home",
       "label": "Khóa",
       "move_tab_to_first": "Di chuyển tab lên đầu tiên",
       "new_topic": "Chủ đề mới",
+      "next_assistant": "[to be translated]:Next Assistant",
       "occupied_by_other_application": "Phím tắt này đã được hệ thống hoặc một ứng dụng khác sử dụng",
       "open_tab_in_new_window": "Mở tab trong cửa sổ mới",
       "pin_tab": "Chuyển đổi Ghim Tab",
       "press_shortcut": "Nhấn Phím tắt",
+      "previous_assistant": "[to be translated]:Previous Assistant",
       "print": "In",
       "quick_assistant": "Trợ lý nhanh",
       "rename_topic": "Đổi tên chủ đề",
@@ -7914,6 +8013,7 @@
       "toggle_right_sidebar": "Bật/tắt thanh bên phải",
       "toggle_show_topics": "Chuyển đổi chủ đề",
       "toggle_sidebar": "Chuyển đổi thanh bên",
+      "translate_clipboard": "[to be translated]:Translate Clipboard",
       "zoom_in": "Phóng to",
       "zoom_out": "Thu nhỏ",
       "zoom_reset": "Đặt lại thu phóng"
@@ -8071,6 +8171,10 @@
         "check": "Kiểm tra",
         "check_failed": "Verifikation fehlgeschlagen",
         "check_success": "Xác minh thành công",
+        "client_tools_preferred": {
+          "description": "[to be translated]:Use the search and URL-fetch services configured above even when the model has built-in search. When off, the model handles it.",
+          "label": "[to be translated]:Prefer configured search services"
+        },
         "compression": {
           "cutoff": {
             "limit": {
@@ -8193,6 +8297,22 @@
           "label": "Tên ngôn ngữ",
           "placeholder": "I’m ready—please provide the English text you’d like translated."
         }
+      },
+      "glossary": {
+        "delete": {
+          "description": "[to be translated]:Delete this glossary entry?",
+          "title": "[to be translated]:Delete glossary entry"
+        },
+        "error": {
+          "add": "[to be translated]:Failed to add glossary entry",
+          "required": "[to be translated]:Source and target phrases are required"
+        },
+        "hint": "[to be translated]:Matched enabled terms are injected through {{customized_dictionary}} in a translation prompt.",
+        "source": "[to be translated]:Source phrase",
+        "source_placeholder": "[to be translated]:Term in the source text",
+        "target": "[to be translated]:Required translation",
+        "target_placeholder": "[to be translated]:Required target wording",
+        "title": "[to be translated]:Translation glossary"
       },
       "prompt": "Lời nhắc dịch thuật",
       "title": "Cài đặt dịch thuật"
@@ -8383,8 +8503,10 @@
       "language": "Bất kỳ ngôn ngữ nào"
     },
     "button": {
+      "polish_and_translate": "[to be translated]:Polish then translate",
       "translate": "Dịch"
     },
+    "clipboard_watch": "[to be translated]:Watch clipboard and translate changes",
     "close": "Đóng",
     "closed": "Dịch đã đóng",
     "complete": "Dịch hoàn thành",
@@ -8393,6 +8515,11 @@
       "title": "Xác nhận dịch thuật"
     },
     "copied": "Contenido de traducción copiado",
+    "counter": {
+      "tip": "[to be translated]:Estimated tokens include the active translation prompt.",
+      "tokens": "[to be translated]:tokens",
+      "words": "[to be translated]:words"
+    },
     "custom": {
       "label": "Ngôn ngữ tùy chỉnh"
     },
@@ -8405,6 +8532,10 @@
         "auto": {
           "label": "Tự động",
           "tip": "Tự động chọn phương pháp phát hiện phù hợp"
+        },
+        "heuristic": {
+          "label": "[to be translated]:Heuristic",
+          "tip": "[to be translated]:Use fast script and character-pattern detection"
         },
         "label": "Phương pháp phát hiện tự động",
         "llm": {
@@ -8456,6 +8587,11 @@
       "reading": "Đang đọc nội dung tệp...",
       "upload": "Thả hoặc nhấp để tải lên hình ảnh/tài liệu"
     },
+    "flip": {
+      "label": "[to be translated]:Correct detected direction and retranslate",
+      "native_language_not_in_pair": "[to be translated]:The native language is not included in the bidirectional pair.",
+      "success": "[to be translated]:Translation direction corrected"
+    },
     "history": {
       "back": "Quay lại danh sách",
       "clear": "Xóa lịch sử",
@@ -8489,6 +8625,7 @@
       "target": "Mục tiêu",
       "title": "Historial de Traducción"
     },
+    "html_conversion": "[to be translated]:Convert rich HTML clipboard content to Markdown",
     "info": {
       "aborted": "Dịch bị hủy"
     },
@@ -8509,20 +8646,71 @@
     "output": {
       "placeholder": "Übersetzung"
     },
+    "paste": "[to be translated]:Paste from clipboard",
+    "post_processing": {
+      "enable": "[to be translated]:Enable post-processing",
+      "english_straight_quotes": "[to be translated]:Normalize English straight quotes",
+      "zh_smart_quotes": "[to be translated]:Use Chinese smart quotes",
+      "zh_text_spacing": "[to be translated]:Add Chinese/Latin text spacing"
+    },
     "preferred_target": "Meta Preferida",
     "processing": "Traduction en cours...",
     "settings": {
       "autoCopy": "Copy after translation",
       "bidirectional": "Cài đặt Dịch thuật Hai chiều",
       "bidirectional_tip": "Khi được bật, chỉ hỗ trợ dịch hai chiều giữa ngôn ngữ nguồn và ngôn ngữ đích",
+      "custom_body": {
+        "polish": "[to be translated]:Polish request",
+        "reasoning_override": "[to be translated]:Reasoning-related custom parameters override the Minimize reasoning switch for this request type.",
+        "title": "[to be translated]:Custom request parameters",
+        "translate": "[to be translated]:Translate request"
+      },
       "error": {
         "save": "Không lưu được cài đặt dịch"
+      },
+      "font_size": "[to be translated]:Font size",
+      "global_translate_model": "[to be translated]:Global translation model",
+      "group_model": "[to be translated]:Models",
+      "group_post_processing": "[to be translated]:Post-processing",
+      "json_structure_view": {
+        "copy_blank_line_between_rows": "[to be translated]:Blank line between copied rows",
+        "copy_separator": {
+          "chinese_colon": "[to be translated]:Chinese colon",
+          "chinese_colon_newline": "[to be translated]:Chinese colon + newline",
+          "colon_newline": "[to be translated]:Colon + newline",
+          "colon_space": "[to be translated]:Colon + space",
+          "label": "[to be translated]:Selection copy separator"
+        },
+        "label": "[to be translated]:JSON structure view"
+      },
+      "layout": {
+        "auto": "[to be translated]:Auto",
+        "horizontal": "[to be translated]:Horizontal",
+        "label": "[to be translated]:Panel layout",
+        "vertical": "[to be translated]:Vertical"
+      },
+      "minimize_thinking": {
+        "label": "[to be translated]:Minimize reasoning",
+        "tip": "[to be translated]:Disable reasoning unless custom parameters explicitly control it"
       },
       "model": "Model Ayarları",
       "model_desc": "Modelo usado para el servicio de traducción",
       "model_placeholder": "Chọn mô hình dịch",
+      "native_language": "[to be translated]:Native language",
+      "native_to_other_model": "[to be translated]:Native to other languages",
       "no_model_warning": "Chưa chọn mô hình dịch thuật",
+      "other_to_native_model": "[to be translated]:Other languages to native",
+      "polish_enabled": "[to be translated]:Polish before translation",
+      "polish_model": "[to be translated]:Polish model",
       "preview": "Xem trước Markdown",
+      "prompt": {
+        "native_to_other": "[to be translated]:Native-to-other prompt",
+        "other_to_native": "[to be translated]:Other-to-native prompt",
+        "polish": "[to be translated]:Polish prompt"
+      },
+      "regex_rules": {
+        "title": "[to be translated]:Regex replacements"
+      },
       "scroll_sync": "Cài đặt cuộn đồng bộ",
       "title": "Cài đặt Dịch thuật"
     },

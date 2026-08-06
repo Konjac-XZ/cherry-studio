@@ -196,6 +196,8 @@ export interface MessageListItem {
   messageSnapshot?: MessageSnapshot
   siblingsGroupId?: number
   isActiveBranch?: boolean
+  /** Presentation-only; the persisted row remains available to prompt/context construction. */
+  hiddenInChat?: boolean
   stats?: MessageStats
   mentions?: Array<{
     id: string
@@ -308,6 +310,7 @@ export interface MessageListState {
   editingMessageId?: string | null
   translationLanguages?: TranslateLanguage[]
   translationLanguagesStatus?: 'loading' | 'error' | 'ready'
+  nativeTranslationLanguage?: TranslateLanguage
   getMessageUiState?: (messageId: string) => MessageUiState
   getMessageSiblings?: (messageId: string) => MessageSiblingInfo | null
   getMessageActivityState?: (message: MessageListItem) => MessageActivityState
@@ -382,6 +385,7 @@ export interface MessageListActions {
   requestTranslationLanguages?: () => void
   retryTranslationLanguages?: () => void
   translateMessage?: (messageId: string, language: TranslateLanguage, sourceText: string) => void | Promise<void>
+  beautifyMessage?: (messageId: string) => Promise<'changed' | 'unchanged' | 'empty'>
   abortMessageTranslation?: (messageId: string) => void | Promise<void>
   removeMessageTranslation?: (messageId: string) => void | Promise<void>
   renderRegenerateModelPicker?: (options: MessageModelPickerRenderOptions) => ReactNode

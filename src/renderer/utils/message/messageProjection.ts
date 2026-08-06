@@ -19,10 +19,17 @@ export function sharedMessageToUIMessage(shared: SharedMessage): CherryUIMessage
       status: shared.status,
       turnOptions: shared.data.turnOptions,
       createdAt: shared.createdAt,
+      updatedAt: shared.updatedAt,
+      hiddenInChat: shared.data.presentation?.hiddenInChat || undefined,
       stats: shared.stats ?? undefined,
       ...(shared.stats?.totalTokens ? { totalTokens: shared.stats.totalTokens } : {})
     }
   }
+}
+
+/** Presentation policy shared by chat, history, flow, and message shortcuts. */
+export function isMessageVisibleInConversation(message: CherryUIMessage): boolean {
+  return !(message.role === 'user' && message.metadata?.hiddenInChat)
 }
 
 export function uiMessagesToPartsMap(messages: CherryUIMessage[]): Record<string, CherryMessagePart[]> {

@@ -97,10 +97,26 @@ describe('useTranslateHistories', () => {
     renderHook(() => useTranslateHistories({ search: 'hello', star: true, pageSize: 5 }))
 
     expect(mockUseInfiniteQuery).toHaveBeenCalledWith('/translate/histories', {
-      query: { search: 'hello', star: true },
+      query: { search: 'hello', star: true, languageCodes: undefined },
       limit: 5,
       swrOptions: { keepPreviousData: false }
     })
+  })
+
+  it('forwards localized language matches and stops exposing rows at the render cap', () => {
+    const items = Array.from({ length: 201 }, (_, index) => ({ id: String(index) }))
+    mockUseInfiniteQuery.mockReturnValue(buildInfiniteState({ pages: [{ items, total: 300 }], hasNext: true }))
+
+    const { result } = renderHook(() =>
+      useTranslateHistories({ search: 'English', languageCodes: ['en-us'], maxItems: 200 })
+    )
+
+    expect(mockUseInfiniteQuery).toHaveBeenCalledWith(
+      '/translate/histories',
+      expect.objectContaining({ query: { search: 'English', star: undefined, languageCodes: ['en-us'] } })
+    )
+    expect(result.current.items).toHaveLength(200)
+    expect(result.current.hasMore).toBe(false)
   })
 
   it('exposes SWR errors so consumers can distinguish loading from failure', () => {

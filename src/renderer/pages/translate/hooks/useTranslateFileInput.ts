@@ -1,0 +1,180 @@
+import { loggerService } from '@logger'
+import { useDrag } from '@renderer/hooks/useDrag'
+import { useFiles } from '@renderer/hooks/useFiles'
+import { toast } from '@renderer/services/toast'
+import { type FileContentGateway, ipcFileContentGateway } from '@renderer/services/translatePlatform'
+import type { FileMetadata } from '@renderer/types/file'
+import { getFileExtension } from '@renderer/utils/file'
+import { getFilesFromDropEvent, getTextFromDropEvent } from '@renderer/utils/input'
+import { htmlToTranslateMarkdown, shouldPreferPlainTextClipboard } from '@renderer/utils/translate'
+import { documentExts, imageExts, textExts } from '@shared/utils/file'
+import { isEmpty } from 'es-toolkit/compat'
+import type { ClipboardEvent, Dispatch, DragEvent, MutableRefObject, SetStateAction } from 'react'
+import { useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
+
+import { useTranslateFileProcessor } from './useTranslateFileProcessor'
+
+const logger = loggerService.withContext('TranslateFileInput')
+
+type UseTranslateFileInputParams = {
+  appendText: (value: string) => void
+  forcePlainTextPasteRef: MutableRefObject<boolean>
+  htmlConversionEnabled: boolean
+  isOcrRunning: boolean
+  isProcessing: boolean
+  isTranslating: boolean
+  onOcrStarted: (jobId: string) => void
+  setIsProcessing: (value: boolean) => void
+  setText: Dispatch<SetStateAction<string>>
+  fileContentGateway?: FileContentGateway
+}
+
+export const useTranslateFileInput = ({
+  appendText,
+  forcePlainTextPasteRef,
+  htmlConversionEnabled,
+  isOcrRunning,
+  isProcessing,
+  isTranslating,
+  onOcrStarted,
+  setIsProcessing,
+  setText,
+  fileContentGateway = ipcFileContentGateway
+}: UseTranslateFileInputParams) => {
+  const { t } = useTranslation()
+  const { onSelectFile, selecting, clearFiles } = useFiles({ extensions: [...imageExts, ...textExts, ...documentExts] })
+  const { getSingleFile, processFile } = useTranslateFileProcessor({ appendText, fileContentGateway, onOcrStarted })
+
+  const handleSelectFile = useCallback(async () => {
+    if (selecting || isTranslating || isOcrRunning) return
+    setIsProcessing(true)
+    try {
+      const files = await onSelectFile({ multipleSelections: false })
+      const file = getSingleFile(files) as FileMetadata | null
+      if (file) await processFile(file)
+    } catch (error) {
+      logger.error('Unknown error when selecting file.', error as Error)
+      toast.error(t('translate.files.error.unknown'))
+    } finally {
+      clearFiles()
+      setIsProcessing(false)
+    }
+  }, [clearFiles, getSingleFile, isOcrRunning, isTranslating, onSelectFile, processFile, selecting, setIsProcessing, t])
+
+  const { handleDragEnter, handleDragLeave, handleDragOver, handleDrop: preventDrop } = useDrag<HTMLDivElement>()
+
+  const onDrop = useCallback(
+    async (event: DragEvent<HTMLDivElement>) => {
+      if (isProcessing || isOcrRunning) return
+      setIsProcessing(true)
+      try {
+        const data = await getTextFromDropEvent(event).catch((error) => {
+          logger.error('getTextFromDropEvent', error as Error)
+          toast.error(t('translate.files.error.unknown'))
+          return null
+        })
+        if (data) appendText(data)
+
+        const droppedFiles = await getFilesFromDropEvent(event).catch((error) => {
+          logger.error('getFilesFromDropEvent', error as Error)
+          toast.error(t('translate.files.error.unknown'))
+          return null
+        })
+        if (!droppedFiles) return
+        const file = getSingleFile(droppedFiles) as FileMetadata | null
+        if (file) await processFile(file)
+      } finally {
+        setIsProcessing(false)
+      }
+    },
+    [appendText, getSingleFile, isOcrRunning, isProcessing, processFile, setIsProcessing, t]
+  )
+
+  const onPaste = useCallback(
+    async (event: ClipboardEvent<HTMLTextAreaElement>) => {
+      if (isProcessing || isOcrRunning) return
+      const forcePlainTextPaste = forcePlainTextPasteRef.current
+      forcePlainTextPasteRef.current = false
+      const hasFiles = !!event.clipboardData.files && event.clipboardData.files.length > 0
+
+      if (!hasFiles) {
+        const plainText = event.clipboardData.getData('text/plain') || event.clipboardData.getData('text')
+        const insertAtSelection = (value: string) => {
+          const { selectionStart, selectionEnd } = event.currentTarget
+          setText((current) => current.slice(0, selectionStart) + value + current.slice(selectionEnd))
+        }
+        if (forcePlainTextPaste) {
+          if (!plainText) return
+          event.preventDefault()
+          insertAtSelection(plainText)
+          return
+        }
+        if (!htmlConversionEnabled) return
+        const html = event.clipboardData.getData('text/html')
+        if (!html.trim()) return
+        const converted = shouldPreferPlainTextClipboard(html, plainText) ? plainText : htmlToTranslateMarkdown(html)
+        if (!converted.trim()) return
+        event.preventDefault()
+        insertAtSelection(converted)
+        return
+      }
+
+      setIsProcessing(true)
+      try {
+        if (!isEmpty(event.clipboardData.getData('text'))) return
+        event.preventDefault()
+        const file = getSingleFile(event.clipboardData.files) as File | null
+        if (!file) return
+
+        const filePath = fileContentGateway.getPathForFile(file)
+        let selectedFile: FileMetadata | null
+        if (!filePath) {
+          if (!file.type.startsWith('image/')) {
+            toast.info(t('common.file.not_supported', { type: getFileExtension(file.name) }))
+            return
+          }
+          const tempFilePath = await fileContentGateway.createTempFile(file.name)
+          await fileContentGateway.write(tempFilePath, new Uint8Array(await file.arrayBuffer()))
+          selectedFile = await fileContentGateway.get(tempFilePath)
+        } else {
+          selectedFile = await fileContentGateway.get(filePath)
+        }
+
+        if (!selectedFile) {
+          toast.error(t('translate.files.error.unknown'))
+          return
+        }
+        await processFile(selectedFile)
+      } catch (error) {
+        logger.error('onPaste:', error as Error)
+        toast.error(t('chat.input.file_error'))
+      } finally {
+        setIsProcessing(false)
+      }
+    },
+    [
+      fileContentGateway,
+      forcePlainTextPasteRef,
+      getSingleFile,
+      htmlConversionEnabled,
+      isOcrRunning,
+      isProcessing,
+      processFile,
+      setIsProcessing,
+      setText,
+      t
+    ]
+  )
+
+  return {
+    handleDragEnter,
+    handleDragLeave,
+    handleDragOver,
+    handleSelectFile,
+    onDrop,
+    onPaste,
+    preventDrop,
+    selecting
+  }
+}

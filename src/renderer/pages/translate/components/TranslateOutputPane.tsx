@@ -1,16 +1,23 @@
 import { Scrollbar } from '@cherrystudio/ui'
+import { getJsonStructureForDisplay, type JsonStructureCopySeparator } from '@renderer/utils/translate'
 import { Check, Copy, NotebookPen } from 'lucide-react'
-import type { Ref } from 'react'
+import { type Ref, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import FloatingActionBar from './FloatingActionBar'
 import IconButton from './IconButton'
+import JsonStructureView from './JsonStructureView'
 
 type Props = {
   ref?: Ref<HTMLDivElement>
   translatedContent: string
   renderedMarkdown: string
   enableMarkdown: boolean
+  enableJsonStructure?: boolean
+  jsonStructureCopySeparator?: JsonStructureCopySeparator
+  jsonStructureCopyBlankLineBetweenRows?: boolean
   translating: boolean
+  fontSize?: number
   copied: boolean
   onCopy: () => void
   onExportToNotes: () => void
@@ -22,13 +29,21 @@ const TranslateOutputPane = ({
   translatedContent,
   renderedMarkdown,
   enableMarkdown,
+  enableJsonStructure = false,
+  jsonStructureCopySeparator = 'colon-space',
+  jsonStructureCopyBlankLineBetweenRows = false,
   translating,
+  fontSize = 16,
   copied,
   onCopy,
   onExportToNotes,
   onScroll
 }: Props) => {
   const { t } = useTranslation()
+  const jsonStructure = useMemo(
+    () => getJsonStructureForDisplay(translatedContent, enableJsonStructure, translating),
+    [enableJsonStructure, translatedContent, translating]
+  )
 
   return (
     <div
@@ -37,6 +52,7 @@ const TranslateOutputPane = ({
       <Scrollbar
         ref={ref}
         onScroll={onScroll}
+        style={{ fontSize }}
         className="selectable min-h-0 flex-1 overflow-x-hidden p-4 pr-12 text-base leading-relaxed">
         <div className="flex min-h-full flex-col">
           {translating && !translatedContent ? (
@@ -45,7 +61,13 @@ const TranslateOutputPane = ({
               <span>{t('translate.processing')}</span>
             </div>
           ) : translatedContent ? (
-            enableMarkdown ? (
+            jsonStructure ? (
+              <JsonStructureView
+                blankLineBetweenRows={jsonStructureCopyBlankLineBetweenRows}
+                copySeparator={jsonStructureCopySeparator}
+                value={jsonStructure}
+              />
+            ) : enableMarkdown ? (
               <div className="markdown" dangerouslySetInnerHTML={{ __html: renderedMarkdown }} />
             ) : (
               <div className="wrap-break-word whitespace-pre-wrap text-foreground">{translatedContent}</div>
@@ -53,11 +75,17 @@ const TranslateOutputPane = ({
           ) : null}
         </div>
       </Scrollbar>
-      <div className="absolute top-4 right-3 flex">
-        <IconButton size="sm" onClick={onCopy} disabled={!translatedContent} aria-label={t('common.copy')}>
-          {copied ? <Check size={14} className="text-foreground" /> : <Copy size={14} />}
-        </IconButton>
-      </div>
+      <FloatingActionBar
+        actions={[
+          {
+            key: 'copy',
+            label: t('common.copy'),
+            onClick: onCopy,
+            disabled: !translatedContent,
+            icon: copied ? <Check size={14} className="text-foreground" /> : <Copy size={14} />
+          }
+        ]}
+      />
       <div className="flex shrink-0 items-center px-3 py-4">
         {translatedContent && <span className="text-foreground-tertiary text-xs">{translatedContent.length}</span>}
         <IconButton

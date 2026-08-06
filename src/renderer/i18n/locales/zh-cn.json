@@ -1646,6 +1646,11 @@
       }
     },
     "message": {
+      "beautify": {
+        "empty": "回复中没有可美化的文本",
+        "label": "美化回复",
+        "unchanged": "回复已经符合所选排版规则"
+      },
       "cache_stats": {
         "inline": "缓存 {{hit_rate}}%",
         "tooltip": "缓存读取 {{cache_read}} / 写入 {{cache_write}} / 未缓存 {{no_cache}} · 节省 {{saved}} 输入 Token"
@@ -1707,6 +1712,7 @@
         "usage": "Token 使用",
         "waiting_first_token": "等待"
       },
+      "translate_native": "翻译为{{language}}",
       "useful": {
         "label": "设置为上下文",
         "tip": "在这组消息中，该消息将被选择加入上下文"
@@ -3442,6 +3448,9 @@
         }
       },
       "basic": {
+        "autoCleanupUserMessage": "隐藏已完成的用户消息",
+        "autoCopy": "复制成功回复",
+        "autoTranslate": "将成功回复翻译为母语",
         "context_compress_enabled": "自动压缩",
         "context_compress_model": "压缩模型",
         "context_compress_model_follow": "默认",
@@ -3456,6 +3465,15 @@
         "desc": "填写头像、名称、简介和系统提示词",
         "description_label": "简介",
         "field": {
+          "autoCleanupUserMessage": {
+            "hint": "仅在全部兄弟回复结束且至少一个成功后隐藏用户气泡；消息仍保留在上下文中"
+          },
+          "autoCopy": {
+            "hint": "排版处理完成后，复制选中或最高优先级的成功回复"
+          },
+          "autoTranslate": {
+            "hint": "使用翻译设置中配置的母语添加一份译文"
+          },
           "avatar": {
             "hint": "用于在资源库和对话中识别助手"
           },
@@ -3502,6 +3520,12 @@
           },
           "top_p": {
             "hint": "启用后限制采样范围"
+          },
+          "zhCnMarkdownSmartQuotes": {
+            "hint": "复用翻译页面的简体中文 Markdown 智能引号处理器"
+          },
+          "zhMarkdownTextSpacing": {
+            "hint": "复用翻译页面的中英文 Markdown 间距处理器"
           }
         },
         "group": "分组",
@@ -3518,6 +3542,7 @@
         "model_pick": "选择模型",
         "pick_avatar": "选择头像",
         "precise": "精确",
+        "reply_automation": "成功回复自动处理",
         "stream_output": "流式输出",
         "tag_empty": "没有可选的标签",
         "tag_hint": "如需新增标签,请在资源库顶部栏的「+ 标签」入口创建",
@@ -3526,7 +3551,9 @@
         "tags": "标签",
         "temperature": "模型温度",
         "title": "基础设置",
-        "top_p": "Top-P"
+        "top_p": "Top-P",
+        "zhCnMarkdownSmartQuotes": "中文智能引号",
+        "zhMarkdownTextSpacing": "中英文间距"
       },
       "breadcrumb": "资源库",
       "dialogs": {
@@ -7709,6 +7736,7 @@
         "all": "全部服务商",
         "disabled": "仅已禁用",
         "enabled": "仅已启用",
+        "hidden_builtin": "已隐藏的内置服务商",
         "label": "筛选服务商"
       },
       "filter_agent": "筛选支持 Agent 的服务商",
@@ -7721,6 +7749,11 @@
         "sign_in_failed": "登录失败，请重试。",
         "sign_in_success": "已登录 Grok CLI",
         "signing_in": "等待浏览器…"
+      },
+      "hide": {
+        "action": "隐藏",
+        "content": "此内置服务商将被禁用，并从常规服务商列表和模型选择器中隐藏。你可以从“已隐藏的内置服务商”筛选项中恢复它。",
+        "title": "隐藏内置服务商"
       },
       "image_endpoints": {
         "image_edit_base_url": {
@@ -7793,6 +7826,7 @@
       "reorder_failed": "调整服务商顺序失败",
       "request_configuration": "请求配置",
       "request_configuration_tooltip": "配置 API Host 与自定义请求头",
+      "restore": "恢复",
       "save_failed": "服务商设置保存失败",
       "search": "搜索模型平台...",
       "search_placeholder": "搜索模型 ID 或名称",
@@ -7945,13 +7979,16 @@
       "enabled": "启用",
       "exit_fullscreen": "退出全屏",
       "filter": "筛选",
+      "go_home": "返回首页",
       "label": "按键",
       "move_tab_to_first": "将标签页移到最左",
       "new_topic": "新建对话",
+      "next_assistant": "切换到下一个助手",
       "occupied_by_other_application": "该快捷键已被系统或其他应用占用",
       "open_tab_in_new_window": "在新窗口中打开标签页",
       "pin_tab": "切换置顶标签页",
       "press_shortcut": "按下快捷键",
+      "previous_assistant": "切换到上一个助手",
       "print": "打印",
       "quick_assistant": "快捷助手",
       "rename_topic": "重命名对话",
@@ -7976,6 +8013,7 @@
       "toggle_right_sidebar": "切换右侧边栏",
       "toggle_show_topics": "切换对话显示",
       "toggle_sidebar": "切换侧边栏",
+      "translate_clipboard": "翻译剪贴板",
       "zoom_in": "放大界面",
       "zoom_out": "缩小界面",
       "zoom_reset": "重置缩放"
@@ -8260,6 +8298,22 @@
           "placeholder": "中文"
         }
       },
+      "glossary": {
+        "delete": {
+          "description": "确定删除这条术语吗？",
+          "title": "删除术语"
+        },
+        "error": {
+          "add": "添加术语失败",
+          "required": "原文词语和指定译法不能为空"
+        },
+        "hint": "启用且命中的词条会通过翻译提示词中的 {{customized_dictionary}} 注入。",
+        "source": "原文词语",
+        "source_placeholder": "原文中的词语",
+        "target": "指定译法",
+        "target_placeholder": "目标语言中的指定译法",
+        "title": "翻译术语表"
+      },
       "prompt": "翻译提示词",
       "title": "翻译设置"
     },
@@ -8449,8 +8503,10 @@
       "language": "任意语言"
     },
     "button": {
+      "polish_and_translate": "润色后翻译",
       "translate": "翻译"
     },
+    "clipboard_watch": "监视剪贴板并自动翻译变化",
     "close": "关闭",
     "closed": "翻译已关闭",
     "complete": "翻译完成",
@@ -8459,6 +8515,11 @@
       "title": "翻译确认"
     },
     "copied": "翻译内容已复制",
+    "counter": {
+      "tip": "Token 估算包含当前生效的翻译提示词。",
+      "tokens": "Token",
+      "words": "词"
+    },
     "custom": {
       "label": "自定义语言"
     },
@@ -8471,6 +8532,10 @@
         "auto": {
           "label": "自动",
           "tip": "自动选择合适的检测方法"
+        },
+        "heuristic": {
+          "label": "启发式",
+          "tip": "使用快速的文字脚本与字符特征检测"
         },
         "label": "自动检测方法",
         "llm": {
@@ -8522,6 +8587,11 @@
       "reading": "读取文件内容中...",
       "upload": "拖入或点击上传图片/文档"
     },
+    "flip": {
+      "label": "纠正检测方向并重新翻译",
+      "native_language_not_in_pair": "当前双向语言对不包含母语。",
+      "success": "已纠正翻译方向"
+    },
     "history": {
       "back": "返回列表",
       "clear": "清空历史",
@@ -8555,6 +8625,7 @@
       "target": "译文",
       "title": "翻译历史"
     },
+    "html_conversion": "将剪贴板富文本 HTML 转换为 Markdown",
     "info": {
       "aborted": "翻译中止"
     },
@@ -8575,20 +8646,71 @@
     "output": {
       "placeholder": "翻译"
     },
+    "paste": "从剪贴板粘贴",
+    "post_processing": {
+      "enable": "启用后处理",
+      "english_straight_quotes": "规范英文直引号",
+      "zh_smart_quotes": "使用中文智能引号",
+      "zh_text_spacing": "添加中西文间距"
+    },
     "preferred_target": "首选目标",
     "processing": "翻译中...",
     "settings": {
       "autoCopy": "翻译完成后自动复制",
       "bidirectional": "双向翻译设置",
       "bidirectional_tip": "开启后，仅支持在源语言和目标语言之间进行双向翻译",
+      "custom_body": {
+        "polish": "润色请求",
+        "reasoning_override": "此请求类型中的推理相关自定义参数会覆盖“尽量关闭思考”开关。",
+        "title": "自定义请求参数",
+        "translate": "翻译请求"
+      },
       "error": {
         "save": "保存翻译设置失败"
+      },
+      "font_size": "字体大小",
+      "global_translate_model": "全局翻译模型",
+      "group_model": "模型",
+      "group_post_processing": "后处理",
+      "json_structure_view": {
+        "copy_blank_line_between_rows": "复制多行时插入空行",
+        "copy_separator": {
+          "chinese_colon": "中文冒号",
+          "chinese_colon_newline": "中文冒号加换行",
+          "colon_newline": "冒号加换行",
+          "colon_space": "冒号加空格",
+          "label": "选择复制分隔符"
+        },
+        "label": "JSON 结构视图"
+      },
+      "layout": {
+        "auto": "自动",
+        "horizontal": "横向",
+        "label": "面板布局",
+        "vertical": "纵向"
+      },
+      "minimize_thinking": {
+        "label": "尽量关闭思考",
+        "tip": "除非自定义参数显式控制推理，否则关闭模型推理"
       },
       "model": "模型设置",
       "model_desc": "翻译服务使用的模型",
       "model_placeholder": "选择翻译模型",
+      "native_language": "母语",
+      "native_to_other_model": "母语译为其他语言",
       "no_model_warning": "未选择翻译模型",
+      "other_to_native_model": "其他语言译为母语",
+      "polish_enabled": "翻译前润色",
+      "polish_model": "润色模型",
       "preview": "Markdown 预览",
+      "prompt": {
+        "native_to_other": "母语译外语提示词",
+        "other_to_native": "外语译母语提示词",
+        "polish": "润色提示词"
+      },
+      "regex_rules": {
+        "title": "正则替换"
+      },
       "scroll_sync": "滚动同步设置",
       "title": "翻译设置"
     },

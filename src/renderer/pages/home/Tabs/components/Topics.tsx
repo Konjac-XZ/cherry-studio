@@ -1686,6 +1686,19 @@ const TopicRow = memo(function TopicRow({
       onClick={() => {
         if (rightPanelState?.maximized) rightPanelActions?.minimize()
         onSwitchTopic(topic)
+      }}
+      onAuxClick={(event) => {
+        if (event.button !== 1) return
+
+        event.preventDefault()
+        event.stopPropagation()
+        if (!canDeleteTopic || rowState.renaming) return
+
+        if (event.ctrlKey || event.metaKey || isConfirmingDeletion) {
+          void onConfirmDelete(topic, event)
+          return
+        }
+        onDeleteClick(topic.id, event)
       }}>
       {showLeadingSlot && <ResourceList.ItemLeadingSlot className="relative" />}
       <ResourceList.RenameField

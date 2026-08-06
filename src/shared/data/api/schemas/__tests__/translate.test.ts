@@ -122,12 +122,31 @@ describe('Translate entity schemas are strict', () => {
         targetText: '你好',
         sourceLanguage: 'en-us',
         targetLanguage: 'zh-cn',
+        modelId: null,
+        cacheKey: null,
         star: false,
         createdAt: '2026-01-01T00:00:00.000Z',
         updatedAt: '2026-01-01T00:00:00.000Z',
         extra: true
       }).success
     ).toBe(false)
+  })
+
+  it('TranslateHistorySchema accepts cache metadata with a qualified model identity', () => {
+    expect(
+      TranslateHistorySchema.safeParse({
+        id: '019b0830-2e52-7000-8000-000000000001',
+        sourceText: 'Hello',
+        targetText: '你好',
+        sourceLanguage: 'en-us',
+        targetLanguage: 'zh-cn',
+        modelId: 'openai::gpt-5',
+        cacheKey: 'translate:openai::gpt-5:en-us:zh-cn:Hello',
+        star: false,
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z'
+      }).success
+    ).toBe(true)
   })
 
   it('TranslateLanguageSchema rejects unknown fields', () => {

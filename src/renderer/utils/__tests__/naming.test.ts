@@ -11,6 +11,7 @@ import {
   getFirstCharacter,
   getLeadingEmoji,
   getLowerBaseModelName,
+  inferModelNameFromId,
   isEmoji,
   removeLeadingEmoji,
   removeSpecialCharactersForTopicName,
@@ -299,6 +300,35 @@ describe('naming', () => {
 
     it('should handle Fireworks models with multiple version dots', () => {
       expect(getLowerBaseModelName('accounts/fireworks/models/deepseek-v3p1p2')).toBe('deepseek-v3.1.2')
+    })
+  })
+
+  describe('inferModelNameFromId', () => {
+    it('infers readable names from common model id patterns', () => {
+      expect(inferModelNameFromId('deepseek-v4-flash')).toBe('DeepSeek V4 Flash')
+      expect(inferModelNameFromId('deepseek/deepseek-v4-flash')).toBe('DeepSeek V4 Flash')
+      expect(inferModelNameFromId('claude-opus-4-6')).toBe('Claude Opus 4.6')
+      expect(inferModelNameFromId('qwen3-32b')).toBe('Qwen 3 32B')
+      expect(inferModelNameFromId('claude-haiku-4-5-20251001')).toBe('Claude Haiku 4.5 2025-10-01')
+      expect(inferModelNameFromId('o3-2025-04-16')).toBe('o3 2025-04-16')
+      expect(inferModelNameFromId('qwen/qwen3-235b-a22b-thinking-2507')).toBe('Qwen 3 235B A22B Thinking 25-07')
+    })
+
+    it('preserves model-family specific casing for suffixes and acronyms', () => {
+      expect(inferModelNameFromId('gpt-4o')).toBe('GPT-4o')
+      expect(inferModelNameFromId('glm-4.6v')).toBe('GLM-4.6V')
+      expect(inferModelNameFromId('o3')).toBe('o3')
+      expect(inferModelNameFromId('o1-mini')).toBe('o1 Mini')
+      expect(inferModelNameFromId('qwen3.6-flash')).toBe('Qwen 3.6 Flash')
+      expect(inferModelNameFromId('qwen3-0.6b')).toBe('Qwen 3 0.6B')
+      expect(inferModelNameFromId('tts')).toBe('TTS')
+      expect(inferModelNameFromId('tts-1')).toBe('TTS 1')
+    })
+
+    it('handles empty and already separated ids safely', () => {
+      expect(inferModelNameFromId('')).toBe('')
+      expect(inferModelNameFromId('Gemini 3 Pro')).toBe('Gemini 3 Pro')
+      expect(inferModelNameFromId('openai/gpt_5_1')).toBe('GPT-5 1')
     })
   })
 

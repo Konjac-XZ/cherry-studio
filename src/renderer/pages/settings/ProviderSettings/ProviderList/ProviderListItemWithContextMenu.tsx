@@ -3,7 +3,7 @@ import ModelNotesPopup from '@renderer/pages/settings/ProviderSettings/ModelNote
 import { providerListClasses } from '@renderer/pages/settings/ProviderSettings/primitives/ProviderSettingsPrimitives'
 import { getFancyProviderName } from '@renderer/pages/settings/ProviderSettings/utils/providerDisplay'
 import type { Provider } from '@shared/data/types/provider'
-import { CopyPlus, Edit, Trash2, UserPen } from 'lucide-react'
+import { CopyPlus, Edit, EyeOff, RotateCcw, Trash2, UserPen } from 'lucide-react'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -19,6 +19,8 @@ interface ProviderListItemWithContextMenuProps {
   onSelect: () => void
   onEdit: () => void
   onDelete: () => void
+  onHide?: () => void
+  onRestore?: () => void
   onDuplicate?: () => void
   showManagementActions: boolean
   listState: ListDragState
@@ -33,6 +35,8 @@ export default function ProviderListItemWithContextMenu({
   onSelect,
   onEdit,
   onDelete,
+  onHide,
+  onRestore,
   onDuplicate,
   showManagementActions,
   listState,
@@ -49,6 +53,24 @@ export default function ProviderListItemWithContextMenu({
         label: t('common.edit'),
         icon: <Edit size={14} />,
         onSelect: onEdit
+      })
+    }
+    if (onRestore) {
+      items.push({
+        type: 'item',
+        id: 'restore',
+        label: t('settings.provider.restore'),
+        icon: <RotateCcw size={14} />,
+        onSelect: onRestore
+      })
+    } else if (onHide) {
+      items.push({
+        type: 'item',
+        id: 'hide',
+        label: t('settings.provider.hide.action'),
+        icon: <EyeOff size={14} />,
+        destructive: true,
+        onSelect: onHide
       })
     }
     if (onDuplicate) {
@@ -78,7 +100,7 @@ export default function ProviderListItemWithContextMenu({
       })
     }
     return items
-  }, [onDelete, onDuplicate, onEdit, provider.id, showManagementActions, t])
+  }, [onDelete, onDuplicate, onEdit, onHide, onRestore, provider.id, showManagementActions, t])
 
   // Right-click stays uncontrolled — Radix handles cross-popup mutex naturally.
   // The more-button popup remains controlled so the parent's single-row-active-at-a-time

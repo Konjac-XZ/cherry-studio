@@ -23,7 +23,7 @@
 import { loggerService } from '@logger'
 import { toast } from '@renderer/services/toast'
 import { formatErrorMessageWithPrefix, isAbortError } from '@renderer/utils/error'
-import { translateText } from '@renderer/utils/translate'
+import { translateText, type TranslateTextOptions } from '@renderer/utils/translate'
 import type { TranslateLangCode } from '@shared/data/preference/preferenceTypes'
 import type { TranslateLanguage } from '@shared/data/types/translate'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -67,7 +67,12 @@ export interface UseTranslateResult {
    * `undefined` on user-initiated abort or on a swallowed error
    * (when `rethrowError` is false).
    */
-  translate: (text: string, targetLanguage: TranslateLangCode | TranslateLanguage) => Promise<string | undefined>
+  translate: (
+    text: string,
+    targetLanguage: TranslateLangCode | TranslateLanguage,
+    runOptions?: TranslateTextOptions,
+    signal?: AbortSignal
+  ) => Promise<string | undefined>
   isTranslating: boolean
   /** Abort the in-flight translation. No-op when nothing is running. */
   cancel: () => void
@@ -103,7 +108,7 @@ export function useTranslate(options?: UseTranslateOptions): UseTranslateResult 
   }, [])
 
   const translate = useCallback<UseTranslateResult['translate']>(
-    async (text, targetLanguage) => {
+    async (text, targetLanguage, runOptions, externalSignal) => {
       // A new call supersedes any in-flight one — keeps semantics simple
       // (one translation per hook instance) and matches the existing stop-button
       // behaviour in TranslatePage.
@@ -114,6 +119,20 @@ export function useTranslate(options?: UseTranslateOptions): UseTranslateResult 
       const abortKey = activeAbortKeyRef.current
 
       setIsTranslating(true)
+
+      const onExternalAbort = () => {
+        controller.abort(externalSignal?.reason)
+        if (activeAbortKeyRef.current === abortKey) {
+          activeAbortKeyRef.current = null
+          activeControllerRef.current = null
+          setIsTranslating(false)
+        }
+      }
+      if (externalSignal?.aborted) {
+        onExternalAbort()
+        return undefined
+      }
+      externalSignal?.addEventListener('abort', onExternalAbort, { once: true })
 
       // Gate the progressive callback so a late `onResponse` from a
       // cancelled / superseded run doesn't write into consumer state.
@@ -135,7 +154,7 @@ export function useTranslate(options?: UseTranslateOptions): UseTranslateResult 
       }
 
       try {
-        const result = await translateText(text, targetLanguage, guardedOnResponse, controller.signal)
+        const result = await translateText(text, targetLanguage, guardedOnResponse, controller.signal, runOptions)
         if (wasSuperseded()) {
           // Cancelled or superseded mid-flight — discard the result so the
           // caller's `if (result)` success branch stays gated.
@@ -157,6 +176,7 @@ export function useTranslate(options?: UseTranslateOptions): UseTranslateResult 
         if (opts?.rethrowError) throw error
         return undefined
       } finally {
+        externalSignal?.removeEventListener('abort', onExternalAbort)
         finishIfActive()
       }
     },

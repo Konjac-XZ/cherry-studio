@@ -36,10 +36,10 @@ function resolveChatModelPreference(preferenceKey: string, value: unknown): stri
 }
 
 /**
- * Transform 4 legacy LLM Model objects into UniqueModelId preference values.
+ * Transform legacy LLM Model objects into UniqueModelId preference values.
  *
- * Sources: llm.defaultModel, llm.topicNamingModel, llm.quickModel, llm.translateModel
- * Targets: chat.default_model_id, topic.naming.model_id, feature.quick_assistant.model_id, feature.translate.model_id
+ * Sources: llm.defaultModel, llm.topicNamingModel, llm.quickModel,
+ * llm.translateModel, llm.polishModel
  */
 export function transformLlmModelIds(sources: Record<string, unknown>): TransformResult {
   return {
@@ -49,6 +49,10 @@ export function transformLlmModelIds(sources: Record<string, unknown>): Transfor
       'feature.quick_assistant.model_id',
       sources.quickModel
     ),
-    'feature.translate.model_id': resolveChatModelPreference('feature.translate.model_id', sources.translateModel)
+    'feature.translate.model_id': resolveChatModelPreference('feature.translate.model_id', sources.translateModel),
+    'feature.translate.model.polish_global_id': resolveChatModelPreference(
+      'feature.translate.model.polish_global_id',
+      sources.polishModel ?? sources.translateModel
+    )
   }
 }

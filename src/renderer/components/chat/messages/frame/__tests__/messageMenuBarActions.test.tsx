@@ -782,6 +782,46 @@ describe('messageMenuBarActions', () => {
     expect(translateMessage).toHaveBeenCalledWith('message-1', language, 'hello')
   })
 
+  it.each([
+    ['changed', 'notifySuccess', 'translate.post_processing.applied'],
+    ['unchanged', 'notifyInfo', 'chat.message.beautify.unchanged'],
+    ['empty', 'notifyWarning', 'chat.message.beautify.empty']
+  ] as const)('reports an honest %s result from the extracted reply beautifier', async (outcome, notifier, message) => {
+    const beautifyMessage = vi.fn().mockResolvedValue(outcome)
+    const notifications = {
+      notifySuccess: vi.fn(),
+      notifyInfo: vi.fn(),
+      notifyWarning: vi.fn()
+    }
+    const context = createActionContext({
+      actions: { beautifyMessage, ...notifications } as MessageListActions
+    })
+
+    await executeMessageMenuBarAction('beautify', context)
+
+    expect(beautifyMessage).toHaveBeenCalledWith('message-1')
+    expect(notifications[notifier]).toHaveBeenCalledWith(message)
+  })
+
+  it('offers native-language translation only when it can add a translation', async () => {
+    const translateMessage = vi.fn()
+    const language = { langCode: 'zh-cn', label: '简体中文' } as any
+    const context = createActionContext({
+      actions: { translateMessage } as MessageListActions,
+      nativeTranslationLanguage: language,
+      getTranslationLanguageLabel: () => '简体中文'
+    })
+
+    expect(resolveMessageMenuBarMenuActions(context).map((action) => action.id)).toContain('translate-native')
+    expect(
+      resolveMessageMenuBarMenuActions({ ...context, hasTranslationBlocks: true }).map((action) => action.id)
+    ).not.toContain('translate-native')
+
+    await executeMessageMenuBarAction('translate-native', context)
+
+    expect(translateMessage).toHaveBeenCalledWith('message-1', language, 'hello')
+  })
+
   it('keeps copy-translation item available without translate capability', () => {
     const translationItems = resolveMessageMenuBarTranslationItems(
       createActionContext({

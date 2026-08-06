@@ -758,6 +758,13 @@
         "placeholder": "Ce ar trebui să facă agentul când rulează această sarcină?"
       },
       "resume": "Reia",
+      "reuseSession": {
+        "bound": "[to be translated]:View session",
+        "description": "[to be translated]:Continue every run in the same session instead of starting a new one.",
+        "label": "[to be translated]:Reuse session",
+        "pending": "[to be translated]:Waiting for the first run",
+        "warning": "[to be translated]:A reused session keeps accumulating context, which raises token cost over time and can overflow the model's context window. To rebind a clean session, disable and save, then enable and save."
+      },
       "run": "Rulează",
       "runTriggered": "Sarcină declanșată",
       "save": "Salvează",
@@ -1419,6 +1426,11 @@
         "placeholder": "Caută"
       }
     },
+    "compaction": {
+      "compacted": "[to be translated]:Context compacted, ~{{count}} tokens saved",
+      "compacted_plain": "[to be translated]:Context compacted",
+      "compacting": "[to be translated]:Compacting context…"
+    },
     "conversation": {
       "new": "Chat nou"
     },
@@ -1484,6 +1496,13 @@
       },
       "new_session": "Sesiune nouă {{Command}}",
       "new_topic": "Subiect nou {{Command}}",
+      "note_reference": {
+        "description": "[to be translated]:Attach a note from Notes",
+        "empty": "[to be translated]:No notes found",
+        "load_failed": "[to be translated]:Failed to load notes",
+        "loading": "[to be translated]:Loading notes...",
+        "title": "[to be translated]:Reference Note"
+      },
       "paste_text_file": "Lipește în intrare",
       "pasted_text_file_name": "text.txt lipit",
       "pause": "Pauză",
@@ -1614,6 +1633,10 @@
           "description": "Nu activa căutarea web",
           "label": "Dezactivează căutarea web"
         },
+        "route": {
+          "builtin": "[to be translated]:Searches with the model's built-in tool",
+          "client": "[to be translated]:Searches with {{provider}}"
+        },
         "settings": "Setări căutare web"
       }
     },
@@ -1623,6 +1646,11 @@
       }
     },
     "message": {
+      "beautify": {
+        "empty": "[to be translated]:There is no reply text to beautify",
+        "label": "[to be translated]:Beautify reply",
+        "unchanged": "[to be translated]:The reply already uses the selected typography"
+      },
       "cache_stats": {
         "inline": "Cache {{hit_rate}}%",
         "tooltip": "Citire cache {{cache_read}} / scriere {{cache_write}} / fără cache {{no_cache}} · {{saved}} tokeni de intrare salvați"
@@ -1684,6 +1712,7 @@
         "usage": "Utilizare token-uri",
         "waiting_first_token": "Așteptare"
       },
+      "translate_native": "[to be translated]:Translate to {{language}}",
       "useful": {
         "label": "Setează ca context",
         "tip": "În acest grup de mesaje, acest mesaj va fi selectat pentru a se alătura contextului"
@@ -1696,6 +1725,9 @@
       }
     },
     "navigation": {
+      "anchor": {
+        "jump_to_turn": "[to be translated]:Jump to turn {{number}}"
+      },
       "bottom": "Înapoi jos",
       "close": "Închide",
       "first": "Deja la primul mesaj",
@@ -3165,6 +3197,7 @@
         "threshold": "Prag de similaritate pentru filtrarea fragmentelor cu relevanță scăzută. Valori mai mari fac recuperarea mai strictă."
       },
       "processor": "Furnizor de procesare",
+      "processor_not_configured": "[to be translated]:Not configured",
       "rerank_disabled": "Dezactivat",
       "rerank_model": "Model de Reordonare",
       "reset_action": "Restabilește valorile implicite",
@@ -3415,7 +3448,15 @@
         }
       },
       "basic": {
+        "autoCleanupUserMessage": "[to be translated]:Hide completed user messages",
+        "autoCopy": "[to be translated]:Copy successful replies",
+        "autoTranslate": "[to be translated]:Translate successful replies to native language",
+        "context_compress_enabled": "[to be translated]:Auto-compress",
+        "context_compress_model": "[to be translated]:Compression model",
+        "context_compress_model_follow": "[to be translated]:Default",
         "context_count": "Număr de contexte",
+        "context_management": "[to be translated]:Context management",
+        "context_truncate_threshold": "[to be translated]:Tool-output truncation threshold (chars)",
         "creative": "Creativ",
         "custom_params": "Parametri personalizați",
         "custom_params_add": "Adaugă parametru",
@@ -3424,11 +3465,29 @@
         "desc": "Configurează identitatea asistentului și parametrii modelului",
         "description_label": "Descriere",
         "field": {
+          "autoCleanupUserMessage": {
+            "hint": "[to be translated]:Hides the user bubble only after every sibling reply finishes and at least one succeeds; the message remains in context"
+          },
+          "autoCopy": {
+            "hint": "[to be translated]:Copies the selected or highest-priority successful reply after typography processing"
+          },
+          "autoTranslate": {
+            "hint": "[to be translated]:Adds one translation using the native language configured in Translate settings"
+          },
           "avatar": {
             "hint": "Folosit pentru a identifica asistentul în bibliotecă și în conversații"
           },
+          "context_compress_enabled": {
+            "hint": "[to be translated]:Summarize older turns automatically when nearing the context window"
+          },
           "context_count": {
             "hint": "Numărul de mesaje recente păstrate ca context"
+          },
+          "context_management": {
+            "hint": "[to be translated]:Override global context-management settings for this assistant; off inherits the global settings"
+          },
+          "context_truncate_threshold": {
+            "hint": "[to be translated]:Tool outputs beyond this many characters are offloaded and truncated"
           },
           "custom_params": {
             "hint": "Parametri suplimentari ai furnizorului trimiși împreună cu cererile"
@@ -3461,6 +3520,12 @@
           },
           "top_p": {
             "hint": "Limitează intervalul de eșantionare a token-urilor când este activată"
+          },
+          "zhCnMarkdownSmartQuotes": {
+            "hint": "[to be translated]:Applies the Translate page's Simplified Chinese Markdown quote processor"
+          },
+          "zhMarkdownTextSpacing": {
+            "hint": "[to be translated]:Applies the Translate page's Chinese and Latin Markdown spacing processor"
           }
         },
         "group": "Grup",
@@ -3477,6 +3542,7 @@
         "model_pick": "+ Alege modelul",
         "pick_avatar": "Alege avatar",
         "precise": "Precis",
+        "reply_automation": "[to be translated]:Successful reply automation",
         "stream_output": "Ieșire flux",
         "tag_empty": "Nu există etichete disponibile",
         "tag_hint": "Pentru a adăuga o etichetă nouă, folosește intrarea „+ Etichetă” din bara de sus a bibliotecii.",
@@ -3485,7 +3551,9 @@
         "tags": "Etichete",
         "temperature": "Temperatură",
         "title": "Setări de bază",
-        "top_p": "Top-P"
+        "top_p": "Top-P",
+        "zhCnMarkdownSmartQuotes": "[to be translated]:Chinese smart quotes",
+        "zhMarkdownTextSpacing": "[to be translated]:Chinese and Latin spacing"
       },
       "breadcrumb": "Bibliotecă",
       "dialogs": {
@@ -4273,6 +4341,7 @@
       "cutoff": "Se trunchiază conținutul căutării...",
       "fetch_complete": "{{count}} rezultat(e) căutare",
       "fetch_empty": "Nu au fost găsite rezultate de căutare",
+      "fetch_opaque": "[to be translated]:Searched by the model",
       "partial_failure": "{{count}} rezultat(e) căutare, unele căutări au eșuat"
     }
   },
@@ -5145,6 +5214,7 @@
     "reset": "Resetează",
     "rotate_left": "Rotire la stânga",
     "rotate_right": "Rotire la dreapta",
+    "save_as": "[to be translated]:Save As",
     "source": "Vezi codul sursă",
     "zoom_in": "Mărește",
     "zoom_out": "Micșorează"
@@ -5783,7 +5853,25 @@
         "title": "Enterprise"
       },
       "feedback": {
+        "agent": {
+          "description": "[to be translated]:Chat with Cherry Assistant to share feedback.",
+          "title": "[to be translated]:Use Agent"
+        },
+        "agent_error": "[to be translated]:Unable to open Cherry Assistant for feedback. Please try again.",
         "button": "Feedback",
+        "dialog": {
+          "description": "[to be translated]:Choose how to share feedback and help us make Cherry Studio better.",
+          "title": "[to be translated]:Choose a feedback channel"
+        },
+        "github": {
+          "description": "[to be translated]:Create a bug report or feature request on GitHub.",
+          "title": "[to be translated]:GitHub Issue"
+        },
+        "recommended": "[to be translated]:Recommended",
+        "survey": {
+          "description": "[to be translated]:Share feedback through our Feishu survey.",
+          "title": "[to be translated]:Feedback survey"
+        },
         "title": "Feedback"
       },
       "label": "Despre și feedback",
@@ -7309,6 +7397,7 @@
       "topic_naming": {
         "auto": "Numire automată subiect",
         "label": "Numire subiect",
+        "model": "[to be translated]:Naming Model",
         "prompt": "Prompt numire subiect"
       },
       "translate_model": "Model traducere",
@@ -7647,6 +7736,7 @@
         "all": "Toți furnizorii",
         "disabled": "Doar pentru persoane cu dizabilități",
         "enabled": "Activat doar",
+        "hidden_builtin": "[to be translated]:Hidden Built-in Providers",
         "label": "Furnizori de filtre"
       },
       "filter_agent": "Furnizori acceptați de agentul de filtrare",
@@ -7659,6 +7749,11 @@
         "sign_in_failed": "Conectarea a eșuat. Vă rugăm să încercați din nou.",
         "sign_in_success": "Conectat la Grok CLI",
         "signing_in": "Așteptând browserul…"
+      },
+      "hide": {
+        "action": "[to be translated]:Hide",
+        "content": "[to be translated]:This built-in provider will be disabled and hidden from normal provider lists and model selectors. You can restore it from the Hidden Built-in Providers filter.",
+        "title": "[to be translated]:Hide Built-in Provider"
       },
       "image_endpoints": {
         "image_edit_base_url": {
@@ -7731,6 +7826,7 @@
       "reorder_failed": "Nu s-a reușit reordonarea furnizorilor",
       "request_configuration": "Configurare cerere",
       "request_configuration_tooltip": "Configurează gazda API și antetele personalizate ale cererii",
+      "restore": "[to be translated]:Restore",
       "save_failed": "Nu s-au putut salva setările furnizorului",
       "search": "Caută furnizori...",
       "search_placeholder": "Caută id sau nume model",
@@ -7883,13 +7979,16 @@
       "enabled": "Activează",
       "exit_fullscreen": "Ieși din ecran complet",
       "filter": "Filtru",
+      "go_home": "[to be translated]:Go to Home",
       "label": "Tastă",
       "move_tab_to_first": "Mută fila pe prima poziție",
       "new_topic": "Subiect nou",
+      "next_assistant": "[to be translated]:Next Assistant",
       "occupied_by_other_application": "Această comandă rapidă este deja utilizată de sistem sau de o altă aplicație",
       "open_tab_in_new_window": "Deschide fila într-o fereastră nouă",
       "pin_tab": "Comutare fixare filă",
       "press_shortcut": "Apasă comanda rapidă",
+      "previous_assistant": "[to be translated]:Previous Assistant",
       "print": "Tipărire",
       "quick_assistant": "Asistent rapid",
       "rename_topic": "Redenumește subiectul",
@@ -7914,6 +8013,7 @@
       "toggle_right_sidebar": "Comută bara laterală dreaptă",
       "toggle_show_topics": "Comută subiectele",
       "toggle_sidebar": "Comutare bară laterală",
+      "translate_clipboard": "[to be translated]:Translate Clipboard",
       "zoom_in": "Mărește",
       "zoom_out": "Micșorează",
       "zoom_reset": "Resetează zoom-ul"
@@ -8071,6 +8171,10 @@
         "check": "Verifică",
         "check_failed": "Verificare eșuată",
         "check_success": "Verificare reușită",
+        "client_tools_preferred": {
+          "description": "[to be translated]:Use the search and URL-fetch services configured above even when the model has built-in search. When off, the model handles it.",
+          "label": "[to be translated]:Prefer configured search services"
+        },
         "compression": {
           "cutoff": {
             "limit": {
@@ -8193,6 +8297,22 @@
           "label": "Nume limbă",
           "placeholder": "Engleză"
         }
+      },
+      "glossary": {
+        "delete": {
+          "description": "[to be translated]:Delete this glossary entry?",
+          "title": "[to be translated]:Delete glossary entry"
+        },
+        "error": {
+          "add": "[to be translated]:Failed to add glossary entry",
+          "required": "[to be translated]:Source and target phrases are required"
+        },
+        "hint": "[to be translated]:Matched enabled terms are injected through {{customized_dictionary}} in a translation prompt.",
+        "source": "[to be translated]:Source phrase",
+        "source_placeholder": "[to be translated]:Term in the source text",
+        "target": "[to be translated]:Required translation",
+        "target_placeholder": "[to be translated]:Required target wording",
+        "title": "[to be translated]:Translation glossary"
       },
       "prompt": "Prompt traducere",
       "title": "Setări traducere"
@@ -8383,8 +8503,10 @@
       "language": "Orice limbă"
     },
     "button": {
+      "polish_and_translate": "[to be translated]:Polish then translate",
       "translate": "Tradu"
     },
+    "clipboard_watch": "[to be translated]:Watch clipboard and translate changes",
     "close": "Închide",
     "closed": "Traducere închisă",
     "complete": "Traducere finalizată",
@@ -8393,6 +8515,11 @@
       "title": "Confirmare traducere"
     },
     "copied": "Conținutul traducerii copiat",
+    "counter": {
+      "tip": "[to be translated]:Estimated tokens include the active translation prompt.",
+      "tokens": "[to be translated]:tokens",
+      "words": "[to be translated]:words"
+    },
     "custom": {
       "label": "Limbă personalizată"
     },
@@ -8405,6 +8532,10 @@
         "auto": {
           "label": "Automat",
           "tip": "Selectează automat metoda de detectare potrivită"
+        },
+        "heuristic": {
+          "label": "[to be translated]:Heuristic",
+          "tip": "[to be translated]:Use fast script and character-pattern detection"
         },
         "label": "Metodă de detectare automată",
         "llm": {
@@ -8456,6 +8587,11 @@
       "reading": "Se citește conținutul fișierului...",
       "upload": "Trageți sau faceți clic pentru a încărca imaginea/documentul"
     },
+    "flip": {
+      "label": "[to be translated]:Correct detected direction and retranslate",
+      "native_language_not_in_pair": "[to be translated]:The native language is not included in the bidirectional pair.",
+      "success": "[to be translated]:Translation direction corrected"
+    },
     "history": {
       "back": "Înapoi la listă",
       "clear": "Golește istoricul",
@@ -8489,6 +8625,7 @@
       "target": "Țintă",
       "title": "Istoric traduceri"
     },
+    "html_conversion": "[to be translated]:Convert rich HTML clipboard content to Markdown",
     "info": {
       "aborted": "Traducere anulată"
     },
@@ -8509,20 +8646,71 @@
     "output": {
       "placeholder": "Traducere"
     },
+    "paste": "[to be translated]:Paste from clipboard",
+    "post_processing": {
+      "enable": "[to be translated]:Enable post-processing",
+      "english_straight_quotes": "[to be translated]:Normalize English straight quotes",
+      "zh_smart_quotes": "[to be translated]:Use Chinese smart quotes",
+      "zh_text_spacing": "[to be translated]:Add Chinese/Latin text spacing"
+    },
     "preferred_target": "Țintă Preferată",
     "processing": "Traducere în curs...",
     "settings": {
       "autoCopy": "Copiază după traducere ",
       "bidirectional": "Setări traducere bidirecțională",
       "bidirectional_tip": "Când este activat, este acceptată doar traducerea bidirecțională între limbile sursă și țintă",
+      "custom_body": {
+        "polish": "[to be translated]:Polish request",
+        "reasoning_override": "[to be translated]:Reasoning-related custom parameters override the Minimize reasoning switch for this request type.",
+        "title": "[to be translated]:Custom request parameters",
+        "translate": "[to be translated]:Translate request"
+      },
       "error": {
         "save": "Nu s-au putut salva setările de traducere"
+      },
+      "font_size": "[to be translated]:Font size",
+      "global_translate_model": "[to be translated]:Global translation model",
+      "group_model": "[to be translated]:Models",
+      "group_post_processing": "[to be translated]:Post-processing",
+      "json_structure_view": {
+        "copy_blank_line_between_rows": "[to be translated]:Blank line between copied rows",
+        "copy_separator": {
+          "chinese_colon": "[to be translated]:Chinese colon",
+          "chinese_colon_newline": "[to be translated]:Chinese colon + newline",
+          "colon_newline": "[to be translated]:Colon + newline",
+          "colon_space": "[to be translated]:Colon + space",
+          "label": "[to be translated]:Selection copy separator"
+        },
+        "label": "[to be translated]:JSON structure view"
+      },
+      "layout": {
+        "auto": "[to be translated]:Auto",
+        "horizontal": "[to be translated]:Horizontal",
+        "label": "[to be translated]:Panel layout",
+        "vertical": "[to be translated]:Vertical"
+      },
+      "minimize_thinking": {
+        "label": "[to be translated]:Minimize reasoning",
+        "tip": "[to be translated]:Disable reasoning unless custom parameters explicitly control it"
       },
       "model": "Setări model",
       "model_desc": "Model folosit pentru serviciul de traducere",
       "model_placeholder": "Selectează modelul de traducere",
+      "native_language": "[to be translated]:Native language",
+      "native_to_other_model": "[to be translated]:Native to other languages",
       "no_model_warning": "Niciun model de traducere selectat",
+      "other_to_native_model": "[to be translated]:Other languages to native",
+      "polish_enabled": "[to be translated]:Polish before translation",
+      "polish_model": "[to be translated]:Polish model",
       "preview": "Previzualizare Markdown",
+      "prompt": {
+        "native_to_other": "[to be translated]:Native-to-other prompt",
+        "other_to_native": "[to be translated]:Other-to-native prompt",
+        "polish": "[to be translated]:Polish prompt"
+      },
+      "regex_rules": {
+        "title": "[to be translated]:Regex replacements"
+      },
       "scroll_sync": "Setări sincronizare derulare",
       "title": "Setări traducere"
     },

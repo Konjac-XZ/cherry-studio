@@ -43,6 +43,20 @@ describe('translate bidirectional helpers', () => {
       ['maps the first pair member to the second', 'en-us', 'ja-jp', true, { success: true, language: 'zh-cn' }],
       ['maps the second pair member to the first', 'zh-cn', 'ja-jp', true, { success: true, language: 'en-us' }],
       [
+        'treats Traditional Chinese as the configured Chinese family member',
+        'zh-tw',
+        'ja-jp',
+        true,
+        { success: true, language: 'en-us' }
+      ],
+      [
+        'supports exact custom-language members without guessing deleted codes',
+        'custom-klingon',
+        'en-us',
+        true,
+        { success: false, errorType: 'not_in_pair' }
+      ],
+      [
         'rejects a detected language outside the pair',
         'ja-jp',
         'en-us',

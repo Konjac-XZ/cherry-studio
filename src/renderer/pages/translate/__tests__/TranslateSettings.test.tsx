@@ -3,12 +3,18 @@ import { TRANSLATE_PROMPT } from '@shared/ai/prompts'
 import { parsePersistedLangCode } from '@shared/data/preference/preferenceTypes'
 import type { TranslateLanguage } from '@shared/data/types/translate'
 import { mockUsePreference, MockUsePreferenceUtils } from '@test-mocks/renderer/usePreference'
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import type React from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const translateLanguageMutationsMock = vi.hoisted(() => ({
   add: vi.fn(),
+  update: vi.fn(),
+  remove: vi.fn()
+}))
+const translateGlossaryMock = vi.hoisted(() => ({
+  entries: [] as any[],
+  create: vi.fn(),
   update: vi.fn(),
   remove: vi.fn()
 }))
@@ -25,6 +31,7 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('@renderer/hooks/translate', () => ({
   useLanguages: () => ({ languages: mockLanguages }),
+  useTranslateGlossary: () => translateGlossaryMock,
   useTranslateLanguages: () => translateLanguageMutationsMock
 }))
 
@@ -32,7 +39,11 @@ vi.mock('@renderer/utils/style', () => ({
   cn: (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(' ')
 }))
 
-vi.mock('../components/LanguagePicker', () => ({
+vi.mock('@renderer/components/ModelSelector', () => ({
+  ModelSelector: ({ trigger }: { trigger: React.ReactNode }) => <>{trigger}</>
+}))
+
+vi.mock('@renderer/components/translate/LanguagePicker', () => ({
   default: ({ value, onChange }: { value: string; onChange: (value: string) => void }) => (
     <button type="button" data-testid={`language-picker-${value}`} onClick={() => onChange('zh-cn')}>
       {value}
@@ -40,7 +51,7 @@ vi.mock('../components/LanguagePicker', () => ({
   )
 }))
 
-vi.mock('../components/IconButton', () => ({
+vi.mock('@renderer/components/translate/IconButton', () => ({
   default: ({ children, ...props }: React.ComponentProps<'button'> & { active?: boolean; size?: string }) => (
     <button type="button" {...props}>
       {children}
@@ -152,7 +163,9 @@ const submitCustomLanguage = ({ value, langCode }: { value?: string; langCode?: 
       target: { value: langCode }
     })
   }
-  fireEvent.click(screen.getByRole('button', { name: 'common.add' }))
+  const form = screen.getByPlaceholderText('settings.translate.custom.value.placeholder').closest('.space-y-3')
+  if (!form) throw new Error('custom language form not found')
+  fireEvent.click(within(form as HTMLElement).getByRole('button', { name: 'common.add' }))
 }
 
 const setBasePreferenceMocks = () => {
@@ -163,7 +176,28 @@ const setBasePreferenceMocks = () => {
     'feature.translate.auto_detection_method': 'auto',
     'feature.translate.page.scroll_sync': false,
     'feature.translate.page.bidirectional_enabled': true,
-    'feature.translate.model_prompt': TRANSLATE_PROMPT
+    'feature.translate.model_prompt': TRANSLATE_PROMPT,
+    'feature.translate.prompt.native_to_other': TRANSLATE_PROMPT,
+    'feature.translate.prompt.other_to_native': TRANSLATE_PROMPT,
+    'feature.translate.prompt.polish': TRANSLATE_PROMPT,
+    'feature.translate.native_language': null,
+    'feature.translate.page.font_size': 16,
+    'feature.translate.page.layout_override': 'auto',
+    'feature.translate.polish.enabled': false,
+    'feature.translate.page.json_structure_view': true,
+    'feature.translate.page.json_structure_copy_separator': 'colon-space',
+    'feature.translate.page.json_structure_copy_blank_line': false,
+    'feature.translate.post_processing.enabled': true,
+    'feature.translate.post_processing.english_straight_quotes': false,
+    'feature.translate.post_processing.zh_smart_quotes': false,
+    'feature.translate.post_processing.zh_text_spacing': false,
+    'feature.translate.model.native_to_other_follows_global': true,
+    'feature.translate.model.other_to_native_follows_global': true,
+    'feature.translate.request.custom_parameters': [],
+    'feature.translate.request.polish_custom_parameters': [],
+    'feature.translate.reasoning.translate_auto_disable': true,
+    'feature.translate.reasoning.polish_auto_disable': true,
+    'feature.translate.post_processing.regex_rules': []
   })
 }
 
@@ -188,6 +222,7 @@ describe('TranslateSettings', () => {
   beforeEach(() => {
     MockUsePreferenceUtils.resetMocks()
     mockLanguages = []
+    translateGlossaryMock.entries = []
 
     setBidirectionalPair.mockReset()
     setAutoDetectionMethod.mockReset()
@@ -242,6 +277,7 @@ describe('TranslateSettingsPanelContent', () => {
   beforeEach(() => {
     MockUsePreferenceUtils.resetMocks()
     mockLanguages = []
+    translateGlossaryMock.entries = []
 
     setPersisted.mockReset()
     translateLanguageMutationsMock.add.mockReset()
@@ -251,10 +287,20 @@ describe('TranslateSettingsPanelContent', () => {
     translateLanguageMutationsMock.remove.mockReset()
     translateLanguageMutationsMock.remove.mockResolvedValue(undefined)
 
-    MockUsePreferenceUtils.setPreferenceValue('feature.translate.model_prompt', TRANSLATE_PROMPT)
+    MockUsePreferenceUtils.setMultiplePreferenceValues({
+      'feature.translate.model_prompt': TRANSLATE_PROMPT,
+      'feature.translate.prompt.native_to_other': TRANSLATE_PROMPT,
+      'feature.translate.prompt.other_to_native': TRANSLATE_PROMPT,
+      'feature.translate.prompt.polish': TRANSLATE_PROMPT,
+      'feature.translate.request.custom_parameters': [],
+      'feature.translate.request.polish_custom_parameters': [],
+      'feature.translate.reasoning.translate_auto_disable': true,
+      'feature.translate.reasoning.polish_auto_disable': true,
+      'feature.translate.post_processing.regex_rules': []
+    })
     mockUsePreference.mockImplementation((key: string) => {
-      if (key === 'feature.translate.model_prompt') {
-        return [MockUsePreferenceUtils.getPreferenceValue('feature.translate.model_prompt'), setPersisted]
+      if (key === 'feature.translate.prompt.native_to_other') {
+        return [MockUsePreferenceUtils.getPreferenceValue('feature.translate.prompt.native_to_other'), setPersisted]
       }
       return [MockUsePreferenceUtils.getPreferenceValue(key as any), vi.fn().mockResolvedValue(undefined)]
     })
@@ -265,10 +311,21 @@ describe('TranslateSettingsPanelContent', () => {
     vi.useRealTimers()
   })
 
+  it('shows a scoped notice when custom parameters override reasoning policy', () => {
+    MockUsePreferenceUtils.setPreferenceValue('feature.translate.request.custom_parameters', [
+      { name: 'reasoning_effort', type: 'string', value: 'high' }
+    ])
+
+    render(<TranslateSettingsPanelContent />)
+
+    expect(screen.getAllByRole('note')).toHaveLength(1)
+    expect(screen.getByRole('note')).toHaveTextContent('translate.settings.custom_body.reasoning_override')
+  })
+
   it('does not persist the default prompt when the saved prompt loads after mount', () => {
     const { rerender } = render(<TranslateSettingsPanelContent />)
 
-    MockUsePreferenceUtils.setPreferenceValue('feature.translate.model_prompt', 'saved custom prompt')
+    MockUsePreferenceUtils.setPreferenceValue('feature.translate.prompt.native_to_other', 'saved custom prompt')
     rerender(<TranslateSettingsPanelContent />)
 
     expect(getPromptTextarea()).toHaveValue('saved custom prompt')
@@ -296,7 +353,7 @@ describe('TranslateSettingsPanelContent', () => {
     expect(getPromptTextarea()).toHaveValue('user typing')
 
     // Remote update arrives before the 400ms debounce fires; the in-progress edit must win.
-    MockUsePreferenceUtils.setPreferenceValue('feature.translate.model_prompt', 'external update')
+    MockUsePreferenceUtils.setPreferenceValue('feature.translate.prompt.native_to_other', 'external update')
     rerender(<TranslateSettingsPanelContent />)
 
     expect(getPromptTextarea()).toHaveValue('user typing')
@@ -381,8 +438,7 @@ describe('TranslateSettingsPanelContent', () => {
     render(<TranslateSettingsPanelContent />)
 
     fireEvent.click(screen.getByRole('button', { name: 'common.edit' }))
-    const textboxes = screen.getAllByRole('textbox')
-    fireEvent.change(textboxes[1], { target: { value: ' Klingon Prime ' } })
+    fireEvent.change(screen.getByDisplayValue('Klingon'), { target: { value: ' Klingon Prime ' } })
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'common.save' }))
     })

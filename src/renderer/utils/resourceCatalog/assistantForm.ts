@@ -41,6 +41,11 @@ export interface AssistantFormState {
   maxTokens: number
   enableMaxTokens: boolean
   streamOutput: boolean
+  autoCopy: boolean
+  autoTranslate: boolean
+  autoCleanupUserMessage: boolean
+  zhCnMarkdownSmartQuotes: boolean
+  zhMarkdownTextSpacing: boolean
   maxToolCalls: number
   enableMaxToolCalls: boolean
   customParameters: CustomParameter[]
@@ -73,6 +78,11 @@ function buildAssistantSettingsFromForm(
     maxTokens: form.maxTokens,
     enableMaxTokens: form.enableMaxTokens,
     streamOutput: form.streamOutput,
+    autoCopy: form.autoCopy,
+    autoTranslate: form.autoTranslate,
+    autoCleanupUserMessage: form.autoCleanupUserMessage,
+    zhCnMarkdownSmartQuotes: form.zhCnMarkdownSmartQuotes,
+    zhMarkdownTextSpacing: form.zhMarkdownTextSpacing,
     maxToolCalls: form.maxToolCalls,
     enableMaxToolCalls: form.enableMaxToolCalls,
     customParameters: form.customParameters,
@@ -105,6 +115,11 @@ export function initialAssistantFormState(assistant: Assistant): AssistantFormSt
     maxTokens: settings.maxTokens ?? UI_DEFAULT_MAX_TOKENS,
     enableMaxTokens: settings.enableMaxTokens ?? false,
     streamOutput: settings.streamOutput ?? true,
+    autoCopy: settings.autoCopy ?? false,
+    autoTranslate: settings.autoTranslate ?? false,
+    autoCleanupUserMessage: settings.autoCleanupUserMessage ?? false,
+    zhCnMarkdownSmartQuotes: settings.zhCnMarkdownSmartQuotes ?? false,
+    zhMarkdownTextSpacing: settings.zhMarkdownTextSpacing ?? false,
     maxToolCalls: settings.maxToolCalls ?? UI_DEFAULT_MAX_TOOL_CALLS,
     enableMaxToolCalls: settings.enableMaxToolCalls ?? true,
     customParameters: settings.customParameters ?? [],
@@ -173,6 +188,11 @@ export function diffAssistantUpdate(
     baseline.maxTokens !== form.maxTokens ||
     baseline.enableMaxTokens !== form.enableMaxTokens ||
     baseline.streamOutput !== form.streamOutput ||
+    baseline.autoCopy !== form.autoCopy ||
+    baseline.autoTranslate !== form.autoTranslate ||
+    baseline.autoCleanupUserMessage !== form.autoCleanupUserMessage ||
+    baseline.zhCnMarkdownSmartQuotes !== form.zhCnMarkdownSmartQuotes ||
+    baseline.zhMarkdownTextSpacing !== form.zhMarkdownTextSpacing ||
     baseline.maxToolCalls !== form.maxToolCalls ||
     baseline.enableMaxToolCalls !== form.enableMaxToolCalls ||
     baseline.mcpMode !== form.mcpMode ||

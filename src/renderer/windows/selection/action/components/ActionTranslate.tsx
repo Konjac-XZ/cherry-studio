@@ -127,6 +127,7 @@ const ActionTranslate: FC<Props> = ({ action, scrollToBottom }) => {
   const [isDetecting, setIsDetecting] = useState(false)
   const [isPreparing, setIsPreparing] = useState(false)
   const [completionError, setCompletionError] = useState<string | null>(null)
+  const flowControllerRef = useRef<AbortController | null>(null)
 
   const {
     translate: runTranslate,
@@ -171,6 +172,8 @@ const ActionTranslate: FC<Props> = ({ action, scrollToBottom }) => {
   const error = completionError
 
   const clear = useCallback(() => {
+    flowControllerRef.current?.abort()
+    flowControllerRef.current = null
     cancelTranslate()
     setContent('')
     setCompletionError(null)
@@ -181,13 +184,28 @@ const ActionTranslate: FC<Props> = ({ action, scrollToBottom }) => {
   const fetchResult = useCallback(async () => {
     if (!selectedText || !initialized) return
     clear()
+    const controller = new AbortController()
+    flowControllerRef.current = controller
+    const { signal } = controller
 
     setIsDetecting(true)
-    const sourceLanguageCode = await detectLanguageOrUnknown(selectedText, detectLanguage, (error) => {
-      logger.error('Error detecting language:', error as Error)
-    }).finally(() => {
-      setIsDetecting(false)
-    })
+    let sourceLanguageCode: TranslateLangCode
+    try {
+      sourceLanguageCode = await detectLanguageOrUnknown(
+        selectedText,
+        detectLanguage,
+        (error) => {
+          logger.error('Error detecting language:', error as Error)
+        },
+        signal
+      )
+    } catch (error) {
+      if (signal.aborted) return
+      throw error
+    } finally {
+      if (flowControllerRef.current === controller) setIsDetecting(false)
+    }
+    if (signal.aborted || flowControllerRef.current !== controller) return
 
     const detectedLang = getLanguage(sourceLanguageCode) ?? null
     setDetectedLanguage(detectedLang)
@@ -205,12 +223,16 @@ const ActionTranslate: FC<Props> = ({ action, scrollToBottom }) => {
     setIsPreparing(true)
 
     try {
-      await runTranslate(selectedText, translateLang)
+      await runTranslate(selectedText, translateLang, undefined, signal)
     } catch (err) {
+      if (signal.aborted || flowControllerRef.current !== controller) return
       setContent('')
       setCompletionError(getSelectionActionErrorMessage(err, t))
     } finally {
-      setIsPreparing(false)
+      if (flowControllerRef.current === controller) {
+        flowControllerRef.current = null
+        setIsPreparing(false)
+      }
     }
   }, [selectedText, initialized, clear, detectLanguage, getLanguage, alterLanguage, targetLanguage, runTranslate, t])
 
@@ -225,6 +247,8 @@ const ActionTranslate: FC<Props> = ({ action, scrollToBottom }) => {
   useEffect(() => {
     void fetchResult()
   }, [fetchResult])
+
+  useEffect(() => clear, [clear])
 
   const handleChangeLanguage = useCallback(
     (newTargetLanguage: TranslateLanguage, newAlterLanguage: TranslateLanguage) => {
@@ -301,9 +325,7 @@ const ActionTranslate: FC<Props> = ({ action, scrollToBottom }) => {
   )
 
   const handlePause = () => {
-    cancelTranslate()
-    setIsDetecting(false)
-    setIsPreparing(false)
+    clear()
   }
 
   const handleRegenerate = () => {

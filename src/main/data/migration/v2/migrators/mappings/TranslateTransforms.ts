@@ -1,6 +1,7 @@
 import { loggerService } from '@logger'
 import { PersistedLangCodeSchema } from '@shared/data/preference/preferenceTypes'
 
+import { legacyChatModelToUniqueId, type LegacyModelRef } from '../transformers/ModelTransformers'
 import type { TransformResult } from './ComplexPreferenceMappings'
 
 const logger = loggerService.withContext('Migration:TranslateTransforms')
@@ -14,6 +15,74 @@ const canonicalizeLegacyLangCode = (langCode: string): string => {
 
 const parseLegacyPersistedLangCode = (langCode: string) => {
   return PersistedLangCodeSchema.safeParse(canonicalizeLegacyLangCode(langCode.toLowerCase()))
+}
+
+const parseLegacyTranslateModelId = (value: unknown) => {
+  if (value == null) return null
+
+  if (typeof value === 'object') {
+    return legacyChatModelToUniqueId(value as LegacyModelRef)
+  }
+
+  if (typeof value !== 'string') return null
+
+  const direct = legacyChatModelToUniqueId(undefined, value)
+  if (direct) return direct
+
+  try {
+    const parsed = JSON.parse(value) as unknown
+    return parsed != null && typeof parsed === 'object' ? legacyChatModelToUniqueId(parsed as LegacyModelRef) : null
+  } catch {
+    return null
+  }
+}
+
+export function migrateTranslateDirectionModels(sources: {
+  nativeToOtherModel?: unknown
+  otherToNativeModel?: unknown
+  polishModel?: unknown
+}): TransformResult {
+  const result: TransformResult = {}
+  const mappings = [
+    ['feature.translate.model.native_to_other_id', sources.nativeToOtherModel],
+    ['feature.translate.model.other_to_native_id', sources.otherToNativeModel],
+    ['feature.translate.model.polish_id', sources.polishModel]
+  ] as const
+
+  for (const [targetKey, source] of mappings) {
+    const modelId = parseLegacyTranslateModelId(source)
+    if (modelId) {
+      result[targetKey] = modelId
+    } else if (source != null) {
+      logger.warn('Invalid translate model identity; keeping the V2 default', {
+        targetKey,
+        valueType: typeof source
+      })
+    }
+  }
+
+  return result
+}
+
+export function migrateTranslateDirectionModelPolicy(sources: {
+  legacyFollowsGlobal?: unknown
+  nativeToOtherFollowsGlobal?: unknown
+  otherToNativeFollowsGlobal?: unknown
+}): TransformResult {
+  const fallback = typeof sources.legacyFollowsGlobal === 'boolean' ? sources.legacyFollowsGlobal : undefined
+  const nativeToOther =
+    typeof sources.nativeToOtherFollowsGlobal === 'boolean' ? sources.nativeToOtherFollowsGlobal : fallback
+  const otherToNative =
+    typeof sources.otherToNativeFollowsGlobal === 'boolean' ? sources.otherToNativeFollowsGlobal : fallback
+
+  return {
+    ...(nativeToOther !== undefined && {
+      'feature.translate.model.native_to_other_follows_global': nativeToOther
+    }),
+    ...(otherToNative !== undefined && {
+      'feature.translate.model.other_to_native_follows_global': otherToNative
+    })
+  }
 }
 
 /**

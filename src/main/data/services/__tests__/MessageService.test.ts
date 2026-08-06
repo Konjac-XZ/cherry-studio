@@ -486,6 +486,49 @@ describe('MessageService', () => {
       expect(stored[0].searchableText).toContain('unique needle')
     })
 
+    it('excludes presentation-hidden topic messages without removing their searchable content', async () => {
+      await dbh.db.insert(topicTable).values({ id: 'topic-hidden-search', activeNodeId: 'm-visible', orderKey: 's1' })
+      await dbh.db.insert(messageTable).values(
+        withRoot('topic-hidden-search', [
+          {
+            id: 'm-hidden',
+            parentId: null,
+            topicId: 'topic-hidden-search',
+            role: 'user',
+            data: {
+              ...partsText('A hidden needle remains durable.'),
+              presentation: { hiddenInChat: true }
+            },
+            status: 'success',
+            siblingsGroupId: 0,
+            createdAt: 100,
+            updatedAt: 100
+          },
+          {
+            id: 'm-visible',
+            parentId: 'm-hidden',
+            topicId: 'topic-hidden-search',
+            role: 'assistant',
+            data: partsText('A visible needle is searchable.'),
+            status: 'success',
+            siblingsGroupId: 0,
+            createdAt: 200,
+            updatedAt: 200
+          }
+        ])
+      )
+
+      const result = messageService.search({ q: 'needle', topicId: 'topic-hidden-search' })
+
+      expect(result.items.map((item) => item.messageId)).toEqual(['m-visible'])
+      const [hiddenRow] = await dbh.db
+        .select({ data: messageTable.data, searchableText: messageTable.searchableText })
+        .from(messageTable)
+        .where(eq(messageTable.id, 'm-hidden'))
+      expect(hiddenRow.data.presentation?.hiddenInChat).toBe(true)
+      expect(hiddenRow.searchableText).toContain('hidden needle')
+    })
+
     it('uses substring matching for terms that FTS would treat as whole tokens', async () => {
       await dbh.db.insert(topicTable).values({ id: 'topic-substring', activeNodeId: 'm-substring-2', orderKey: 's5' })
       await dbh.db.insert(messageTable).values(

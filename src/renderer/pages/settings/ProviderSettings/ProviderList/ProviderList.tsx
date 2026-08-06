@@ -1,7 +1,8 @@
 import { useReorder } from '@data/hooks/useReorder'
 import ConfirmActionPopup from '@renderer/components/popups/ConfirmActionPopup'
+import { usePreference } from '@renderer/data/hooks/usePreference'
 import { useModels } from '@renderer/hooks/useModel'
-import { useProviders } from '@renderer/hooks/useProvider'
+import { useProviderActions, useProviders } from '@renderer/hooks/useProvider'
 import { providerListClasses } from '@renderer/pages/settings/ProviderSettings/primitives/ProviderSettingsPrimitives'
 import {
   isProviderPresetInstanceSource,
@@ -9,6 +10,12 @@ import {
   matchKeywordsInProvider
 } from '@renderer/pages/settings/ProviderSettings/utils/providerDisplay'
 import { toast } from '@renderer/services/toast'
+import { isSystemProviderId } from '@renderer/types/provider'
+import {
+  filterHiddenBuiltInProviders,
+  filterRuntimeVisibleProviders,
+  isHiddenBuiltInProvider
+} from '@renderer/utils/providerVisibility'
 import type { Provider } from '@shared/data/types/provider'
 import { canManageProvider } from '@shared/utils/provider'
 import { Plus } from 'lucide-react'
@@ -34,7 +41,9 @@ export interface ProviderListProps {
 
 export default function ProviderList({ selectedProviderId, filterModeHint, onSelectProvider }: ProviderListProps) {
   const { t } = useTranslation()
-  const { providers } = useProviders()
+  const { providers } = useProviders(undefined, { includeHiddenBuiltIns: true })
+  const { updateProviderById } = useProviderActions()
+  const [hiddenBuiltInIds, setHiddenBuiltInIds] = usePreference('settings.provider.hidden_builtin_ids')
   const { applyReorderedList } = useReorder('/providers', { revalidateOnSuccess: false })
   const { isSupported: isOvmsSupported } = useOvmsSupport()
 
@@ -101,7 +110,11 @@ export default function ProviderList({ selectedProviderId, filterModeHint, onSel
   }, [allModels, searchText])
 
   const filteredProviders = useMemo(() => {
-    return providers.filter((provider) => {
+    const candidates =
+      filterMode === 'hidden'
+        ? filterHiddenBuiltInProviders(providers, hiddenBuiltInIds)
+        : filterRuntimeVisibleProviders(providers, hiddenBuiltInIds)
+    return candidates.filter((provider) => {
       if (!isProviderSettingsListVisibleProvider(provider)) {
         return false
       }
@@ -117,7 +130,7 @@ export default function ProviderList({ selectedProviderId, filterModeHint, onSel
       const keywords = searchText.toLowerCase().split(/\s+/).filter(Boolean)
       return matchKeywordsInProvider(keywords, provider, providerModelsIndex?.get(provider.id))
     })
-  }, [filterMode, isOvmsSupported, providers, providerModelsIndex, searchText])
+  }, [filterMode, hiddenBuiltInIds, isOvmsSupported, providers, providerModelsIndex, searchText])
 
   const providerCounts = useMemo(
     () =>
@@ -234,6 +247,34 @@ export default function ProviderList({ selectedProviderId, filterModeHint, onSel
     [deleteProvider, t]
   )
 
+  const handleHideProvider = useCallback(
+    async (provider: Provider) => {
+      await ConfirmActionPopup.show({
+        title: t('settings.provider.hide.title'),
+        content: t('settings.provider.hide.content'),
+        danger: true,
+        okText: t('settings.provider.hide.action'),
+        action: async () => {
+          await updateProviderById(provider.id, { isEnabled: false })
+          await setHiddenBuiltInIds(Array.from(new Set([...hiddenBuiltInIds, provider.id])))
+          const fallback = filterRuntimeVisibleProviders(providers, [...hiddenBuiltInIds, provider.id])[0]
+          if (fallback) onSelectProvider(fallback.id)
+          setFilterMode('all')
+        }
+      })
+    },
+    [hiddenBuiltInIds, onSelectProvider, providers, setHiddenBuiltInIds, t, updateProviderById]
+  )
+
+  const handleRestoreProvider = useCallback(
+    async (providerId: string) => {
+      await setHiddenBuiltInIds(hiddenBuiltInIds.filter((id) => id !== providerId))
+      onSelectProvider(providerId)
+      setFilterMode('all')
+    },
+    [hiddenBuiltInIds, onSelectProvider, setHiddenBuiltInIds]
+  )
+
   const renderProviderItem = (provider: Provider, _index: number, state: ProviderListContentItemState) => {
     const showManagementActions = (providerCounts.get(provider.id) ?? 0) > 1 || canManageProvider(provider)
     const selected = provider.id === selectedProviderId
@@ -247,6 +288,14 @@ export default function ProviderList({ selectedProviderId, filterModeHint, onSel
         onSelect={() => onSelectProvider(provider.id)}
         onEdit={() => startEdit(provider)}
         onDelete={() => handleDeleteProvider(provider.id)}
+        onHide={
+          isSystemProviderId(provider.id) && !isHiddenBuiltInProvider(provider, hiddenBuiltInIds)
+            ? () => handleHideProvider(provider)
+            : undefined
+        }
+        onRestore={
+          isHiddenBuiltInProvider(provider, hiddenBuiltInIds) ? () => handleRestoreProvider(provider.id) : undefined
+        }
         onDuplicate={
           provider.presetProviderId && !groupedPresetIds.has(provider.presetProviderId)
             ? () => startAddFrom(provider)

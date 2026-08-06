@@ -65,7 +65,7 @@ export type QuickPanelOpenOptions = {
   list: QuickPanelListItem[]
   /** default: 0 */
   defaultIndex?: number
-  /** default: 7 */
+  /** default: 14 */
   pageSize?: number
   /** Whether Cmd/Ctrl multi-select is supported, default: false. */
   multiple?: boolean

@@ -20,7 +20,7 @@ const parseBuiltinLangCode = <T extends string>(value: T): BuiltinPersistedLangC
 export const BUILTIN_LANGUAGE = {
   enUS: { langCode: parseBuiltinLangCode('en-us'), value: 'English', emoji: '🇺🇸' },
   zhCN: { langCode: parseBuiltinLangCode('zh-cn'), value: 'Chinese (Simplified)', emoji: '🇨🇳' },
-  zhTW: { langCode: parseBuiltinLangCode('zh-tw'), value: 'Chinese (Traditional)', emoji: '🇭🇰' },
+  zhTW: { langCode: parseBuiltinLangCode('zh-tw'), value: 'Chinese (Traditional)', emoji: '🇹🇼' },
   jaJP: { langCode: parseBuiltinLangCode('ja-jp'), value: 'Japanese', emoji: '🇯🇵' },
   koKR: { langCode: parseBuiltinLangCode('ko-kr'), value: 'Korean', emoji: '🇰🇷' },
   frFR: { langCode: parseBuiltinLangCode('fr-fr'), value: 'French', emoji: '🇫🇷' },

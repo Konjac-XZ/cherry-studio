@@ -16,12 +16,12 @@
 /* Windows系统专用字体配置 */
 body[os='windows'] {
   --font-family:
-    var(--app-user-font-family, 'Microsoft YaHei UI'), 'Microsoft YaHei', 'Segoe UI',
-    system-ui, 'Twemoji Country Flags', Ubuntu, -apple-system, BlinkMacSystemFont, Roboto, Oxygen, Cantarell,
+    var(--app-user-font-family, 'Twemoji Country Flags'), -apple-system, BlinkMacSystemFont, system-ui, 'Segoe UI',
+    'Microsoft YaHei UI', 'Microsoft YaHei', '微软雅黑', Ubuntu, Roboto, Oxygen, Cantarell,
     'Open Sans', 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
     'Segoe UI Symbol', 'Noto Color Emoji';
 
   --code-font-family:
-    var(--app-user-code-font-family, 'Cascadia Code'), 'Fira Code', 'Consolas', 'Sarasa Mono SC', 'Microsoft YaHei UI',
-    Courier, monospace;
+    var(--app-user-code-font-family, 'JetBrainsMono NFP'), 'Cascadia Code', 'Fira Code', 'Consolas', 'Sarasa Mono SC',
+    'Microsoft YaHei UI', Courier, monospace;
 }

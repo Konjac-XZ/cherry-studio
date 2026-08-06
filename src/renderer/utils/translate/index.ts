@@ -1,8 +1,45 @@
 export {
+  clipboardFingerprint,
+  htmlToTranslateMarkdown,
+  shouldPreferPlainTextClipboard,
+  shouldPreferPlainTextCodeBlock
+} from './clipboardMarkdown'
+export {
+  type ComposerInputTranslationCoordinatorOptions,
+  coordinateComposerInputTranslation
+} from './composerInputTranslation'
+export type { JsonStructure } from './jsonStructure'
+export { getJsonStructureForDisplay, parseJsonStructure } from './jsonStructure'
+export type { JsonStructureCopySeparator } from './jsonStructureCopy'
+export { normalizeJsonStructureSelection } from './jsonStructureCopy'
+export {
   determineTargetLanguage,
   getTargetLanguageForBidirectional,
+  isEquivalentBidirectionalLanguage,
   pickBidirectionalTarget,
   UNKNOWN_LANG_CODE
 } from './language'
+export {
+  clampTranslatePanelSize,
+  findEqualizedTranslatePanelSize,
+  getTranslatePanelBounds,
+  MIN_TRANSLATE_PANEL_PERCENT
+} from './layout'
+export { getTranslateModifierLabel } from './platform'
+export {
+  applyRegexReplacementRules,
+  applyTranslationPostProcessors,
+  DEFAULT_TRANSLATION_POST_PROCESSOR_FEATURES,
+  normalizeEnMarkdownStraightQuotes,
+  normalizeZhCnMarkdownQuotes,
+  type RegexReplacementRule,
+  shouldApplyEnMarkdownStraightQuotes,
+  shouldApplyZhCnMarkdownSmartQuotes,
+  shouldApplyZhMarkdownTextSpacing,
+  type TranslationPostProcessorContext,
+  type TranslationPostProcessorFeatures
+} from './postProcessors'
+export { normalizeEditedTranslateFontSize, normalizePersistedTranslateFontSize } from './preferences'
 export { createInputScrollHandler, createOutputScrollHandler, handleScrollSync } from './scrollSync'
-export { translateText } from './translateText'
+export { resolveTranslatePlan, translateText, type TranslateTextOptions } from './translateText'
+export { normalizeZhMarkdownTextSpacing } from './zhMarkdownSpacing'

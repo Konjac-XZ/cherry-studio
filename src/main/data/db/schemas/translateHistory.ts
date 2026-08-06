@@ -22,11 +22,15 @@ export const translateHistoryTable = sqliteTable(
     targetText: text().notNull(),
     sourceLanguage: text().references(() => translateLanguageTable.langCode, { onDelete: 'set null' }),
     targetLanguage: text().references(() => translateLanguageTable.langCode, { onDelete: 'set null' }),
+    modelId: text(),
+    cacheKey: text(),
     star: integer({ mode: 'boolean' }).notNull().default(false),
     ...createUpdateTimestamps
   },
   (t) => [
     index('translate_history_created_at_idx').on(t.createdAt),
-    index('translate_history_star_created_at_idx').on(t.star, t.createdAt)
+    index('translate_history_star_created_at_idx').on(t.star, t.createdAt),
+    index('translate_history_cache_key_idx').on(t.cacheKey),
+    index('translate_history_model_id_idx').on(t.modelId)
   ]
 )

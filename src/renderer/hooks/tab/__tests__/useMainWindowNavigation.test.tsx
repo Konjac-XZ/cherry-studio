@@ -157,6 +157,29 @@ describe('useMainWindowNavigation', () => {
     expect(mocks.openTab).toHaveBeenCalledWith('/knowledge')
   })
 
+  it('opens the Translate route as the stable Translate tab', () => {
+    mocks.openTab.mockReturnValue('translate')
+    render(<MainWindowNavigationHarness />)
+
+    mocks.ipcListeners.get('navigation.open_route_requested')?.({ to: '/app/translate?paste=1&_=nonce-1' })
+
+    expect(mocks.openTab).toHaveBeenCalledWith('/app/translate?paste=1&_=nonce-1', { id: 'translate' })
+  })
+
+  it('reuses an existing Translate tab for Translate Clipboard route commands', () => {
+    mocks.tabs = [{ id: 'translate', type: 'route', url: '/app/translate', title: 'Translate' }]
+    render(<MainWindowNavigationHarness />)
+
+    mocks.ipcListeners.get('navigation.open_route_requested')?.({ to: '/translate?paste=1&_=nonce-2' })
+
+    expect(mocks.openTab).not.toHaveBeenCalled()
+    expect(mocks.updateTab).toHaveBeenCalledWith('translate', {
+      url: '/app/translate?paste=1&_=nonce-2',
+      lastAccessTime: expect.any(Number)
+    })
+    expect(mocks.setActiveTab).toHaveBeenCalledWith('translate')
+  })
+
   it('routes a settings path from the open_route_requested event through the settings singleton', () => {
     mocks.tabs = [{ id: 'settings-1', type: 'route', url: '/settings/provider', title: 'settings.title' }]
     render(<MainWindowNavigationHarness />)

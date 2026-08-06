@@ -113,6 +113,17 @@ describe('native-protocol reasoning dialect', () => {
     }
   })
 
+  it('keeps Gemini 3 thought transport enabled when reasoning is minimized', () => {
+    expect(REASONING_FORMAT_PROFILES.gemini.wire.off?.operations).toEqual([
+      { target: 'thinkingConfig.includeThoughts', value: { source: 'literal', value: true } },
+      { target: 'thinkingConfig.thinkingLevel', value: { source: 'literal', value: 'minimal' } }
+    ])
+    expect(REASONING_FORMAT_PROFILES.gemini.budgetWire?.off?.operations).toEqual([
+      { target: 'thinkingConfig.includeThoughts', value: { source: 'literal', value: false } },
+      { target: 'thinkingConfig.thinkingBudget', value: { source: 'literal', value: 0 } }
+    ])
+  })
+
   // Formats whose protocol has one dialect must ignore the declaration entirely,
   // so open-weight models on openai-compatible endpoints are untouched.
   it.each(['openai-chat', 'openai-responses', 'ollama', 'none'] as const)(

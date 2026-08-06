@@ -145,6 +145,48 @@ describe('Model drawers', () => {
     )
   })
 
+  it('infers readable names from model IDs without overwriting an explicit user name', () => {
+    useProviderMock.mockReturnValue({
+      provider: { id: 'openai', name: 'OpenAI' }
+    })
+
+    render(<AddModelDrawer providerId="openai" open prefill={null} onClose={vi.fn()} />)
+
+    const modelIdInput = screen.getByLabelText('settings.models.add.model_id.label')
+    const nameInput = screen.getByLabelText('settings.models.add.model_name.label')
+
+    fireEvent.change(modelIdInput, { target: { value: 'claude-opus-4-6' } })
+    expect(nameInput).toHaveValue('Claude Opus 4.6')
+
+    fireEvent.change(nameInput, { target: { value: 'My Explicit Name' } })
+    fireEvent.change(modelIdInput, { target: { value: 'claude-sonnet-5' } })
+    expect(nameInput).toHaveValue('My Explicit Name')
+  })
+
+  it('infers readable names for comma-separated model IDs', async () => {
+    useProviderMock.mockReturnValue({
+      provider: { id: 'openai', name: 'OpenAI' }
+    })
+
+    render(<AddModelDrawer providerId="openai" open prefill={null} onClose={vi.fn()} />)
+
+    fireEvent.change(screen.getByLabelText('settings.models.add.model_id.label'), {
+      target: { value: 'qwen3-32b,claude-opus-4-6' }
+    })
+    await act(async () => {
+      fireEvent.submit(screen.getByTestId('provider-settings-model-add-drawer-content'))
+    })
+
+    expect(createModelMock).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ modelId: 'qwen3-32b', name: 'Qwen 3 32B' })
+    )
+    expect(createModelMock).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ modelId: 'claude-opus-4-6', name: 'Claude Opus 4.6' })
+    )
+  })
+
   it('marks only the model ID as required and blocks empty submission', () => {
     useProviderMock.mockReturnValue({
       provider: { id: 'openai', name: 'OpenAI' }

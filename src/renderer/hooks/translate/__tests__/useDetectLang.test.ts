@@ -1,5 +1,5 @@
 import { toast } from '@renderer/services/toast'
-import { parseTranslateLangCode } from '@shared/data/preference/preferenceTypes'
+import { parseTranslateLangCode, type TranslateLangCode } from '@shared/data/preference/preferenceTypes'
 import { mockUsePreference } from '@test-mocks/renderer/usePreference'
 import { mockRendererLoggerService } from '@test-mocks/RendererLoggerService'
 import { act, renderHook } from '@testing-library/react'
@@ -8,6 +8,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { UNKNOWN_LANG_CODE } from '../../../utils/translate'
 import {
   detectLanguageByFranc,
+  detectLanguageByHeuristic,
   detectLanguageByLLM,
   detectLanguageOrUnknown,
   detectWithMethod,
@@ -134,6 +135,21 @@ describe('detectLanguageByFranc', () => {
   })
 })
 
+describe('detectLanguageByHeuristic', () => {
+  it.each([
+    ['한국어 문장', 'ko-kr'],
+    ['日本語の文', 'ja-jp'],
+    ['中文句子', 'zh-cn'],
+    ['English sentence', 'en-us']
+  ] as const)('detects script-specific %s', (text, expected) => {
+    expect(detectLanguageByHeuristic(text)).toBe(expected)
+  })
+
+  it('falls back deterministically to an allowed custom candidate', () => {
+    expect(detectLanguageByHeuristic('中文', ['custom-language' as TranslateLangCode])).toBe('custom-language')
+  })
+})
+
 describe('detectWithMethod', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -195,6 +211,20 @@ describe('detectLanguageOrUnknown', () => {
 
     await expect(detectLanguageOrUnknown('Hello', detectLanguage, onError)).resolves.toBe(UNKNOWN_LANG_CODE)
     expect(onError).toHaveBeenCalledWith(error)
+  })
+
+  it('propagates cancellation instead of converting it into an unknown language', async () => {
+    const controller = new AbortController()
+    const detectLanguage = vi.fn(async (_text: string, signal?: AbortSignal) => {
+      controller.abort()
+      throw signal?.reason ?? new DOMException('aborted', 'AbortError')
+    })
+    const onError = vi.fn()
+
+    await expect(detectLanguageOrUnknown('Hello', detectLanguage, onError, controller.signal)).rejects.toMatchObject({
+      name: 'AbortError'
+    })
+    expect(onError).not.toHaveBeenCalled()
   })
 })
 

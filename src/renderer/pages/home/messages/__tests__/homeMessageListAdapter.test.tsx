@@ -700,6 +700,44 @@ describe('useHomeMessageListProviderValue topic image actions', () => {
     await waitFor(() => expect(value?.state.isMessageTranslating?.('message-1')).toBe(false))
   })
 
+  it('beautifies persisted reply parts through the reusable processor and preserves non-text parts', async () => {
+    let value: MessageListProviderValue | undefined
+    const filePart = { type: 'file', mediaType: 'image/png', url: 'file://image.png' } as CherryMessagePart
+    vi.mocked(dataApiService.get).mockResolvedValue({
+      data: { parts: [{ type: 'text', text: '他说 "hello世界"。' }, filePart] }
+    } as Awaited<ReturnType<typeof dataApiService.get<'/messages/:id'>>>)
+
+    render(<MessageListAdapterHarness topic={createTopic('topic-a')} onValue={(nextValue) => (value = nextValue)} />)
+    await waitFor(() => expect(value).toBeDefined())
+
+    const outcome = await value?.actions.beautifyMessage?.('message-1')
+
+    expect(outcome).toBe('changed')
+    expect(dataApiService.get).toHaveBeenCalledWith('/messages/message-1')
+    expect(chatWriteMock.editMessage).toHaveBeenCalledWith('message-1', [
+      { type: 'text', text: '他说“hello 世界”。' },
+      filePart
+    ])
+  })
+
+  it('does not rewrite an already-beautified or empty reply', async () => {
+    let value: MessageListProviderValue | undefined
+    vi.mocked(dataApiService.get)
+      .mockResolvedValueOnce({
+        data: { parts: [{ type: 'text', text: 'Already spaced.' }] }
+      } as Awaited<ReturnType<typeof dataApiService.get<'/messages/:id'>>>)
+      .mockResolvedValueOnce({
+        data: { parts: [{ type: 'text', text: '   ' }] }
+      } as Awaited<ReturnType<typeof dataApiService.get<'/messages/:id'>>>)
+
+    render(<MessageListAdapterHarness topic={createTopic('topic-a')} onValue={(nextValue) => (value = nextValue)} />)
+    await waitFor(() => expect(value).toBeDefined())
+
+    expect(await value?.actions.beautifyMessage?.('message-1')).toBe('unchanged')
+    expect(await value?.actions.beautifyMessage?.('message-2')).toBe('empty')
+    expect(chatWriteMock.editMessage).not.toHaveBeenCalled()
+  })
+
   it('shows an error when saving code block edits through chat write fails', async () => {
     const textPart = {
       type: 'text',

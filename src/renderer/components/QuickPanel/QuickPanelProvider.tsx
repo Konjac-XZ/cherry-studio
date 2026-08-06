@@ -12,6 +12,9 @@ import type {
   QuickPanelSortFn,
   QuickPanelTriggerInfo
 } from './types'
+
+const DEFAULT_QUICK_PANEL_PAGE_SIZE = 14
+
 const QuickPanelContext = createContext<QuickPanelContextType | null>(null)
 
 type RegisteredKeyDownHandler = {
@@ -26,7 +29,7 @@ export const QuickPanelProvider: React.FC<React.PropsWithChildren> = ({ children
   const [list, setList] = useState<QuickPanelListItem[]>([])
   const [title, setTitle] = useState<string | undefined>()
   const [defaultIndex, setDefaultIndex] = useState<number>(-1)
-  const [pageSize, setPageSize] = useState<number>(7)
+  const [pageSize, setPageSize] = useState<number>(DEFAULT_QUICK_PANEL_PAGE_SIZE)
   const [multiple, setMultiple] = useState<boolean>(false)
   const [readOnly, setReadOnly] = useState<boolean>(false)
   const [manageListExternally, setManageListExternally] = useState<boolean>(false)
@@ -111,7 +114,7 @@ export const QuickPanelProvider: React.FC<React.PropsWithChildren> = ({ children
       setList(ensureListItemIds(options.list))
       const nextDefaultIndex = typeof options.defaultIndex === 'number' ? Math.max(-1, options.defaultIndex) : -1
       setDefaultIndex(nextDefaultIndex)
-      setPageSize(options.pageSize ?? 7)
+      setPageSize(options.pageSize ?? DEFAULT_QUICK_PANEL_PAGE_SIZE)
       setMultiple(options.multiple ?? false)
       setReadOnly(options.readOnly ?? false)
       setManageListExternally(options.manageListExternally ?? false)

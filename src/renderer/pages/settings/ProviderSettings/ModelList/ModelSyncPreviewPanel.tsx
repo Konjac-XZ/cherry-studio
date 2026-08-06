@@ -92,13 +92,15 @@ const ManageModelRow = memo(function ManageModelRow({
       ? t('settings.models.manage.default_model_cannot_remove')
       : t('settings.models.manage.remove_model')
     : t('button.add')
+  const rawModelId = modelIdLine(model)
+  const displayName = model.name?.trim() || rawModelId
 
   return (
     <div className={modelSyncClasses.manageRow} data-added={isAdded}>
       <ModelGlyph model={model} />
       <div className="min-w-0 flex-1">
         <div className={modelSyncClasses.manageRowTitleLine}>
-          <p className={modelSyncClasses.manageRowTitle}>{modelIdLine(model)}</p>
+          <p className={modelSyncClasses.manageRowTitle}>{displayName}</p>
           {model.description ? (
             <Tooltip content={model.description} placement="top">
               <span tabIndex={0} aria-label={model.description} className={modelSyncClasses.manageRowDescriptionHelp}>
@@ -112,6 +114,9 @@ const ManageModelRow = memo(function ManageModelRow({
             </Badge>
           ) : null}
         </div>
+        {displayName !== rawModelId ? (
+          <p className="select-text truncate text-muted-foreground text-xs leading-4">{rawModelId}</p>
+        ) : null}
       </div>
       <div className={modelSyncClasses.fetchCapabilityStrip}>
         <ModelTagsWithLabel

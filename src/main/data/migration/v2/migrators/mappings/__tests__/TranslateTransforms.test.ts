@@ -3,8 +3,54 @@ import { describe, expect, it } from 'vitest'
 import {
   copyTargetLanguageForMiniWindow,
   copyTranslatePageLanguages,
+  migrateTranslateDirectionModelPolicy,
+  migrateTranslateDirectionModels,
   splitBidirectionalPairForAction
 } from '../TranslateTransforms'
+
+describe('migrateTranslateDirectionModels', () => {
+  it('converts V1 JSON model identities and accepts already-normalized V2 IDs', () => {
+    expect(
+      migrateTranslateDirectionModels({
+        nativeToOtherModel: JSON.stringify({ provider: 'openai', id: 'gpt-4.1' }),
+        otherToNativeModel: { provider: 'anthropic', id: 'claude-sonnet-4-5' },
+        polishModel: 'qwen::qwen-max'
+      })
+    ).toEqual({
+      'feature.translate.model.native_to_other_id': 'openai::gpt-4.1',
+      'feature.translate.model.other_to_native_id': 'anthropic::claude-sonnet-4-5',
+      'feature.translate.model.polish_id': 'qwen::qwen-max'
+    })
+  })
+
+  it('leaves missing and malformed identities at their V2 defaults', () => {
+    expect(
+      migrateTranslateDirectionModels({
+        nativeToOtherModel: '{bad json',
+        otherToNativeModel: JSON.stringify({ provider: 'openai' }),
+        polishModel: null
+      })
+    ).toEqual({})
+  })
+})
+
+describe('migrateTranslateDirectionModelPolicy', () => {
+  it('uses explicit direction values before the legacy shared fallback', () => {
+    expect(
+      migrateTranslateDirectionModelPolicy({
+        legacyFollowsGlobal: false,
+        nativeToOtherFollowsGlobal: true
+      })
+    ).toEqual({
+      'feature.translate.model.native_to_other_follows_global': true,
+      'feature.translate.model.other_to_native_follows_global': false
+    })
+  })
+
+  it('returns no values when no valid boolean preference exists', () => {
+    expect(migrateTranslateDirectionModelPolicy({ legacyFollowsGlobal: 'true' })).toEqual({})
+  })
+})
 
 describe('splitBidirectionalPairForAction', () => {
   it('should split a valid pair into preferred and alter languages', () => {

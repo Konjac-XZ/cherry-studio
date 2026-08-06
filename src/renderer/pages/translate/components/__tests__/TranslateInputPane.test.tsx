@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import TranslateInputPane from '../TranslateInputPane'
@@ -46,6 +46,9 @@ const baseProps = () => ({
   onDrop: vi.fn(),
   onSelectFile: vi.fn(),
   onCopy: vi.fn(),
+  onPasteFromClipboard: vi.fn(async () => 'pasted'),
+  htmlConversionEnabled: true,
+  onToggleHtmlConversion: vi.fn(),
   onCancelOcr: vi.fn(),
   disabled: false,
   ocrProcessing: false,
@@ -77,7 +80,30 @@ describe('TranslateInputPane', () => {
     expect(screen.getByRole('textbox')).toHaveValue('hello')
   })
 
-  it('clears the input when the clear button is clicked', () => {
+  it('pastes clipboard text at the current caret', async () => {
+    const props = baseProps()
+    props.text = 'hello'
+    render(<TranslateInputPane {...props} />)
+    const textarea = screen.getByRole('textbox') as HTMLTextAreaElement
+    textarea.setSelectionRange(2, 2)
+
+    fireEvent.click(screen.getByRole('button', { name: 'translate.paste' }))
+
+    await waitFor(() => expect(props.onTextChange).toHaveBeenCalledWith('hepastedllo'))
+  })
+
+  it('exposes the persisted HTML conversion state and toggle', () => {
+    const props = baseProps()
+    render(<TranslateInputPane {...props} />)
+    const toggle = screen.getByRole('button', { name: 'translate.html_conversion' })
+    expect(toggle).toHaveAttribute('aria-pressed', 'true')
+
+    fireEvent.click(toggle)
+
+    expect(props.onToggleHtmlConversion).toHaveBeenCalledOnce()
+  })
+
+  it('clears the input and restores textarea focus', async () => {
     const props = baseProps()
     props.text = 'hello'
 
@@ -86,12 +112,13 @@ describe('TranslateInputPane', () => {
     fireEvent.click(screen.getByRole('button', { name: 'common.clear' }))
 
     expect(props.onTextChange).toHaveBeenCalledWith('')
+    await waitFor(() => expect(screen.getByRole('textbox')).toHaveFocus())
   })
 
-  it('hides the clear button when there is no text', () => {
+  it('keeps the compact clear action available but disabled when there is no text', () => {
     render(<TranslateInputPane {...baseProps()} />)
 
-    expect(screen.queryByRole('button', { name: 'common.clear' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'common.clear' })).toBeDisabled()
   })
 
   it('shows the drop indicator while a file is dragged over the pane', () => {

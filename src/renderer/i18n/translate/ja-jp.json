@@ -758,6 +758,13 @@
         "placeholder": "このタスク実行時にエージェントが行うべきことは？"
       },
       "resume": "再開",
+      "reuseSession": {
+        "bound": "[to be translated]:View session",
+        "description": "[to be translated]:Continue every run in the same session instead of starting a new one.",
+        "label": "[to be translated]:Reuse session",
+        "pending": "[to be translated]:Waiting for the first run",
+        "warning": "[to be translated]:A reused session keeps accumulating context, which raises token cost over time and can overflow the model's context window. To rebind a clean session, disable and save, then enable and save."
+      },
       "run": "実行",
       "runTriggered": "タスクがトリガーされました",
       "save": "保存",
@@ -1419,6 +1426,11 @@
         "placeholder": "検索"
       }
     },
+    "compaction": {
+      "compacted": "[to be translated]:Context compacted, ~{{count}} tokens saved",
+      "compacted_plain": "[to be translated]:Context compacted",
+      "compacting": "[to be translated]:Compacting context…"
+    },
     "conversation": {
       "new": "新しいチャット"
     },
@@ -1484,6 +1496,13 @@
       },
       "new_session": "新しいセッション {{Command}}",
       "new_topic": "新しいトピック {{Command}}",
+      "note_reference": {
+        "description": "[to be translated]:Attach a note from Notes",
+        "empty": "[to be translated]:No notes found",
+        "load_failed": "[to be translated]:Failed to load notes",
+        "loading": "[to be translated]:Loading notes...",
+        "title": "[to be translated]:Reference Note"
+      },
       "paste_text_file": "入力に貼り付け",
       "pasted_text_file_name": "Pasted text.txt",
       "pause": "一時停止",
@@ -1614,6 +1633,10 @@
           "description": "ウェブ検索を無効にする",
           "label": "ウェブ検索を無効にする"
         },
+        "route": {
+          "builtin": "[to be translated]:Searches with the model's built-in tool",
+          "client": "[to be translated]:Searches with {{provider}}"
+        },
         "settings": "ウェブ検索設定"
       }
     },
@@ -1623,6 +1646,11 @@
       }
     },
     "message": {
+      "beautify": {
+        "empty": "[to be translated]:There is no reply text to beautify",
+        "label": "[to be translated]:Beautify reply",
+        "unchanged": "[to be translated]:The reply already uses the selected typography"
+      },
       "cache_stats": {
         "inline": "キャッシュ {{hit_rate}}%",
         "tooltip": "キャッシュ読み込み {{cache_read}} / 書き込み {{cache_write}} / キャッシュなし {{no_cache}} · 入力トークン {{saved}} 節約"
@@ -1684,6 +1712,7 @@
         "usage": "トークン使用量",
         "waiting_first_token": "待機"
       },
+      "translate_native": "[to be translated]:Translate to {{language}}",
       "useful": {
         "label": "上下文として設定する",
         "tip": "このメッセージは、このメッセージセットの中でコンテキストに含まれるために選択されます"
@@ -1696,6 +1725,9 @@
       }
     },
     "navigation": {
+      "anchor": {
+        "jump_to_turn": "[to be translated]:Jump to turn {{number}}"
+      },
       "bottom": "下部に戻る",
       "close": "閉じる",
       "first": "最初のメッセージです",
@@ -3165,6 +3197,7 @@
         "threshold": "低関連度チャンクをフィルタリングするための類似度閾値。値を高くすると検索がより厳格になります。"
       },
       "processor": "処理プロバイダ",
+      "processor_not_configured": "[to be translated]:Not configured",
       "rerank_disabled": "無効",
       "rerank_model": "リランクモデル",
       "reset_action": "デフォルトに戻す",
@@ -3415,7 +3448,15 @@
         }
       },
       "basic": {
+        "autoCleanupUserMessage": "[to be translated]:Hide completed user messages",
+        "autoCopy": "[to be translated]:Copy successful replies",
+        "autoTranslate": "[to be translated]:Translate successful replies to native language",
+        "context_compress_enabled": "[to be translated]:Auto-compress",
+        "context_compress_model": "[to be translated]:Compression model",
+        "context_compress_model_follow": "[to be translated]:Default",
         "context_count": "コンテキストカウント",
+        "context_management": "[to be translated]:Context management",
+        "context_truncate_threshold": "[to be translated]:Tool-output truncation threshold (chars)",
         "creative": "クリエイティブ",
         "custom_params": "カスタムパラメータ",
         "custom_params_add": "パラメータを追加",
@@ -3424,11 +3465,29 @@
         "desc": "アシスタントのIDとモデルパラメータを設定します",
         "description_label": "説明",
         "field": {
+          "autoCleanupUserMessage": {
+            "hint": "[to be translated]:Hides the user bubble only after every sibling reply finishes and at least one succeeds; the message remains in context"
+          },
+          "autoCopy": {
+            "hint": "[to be translated]:Copies the selected or highest-priority successful reply after typography processing"
+          },
+          "autoTranslate": {
+            "hint": "[to be translated]:Adds one translation using the native language configured in Translate settings"
+          },
           "avatar": {
             "hint": "ライブラリおよびチャット内でアシスタントを識別するために使用されます"
           },
+          "context_compress_enabled": {
+            "hint": "[to be translated]:Summarize older turns automatically when nearing the context window"
+          },
           "context_count": {
             "hint": "コンテキストとして保持される最近のメッセージ数"
+          },
+          "context_management": {
+            "hint": "[to be translated]:Override global context-management settings for this assistant; off inherits the global settings"
+          },
+          "context_truncate_threshold": {
+            "hint": "[to be translated]:Tool outputs beyond this many characters are offloaded and truncated"
           },
           "custom_params": {
             "hint": "リクエストと共に送信される追加プロバイダーパラメータ"
@@ -3461,6 +3520,12 @@
           },
           "top_p": {
             "hint": "有効にすると、トークンサンプリングの範囲を制限します"
+          },
+          "zhCnMarkdownSmartQuotes": {
+            "hint": "[to be translated]:Applies the Translate page's Simplified Chinese Markdown quote processor"
+          },
+          "zhMarkdownTextSpacing": {
+            "hint": "[to be translated]:Applies the Translate page's Chinese and Latin Markdown spacing processor"
           }
         },
         "group": "グループ",
@@ -3477,6 +3542,7 @@
         "model_pick": "+ モデルを選択",
         "pick_avatar": "アバターを選択",
         "precise": "正確",
+        "reply_automation": "[to be translated]:Successful reply automation",
         "stream_output": "ストリーム出力",
         "tag_empty": "タグがありません",
         "tag_hint": "新しいタグを追加するには、ライブラリの上部バーの「+ Tag」エントリを使用してください。",
@@ -3485,7 +3551,9 @@
         "tags": "タグ",
         "temperature": "温度",
         "title": "基本設定",
-        "top_p": "Top-P"
+        "top_p": "Top-P",
+        "zhCnMarkdownSmartQuotes": "[to be translated]:Chinese smart quotes",
+        "zhMarkdownTextSpacing": "[to be translated]:Chinese and Latin spacing"
       },
       "breadcrumb": "図書館",
       "dialogs": {
@@ -4273,6 +4341,7 @@
       "cutoff": "検索内容を切り詰めています...",
       "fetch_complete": "{{count}}件の検索結果",
       "fetch_empty": "検索結果は見つかりませんでした",
+      "fetch_opaque": "[to be translated]:Searched by the model",
       "partial_failure": "{{count}}件の検索結果、一部の検索に失敗しました"
     }
   },
@@ -5145,6 +5214,7 @@
     "reset": "リセット",
     "rotate_left": "左回転",
     "rotate_right": "右に回転",
+    "save_as": "[to be translated]:Save As",
     "source": "ソースコードを表示",
     "zoom_in": "拡大",
     "zoom_out": "縮小"
@@ -5783,7 +5853,25 @@
         "title": "エンタープライズ"
       },
       "feedback": {
+        "agent": {
+          "description": "[to be translated]:Chat with Cherry Assistant to share feedback.",
+          "title": "[to be translated]:Use Agent"
+        },
+        "agent_error": "[to be translated]:Unable to open Cherry Assistant for feedback. Please try again.",
         "button": "フィードバック",
+        "dialog": {
+          "description": "[to be translated]:Choose how to share feedback and help us make Cherry Studio better.",
+          "title": "[to be translated]:Choose a feedback channel"
+        },
+        "github": {
+          "description": "[to be translated]:Create a bug report or feature request on GitHub.",
+          "title": "[to be translated]:GitHub Issue"
+        },
+        "recommended": "[to be translated]:Recommended",
+        "survey": {
+          "description": "[to be translated]:Share feedback through our Feishu survey.",
+          "title": "[to be translated]:Feedback survey"
+        },
         "title": "フィードバック"
       },
       "label": "について",
@@ -7309,6 +7397,7 @@
       "topic_naming": {
         "auto": "トピックの自動命名",
         "label": "トピック名",
+        "model": "[to be translated]:Naming Model",
         "prompt": "トピック命名プロンプト"
       },
       "translate_model": "翻訳モデル",
@@ -7647,6 +7736,7 @@
         "all": "すべてのプロバイダー",
         "disabled": "障害者専用",
         "enabled": "有効のみ",
+        "hidden_builtin": "[to be translated]:Hidden Built-in Providers",
         "label": "フィルタープロバイダー"
       },
       "filter_agent": "フィルターエージェント対応プロバイダー",
@@ -7659,6 +7749,11 @@
         "sign_in_failed": "サインインに失敗しました。もう一度お試しください。",
         "sign_in_success": "Grok CLIにサインインしました",
         "signing_in": "ブラウザを待機中…"
+      },
+      "hide": {
+        "action": "[to be translated]:Hide",
+        "content": "[to be translated]:This built-in provider will be disabled and hidden from normal provider lists and model selectors. You can restore it from the Hidden Built-in Providers filter.",
+        "title": "[to be translated]:Hide Built-in Provider"
       },
       "image_endpoints": {
         "image_edit_base_url": {
@@ -7731,6 +7826,7 @@
       "reorder_failed": "プロバイダーの並び替えに失敗しました",
       "request_configuration": "リクエスト設定",
       "request_configuration_tooltip": "APIホストとカスタムリクエストヘッダーを設定する",
+      "restore": "[to be translated]:Restore",
       "save_failed": "プロバイダー設定の保存に失敗しました",
       "search": "プロバイダーを検索...",
       "search_placeholder": "モデルIDまたは名前を検索",
@@ -7883,13 +7979,16 @@
       "enabled": "有効化",
       "exit_fullscreen": "フルスクリーンを終了",
       "filter": "フィルター",
+      "go_home": "[to be translated]:Go to Home",
       "label": "キー",
       "move_tab_to_first": "タブを最初に移動",
       "new_topic": "新しいトピック",
+      "next_assistant": "[to be translated]:Next Assistant",
       "occupied_by_other_application": "このショートカットは既にシステムまたは別のアプリケーションで使用されています",
       "open_tab_in_new_window": "新しいウィンドウでタブを開く",
       "pin_tab": "タブをピン留め/解除",
       "press_shortcut": "ショートカットを押す",
+      "previous_assistant": "[to be translated]:Previous Assistant",
       "print": "印刷",
       "quick_assistant": "クイックアシスタント",
       "rename_topic": "トピックの名前を変更",
@@ -7914,6 +8013,7 @@
       "toggle_right_sidebar": "右サイドバーを切り替え",
       "toggle_show_topics": "トピックの表示を切り替え",
       "toggle_sidebar": "サイドバーを切り替える",
+      "translate_clipboard": "[to be translated]:Translate Clipboard",
       "zoom_in": "ズームイン",
       "zoom_out": "ズームアウト",
       "zoom_reset": "ズームをリセット"
@@ -8071,6 +8171,10 @@
         "check": "チェック",
         "check_failed": "検証に失敗しました",
         "check_success": "検証に成功しました",
+        "client_tools_preferred": {
+          "description": "[to be translated]:Use the search and URL-fetch services configured above even when the model has built-in search. When off, the model handles it.",
+          "label": "[to be translated]:Prefer configured search services"
+        },
         "compression": {
           "cutoff": {
             "limit": {
@@ -8193,6 +8297,22 @@
           "label": "言語名",
           "placeholder": "日本語"
         }
+      },
+      "glossary": {
+        "delete": {
+          "description": "[to be translated]:Delete this glossary entry?",
+          "title": "[to be translated]:Delete glossary entry"
+        },
+        "error": {
+          "add": "[to be translated]:Failed to add glossary entry",
+          "required": "[to be translated]:Source and target phrases are required"
+        },
+        "hint": "[to be translated]:Matched enabled terms are injected through {{customized_dictionary}} in a translation prompt.",
+        "source": "[to be translated]:Source phrase",
+        "source_placeholder": "[to be translated]:Term in the source text",
+        "target": "[to be translated]:Required translation",
+        "target_placeholder": "[to be translated]:Required target wording",
+        "title": "[to be translated]:Translation glossary"
       },
       "prompt": "翻訳プロンプト",
       "title": "翻訳設定"
@@ -8383,8 +8503,10 @@
       "language": "任意の言語"
     },
     "button": {
+      "polish_and_translate": "[to be translated]:Polish then translate",
       "translate": "翻訳"
     },
+    "clipboard_watch": "[to be translated]:Watch clipboard and translate changes",
     "close": "閉じる",
     "closed": "翻訳は閉じられました",
     "complete": "翻訳完了",
@@ -8393,6 +8515,11 @@
       "title": "翻訳確認"
     },
     "copied": "翻訳内容がコピーされました",
+    "counter": {
+      "tip": "[to be translated]:Estimated tokens include the active translation prompt.",
+      "tokens": "[to be translated]:tokens",
+      "words": "[to be translated]:words"
+    },
     "custom": {
       "label": "カスタム言語"
     },
@@ -8405,6 +8532,10 @@
         "auto": {
           "label": "自動",
           "tip": "適切な検出方法を自動的に選択します"
+        },
+        "heuristic": {
+          "label": "[to be translated]:Heuristic",
+          "tip": "[to be translated]:Use fast script and character-pattern detection"
         },
         "label": "自動検出方法",
         "llm": {
@@ -8456,6 +8587,11 @@
       "reading": "ファイルの内容を読み込んでいます...",
       "upload": "画像またはドキュメントをドロップするか、クリックしてアップロード"
     },
+    "flip": {
+      "label": "[to be translated]:Correct detected direction and retranslate",
+      "native_language_not_in_pair": "[to be translated]:The native language is not included in the bidirectional pair.",
+      "success": "[to be translated]:Translation direction corrected"
+    },
     "history": {
       "back": "リストに戻る",
       "clear": "履歴をクリア",
@@ -8489,6 +8625,7 @@
       "target": "ターゲット",
       "title": "翻訳履歴"
     },
+    "html_conversion": "[to be translated]:Convert rich HTML clipboard content to Markdown",
     "info": {
       "aborted": "翻訳中止"
     },
@@ -8509,20 +8646,71 @@
     "output": {
       "placeholder": "翻訳"
     },
+    "paste": "[to be translated]:Paste from clipboard",
+    "post_processing": {
+      "enable": "[to be translated]:Enable post-processing",
+      "english_straight_quotes": "[to be translated]:Normalize English straight quotes",
+      "zh_smart_quotes": "[to be translated]:Use Chinese smart quotes",
+      "zh_text_spacing": "[to be translated]:Add Chinese/Latin text spacing"
+    },
     "preferred_target": "優先ターゲット",
     "processing": "翻訳中...",
     "settings": {
       "autoCopy": "翻訳完了後、自動的にコピー",
       "bidirectional": "双方向翻訳設定",
       "bidirectional_tip": "有効にすると、ソース言語と目標言語間の双方向翻訳のみがサポートされます",
+      "custom_body": {
+        "polish": "[to be translated]:Polish request",
+        "reasoning_override": "[to be translated]:Reasoning-related custom parameters override the Minimize reasoning switch for this request type.",
+        "title": "[to be translated]:Custom request parameters",
+        "translate": "[to be translated]:Translate request"
+      },
       "error": {
         "save": "翻訳設定の保存に失敗しました"
+      },
+      "font_size": "[to be translated]:Font size",
+      "global_translate_model": "[to be translated]:Global translation model",
+      "group_model": "[to be translated]:Models",
+      "group_post_processing": "[to be translated]:Post-processing",
+      "json_structure_view": {
+        "copy_blank_line_between_rows": "[to be translated]:Blank line between copied rows",
+        "copy_separator": {
+          "chinese_colon": "[to be translated]:Chinese colon",
+          "chinese_colon_newline": "[to be translated]:Chinese colon + newline",
+          "colon_newline": "[to be translated]:Colon + newline",
+          "colon_space": "[to be translated]:Colon + space",
+          "label": "[to be translated]:Selection copy separator"
+        },
+        "label": "[to be translated]:JSON structure view"
+      },
+      "layout": {
+        "auto": "[to be translated]:Auto",
+        "horizontal": "[to be translated]:Horizontal",
+        "label": "[to be translated]:Panel layout",
+        "vertical": "[to be translated]:Vertical"
+      },
+      "minimize_thinking": {
+        "label": "[to be translated]:Minimize reasoning",
+        "tip": "[to be translated]:Disable reasoning unless custom parameters explicitly control it"
       },
       "model": "モデル設定",
       "model_desc": "翻訳サービスで使用されるモデル",
       "model_placeholder": "翻訳モデルを選択してください",
+      "native_language": "[to be translated]:Native language",
+      "native_to_other_model": "[to be translated]:Native to other languages",
       "no_model_warning": "翻訳モデルが選択されていません",
+      "other_to_native_model": "[to be translated]:Other languages to native",
+      "polish_enabled": "[to be translated]:Polish before translation",
+      "polish_model": "[to be translated]:Polish model",
       "preview": "Markdown プレビュー",
+      "prompt": {
+        "native_to_other": "[to be translated]:Native-to-other prompt",
+        "other_to_native": "[to be translated]:Other-to-native prompt",
+        "polish": "[to be translated]:Polish prompt"
+      },
+      "regex_rules": {
+        "title": "[to be translated]:Regex replacements"
+      },
       "scroll_sync": "スクロール同期設定",
       "title": "翻訳設定"
     },

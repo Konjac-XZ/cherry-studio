@@ -29,6 +29,7 @@ import { AppUpdaterService } from '@main/services/AppUpdaterService'
 import { AutoBackupService } from '@main/services/AutoBackupService'
 import { BinaryManager } from '@main/services/BinaryManager'
 import { CitationPreviewService } from '@main/services/CitationPreviewService'
+import { ClipboardWatchService } from '@main/services/ClipboardWatchService'
 import { CodeCliService } from '@main/services/codeCli'
 import { CommandService } from '@main/services/CommandService'
 import { DirectoryTreeManager, FileManager } from '@main/services/file'
@@ -89,6 +90,7 @@ export const services = {
   CodeCliService,
   CommandService,
   CitationPreviewService,
+  ClipboardWatchService,
   LanTransferService,
   FileManager,
   DirectoryTreeManager,

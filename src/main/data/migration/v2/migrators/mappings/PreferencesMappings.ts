@@ -1,6 +1,6 @@
 /**
  * Auto-generated preference mappings from classification.json
- * Generated at: 2026-08-04T07:34:44.893Z
+ * Generated at: 2026-08-05T16:26:16.711Z
  *
  * This file contains pure mapping relationships without default values.
  * Default values are managed in src/shared/data/preferences.ts
@@ -97,6 +97,10 @@ export const REDUX_STORE_MAPPINGS = {
     {
       originalKey: 'targetLanguage',
       targetKey: 'chat.input.translate.target_language'
+    },
+    {
+      originalKey: 'userNativeLanguage',
+      targetKey: 'feature.translate.native_language'
     },
     {
       originalKey: 'proxyMode',
@@ -301,6 +305,18 @@ export const REDUX_STORE_MAPPINGS = {
     {
       originalKey: 'translateModelPrompt',
       targetKey: 'feature.translate.model_prompt'
+    },
+    {
+      originalKey: 'nativeLanguageTranslateModelPrompt',
+      targetKey: 'feature.translate.prompt.native_to_other'
+    },
+    {
+      originalKey: 'otherLanguageTranslateModelPrompt',
+      targetKey: 'feature.translate.prompt.other_to_native'
+    },
+    {
+      originalKey: 'polishPrompt',
+      targetKey: 'feature.translate.prompt.polish'
     },
     {
       originalKey: 'autoTranslateWithSpace',
@@ -691,6 +707,14 @@ export const REDUX_STORE_MAPPINGS = {
     {
       originalKey: 'settings.autoCopy',
       targetKey: 'feature.translate.page.auto_copy'
+    },
+    {
+      originalKey: 'settings.customParameters',
+      targetKey: 'feature.translate.request.custom_parameters'
+    },
+    {
+      originalKey: 'settings.polishCustomParameters',
+      targetKey: 'feature.translate.request.polish_custom_parameters'
     }
   ],
   websearch: [
@@ -783,6 +807,62 @@ export const DEXIE_SETTINGS_MAPPINGS: ReadonlyArray<{ originalKey: string; targe
   {
     originalKey: 'translate:bidirectional:enabled',
     targetKey: 'feature.translate.page.bidirectional_enabled'
+  },
+  {
+    originalKey: 'translate:json-structure-view:enabled',
+    targetKey: 'feature.translate.page.json_structure_view'
+  },
+  {
+    originalKey: 'translate:json-structure-view:copy-blank-line-between-rows',
+    targetKey: 'feature.translate.page.json_structure_copy_blank_line'
+  },
+  {
+    originalKey: 'translate:json-structure-view:copy-separator',
+    targetKey: 'feature.translate.page.json_structure_copy_separator'
+  },
+  {
+    originalKey: 'translate:postprocess:enStraightQuotes:enabled',
+    targetKey: 'feature.translate.post_processing.english_straight_quotes'
+  },
+  {
+    originalKey: 'translate:postprocess:zhQuotes:enabled',
+    targetKey: 'feature.translate.post_processing.zh_smart_quotes'
+  },
+  {
+    originalKey: 'translate:postprocess:zhSpacing:enabled',
+    targetKey: 'feature.translate.post_processing.zh_text_spacing'
+  },
+  {
+    originalKey: 'translate:postprocess:regex:rules',
+    targetKey: 'feature.translate.post_processing.regex_rules'
+  },
+  {
+    originalKey: 'translate:postprocess:enabled',
+    targetKey: 'feature.translate.post_processing.enabled'
+  },
+  {
+    originalKey: 'translate:layout:override',
+    targetKey: 'feature.translate.page.layout_override'
+  },
+  {
+    originalKey: 'translate:font:size',
+    targetKey: 'feature.translate.page.font_size'
+  },
+  {
+    originalKey: 'translate:paste:html-conversion:enabled',
+    targetKey: 'feature.translate.page.html_conversion_on_paste'
+  },
+  {
+    originalKey: 'translate:polish:enabled',
+    targetKey: 'feature.translate.polish.enabled'
+  },
+  {
+    originalKey: 'translate:auto-disable-thinking',
+    targetKey: 'feature.translate.reasoning.translate_auto_disable'
+  },
+  {
+    originalKey: 'translate:polish:auto-disable-thinking',
+    targetKey: 'feature.translate.reasoning.polish_auto_disable'
   }
 ] as const
 
@@ -803,11 +883,11 @@ export const LOCALSTORAGE_MAPPINGS: ReadonlyArray<{ originalKey: string; targetK
 /**
  * 映射统计:
  * - ElectronStore项: 2
- * - Redux Store项: 175
+ * - Redux Store项: 181
  * - Redux分类: settings, selectionStore, llm, nutstore, preprocess, translate, websearch, ocr, note
- * - DexieSettings项: 5
+ * - DexieSettings项: 19
  * - localStorage项: 0
- * - 总配置项: 182
+ * - 总配置项: 202
  *
  * 使用说明:
  * 1. ElectronStore读取: configManager.get(mapping.originalKey)

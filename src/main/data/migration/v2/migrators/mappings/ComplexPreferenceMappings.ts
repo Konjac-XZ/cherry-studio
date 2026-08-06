@@ -34,6 +34,8 @@ import { SHORTCUT_TARGET_KEYS, transformShortcuts } from './ShortcutMappings'
 import {
   copyTargetLanguageForMiniWindow,
   copyTranslatePageLanguages,
+  migrateTranslateDirectionModelPolicy,
+  migrateTranslateDirectionModels,
   splitBidirectionalPairForAction
 } from './TranslateTransforms'
 
@@ -218,13 +220,15 @@ export const COMPLEX_PREFERENCE_MAPPINGS: ComplexMapping[] = [
       defaultModel: { source: 'redux', category: 'llm', key: 'defaultModel' },
       topicNamingModel: { source: 'redux', category: 'llm', key: 'topicNamingModel' },
       quickModel: { source: 'redux', category: 'llm', key: 'quickModel' },
-      translateModel: { source: 'redux', category: 'llm', key: 'translateModel' }
+      translateModel: { source: 'redux', category: 'llm', key: 'translateModel' },
+      polishModel: { source: 'redux', category: 'llm', key: 'polishModel' }
     },
     targetKeys: [
       'chat.default_model_id',
       'topic.naming.model_id',
       'feature.quick_assistant.model_id',
-      'feature.translate.model_id'
+      'feature.translate.model_id',
+      'feature.translate.model.polish_global_id'
     ],
     transform: transformLlmModelIds
   },
@@ -303,6 +307,43 @@ export const COMPLEX_PREFERENCE_MAPPINGS: ComplexMapping[] = [
       'feature.translate.page.target_language'
     ],
     transform: copyTranslatePageLanguages
+  },
+
+  {
+    id: 'translate_direction_models',
+    description: 'Convert legacy per-direction translate model identities to UniqueModelId values',
+    sources: {
+      nativeToOtherModel: { source: 'dexie-settings', key: 'translate:model:native-to-other' },
+      otherToNativeModel: { source: 'dexie-settings', key: 'translate:model:other-to-native' },
+      polishModel: { source: 'dexie-settings', key: 'translate:model:polish' }
+    },
+    targetKeys: [
+      'feature.translate.model.native_to_other_id',
+      'feature.translate.model.other_to_native_id',
+      'feature.translate.model.polish_id'
+    ],
+    transform: migrateTranslateDirectionModels
+  },
+
+  {
+    id: 'translate_direction_model_policy',
+    description: 'Migrate per-direction follow-global policy with the legacy shared preference as fallback',
+    sources: {
+      legacyFollowsGlobal: { source: 'dexie-settings', key: 'translate:model:follow-global' },
+      nativeToOtherFollowsGlobal: {
+        source: 'dexie-settings',
+        key: 'translate:model:native-to-other:follow-global'
+      },
+      otherToNativeFollowsGlobal: {
+        source: 'dexie-settings',
+        key: 'translate:model:other-to-native:follow-global'
+      }
+    },
+    targetKeys: [
+      'feature.translate.model.native_to_other_follows_global',
+      'feature.translate.model.other_to_native_follows_global'
+    ],
+    transform: migrateTranslateDirectionModelPolicy
   }
 ]
 

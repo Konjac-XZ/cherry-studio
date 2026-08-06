@@ -31,7 +31,7 @@ import { ModelSelectorDetailCard } from './ModelSelectorDetailCard'
 import { ModelSelectorRow, ModelSelectorRowActionButton } from './ModelSelectorRow'
 import { computeCollapsedSelection, computeToggledSelection } from './selection'
 import type { FlatListItem, ModelSelectorModelItem, ModelSelectorProps, ModelSelectorSelectionType } from './types'
-import { useModelListKeyboardNav } from './useModelListKeyboardNav'
+import { DEFAULT_MODEL_SELECTOR_PAGE_SIZE, useModelListKeyboardNav } from './useModelListKeyboardNav'
 import { useModelSelectorData } from './useModelSelectorData'
 import { getProviderDisplayName } from './utils'
 
@@ -45,8 +45,6 @@ const MODEL_SELECTOR_CONTENT_HEIGHT = 440
 const MODEL_SELECTOR_WIDTH = 400
 const DEFAULT_PRIORITIZED_PROVIDER_IDS: readonly string[] = []
 const MODEL_SELECTOR_NAVIGATION_KEYS = new Set(['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Enter'])
-const DEFAULT_MODEL_SELECTOR_KEYBOARD_PAGE_SIZE = Math.max(1, Math.floor(MODEL_SELECTOR_CONTENT_HEIGHT / ITEM_HEIGHT))
-
 const estimateModelSelectorItemSize = () => ITEM_HEIGHT
 type ModelSelectorScrollAlign = NonNullable<Parameters<DynamicVirtualListRef['scrollToIndex']>[1]>['align']
 
@@ -406,7 +404,7 @@ export function ModelSelector(props: ModelSelectorProps) {
     () => MODEL_SELECTOR_LIST_VERTICAL_PADDING + Math.max(1, listItems.length) * ITEM_HEIGHT,
     [listItems.length]
   )
-  const pageSize = DEFAULT_MODEL_SELECTOR_KEYBOARD_PAGE_SIZE
+  const pageSize = DEFAULT_MODEL_SELECTOR_PAGE_SIZE
   const selectedTagsKey = useMemo(() => selectedTags.join('|'), [selectedTags])
   const getListItemKey = useCallback((index: number) => listItems[index].key, [listItems])
   const isStickyListItem = useCallback((index: number) => listItems[index].type === 'group', [listItems])

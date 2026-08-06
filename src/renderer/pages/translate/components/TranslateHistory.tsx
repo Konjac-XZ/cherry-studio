@@ -1,4 +1,4 @@
-import { ConfirmDialog, EmptyState, PageSidePanel } from '@cherrystudio/ui'
+import { ConfirmDialog, EmptyState, Input, PageSidePanel } from '@cherrystudio/ui'
 import { loggerService } from '@logger'
 import { DynamicVirtualList } from '@renderer/components/VirtualList'
 import { useLanguages, useTranslateHistories, useTranslateHistory } from '@renderer/hooks/translate'
@@ -6,7 +6,7 @@ import { toast } from '@renderer/services/toast'
 import { cn } from '@renderer/utils/style'
 import type { TranslateLangCode } from '@shared/data/preference/preferenceTypes'
 import type { TranslateHistory, TranslateLanguage } from '@shared/data/types/translate'
-import { ArrowRight, ChevronRight, Clock, Copy, Repeat, Star, Trash2 } from 'lucide-react'
+import { ArrowRight, ChevronRight, Clock, Copy, Repeat, Search, Star, Trash2 } from 'lucide-react'
 import type { FC, UIEvent } from 'react'
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -30,6 +30,7 @@ type Props = {
 }
 
 const ITEM_HEIGHT = 104
+const TRANSLATE_HISTORY_RENDER_LIMIT = 200
 const UNKNOWN_LANGUAGE = { value: 'Unknown', langCode: 'unknown' as TranslateLangCode, emoji: '🏳️' }
 type DisplayLanguage = TranslateLanguage | typeof UNKNOWN_LANGUAGE
 
@@ -50,12 +51,31 @@ const formatCreatedAt = (value: unknown, locale: string): string => {
 const TranslateHistoryList: FC<Props> = ({ isOpen, onHistoryItemClick, onClose }) => {
   const { t, i18n } = useTranslation()
   const [showStared, setShowStared] = useState(false)
+  const [search, setSearch] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [confirmClearOpen, setConfirmClearOpen] = useState(false)
+  const { getLanguage, getLabel, languages } = useLanguageLabels()
+  const normalizedSearch = search.trim().toLocaleLowerCase(i18n.language)
+  const matchingLanguageCodes = useMemo(
+    () =>
+      normalizedSearch
+        ? languages
+            .filter((language) =>
+              `${getLabel(language)} ${language.value} ${language.langCode}`
+                .toLocaleLowerCase(i18n.language)
+                .includes(normalizedSearch)
+            )
+            .map((language) => language.langCode)
+        : undefined,
+    [getLabel, i18n.language, languages, normalizedSearch]
+  )
   const { items, total, hasMore, isLoadingMore, loadMore, status } = useTranslateHistories({
-    star: showStared || undefined
+    search: search.trim() || undefined,
+    star: showStared || undefined,
+    languageCodes: matchingLanguageCodes,
+    pageSize: 100,
+    maxItems: TRANSLATE_HISTORY_RENDER_LIMIT
   })
-  const { getLanguage, getLabel } = useLanguageLabels()
   const { clear: clearHistory, update: updateHistory } = useTranslateHistory()
   const pendingLoadMoreRef = useRef(false)
 
@@ -192,6 +212,22 @@ const TranslateHistoryList: FC<Props> = ({ isOpen, onHistoryItemClick, onClose }
         closeLabel={t('translate.close')}
         bodyClassName="flex min-h-0 flex-col">
         <div className="flex min-h-0 flex-1 flex-col gap-3">
+          {!selectedItem && (
+            <div className="relative shrink-0">
+              <Search
+                size={14}
+                aria-hidden="true"
+                className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-2.5 text-muted-foreground"
+              />
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder={t('translate.history.search.placeholder')}
+                spellCheck={false}
+                className="pl-8"
+              />
+            </div>
+          )}
           {selectedItem ? (
             <HistoryDetail
               item={selectedItem}
@@ -239,7 +275,8 @@ const TranslateHistoryList: FC<Props> = ({ isOpen, onHistoryItemClick, onClose }
 }
 
 const useLanguageLabels = () => {
-  const { getLanguage: getDataApiLanguage, getLabel: getDataApiLabel } = useLanguages()
+  const { languages: loadedLanguages, getLanguage: getDataApiLanguage, getLabel: getDataApiLabel } = useLanguages()
+  const languages = loadedLanguages ?? []
 
   const getLanguage = useCallback(
     (langCode: TranslateLangCode | null) =>
@@ -255,7 +292,7 @@ const useLanguageLabels = () => {
     [getDataApiLabel]
   )
 
-  return { getLanguage, getLabel }
+  return { getLanguage, getLabel, languages }
 }
 
 const HistoryRow: FC<{

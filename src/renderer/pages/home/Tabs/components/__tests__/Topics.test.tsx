@@ -1593,6 +1593,40 @@ describe('Topics', () => {
     await vi.waitFor(() => expect(topicDataMocks.deleteTopic).toHaveBeenCalledWith('topic-c'))
   })
 
+  it('uses the existing two-step confirmation for middle-click deletion without activating the topic', async () => {
+    const { getByText, setActiveTopic } = renderTopicList()
+    const topicRow = getByText('Gamma topic').closest('[role="option"]') as HTMLElement
+
+    fireEvent(topicRow, new MouseEvent('auxclick', { bubbles: true, button: 1 }))
+
+    expect(topicDataMocks.deleteTopic).not.toHaveBeenCalled()
+    expect(within(topicRow).getByLabelText('Delete')).toHaveAttribute('data-deleting', 'true')
+    expect(setActiveTopic).not.toHaveBeenCalled()
+
+    fireEvent(topicRow, new MouseEvent('auxclick', { bubbles: true, button: 1 }))
+
+    await vi.waitFor(() => expect(topicDataMocks.deleteTopic).toHaveBeenCalledWith('topic-c'))
+    expect(setActiveTopic).not.toHaveBeenCalled()
+  })
+
+  it('deletes immediately on modified middle-click and guards pinned or renaming rows', async () => {
+    const { getByText, setActiveTopic } = renderTopicList()
+    const gammaRow = getByText('Gamma topic').closest('[role="option"]') as HTMLElement
+    const pinnedRow = getByText('Beta pinned').closest('[role="option"]') as HTMLElement
+    const alphaTitle = getByText('Alpha topic')
+    const alphaRow = alphaTitle.closest('[role="option"]') as HTMLElement
+
+    fireEvent(gammaRow, new MouseEvent('auxclick', { bubbles: true, button: 1, ctrlKey: true }))
+    await vi.waitFor(() => expect(topicDataMocks.deleteTopic).toHaveBeenCalledWith('topic-c'))
+
+    fireEvent(pinnedRow, new MouseEvent('auxclick', { bubbles: true, button: 1 }))
+    fireEvent.doubleClick(alphaTitle)
+    fireEvent(alphaRow, new MouseEvent('auxclick', { bubbles: true, button: 1 }))
+
+    expect(topicDataMocks.deleteTopic).toHaveBeenCalledTimes(1)
+    expect(setActiveTopic).not.toHaveBeenCalled()
+  })
+
   it('selects the same assistant neighbouring topic after deleting the active topic in the right panel', async () => {
     mockUseInfiniteQuery.mockReturnValue({
       pages: [

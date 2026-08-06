@@ -20,6 +20,7 @@ import { ModelListSchema } from '../schemas/model'
 import { ProviderListSchema } from '../schemas/provider'
 import { ProviderModelListSchema } from '../schemas/provider-models'
 import { ReasoningWireProfileSchema } from '../schemas/reasoningWire'
+import { normalizeModelId } from '../utils/normalize'
 
 const dataDir = join(fileURLToPath(import.meta.url), '..', '..', '..', 'data')
 const modelsRaw = JSON.parse(readFileSync(join(dataDir, 'models.json'), 'utf8'))
@@ -52,6 +53,24 @@ const JUNK = /(?:-vip|-ssvip|-cursor|-all|-nx|-gizmo|-mobile)$|--|^duo-chat-|\ba
 describe('catalog invariants (data/*.json)', () => {
   const ids = models.map((m) => m.id)
   const baseIds = new Set(ids)
+
+  it('keeps the V2-native Claude Sonnet 5 contract across direct and Bedrock-style ids', () => {
+    expect(models.find((model) => model.id === 'claude-sonnet-5')).toMatchObject({
+      contextWindow: 1_000_000,
+      maxOutputTokens: 128_000,
+      capabilities: expect.arrayContaining([
+        'function-call',
+        'reasoning',
+        'image-recognition',
+        'structured-output',
+        'file-input'
+      ])
+    })
+    expect(normalizeModelId('anthropic.claude-sonnet-5-v1:0')).toBe('claude-sonnet-5')
+    expect(normalizeModelId('anthropic/claude-sonnet-5')).toBe('claude-sonnet-5')
+    expect(isServerToolModelEligible('claude-sonnet-5', SERVER_TOOL.WEB_SEARCH)).toBe(true)
+    expect(isServerToolModelEligible('anthropic.claude-sonnet-5-v1:0', SERVER_TOOL.WEB_SEARCH)).toBe(true)
+  })
 
   it.each([
     ['mai-image-2-5', 'microsoft', 'Microsoft: MAI-Image-2.5'],

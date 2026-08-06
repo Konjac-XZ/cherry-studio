@@ -69,13 +69,14 @@ describe('PreferencesMappings', () => {
       expect(mapping!.sources).toHaveProperty('translateModel')
     })
 
-    it('targets 4 UniqueModelId preference keys', () => {
+    it('targets every UniqueModelId preference key', () => {
       const mapping = getComplexMappingById('llm_model_ids_to_unique')
       expect(mapping!.targetKeys).toEqual([
         'chat.default_model_id',
         'topic.naming.model_id',
         'feature.quick_assistant.model_id',
-        'feature.translate.model_id'
+        'feature.translate.model_id',
+        'feature.translate.model.polish_global_id'
       ])
     })
 

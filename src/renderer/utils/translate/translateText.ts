@@ -1,11 +1,26 @@
 import { ipcApi } from '@renderer/ipc'
 import { isTranslateLangCode, type TranslateLangCode } from '@shared/data/preference/preferenceTypes'
-import type { TranslateLanguage } from '@shared/data/types/translate'
+import type { UniqueModelId } from '@shared/data/types/model'
+import type { TranslateLanguage, TranslateOperation } from '@shared/data/types/translate'
 import { t } from 'i18next'
 import { v4 as uuid } from 'uuid'
 
 /** Must stay in sync with main-side prefix (validated in `translateService.open`). */
 const TRANSLATE_STREAM_PREFIX = 'translate:'
+
+export interface TranslateTextOptions {
+  operation?: TranslateOperation
+  sourceLangCode?: TranslateLangCode
+  modelId?: UniqueModelId
+}
+
+export const resolveTranslatePlan = async (
+  targetLangCode: TranslateLangCode,
+  operation: TranslateOperation = 'translate'
+): Promise<UniqueModelId> => {
+  const result = await ipcApi.request('translate.plan', { targetLangCode, operation })
+  return result.modelId
+}
 
 /**
  * Translate `text` to `targetLanguage` via main's `translate.open` IPC.
@@ -16,7 +31,8 @@ export const translateText = async (
   text: string,
   targetLanguage: TranslateLangCode | TranslateLanguage,
   onResponse?: (text: string, isComplete: boolean) => void,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  options?: TranslateTextOptions
 ): Promise<string> => {
   if (signal?.aborted) {
     throw new DOMException('Translation aborted before start', 'AbortError')
@@ -100,9 +116,18 @@ export const translateText = async (
       })
     )
 
-    ipcApi.request('translate.open', { streamId, text, targetLangCode }).catch((openError: unknown) => {
-      cleanup()
-      reject(openError instanceof Error ? openError : new Error(String(openError)))
-    })
+    ipcApi
+      .request('translate.open', {
+        streamId,
+        text,
+        targetLangCode,
+        ...(options?.operation && { operation: options.operation }),
+        ...(options?.sourceLangCode && { sourceLangCode: options.sourceLangCode }),
+        ...(options?.modelId && { modelId: options.modelId })
+      })
+      .catch((openError: unknown) => {
+        cleanup()
+        reject(openError instanceof Error ? openError : new Error(String(openError)))
+      })
   })
 }

@@ -56,6 +56,7 @@ export function toMessageListItem(message: CherryUIMessage, ctx: MessageListItem
     messageSnapshot,
     siblingsGroupId: metadata.siblingsGroupId,
     isActiveBranch: metadata.isActiveBranch,
+    hiddenInChat: metadata.hiddenInChat,
     stats: statsFromMetadata(message.metadata)
   }
 }

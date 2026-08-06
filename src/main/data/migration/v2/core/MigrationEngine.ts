@@ -38,6 +38,7 @@ import { preferenceTable } from '@data/db/schemas/preference'
 import { promptTable } from '@data/db/schemas/prompt'
 import { entityTagTable, tagTable } from '@data/db/schemas/tagging'
 import { topicTable } from '@data/db/schemas/topic'
+import { translateGlossaryTable } from '@data/db/schemas/translateGlossary'
 import { translateHistoryTable } from '@data/db/schemas/translateHistory'
 import { translateLanguageTable } from '@data/db/schemas/translateLanguage'
 import { userModelTable } from '@data/db/schemas/userModel'
@@ -91,6 +92,7 @@ const MIGRATION_TARGET_TABLES = [
   { table: miniAppTable, name: 'mini_app' },
   { table: preferenceTable, name: 'preference' },
   { table: noteTable, name: 'note' },
+  { table: translateGlossaryTable, name: 'translate_glossary' },
   { table: translateHistoryTable, name: 'translate_history' },
   { table: translateLanguageTable, name: 'translate_language' },
   { table: knowledgeItemTable, name: 'knowledge_item' }, // Must clear before knowledge_base (FK reference)

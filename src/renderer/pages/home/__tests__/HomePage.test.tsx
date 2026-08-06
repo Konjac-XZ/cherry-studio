@@ -1746,6 +1746,43 @@ describe('HomePage', () => {
     expect(homeMocks.setShowSidebar).toHaveBeenCalledWith(false)
   })
 
+  it('cycles assistants in display order, wraps, and skips collapsed assistant rows', async () => {
+    homeMocks.isActiveTab = true
+    homeMocks.assistants = [
+      { id: 'assistant-1', name: 'One' },
+      { id: 'assistant-2', name: 'Two' },
+      { id: 'assistant-3', name: 'Three' }
+    ]
+    homeMocks.createTopic.mockResolvedValue({ ...createdTopic, id: 'topic-three', assistantId: 'assistant-3' })
+    cacheService.setPersist('ui.topic.expansion.assistant', ['topic:assistant:assistant-2'])
+
+    render(<HomePage />)
+
+    const nextHandler = vi
+      .mocked(useCommandHandler)
+      .mock.calls.filter(([command]) => command === 'assistant.next')
+      .at(-1)?.[1]
+    expect(nextHandler).toBeDefined()
+
+    act(() => {
+      void nextHandler?.()
+    })
+
+    await waitFor(() => expect(homeMocks.createTopic).toHaveBeenCalledWith({ assistantId: 'assistant-3' }))
+    expect(screen.getByTestId('active-topic')).toHaveTextContent('topic-three')
+
+    homeMocks.createTopic.mockResolvedValue({ ...createdTopic, id: 'topic-one', assistantId: 'assistant-1' })
+    const wrappedNextHandler = vi
+      .mocked(useCommandHandler)
+      .mock.calls.filter(([command]) => command === 'assistant.next')
+      .at(-1)?.[1]
+    act(() => {
+      void wrappedNextHandler?.()
+    })
+
+    await waitFor(() => expect(homeMocks.createTopic).toHaveBeenCalledWith({ assistantId: 'assistant-1' }))
+  })
+
   it('keeps detached topic sidebar state local, default-closed, and fixed on the left', () => {
     homeMocks.preferenceValues.set('topic.tab.show', true)
     homeMocks.preferenceValues.set('topic.tab.display_mode', 'assistant')

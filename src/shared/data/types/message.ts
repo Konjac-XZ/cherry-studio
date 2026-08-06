@@ -153,6 +153,11 @@ export interface MessageData {
   parts?: CherryMessagePart[]
   /** Main-authoritative request controls for resuming this assistant turn. */
   turnOptions?: AssistantTurnOptions
+  /** Presentation-only state. It never participates in prompt/context construction. */
+  presentation?: {
+    /** Keep the user row in the tree while omitting it from conversation surfaces. */
+    hiddenInChat?: boolean
+  }
 }
 
 // ── Cherry-specific UI message types ────────────────────────────────
@@ -201,6 +206,8 @@ export interface CherryUIMessageMetadata {
   createdAt?: string
   /** Last modification timestamp (ISO). Mirrors v1 Message.updatedAt during migration. */
   updatedAt?: string
+  /** Presentation-only visibility projected from the persisted message data. */
+  hiddenInChat?: boolean
 
   /**
    * Total-tokens convenience mirror of `MessageStats.totalTokens`, populated by
@@ -408,6 +415,10 @@ export const MessageDataSchema = z.custom<MessageData>((value) => {
       return false
     }
     if (v.turnOptions.fastMode !== undefined && typeof v.turnOptions.fastMode !== 'boolean') return false
+  }
+  if (v.presentation !== undefined) {
+    if (typeof v.presentation !== 'object' || v.presentation === null || Array.isArray(v.presentation)) return false
+    if (v.presentation.hiddenInChat !== undefined && typeof v.presentation.hiddenInChat !== 'boolean') return false
   }
   return true
 })

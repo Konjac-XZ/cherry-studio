@@ -80,7 +80,7 @@ vi.mock('@renderer/hooks/useTheme', () => ({
   useTheme: () => ({ theme: 'light' })
 }))
 
-vi.mock('@renderer/pages/translate/TranslateSettings', () => ({
+vi.mock('@renderer/components/translate/TranslateSettings', () => ({
   TranslateSettingsPanelContent: () => null
 }))
 

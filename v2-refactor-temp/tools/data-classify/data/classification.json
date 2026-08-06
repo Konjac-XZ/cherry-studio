@@ -249,6 +249,25 @@
           ]
         },
         {
+          "originalKey": "polishModel",
+          "type": "unknown",
+          "defaultValue": "SYSTEM_MODELS.defaultModel[2]",
+          "status": "classified",
+          "category": "preferences",
+          "targetKey": null,
+          "children": [
+            {
+              "category": null,
+              "defaultValue": null,
+              "originalKey": "id",
+              "status": "pending",
+              "targetKey": null,
+              "type": "string",
+              "note": "Migrated via complex mapping: llm_model_ids_to_unique"
+            }
+          ]
+        },
+        {
           "originalKey": "quickAssistantId",
           "type": "string",
           "defaultValue": "",
@@ -872,6 +891,14 @@
           "status": "classified",
           "category": "preferences",
           "targetKey": "chat.input.translate.target_language"
+        },
+        {
+          "originalKey": "userNativeLanguage",
+          "type": "PreferenceTypes.TranslateLangCode",
+          "defaultValue": null,
+          "status": "classified",
+          "category": "preferences",
+          "targetKey": "feature.translate.native_language"
         },
         {
           "originalKey": "proxyMode",
@@ -1514,6 +1541,30 @@
           "status": "classified",
           "category": "preferences",
           "targetKey": "feature.translate.model_prompt"
+        },
+        {
+          "originalKey": "nativeLanguageTranslateModelPrompt",
+          "type": "string",
+          "defaultValue": "VALUE: TRANSLATE_PROMPT",
+          "status": "classified",
+          "category": "preferences",
+          "targetKey": "feature.translate.prompt.native_to_other"
+        },
+        {
+          "originalKey": "otherLanguageTranslateModelPrompt",
+          "type": "string",
+          "defaultValue": "VALUE: TRANSLATE_PROMPT",
+          "status": "classified",
+          "category": "preferences",
+          "targetKey": "feature.translate.prompt.other_to_native"
+        },
+        {
+          "originalKey": "polishPrompt",
+          "type": "string",
+          "defaultValue": "VALUE: POLISH_PROMPT",
+          "status": "classified",
+          "category": "preferences",
+          "targetKey": "feature.translate.prompt.polish"
         },
         {
           "originalKey": "autoTranslateWithSpace",
@@ -2831,6 +2882,22 @@
               "status": "classified",
               "category": "preferences",
               "targetKey": "feature.translate.page.auto_copy"
+            },
+            {
+              "originalKey": "customParameters",
+              "type": "PreferenceTypes.TranslateCustomParameters",
+              "defaultValue": [],
+              "status": "classified",
+              "category": "preferences",
+              "targetKey": "feature.translate.request.custom_parameters"
+            },
+            {
+              "originalKey": "polishCustomParameters",
+              "type": "PreferenceTypes.TranslateCustomParameters",
+              "defaultValue": [],
+              "status": "classified",
+              "category": "preferences",
+              "targetKey": "feature.translate.request.polish_custom_parameters"
             }
           ]
         },
@@ -3529,6 +3596,172 @@
           "status": "classified",
           "category": "preferences",
           "targetKey": "feature.translate.page.bidirectional_enabled"
+        },
+        {
+          "originalKey": "translate:json-structure-view:enabled",
+          "type": "boolean",
+          "defaultValue": true,
+          "status": "classified",
+          "category": "preferences",
+          "targetKey": "feature.translate.page.json_structure_view"
+        },
+        {
+          "originalKey": "translate:json-structure-view:copy-blank-line-between-rows",
+          "type": "boolean",
+          "defaultValue": false,
+          "status": "classified",
+          "category": "preferences",
+          "targetKey": "feature.translate.page.json_structure_copy_blank_line"
+        },
+        {
+          "originalKey": "translate:json-structure-view:copy-separator",
+          "type": "PreferenceTypes.TranslateJsonCopySeparator",
+          "defaultValue": "colon-space",
+          "status": "classified",
+          "category": "preferences",
+          "targetKey": "feature.translate.page.json_structure_copy_separator"
+        },
+        {
+          "originalKey": "translate:postprocess:enStraightQuotes:enabled",
+          "type": "boolean",
+          "defaultValue": false,
+          "status": "classified",
+          "category": "preferences",
+          "targetKey": "feature.translate.post_processing.english_straight_quotes"
+        },
+        {
+          "originalKey": "translate:postprocess:zhQuotes:enabled",
+          "type": "boolean",
+          "defaultValue": false,
+          "status": "classified",
+          "category": "preferences",
+          "targetKey": "feature.translate.post_processing.zh_smart_quotes"
+        },
+        {
+          "originalKey": "translate:postprocess:zhSpacing:enabled",
+          "type": "boolean",
+          "defaultValue": false,
+          "status": "classified",
+          "category": "preferences",
+          "targetKey": "feature.translate.post_processing.zh_text_spacing"
+        },
+        {
+          "originalKey": "translate:postprocess:regex:rules",
+          "type": "PreferenceTypes.TranslateRegexReplacementRule[]",
+          "defaultValue": [],
+          "status": "classified",
+          "category": "preferences",
+          "targetKey": "feature.translate.post_processing.regex_rules"
+        },
+        {
+          "originalKey": "translate:postprocess:enabled",
+          "type": "boolean",
+          "defaultValue": true,
+          "status": "classified",
+          "category": "preferences",
+          "targetKey": "feature.translate.post_processing.enabled"
+        },
+        {
+          "originalKey": "translate:layout:override",
+          "type": "PreferenceTypes.TranslateLayoutOverride",
+          "defaultValue": "auto",
+          "status": "classified",
+          "category": "preferences",
+          "targetKey": "feature.translate.page.layout_override"
+        },
+        {
+          "originalKey": "translate:font:size",
+          "type": "number",
+          "defaultValue": 16,
+          "status": "classified",
+          "category": "preferences",
+          "targetKey": "feature.translate.page.font_size"
+        },
+        {
+          "originalKey": "translate:paste:html-conversion:enabled",
+          "type": "boolean",
+          "defaultValue": true,
+          "status": "classified",
+          "category": "preferences",
+          "targetKey": "feature.translate.page.html_conversion_on_paste"
+        },
+        {
+          "originalKey": "translate:polish:enabled",
+          "type": "boolean",
+          "defaultValue": false,
+          "status": "classified",
+          "category": "preferences",
+          "targetKey": "feature.translate.polish.enabled"
+        },
+        {
+          "originalKey": "translate:auto-disable-thinking",
+          "type": "boolean",
+          "defaultValue": true,
+          "status": "classified",
+          "category": "preferences",
+          "targetKey": "feature.translate.reasoning.translate_auto_disable"
+        },
+        {
+          "originalKey": "translate:polish:auto-disable-thinking",
+          "type": "boolean",
+          "defaultValue": true,
+          "status": "classified",
+          "category": "preferences",
+          "targetKey": "feature.translate.reasoning.polish_auto_disable"
+        },
+        {
+          "originalKey": "translate:model:native-to-other",
+          "type": "string",
+          "defaultValue": null,
+          "status": "classified",
+          "category": null,
+          "targetKey": null,
+          "note": "Migrated via complex mapping: translate_direction_models"
+        },
+        {
+          "originalKey": "translate:model:other-to-native",
+          "type": "string",
+          "defaultValue": null,
+          "status": "classified",
+          "category": null,
+          "targetKey": null,
+          "note": "Migrated via complex mapping: translate_direction_models"
+        },
+        {
+          "originalKey": "translate:model:polish",
+          "type": "string",
+          "defaultValue": null,
+          "status": "classified",
+          "category": null,
+          "targetKey": null,
+          "note": "Migrated via complex mapping: translate_direction_models"
+        },
+        {
+          "originalKey": "translate:model:native-to-other:follow-global",
+          "type": "boolean",
+          "defaultValue": true,
+          "status": "classified",
+          "category": null,
+          "targetKey": null,
+          "note": "Migrated via complex mapping: translate_direction_model_policy"
+        },
+        {
+          "originalKey": "translate:model:other-to-native:follow-global",
+          "type": "boolean",
+          "defaultValue": true,
+          "status": "classified",
+          "category": null,
+          "targetKey": null,
+          "note": "Migrated via complex mapping: translate_direction_model_policy"
+        },
+        {
+          "originalKey": "translate:model:follow-global",
+          "type": "boolean",
+          "defaultValue": true,
+          "status": "classified",
+          "category": null,
+          "targetKey": null,
+          "note": "Legacy fallback migrated via complex mapping: translate_direction_model_policy"
         },
         {
           "originalKey": "translate:source:language",

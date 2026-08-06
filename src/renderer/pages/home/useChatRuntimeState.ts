@@ -1,4 +1,6 @@
+import { dataApiService } from '@data/DataApiService'
 import { useInvalidateCache } from '@data/hooks/useDataApi'
+import { usePreference } from '@data/hooks/usePreference'
 import { loggerService } from '@logger'
 import { buildTopicMessageFlowLiveState, type TopicMessageFlowLiveState } from '@renderer/components/chat/flow'
 import {
@@ -25,13 +27,25 @@ import {
   useTopicOverlayHandoffOnTerminal,
   useTopicStreamStatus
 } from '@renderer/hooks/useTopicStreamStatus'
+import { toast } from '@renderer/services/toast'
 import type { Assistant } from '@renderer/types/assistant'
 import type { Topic } from '@renderer/types/topic'
+import { TopicType } from '@renderer/types/topic'
+import { removeTrailingDoubleSpaces } from '@renderer/utils/markdown'
+import {
+  getAssistantRepliesForUser,
+  isHighestPriorityAssistantReply,
+  shouldHideOriginatingUserMessage
+} from '@renderer/utils/message/assistantReplyAutomation'
+import { postProcessAssistantReplyParts } from '@renderer/utils/message/assistantReplyPostProcessing'
 import { mergeMessagesById } from '@renderer/utils/message/mergeMessagesById'
+import { isMessageVisibleInConversation } from '@renderer/utils/message/messageProjection'
+import { translateText, UNKNOWN_LANG_CODE } from '@renderer/utils/translate'
 import type { ActiveExecution } from '@shared/ai/transport'
-import type { CherryMessagePart, CherryUIMessage } from '@shared/data/types/message'
+import type { CherryMessagePart, CherryUIMessage, MessageStatus } from '@shared/data/types/message'
 import type { UniqueModelId } from '@shared/data/types/model'
 import type { ReasoningEffortOption } from '@shared/types/aiSdk'
+import { t } from 'i18next'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { useChatWriteActions } from './hooks/useChatWriteActions'
@@ -119,6 +133,13 @@ export function useChatRuntimeState({
   const { isPending: isTopicStreamPending } = useTopicStreamStatus(topic.id)
   const isTopicAwaitingApproval = useTopicAwaitingApproval(topic.id)
   const messages = uiMessages
+  const messagesRef = useRef(messages)
+  messagesRef.current = messages
+  const assistantRef = useRef(assistant)
+  assistantRef.current = assistant
+  const [nativeLanguage] = usePreference('feature.translate.native_language')
+  const nativeLanguageRef = useRef(nativeLanguage)
+  nativeLanguageRef.current = nativeLanguage
   const invalidateCache = useInvalidateCache()
   const messageListRuntimeRef = useRef<MessageListRuntime | null>(null)
   const bindMessageListRuntime = useCallback((runtime: MessageListRuntime) => {
@@ -147,9 +168,11 @@ export function useChatRuntimeState({
   const [branchLiveMessages, setBranchLiveMessages] = useState<CherryUIMessage[]>([])
   const [branchLiveExecutions, setBranchLiveExecutions] = useState<ActiveExecution[]>([])
   const finishedBranchExecutionIdsRef = useRef<Set<string>>(new Set())
+  const terminalStatusByMessageIdRef = useRef<Map<string, MessageStatus>>(new Map())
   const runtimeBranchLiveStatePublishedRef = useRef(false)
   useEffect(() => {
     finishedBranchExecutionIdsRef.current.clear()
+    terminalStatusByMessageIdRef.current.clear()
     runtimeBranchLiveStatePublishedRef.current = false
     setBranchLiveMessages([])
     setBranchLiveExecutions([])
@@ -201,7 +224,10 @@ export function useChatRuntimeState({
     liveAssistants,
     translationOverlay
   })
-  const displayMessages = useMemo(() => mergeMessagesById(messages, liveAssistants), [messages, liveAssistants])
+  const displayMessages = useMemo(
+    () => mergeMessagesById(messages, liveAssistants).filter(isMessageVisibleInConversation),
+    [messages, liveAssistants]
+  )
 
   // Tool-approval card surface. Awaiting-approval tools render `null` inline
   // (see MessageMcpTool / AgentExecutionTimeline), so the composer override is
@@ -290,7 +316,7 @@ export function useChatRuntimeState({
 
     const liveState = buildTopicMessageFlowLiveState({
       topicId: topic.id,
-      messages: branchFlowLiveMessages,
+      messages: branchFlowLiveMessages.filter(isMessageVisibleInConversation),
       partsByMessageId,
       activeNodeId: branchFlowLiveMessages.at(-1)?.id ?? activeNodeId,
       streamingMessageIds: activeStreamingMessageIds
@@ -317,13 +343,119 @@ export function useChatRuntimeState({
   ])
 
   const handleExecutionFinish = useCallback(
-    (executionId: string, { message, isError }: ExecutionFinishEvent) => {
+    (executionId: string, { message, isAbort, isError }: ExecutionFinishEvent) => {
       const treeCachePath = `/topics/${topic.id}/tree`
+      terminalStatusByMessageIdRef.current.set(message.id, isError ? 'error' : isAbort ? 'paused' : 'success')
       void (async () => {
+        let didMutateMessages = false
         try {
           if (isError || !message.parts?.length) {
             await cache.rollbackBranch()
           }
+          const persistedMessages = messagesRef.current
+          const persistedMessage = persistedMessages.find((candidate) => candidate.id === message.id) ?? message
+          const userMessageId = persistedMessage.metadata?.parentId
+          const siblingReplies = userMessageId
+            ? getAssistantRepliesForUser(mergeMessagesById(persistedMessages, [persistedMessage]), userMessageId)
+            : []
+          const settings = assistantRef.current?.settings
+          const assistantReplyAutomationEnabled = Boolean(
+            settings?.autoCopy ||
+              settings?.autoTranslate ||
+              settings?.zhCnMarkdownSmartQuotes ||
+              settings?.zhMarkdownTextSpacing
+          )
+
+          if (
+            !isError &&
+            !isAbort &&
+            assistantReplyAutomationEnabled &&
+            userMessageId &&
+            isHighestPriorityAssistantReply(persistedMessage, siblingReplies, assistantRef.current?.settings)
+          ) {
+            const persisted = await dataApiService.get(`/messages/${message.id}`)
+            const processed = postProcessAssistantReplyParts(persisted.data.parts ?? message.parts, {
+              zhCnMarkdownSmartQuotes: settings?.zhCnMarkdownSmartQuotes,
+              zhMarkdownTextSpacing: settings?.zhMarkdownTextSpacing
+            })
+            if (processed.changed) {
+              await dataApiService.patch(`/messages/${message.id}`, {
+                body: { data: { ...persisted.data, parts: processed.parts } }
+              })
+              didMutateMessages = true
+            }
+
+            const text = removeTrailingDoubleSpaces(processed.text.trimStart())
+            if (text && settings?.autoCopy) {
+              try {
+                await navigator.clipboard.writeText(text)
+              } catch (error) {
+                logger.error('failed to auto-copy successful assistant reply', error as Error, {
+                  messageId: message.id
+                })
+                toast.error(t('common.copy_failed'))
+              }
+            }
+
+            const targetLanguage = nativeLanguageRef.current
+            const hasTranslation = processed.parts.some((part) => part.type === 'data-translation')
+            if (
+              text &&
+              settings?.autoTranslate &&
+              targetLanguage &&
+              targetLanguage !== UNKNOWN_LANG_CODE &&
+              !hasTranslation
+            ) {
+              try {
+                const translated = await translateText(text, targetLanguage)
+                const latest = await dataApiService.get(`/messages/${message.id}`)
+                const latestParts = latest.data.parts ?? []
+                if (!latestParts.some((part) => part.type === 'data-translation')) {
+                  await dataApiService.patch(`/messages/${message.id}`, {
+                    body: {
+                      data: {
+                        ...latest.data,
+                        parts: [
+                          ...latestParts,
+                          {
+                            type: 'data-translation',
+                            data: { content: translated, targetLanguage }
+                          }
+                        ]
+                      }
+                    }
+                  })
+                  didMutateMessages = true
+                }
+              } catch (error) {
+                logger.error('failed to auto-translate successful assistant reply', error as Error, {
+                  messageId: message.id,
+                  targetLanguage
+                })
+              }
+            }
+          }
+
+          if (
+            assistantRef.current?.settings.autoCleanupUserMessage &&
+            topic.type !== TopicType.Session &&
+            userMessageId &&
+            shouldHideOriginatingUserMessage(siblingReplies, terminalStatusByMessageIdRef.current)
+          ) {
+            const userMessage = await dataApiService.get(`/messages/${userMessageId}`)
+            if (!userMessage.data.presentation?.hiddenInChat) {
+              await dataApiService.patch(`/messages/${userMessageId}`, {
+                body: {
+                  data: {
+                    ...userMessage.data,
+                    presentation: { ...userMessage.data.presentation, hiddenInChat: true }
+                  }
+                }
+              })
+              didMutateMessages = true
+            }
+          }
+          if (didMutateMessages) await refresh()
           await invalidateCache(treeCachePath)
         } catch (err) {
           logger.warn('failed to reconcile topic branch flow after execution finish', err as Error)
@@ -351,7 +483,16 @@ export function useChatRuntimeState({
         }
       })()
     },
-    [branchActiveExecutions, cache, disposeOverlay, invalidateCache, onBranchLiveStateChange, refresh, topic.id]
+    [
+      branchActiveExecutions,
+      cache,
+      disposeOverlay,
+      invalidateCache,
+      onBranchLiveStateChange,
+      refresh,
+      topic.id,
+      topic.type
+    ]
   )
   finishRef.current = handleExecutionFinish
 

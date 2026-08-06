@@ -108,7 +108,7 @@ const formatProfiles = {
   },
   gemini: {
     wire: {
-      off: mode([literal('thinkingConfig.includeThoughts', false), literal('thinkingConfig.thinkingLevel', 'minimal')]),
+      off: mode([literal('thinkingConfig.includeThoughts', true), literal('thinkingConfig.thinkingLevel', 'minimal')]),
       auto: mode([literal('thinkingConfig.includeThoughts', true)]),
       effort: mode([literal('thinkingConfig.includeThoughts', true), effort('thinkingConfig.thinkingLevel')])
     },

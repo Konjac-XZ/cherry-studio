@@ -20,6 +20,27 @@ const logger = loggerService.withContext('OvmsManager')
 const execAsync = promisify(exec)
 const execFileAsync = promisify(execFile)
 
+export const parseOvmsProcessIds = (stdout: string): number[] => {
+  const trimmed = stdout.trim()
+  if (!trimmed) return []
+
+  const parsed: unknown = JSON.parse(trimmed)
+  const values = Array.isArray(parsed) ? parsed : [parsed]
+  return [...new Set(values.filter((value): value is number => Number.isInteger(value) && Number(value) > 0))]
+}
+
+export const stopOvmsProcessIds = async (
+  pids: number[],
+  stop: (pid: number) => Promise<{ success: boolean; message?: string }>
+) => {
+  let firstFailure: { success: false; message?: string } | undefined
+  for (const pid of pids) {
+    const result = await stop(pid)
+    if (!result.success && !firstFailure) firstFailure = { success: false, message: result.message }
+  }
+  return firstFailure ?? { success: true as const }
+}
+
 interface OvmsProcess {
   pid: number
   path: string
@@ -118,15 +139,26 @@ export class OvmsManager extends BaseService {
    */
   public async stopOvms(): Promise<{ success: boolean; message?: string }> {
     try {
-      // close the OVMS process
-      await execAsync(
-        `powershell -Command "Get-WmiObject Win32_Process | Where-Object { $_.CommandLine -like 'ovms.exe*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }"`
+      const { stdout } = await execAsync(
+        'powershell -NoProfile -Command "Get-Process -Name ovms -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Id | ConvertTo-Json -Compress"'
       )
+      const pids = parseOvmsProcessIds(stdout)
+      if (pids.length === 0) {
+        this.ovms = null
+        logger.info('No OVMS process is running')
+        return { success: true, message: 'No OVMS process is running' }
+      }
 
-      // Reset the ovms instance
+      const result = await stopOvmsProcessIds(pids, async (pid) => {
+        logger.info(`Stopping OVMS process PID: ${pid}`)
+        const stopped = await this.terminalProcess(pid)
+        if (!stopped.success) logger.error(`Failed to stop OVMS process PID ${pid}: ${stopped.message ?? 'unknown'}`)
+        return stopped
+      })
       this.ovms = null
+      if (!result.success) return result
 
-      logger.info('OVMS process stopped successfully')
+      logger.info(`Stopped ${pids.length} OVMS process(es) successfully`)
       return { success: true, message: 'OVMS process stopped successfully' }
     } catch (error) {
       logger.error(`Failed to stop OVMS process: ${error}`)

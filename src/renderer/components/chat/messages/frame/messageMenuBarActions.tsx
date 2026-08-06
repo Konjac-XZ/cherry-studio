@@ -31,6 +31,7 @@ import {
   Menu,
   NotebookPen,
   Save,
+  Sparkles,
   Split,
   ThumbsUp,
   Upload
@@ -71,6 +72,7 @@ export interface MessageMenuBarActionContext {
   isEditable: boolean
   translateLanguages: TranslateLanguage[]
   translationLanguagesStatus?: 'loading' | 'error' | 'ready'
+  nativeTranslationLanguage?: TranslateLanguage
   getTranslationLanguageLabel?: (language: TranslateLanguage, withEmoji?: boolean) => string | undefined
   startEditingMessage?: (messageId: string) => void
   onSelectContext?: (messageId: string) => void
@@ -178,6 +180,18 @@ registerCommand('message.copy', async ({ actions, mainTextContent, messageParts,
 
 registerCommand('message.edit', ({ message, startEditingMessage }) => {
   startEditingMessage?.(message.id)
+})
+
+registerCommand('message.beautify', async ({ actions, message, t }) => {
+  const outcome = await actions.beautifyMessage?.(message.id)
+  if (outcome === 'changed') actions.notifySuccess?.(t('translate.post_processing.applied'))
+  if (outcome === 'unchanged') actions.notifyInfo?.(t('chat.message.beautify.unchanged'))
+  if (outcome === 'empty') actions.notifyWarning?.(t('chat.message.beautify.empty'))
+})
+
+registerCommand('message.translateNative', async ({ actions, mainTextContent, message, nativeTranslationLanguage }) => {
+  if (!nativeTranslationLanguage) return
+  await actions.translateMessage?.(message.id, nativeTranslationLanguage, mainTextContent)
 })
 
 registerCommand('message.regenerate', async ({ actions, message }) => {
@@ -426,6 +440,37 @@ registerAction({
     !!actions.editMessage &&
     !!startEditingMessage &&
     (isUserMessage || isAssistantMessage)
+})
+
+registerAction({
+  id: 'beautify',
+  commandId: 'message.beautify',
+  label: ({ t }) => t('chat.message.beautify.label'),
+  icon: <Sparkles size={15} />,
+  group: 'write',
+  order: 15,
+  surface: 'menu',
+  availability: ({ actions, isAssistantMessage, isEditable, isProcessing }) =>
+    isAssistantMessage && isEditable && !isProcessing && !!actions.beautifyMessage
+})
+
+registerAction({
+  id: 'translate-native',
+  commandId: 'message.translateNative',
+  label: ({ getTranslationLanguageLabel, nativeTranslationLanguage, t }) =>
+    t('chat.message.translate_native', {
+      language: nativeTranslationLanguage ? (getTranslationLanguageLabel?.(nativeTranslationLanguage) ?? '') : ''
+    }),
+  icon: <Languages size={15} />,
+  group: 'write',
+  order: 16,
+  surface: 'menu',
+  availability: ({ actions, hasTranslationBlocks, isAssistantMessage, isProcessing, nativeTranslationLanguage }) =>
+    isAssistantMessage &&
+    !isProcessing &&
+    !hasTranslationBlocks &&
+    !!nativeTranslationLanguage &&
+    !!actions.translateMessage
 })
 
 registerAction({

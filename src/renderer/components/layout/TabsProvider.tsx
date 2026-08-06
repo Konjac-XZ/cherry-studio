@@ -5,6 +5,12 @@ import { ipcApi, useIpcOn } from '@renderer/ipc'
 import { TabLruManager } from '@renderer/services/TabLruManager'
 import { getDefaultRouteTitle, isPageTitledRoute, isTopLevelRoute } from '@renderer/utils/routeTitle'
 import { resolveSidebarAppTabEntryUrl } from '@renderer/utils/sidebar'
+import {
+  createProtectedTranslateTab,
+  isProtectedAppTab,
+  isTranslateTab,
+  reconcileProtectedTranslateTab
+} from '@renderer/utils/translateTabPolicy'
 import type { Tab, TabSavedState } from '@shared/data/cache/cacheValueTypes'
 import type { ReactNode } from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -60,6 +66,10 @@ export function migratePinnedTabs(pinnedTabs: Tab[]): { tabs: Tab[]; changed: bo
   const tabs: Tab[] = []
   let changed = false
   for (const tab of pinnedTabs) {
+    if (isTranslateTab(tab)) {
+      changed = true
+      continue
+    }
     const path = routePathOfTab(tab)
     if (path === LEGACY_LIBRARY_ROUTE_PATH) {
       changed = true
@@ -129,13 +139,21 @@ function computeInitialSession(params: {
   const { includePinnedTabs, initialDefaultTab, pinnedTabs, persistedNormalTabs, persistedActiveTabId } = params
 
   const freshSession: InitialSession = {
-    normalTabs: initialDefaultTab ? [initialDefaultTab] : [],
+    normalTabs: initialDefaultTab
+      ? includePinnedTabs
+        ? [initialDefaultTab, createProtectedTranslateTab()]
+        : [initialDefaultTab]
+      : includePinnedTabs
+        ? [createProtectedTranslateTab()]
+        : [],
     pinnedTabs: [],
     activeTabId: initialDefaultTab?.id ?? ''
   }
 
   // Detached windows never persist/restore a session.
   if (!includePinnedTabs) return freshSession
+
+  const reconciledNormalTabs = reconcileProtectedTranslateTab(persistedNormalTabs).tabs
 
   const pinnedHasActive = !!persistedActiveTabId && pinnedTabs.some((t) => t.id === persistedActiveTabId)
 
@@ -156,14 +174,14 @@ function computeInitialSession(params: {
   // stale persisted id leaves every tab dormant, AppShell mounts zero TabRouters, and the content
   // area is blank until the user clicks a tab.
   const activeInSession =
-    pinnedHasActive || (!!persistedActiveTabId && persistedNormalTabs.some((t) => t.id === persistedActiveTabId))
+    pinnedHasActive || (!!persistedActiveTabId && reconciledNormalTabs.some((t) => t.id === persistedActiveTabId))
   const activeTabId = activeInSession
     ? persistedActiveTabId
-    : (persistedNormalTabs[0]?.id ?? pinnedTabs[0]?.id ?? initialDefaultTab?.id ?? '')
+    : (reconciledNormalTabs[0]?.id ?? pinnedTabs[0]?.id ?? initialDefaultTab?.id ?? '')
 
   // Only the active tab stays awake; everything else restores dormant.
   return {
-    normalTabs: restoreTabs(persistedNormalTabs, activeTabId),
+    normalTabs: restoreTabs(reconciledNormalTabs, activeTabId),
     pinnedTabs: restoreTabs(pinnedTabs, activeTabId),
     activeTabId
   }
@@ -364,7 +382,8 @@ export function TabsProvider({
 
   const closeTabs = useCallback(
     (ids: readonly string[], activateId?: string) => {
-      const closingIdSet = new Set(ids)
+      const protectedIds = new Set(tabs.filter(isProtectedAppTab).map((tab) => tab.id))
+      const closingIdSet = new Set(ids.filter((id) => !protectedIds.has(id)))
       if (closingIdSet.size === 0) return
 
       const closingTabs = tabs.filter((tab) => closingIdSet.has(tab.id))
@@ -465,7 +484,7 @@ export function TabsProvider({
   const pinTab = useCallback(
     (id: string) => {
       const tab = tabs.find((t) => t.id === id)
-      if (!tab || tab.isPinned) return
+      if (!tab || tab.isPinned || isProtectedAppTab(tab)) return
 
       // Remove from normalTabs
       setNormalTabs((prev) => prev.filter((t) => t.id !== id))
@@ -483,7 +502,7 @@ export function TabsProvider({
   const unpinTab = useCallback(
     (id: string) => {
       const tab = tabs.find((t) => t.id === id)
-      if (!tab || !tab.isPinned) return
+      if (!tab || !tab.isPinned || isProtectedAppTab(tab)) return
 
       // Remove from pinnedTabs
       setPinnedTabs((prev) => prev.filter((t) => t.id !== id))
@@ -526,7 +545,7 @@ export function TabsProvider({
   const detachTab = useCallback(
     (tabId: string) => {
       const tab = tabs.find((t) => t.id === tabId)
-      if (!tab) return
+      if (!tab || isProtectedAppTab(tab)) return
 
       // Send IPC message to create new window
       void ipcApi.request('tab.detach', {

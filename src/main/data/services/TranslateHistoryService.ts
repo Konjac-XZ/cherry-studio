@@ -14,8 +14,9 @@ import type {
 } from '@shared/data/api/schemas/translate'
 import { parsePersistedLangCode } from '@shared/data/preference/preferenceTypes'
 import type { TranslateHistory } from '@shared/data/types/translate'
+import { createTranslateHistoryCacheKey } from '@shared/utils/translateHistory'
 import type { SQL } from 'drizzle-orm'
-import { and, eq, or, sql } from 'drizzle-orm'
+import { and, eq, inArray, or, sql } from 'drizzle-orm'
 
 import { asNumericKey, decodeListCursor, encodeCursor, keysetOrdering } from './utils/keysetCursor'
 import { timestampToISO } from './utils/rowMappers'
@@ -29,6 +30,8 @@ function rowToTranslateHistory(row: typeof translateHistoryTable.$inferSelect): 
     targetText: row.targetText,
     sourceLanguage: row.sourceLanguage === null ? null : parsePersistedLangCode(row.sourceLanguage),
     targetLanguage: row.targetLanguage === null ? null : parsePersistedLangCode(row.targetLanguage),
+    modelId: row.modelId as TranslateHistory['modelId'],
+    cacheKey: row.cacheKey,
     star: row.star,
     createdAt: timestampToISO(row.createdAt),
     updatedAt: timestampToISO(row.updatedAt)
@@ -49,13 +52,29 @@ export class TranslateHistoryService {
     if (query?.search) {
       const escaped = query.search.replace(/[%_\\]/g, '\\$&')
       const pattern = `%${escaped}%`
-      const searchCondition = or(
+      const searchConditions: SQL[] = [
         sql`${translateHistoryTable.sourceText} LIKE ${pattern} ESCAPE '\\'`,
-        sql`${translateHistoryTable.targetText} LIKE ${pattern} ESCAPE '\\'`
-      )
+        sql`${translateHistoryTable.targetText} LIKE ${pattern} ESCAPE '\\'`,
+        sql`strftime('%m/%d %H:%M', ${translateHistoryTable.createdAt} / 1000, 'unixepoch', 'localtime') LIKE ${pattern} ESCAPE '\\'`
+      ]
+      if (query.languageCodes?.length) {
+        searchConditions.push(
+          inArray(translateHistoryTable.sourceLanguage, query.languageCodes),
+          inArray(translateHistoryTable.targetLanguage, query.languageCodes)
+        )
+      }
+      const searchCondition = or(...searchConditions)
       if (searchCondition) {
         filterConditions.push(searchCondition)
       }
+    }
+
+    if (query.cacheKey) {
+      filterConditions.push(eq(translateHistoryTable.cacheKey, query.cacheKey))
+    }
+
+    if (query.sourceText) {
+      filterConditions.push(eq(translateHistoryTable.sourceText, query.sourceText))
     }
 
     const ordering = keysetOrdering(translateHistoryTable.createdAt, translateHistoryTable.id, {
@@ -107,6 +126,16 @@ export class TranslateHistoryService {
 
   create(dto: CreateTranslateHistoryDto): TranslateHistory {
     const db = application.get('DbService').getDb()
+    const cacheKey =
+      dto.cacheKey ??
+      (dto.sourceLanguage && dto.targetLanguage
+        ? createTranslateHistoryCacheKey({
+            sourceText: dto.sourceText,
+            sourceLanguage: dto.sourceLanguage,
+            targetLanguage: dto.targetLanguage,
+            modelId: dto.modelId
+          })
+        : null)
 
     const [row] = db
       .insert(translateHistoryTable)
@@ -114,7 +143,9 @@ export class TranslateHistoryService {
         sourceText: dto.sourceText,
         targetText: dto.targetText,
         sourceLanguage: dto.sourceLanguage,
-        targetLanguage: dto.targetLanguage
+        targetLanguage: dto.targetLanguage,
+        modelId: dto.modelId ?? null,
+        cacheKey
       })
       .returning()
       .all()
@@ -142,7 +173,29 @@ export class TranslateHistoryService {
       if (dto.targetText !== undefined) updates.targetText = dto.targetText
       if (dto.sourceLanguage !== undefined) updates.sourceLanguage = dto.sourceLanguage
       if (dto.targetLanguage !== undefined) updates.targetLanguage = dto.targetLanguage
+      if (dto.modelId !== undefined) updates.modelId = dto.modelId
       if (dto.star !== undefined) updates.star = dto.star
+
+      if (
+        dto.sourceText !== undefined ||
+        dto.sourceLanguage !== undefined ||
+        dto.targetLanguage !== undefined ||
+        dto.modelId !== undefined
+      ) {
+        const sourceText = dto.sourceText ?? current.sourceText
+        const sourceLanguage = dto.sourceLanguage === undefined ? current.sourceLanguage : dto.sourceLanguage
+        const targetLanguage = dto.targetLanguage === undefined ? current.targetLanguage : dto.targetLanguage
+        const modelId = dto.modelId === undefined ? current.modelId : dto.modelId
+        updates.cacheKey =
+          sourceLanguage && targetLanguage
+            ? createTranslateHistoryCacheKey({
+                sourceText,
+                sourceLanguage,
+                targetLanguage,
+                modelId: modelId as TranslateHistory['modelId']
+              })
+            : null
+      }
 
       if (Object.keys(updates).length === 0) {
         return rowToTranslateHistory(current)

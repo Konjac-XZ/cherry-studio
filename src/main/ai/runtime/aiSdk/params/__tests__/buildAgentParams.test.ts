@@ -718,6 +718,29 @@ describe('buildAgentParams assistant-less reasoning', () => {
     expect(result.options.providerOptions).toBeUndefined()
   })
 
+  it('routes assistant-less custom parameters through the normal standard/provider parameter pipeline', async () => {
+    const { provider, model } = makeOffCapableSetup()
+
+    const result = await buildAgentParams({
+      request: {
+        callOverrides: {
+          customParameters: {
+            temperature: 0.37,
+            chat_template_kwargs: { enable_thinking: false }
+          }
+        }
+      },
+      signal: undefined,
+      provider,
+      model
+    })
+
+    expect(result.options.temperature).toBe(0.37)
+    expect(result.options.providerOptions).toMatchObject({
+      anthropic: { chat_template_kwargs: { enable_thinking: false } }
+    })
+  })
+
   it('does not add citation guidance for a same-named Gateway client tool', async () => {
     const { provider, model } = makeOffCapableSetup()
     const entry: ToolEntry = {

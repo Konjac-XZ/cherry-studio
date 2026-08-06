@@ -137,6 +137,11 @@ describe('ComplexPreferenceMappings', () => {
       expect(keys).toContain('feature.translate.action.preferred_lang')
       expect(keys).toContain('feature.translate.action.alter_lang')
       expect(keys).toContain('feature.translate.mini_window.target_lang')
+      expect(keys).toContain('feature.translate.model.native_to_other_id')
+      expect(keys).toContain('feature.translate.model.other_to_native_id')
+      expect(keys).toContain('feature.translate.model.polish_id')
+      expect(keys).toContain('feature.translate.model.native_to_other_follows_global')
+      expect(keys).toContain('feature.translate.model.other_to_native_follows_global')
     })
 
     it('should flatten target keys from all mappings', () => {

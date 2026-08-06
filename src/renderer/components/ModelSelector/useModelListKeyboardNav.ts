@@ -14,6 +14,8 @@ interface UseModelListKeyboardNavOptions<TItem extends KeyboardNavigableItem> {
   pageSize?: number
 }
 
+export const DEFAULT_MODEL_SELECTOR_PAGE_SIZE = 25
+
 function isButtonEventTarget(target: EventTarget | null) {
   return target instanceof HTMLElement && Boolean(target.closest('button'))
 }
@@ -25,7 +27,7 @@ export function useModelListKeyboardNav<TItem extends KeyboardNavigableItem>({
   onClose,
   onFocusItem,
   onSelectItem,
-  pageSize = 12
+  pageSize = DEFAULT_MODEL_SELECTOR_PAGE_SIZE
 }: UseModelListKeyboardNavOptions<TItem>) {
   useEffect(() => {
     if (!open || items.length === 0) {

@@ -57,7 +57,11 @@ type MessageListMessagesValue = MessageListItem[]
 
 type MessageListUiStaticValue = Pick<
   MessageListState,
-  'menuConfig' | 'translationLanguages' | 'translationLanguagesStatus' | 'externalCodeEditors'
+  | 'menuConfig'
+  | 'translationLanguages'
+  | 'translationLanguagesStatus'
+  | 'nativeTranslationLanguage'
+  | 'externalCodeEditors'
 >
 
 type MessageListUiSelectorsValue = Pick<
@@ -127,9 +131,16 @@ export const MessageListProvider = ({ value, children }: { value: MessageListPro
       menuConfig: state.menuConfig,
       translationLanguages: state.translationLanguages,
       translationLanguagesStatus: state.translationLanguagesStatus,
+      nativeTranslationLanguage: state.nativeTranslationLanguage,
       externalCodeEditors: state.externalCodeEditors
     }),
-    [state.menuConfig, state.translationLanguages, state.translationLanguagesStatus, state.externalCodeEditors]
+    [
+      state.menuConfig,
+      state.translationLanguages,
+      state.translationLanguagesStatus,
+      state.nativeTranslationLanguage,
+      state.externalCodeEditors
+    ]
   )
 
   const uiSelectors = useMemo<MessageListUiSelectorsValue>(
