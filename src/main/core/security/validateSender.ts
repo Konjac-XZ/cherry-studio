@@ -1,5 +1,5 @@
 import { realpathSync } from 'node:fs'
-import { isAbsolute, relative } from 'node:path'
+import { dirname, isAbsolute, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { application } from '@application'
@@ -24,6 +24,42 @@ function resolveAppRoot(appRootDir: string): string {
   } catch {
     return appRootDir
   }
+}
+
+/**
+ * Whether a renderer file belongs to the app root, accounting for filesystem
+ * aliases on either side of the comparison.
+ *
+ * Windows portable executables are extracted below a temporary directory. In
+ * that environment Chromium can report the sender URL through an 8.3 alias
+ * (`C:\\Users\\NAME~1\\...`) while `app.getAppPath()` uses the long path. A
+ * direct `path.relative()` comparison rejects those two spellings even though
+ * they resolve to the same `app.asar`.
+ *
+ * Renderer paths below an asar cannot always be passed to native realpath (the
+ * archive is a file to the OS), so walk upward to the nearest resolvable
+ * ancestor and compare its canonical path with the canonical app root. The
+ * raw comparison remains the fallback for synthetic/nonexistent test roots.
+ */
+function isRendererPathInsideAppRoot(filePath: string, appRootDir: string): boolean {
+  const resolvedAppRoot = resolveAppRoot(appRootDir)
+  if (isPathInside(filePath, resolvedAppRoot)) return true
+
+  let candidate = filePath
+  while (true) {
+    try {
+      if (isPathInside(realpathSync.native(candidate), resolvedAppRoot)) return true
+    } catch {
+      // The candidate may be an asar-internal virtual path. Walk upward to
+      // the archive (or another real ancestor) before falling back below.
+    }
+
+    const parent = dirname(candidate)
+    if (parent === candidate) break
+    candidate = parent
+  }
+
+  return isPathInside(filePath, appRootDir)
 }
 
 /**
@@ -72,7 +108,7 @@ export function isAppRendererUrl(
     } catch {
       return false
     }
-    return isPathInside(filePath, resolveAppRoot(appRootDir))
+    return isRendererPathInsideAppRoot(filePath, appRootDir)
   }
 
   if (devServerUrl) {
