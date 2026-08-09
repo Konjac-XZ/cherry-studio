@@ -2167,6 +2167,7 @@
     "config_json_hint": "Paste or edit raw JSON; it stays in sync with the fields above",
     "configure": "Configure",
     "configuring_provider": "Configure {{provider}}",
+    "count": "{{count}} languages",
     "count_one": "{{count}} item",
     "count_other": "{{count}} items",
     "current_config": "Current",
@@ -7368,6 +7369,7 @@
       "not_enabled_models": "Disabled",
       "painting_model": "Painting Model",
       "painting_model_description": "Model used for image generation",
+      "polish_model": "Polish Model",
       "provider_id": "Provider ID",
       "provider_key_add_confirm": "Do you want to add the API key for {{provider}}?",
       "provider_key_add_failed_by_empty_data": "Failed to add provider API key, data is empty",
@@ -8580,6 +8582,7 @@
         "check_type": "An error occurred while checking the file type",
         "multiple": "Multiple file uploads are not allowed",
         "ocr": "Failed to recognize image text",
+        "read_content": "Failed to read file content",
         "too_large": "File too large",
         "unknown": "Failed to read file content"
       },
@@ -8627,7 +8630,8 @@
     },
     "html_conversion": "Convert rich HTML clipboard content to Markdown",
     "info": {
-      "aborted": "Translation aborted"
+      "aborted": "Translation aborted",
+      "reused_cached": "Reused a previous translation. {{modifier}}+Click Translate to refresh it."
     },
     "input": {
       "placeholder": "Enter text..."
@@ -8648,6 +8652,7 @@
     },
     "paste": "Paste from clipboard",
     "post_processing": {
+      "applied": "Post-processing applied",
       "enable": "Enable post-processing",
       "english_straight_quotes": "Normalize English straight quotes",
       "zh_smart_quotes": "Use Chinese smart quotes",
@@ -8668,8 +8673,13 @@
       "error": {
         "save": "Failed to save translation settings"
       },
+      "follow_global_models": "Use global model",
       "font_size": "Font size",
       "global_translate_model": "Global translation model",
+      "group_display": "Display",
+      "group_json_view": "JSON view",
+      "group_language": "Languages",
+      "group_misc": "Miscellaneous",
       "group_model": "Models",
       "group_post_processing": "Post-processing",
       "json_structure_view": {
@@ -8681,7 +8691,8 @@
           "colon_space": "Colon + space",
           "label": "Selection copy separator"
         },
-        "label": "JSON structure view"
+        "label": "JSON structure view",
+        "tip": "Displays complete JSON objects and arrays as an indented table. Full copy and translation history keep the original model output."
       },
       "layout": {
         "auto": "Auto",
@@ -8725,6 +8736,7 @@
     "target_language": "Target Language",
     "title": "Translation",
     "tooltip": {
+      "force_refresh": "{{modifier}}+Click: refresh and overwrite the saved result",
       "newline": "Newline"
     }
   },

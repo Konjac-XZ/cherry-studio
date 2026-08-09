@@ -759,11 +759,11 @@
       },
       "resume": "恢復",
       "reuseSession": {
-        "bound": "[to be translated]:View session",
-        "description": "[to be translated]:Continue every run in the same session instead of starting a new one.",
-        "label": "[to be translated]:Reuse session",
-        "pending": "[to be translated]:Waiting for the first run",
-        "warning": "[to be translated]:A reused session keeps accumulating context, which raises token cost over time and can overflow the model's context window. To rebind a clean session, disable and save, then enable and save."
+        "bound": "檢視工作階段",
+        "description": "每次執行都在同一個工作階段中繼續，而不是建立新的工作階段。",
+        "label": "重複使用工作階段",
+        "pending": "等待首次執行",
+        "warning": "重複使用工作階段會持續累積上下文，長期執行將增加 Token 消耗，並可能超出模型的上下文視窗。如需改用乾淨的工作階段，請先關閉並儲存，再重新開啟並儲存。"
       },
       "run": "執行",
       "runTriggered": "任務已觸發",
@@ -1427,9 +1427,9 @@
       }
     },
     "compaction": {
-      "compacted": "[to be translated]:Context compacted, ~{{count}} tokens saved",
-      "compacted_plain": "[to be translated]:Context compacted",
-      "compacting": "[to be translated]:Compacting context…"
+      "compacted": "已壓縮上下文，節省約 {{count}} 個 Token",
+      "compacted_plain": "已壓縮上下文",
+      "compacting": "正在壓縮上下文…"
     },
     "conversation": {
       "new": "新聊天"
@@ -1497,11 +1497,11 @@
       "new_session": "新工作階段 {{Command}}",
       "new_topic": "新對話 {{Command}}",
       "note_reference": {
-        "description": "[to be translated]:Attach a note from Notes",
-        "empty": "[to be translated]:No notes found",
-        "load_failed": "[to be translated]:Failed to load notes",
-        "loading": "[to be translated]:Loading notes...",
-        "title": "[to be translated]:Reference Note"
+        "description": "附加「筆記」中的內容",
+        "empty": "找不到筆記",
+        "load_failed": "筆記載入失敗",
+        "loading": "正在載入筆記…",
+        "title": "引用筆記"
       },
       "paste_text_file": "貼到輸入框",
       "pasted_text_file_name": "已貼上的文字.txt",
@@ -1634,8 +1634,8 @@
           "label": "關閉網路搜尋"
         },
         "route": {
-          "builtin": "[to be translated]:Searches with the model's built-in tool",
-          "client": "[to be translated]:Searches with {{provider}}"
+          "builtin": "使用模型內建搜尋",
+          "client": "使用 {{provider}} 搜尋"
         },
         "settings": "網路搜尋設定"
       }
@@ -1647,9 +1647,9 @@
     },
     "message": {
       "beautify": {
-        "empty": "[to be translated]:There is no reply text to beautify",
-        "label": "[to be translated]:Beautify reply",
-        "unchanged": "[to be translated]:The reply already uses the selected typography"
+        "empty": "回覆中沒有可美化的文字",
+        "label": "美化回覆",
+        "unchanged": "回覆已經符合所選排版規則"
       },
       "cache_stats": {
         "inline": "快取 {{hit_rate}}%",
@@ -1712,7 +1712,7 @@
         "usage": "Token 使用量",
         "waiting_first_token": "等待"
       },
-      "translate_native": "[to be translated]:Translate to {{language}}",
+      "translate_native": "翻譯成{{language}}",
       "useful": {
         "label": "設為上下文",
         "tip": "在這組訊息中，該訊息將被選擇加入上下文"
@@ -1726,7 +1726,7 @@
     },
     "navigation": {
       "anchor": {
-        "jump_to_turn": "[to be translated]:Jump to turn {{number}}"
+        "jump_to_turn": "跳轉到第 {{number}} 輪對話"
       },
       "bottom": "回到底端",
       "close": "關閉",
@@ -2167,6 +2167,7 @@
     "config_json_hint": "貼上或編輯原始 JSON，可與上方參數雙向同步",
     "configure": "設定",
     "configuring_provider": "設定 {{provider}}",
+    "count": "{{count}} 種語言",
     "count_one": "{{count}} 個",
     "count_other": "{{count}} 個",
     "current_config": "目前",
@@ -3197,7 +3198,7 @@
         "threshold": "用於過濾低相關性重排片段的相似度閾值，數值越高召回越嚴格。"
       },
       "processor": "处理服务商",
-      "processor_not_configured": "[to be translated]:Not configured",
+      "processor_not_configured": "尚未設定",
       "rerank_disabled": "不使用",
       "rerank_model": "重排模型",
       "reset_action": "恢復預設",
@@ -3448,15 +3449,15 @@
         }
       },
       "basic": {
-        "autoCleanupUserMessage": "[to be translated]:Hide completed user messages",
-        "autoCopy": "[to be translated]:Copy successful replies",
-        "autoTranslate": "[to be translated]:Translate successful replies to native language",
-        "context_compress_enabled": "[to be translated]:Auto-compress",
-        "context_compress_model": "[to be translated]:Compression model",
-        "context_compress_model_follow": "[to be translated]:Default",
+        "autoCleanupUserMessage": "隱藏已完成的使用者訊息",
+        "autoCopy": "複製成功回覆",
+        "autoTranslate": "將成功回覆翻譯為母語",
+        "context_compress_enabled": "自動壓縮",
+        "context_compress_model": "壓縮模型",
+        "context_compress_model_follow": "預設",
         "context_count": "情境計數",
-        "context_management": "[to be translated]:Context management",
-        "context_truncate_threshold": "[to be translated]:Tool-output truncation threshold (chars)",
+        "context_management": "上下文管理",
+        "context_truncate_threshold": "工具輸出截斷門檻（字元）",
         "creative": "創意",
         "custom_params": "自訂參數",
         "custom_params_add": "新增參數",
@@ -3466,28 +3467,28 @@
         "description_label": "描述",
         "field": {
           "autoCleanupUserMessage": {
-            "hint": "[to be translated]:Hides the user bubble only after every sibling reply finishes and at least one succeeds; the message remains in context"
+            "hint": "僅在全部兄弟回覆結束且至少一個成功後隱藏使用者氣泡；訊息仍保留在上下文中"
           },
           "autoCopy": {
-            "hint": "[to be translated]:Copies the selected or highest-priority successful reply after typography processing"
+            "hint": "排版處理完成後，複製已選取或優先順序最高的成功回覆"
           },
           "autoTranslate": {
-            "hint": "[to be translated]:Adds one translation using the native language configured in Translate settings"
+            "hint": "使用「翻譯」設定中指定的母語新增一份譯文"
           },
           "avatar": {
             "hint": "用於在圖書館和聊天中識別助理"
           },
           "context_compress_enabled": {
-            "hint": "[to be translated]:Summarize older turns automatically when nearing the context window"
+            "hint": "接近上下文視窗上限時自動摘要較早的對話"
           },
           "context_count": {
             "hint": "保留作為上下文之近期訊息數量"
           },
           "context_management": {
-            "hint": "[to be translated]:Override global context-management settings for this assistant; off inherits the global settings"
+            "hint": "開啟後，此助理使用自訂的上下文管理設定；關閉時跟隨全域設定"
           },
           "context_truncate_threshold": {
-            "hint": "[to be translated]:Tool outputs beyond this many characters are offloaded and truncated"
+            "hint": "超過該字元數的工具輸出會被轉存並截斷"
           },
           "custom_params": {
             "hint": "與請求一同發送的額外提供者參數"
@@ -3522,10 +3523,10 @@
             "hint": "啟用時限制權杖取樣範圍"
           },
           "zhCnMarkdownSmartQuotes": {
-            "hint": "[to be translated]:Applies the Translate page's Simplified Chinese Markdown quote processor"
+            "hint": "套用「翻譯」頁面的簡體中文 Markdown 智慧引號處理器"
           },
           "zhMarkdownTextSpacing": {
-            "hint": "[to be translated]:Applies the Translate page's Chinese and Latin Markdown spacing processor"
+            "hint": "套用「翻譯」頁面的中西文 Markdown 間距處理器"
           }
         },
         "group": "群組",
@@ -3542,7 +3543,7 @@
         "model_pick": "選擇模型",
         "pick_avatar": "選擇頭像",
         "precise": "精確",
-        "reply_automation": "[to be translated]:Successful reply automation",
+        "reply_automation": "成功回覆自動處理",
         "stream_output": "串流輸出",
         "tag_empty": "無可用標籤",
         "tag_hint": "若要新增標籤，請使用媒體庫頂端列中的「+ 標籤」項目",
@@ -3552,8 +3553,8 @@
         "temperature": "溫度",
         "title": "基礎設定",
         "top_p": "Top-P",
-        "zhCnMarkdownSmartQuotes": "[to be translated]:Chinese smart quotes",
-        "zhMarkdownTextSpacing": "[to be translated]:Chinese and Latin spacing"
+        "zhCnMarkdownSmartQuotes": "中文智慧引號",
+        "zhMarkdownTextSpacing": "中英文間距"
       },
       "breadcrumb": "圖書館",
       "dialogs": {
@@ -4341,7 +4342,7 @@
       "cutoff": "正在截斷搜尋內容...",
       "fetch_complete": "{{count}} 個搜尋結果",
       "fetch_empty": "找不到搜尋結果",
-      "fetch_opaque": "[to be translated]:Searched by the model",
+      "fetch_opaque": "已由模型完成搜尋",
       "partial_failure": "{{count}} 個搜尋結果，部分搜尋失敗"
     }
   },
@@ -5214,7 +5215,7 @@
     "reset": "重設",
     "rotate_left": "向左旋轉",
     "rotate_right": "向右旋轉",
-    "save_as": "[to be translated]:Save As",
+    "save_as": "另存為",
     "source": "檢視原始碼",
     "zoom_in": "放大",
     "zoom_out": "縮小"
@@ -5854,23 +5855,23 @@
       },
       "feedback": {
         "agent": {
-          "description": "[to be translated]:Chat with Cherry Assistant to share feedback.",
-          "title": "[to be translated]:Use Agent"
+          "description": "與 Cherry Assistant 對話以提供意見回饋。",
+          "title": "使用 Agent"
         },
-        "agent_error": "[to be translated]:Unable to open Cherry Assistant for feedback. Please try again.",
+        "agent_error": "無法開啟 Cherry Assistant 以提供意見回饋，請再試一次。",
         "button": "回饋",
         "dialog": {
-          "description": "[to be translated]:Choose how to share feedback and help us make Cherry Studio better.",
-          "title": "[to be translated]:Choose a feedback channel"
+          "description": "選擇提供意見回饋的方式，協助我們改善 Cherry Studio。",
+          "title": "選擇意見回饋管道"
         },
         "github": {
-          "description": "[to be translated]:Create a bug report or feature request on GitHub.",
-          "title": "[to be translated]:GitHub Issue"
+          "description": "前往 GitHub 建立錯誤回報或功能建議。",
+          "title": "GitHub Issue"
         },
-        "recommended": "[to be translated]:Recommended",
+        "recommended": "推薦",
         "survey": {
-          "description": "[to be translated]:Share feedback through our Feishu survey.",
-          "title": "[to be translated]:Feedback survey"
+          "description": "透過飛書問卷提供意見回饋。",
+          "title": "意見回饋問卷"
         },
         "title": "回饋"
       },
@@ -7368,6 +7369,7 @@
       "not_enabled_models": "已停用",
       "painting_model": "繪圖模型",
       "painting_model_description": "圖像生成使用的模型",
+      "polish_model": "潤飾模型",
       "provider_id": "提供者 ID",
       "provider_key_add_confirm": "是否要為 {{provider}} 新增 API 金鑰？",
       "provider_key_add_failed_by_empty_data": "新增提供者 API 金鑰失敗，資料為空",
@@ -7397,7 +7399,7 @@
       "topic_naming": {
         "auto": "對話自動重新命名",
         "label": "對話命名",
-        "model": "[to be translated]:Naming Model",
+        "model": "命名模型",
         "prompt": "對話命名提示詞"
       },
       "translate_model": "翻譯模型",
@@ -7736,7 +7738,7 @@
         "all": "全部服務商",
         "disabled": "僅已停用",
         "enabled": "僅已啟用",
-        "hidden_builtin": "[to be translated]:Hidden Built-in Providers",
+        "hidden_builtin": "已隱藏的內建服務商",
         "label": "篩選服務商"
       },
       "filter_agent": "篩選支援 Agent 的服務商",
@@ -7751,9 +7753,9 @@
         "signing_in": "等待瀏覽器…"
       },
       "hide": {
-        "action": "[to be translated]:Hide",
-        "content": "[to be translated]:This built-in provider will be disabled and hidden from normal provider lists and model selectors. You can restore it from the Hidden Built-in Providers filter.",
-        "title": "[to be translated]:Hide Built-in Provider"
+        "action": "隱藏",
+        "content": "此內建服務商將停用，並從一般服務商清單與模型選擇器中隱藏。你可以從「已隱藏的內建服務商」篩選條件中將它還原。",
+        "title": "隱藏內建服務商"
       },
       "image_endpoints": {
         "image_edit_base_url": {
@@ -7826,7 +7828,7 @@
       "reorder_failed": "調整服務商順序失敗",
       "request_configuration": "請求設定",
       "request_configuration_tooltip": "設定 API Host 與自訂請求標頭",
-      "restore": "[to be translated]:Restore",
+      "restore": "還原",
       "save_failed": "服務商設定儲存失敗",
       "search": "搜尋模型平臺...",
       "search_placeholder": "搜尋模型 ID 或名稱",
@@ -7979,16 +7981,16 @@
       "enabled": "啟用",
       "exit_fullscreen": "離開全螢幕",
       "filter": "篩選",
-      "go_home": "[to be translated]:Go to Home",
+      "go_home": "返回首頁",
       "label": "按鍵",
       "move_tab_to_first": "將分頁移至最前",
       "new_topic": "新增對話",
-      "next_assistant": "[to be translated]:Next Assistant",
+      "next_assistant": "切換到下一個助手",
       "occupied_by_other_application": "此快捷鍵已被系統或其他應用程式占用",
       "open_tab_in_new_window": "在新視窗中開啟分頁",
       "pin_tab": "切換釘選分頁",
       "press_shortcut": "按下快捷鍵",
-      "previous_assistant": "[to be translated]:Previous Assistant",
+      "previous_assistant": "切換到上一個助手",
       "print": "列印",
       "quick_assistant": "快捷助手",
       "rename_topic": "重新命名對話",
@@ -8013,7 +8015,7 @@
       "toggle_right_sidebar": "切換右側邊欄",
       "toggle_show_topics": "切換對話顯示",
       "toggle_sidebar": "切換側邊欄",
-      "translate_clipboard": "[to be translated]:Translate Clipboard",
+      "translate_clipboard": "翻譯剪貼簿",
       "zoom_in": "放大介面",
       "zoom_out": "縮小介面",
       "zoom_reset": "重設縮放"
@@ -8172,8 +8174,8 @@
         "check_failed": "驗證失敗",
         "check_success": "驗證成功",
         "client_tools_preferred": {
-          "description": "[to be translated]:Use the search and URL-fetch services configured above even when the model has built-in search. When off, the model handles it.",
-          "label": "[to be translated]:Prefer configured search services"
+          "description": "即使模型具備內建網路搜尋，也優先使用上方設定的搜尋與網頁擷取服務；關閉後則交由模型處理。",
+          "label": "優先使用已設定的搜尋服務"
         },
         "compression": {
           "cutoff": {
@@ -8300,19 +8302,19 @@
       },
       "glossary": {
         "delete": {
-          "description": "[to be translated]:Delete this glossary entry?",
-          "title": "[to be translated]:Delete glossary entry"
+          "description": "確定刪除這條術語嗎？",
+          "title": "刪除術語"
         },
         "error": {
-          "add": "[to be translated]:Failed to add glossary entry",
-          "required": "[to be translated]:Source and target phrases are required"
+          "add": "新增術語失敗",
+          "required": "原文詞語與指定譯法不可為空"
         },
-        "hint": "[to be translated]:Matched enabled terms are injected through {{customized_dictionary}} in a translation prompt.",
-        "source": "[to be translated]:Source phrase",
-        "source_placeholder": "[to be translated]:Term in the source text",
-        "target": "[to be translated]:Required translation",
-        "target_placeholder": "[to be translated]:Required target wording",
-        "title": "[to be translated]:Translation glossary"
+        "hint": "啟用且命中的詞條會透過翻譯提示詞中的 {{customized_dictionary}} 注入。",
+        "source": "原文詞語",
+        "source_placeholder": "原文中的詞語",
+        "target": "指定譯法",
+        "target_placeholder": "目標語言中的指定譯法",
+        "title": "翻譯術語表"
       },
       "prompt": "翻譯提示詞",
       "title": "翻譯設定"
@@ -8503,10 +8505,10 @@
       "language": "任意語言"
     },
     "button": {
-      "polish_and_translate": "[to be translated]:Polish then translate",
+      "polish_and_translate": "潤飾後翻譯",
       "translate": "翻譯"
     },
-    "clipboard_watch": "[to be translated]:Watch clipboard and translate changes",
+    "clipboard_watch": "監控剪貼簿並自動翻譯變更",
     "close": "關閉",
     "closed": "翻譯已關閉",
     "complete": "翻譯完成",
@@ -8516,9 +8518,9 @@
     },
     "copied": "翻譯內容已複製",
     "counter": {
-      "tip": "[to be translated]:Estimated tokens include the active translation prompt.",
-      "tokens": "[to be translated]:tokens",
-      "words": "[to be translated]:words"
+      "tip": "Token 估算包含目前使用的翻譯提示詞。",
+      "tokens": "Token",
+      "words": "詞"
     },
     "custom": {
       "label": "自定義語言"
@@ -8534,8 +8536,8 @@
           "tip": "自動選擇合適的偵測方法"
         },
         "heuristic": {
-          "label": "[to be translated]:Heuristic",
-          "tip": "[to be translated]:Use fast script and character-pattern detection"
+          "label": "啟發式",
+          "tip": "使用快速的文字系統與字元特徵進行偵測"
         },
         "label": "自動偵測方法",
         "llm": {
@@ -8580,6 +8582,7 @@
         "check_type": "檢查檔案類型時發生錯誤",
         "multiple": "不允許上傳多個檔案",
         "ocr": "辨識圖片文字失敗",
+        "read_content": "讀取檔案內容失敗",
         "too_large": "檔案過大",
         "unknown": "讀取檔案內容失敗"
       },
@@ -8588,9 +8591,9 @@
       "upload": "拖入或點擊上傳圖片/文件"
     },
     "flip": {
-      "label": "[to be translated]:Correct detected direction and retranslate",
-      "native_language_not_in_pair": "[to be translated]:The native language is not included in the bidirectional pair.",
-      "success": "[to be translated]:Translation direction corrected"
+      "label": "修正偵測方向並重新翻譯",
+      "native_language_not_in_pair": "目前的雙向語言組合不包含母語。",
+      "success": "已修正翻譯方向"
     },
     "history": {
       "back": "返回列表",
@@ -8625,9 +8628,10 @@
       "target": "譯文",
       "title": "翻譯歷史"
     },
-    "html_conversion": "[to be translated]:Convert rich HTML clipboard content to Markdown",
+    "html_conversion": "將剪貼簿富文字 HTML 轉換為 Markdown",
     "info": {
-      "aborted": "翻譯中止"
+      "aborted": "翻譯中止",
+      "reused_cached": "已重用先前的翻譯結果。{{modifier}}+點擊「翻譯」可強制重新整理。"
     },
     "input": {
       "placeholder": "請輸入文字..."
@@ -8646,12 +8650,13 @@
     "output": {
       "placeholder": "翻譯"
     },
-    "paste": "[to be translated]:Paste from clipboard",
+    "paste": "從剪貼簿貼上",
     "post_processing": {
-      "enable": "[to be translated]:Enable post-processing",
-      "english_straight_quotes": "[to be translated]:Normalize English straight quotes",
-      "zh_smart_quotes": "[to be translated]:Use Chinese smart quotes",
-      "zh_text_spacing": "[to be translated]:Add Chinese/Latin text spacing"
+      "applied": "後處理已套用",
+      "enable": "啟用後處理",
+      "english_straight_quotes": "規範英文直引號",
+      "zh_smart_quotes": "使用中文智慧引號",
+      "zh_text_spacing": "新增中西文間距"
     },
     "preferred_target": "首選目標",
     "processing": "翻譯中...",
@@ -8660,58 +8665,64 @@
       "bidirectional": "雙向翻譯設定",
       "bidirectional_tip": "開啟後，僅支援在來源語言和目標語言之間進行雙向翻譯",
       "custom_body": {
-        "polish": "[to be translated]:Polish request",
-        "reasoning_override": "[to be translated]:Reasoning-related custom parameters override the Minimize reasoning switch for this request type.",
-        "title": "[to be translated]:Custom request parameters",
-        "translate": "[to be translated]:Translate request"
+        "polish": "潤飾請求",
+        "reasoning_override": "此請求類型中的推理相關自訂參數會覆寫「盡量關閉推理」開關。",
+        "title": "自訂請求參數",
+        "translate": "翻譯請求"
       },
       "error": {
         "save": "儲存翻譯設定失敗"
       },
-      "font_size": "[to be translated]:Font size",
-      "global_translate_model": "[to be translated]:Global translation model",
-      "group_model": "[to be translated]:Models",
-      "group_post_processing": "[to be translated]:Post-processing",
+      "follow_global_models": "跟隨全域模型",
+      "font_size": "字體大小",
+      "global_translate_model": "全域翻譯模型",
+      "group_display": "顯示",
+      "group_json_view": "JSON 檢視",
+      "group_language": "語言",
+      "group_misc": "雜項",
+      "group_model": "模型",
+      "group_post_processing": "後處理",
       "json_structure_view": {
-        "copy_blank_line_between_rows": "[to be translated]:Blank line between copied rows",
+        "copy_blank_line_between_rows": "複製多行時插入空行",
         "copy_separator": {
-          "chinese_colon": "[to be translated]:Chinese colon",
-          "chinese_colon_newline": "[to be translated]:Chinese colon + newline",
-          "colon_newline": "[to be translated]:Colon + newline",
-          "colon_space": "[to be translated]:Colon + space",
-          "label": "[to be translated]:Selection copy separator"
+          "chinese_colon": "中文冒號",
+          "chinese_colon_newline": "中文冒號加換行",
+          "colon_newline": "冒號加換行",
+          "colon_space": "冒號加空格",
+          "label": "選取內容的複製分隔符號"
         },
-        "label": "[to be translated]:JSON structure view"
+        "label": "JSON 結構檢視",
+        "tip": "將完整的 JSON 物件和陣列顯示為縮排表格。完整複製和翻譯歷史仍保留模型的原始輸出。"
       },
       "layout": {
-        "auto": "[to be translated]:Auto",
-        "horizontal": "[to be translated]:Horizontal",
-        "label": "[to be translated]:Panel layout",
-        "vertical": "[to be translated]:Vertical"
+        "auto": "自動",
+        "horizontal": "橫向",
+        "label": "版面配置",
+        "vertical": "縱向"
       },
       "minimize_thinking": {
-        "label": "[to be translated]:Minimize reasoning",
-        "tip": "[to be translated]:Disable reasoning unless custom parameters explicitly control it"
+        "label": "盡量關閉推理",
+        "tip": "除非自訂參數明確控制推理，否則關閉模型推理"
       },
       "model": "模型設定",
       "model_desc": "翻譯服務使用的模型",
       "model_placeholder": "選擇翻譯模型",
-      "native_language": "[to be translated]:Native language",
-      "native_to_other_model": "[to be translated]:Native to other languages",
+      "native_language": "母語",
+      "native_to_other_model": "母語譯為其他語言",
       "no_model_warning": "未選擇翻譯模型",
-      "other_to_native_model": "[to be translated]:Other languages to native",
-      "polish_enabled": "[to be translated]:Polish before translation",
-      "polish_model": "[to be translated]:Polish model",
+      "other_to_native_model": "其他語言譯為母語",
+      "polish_enabled": "翻譯前潤飾",
+      "polish_model": "潤飾模型",
       "preview": "Markdown 預覽",
       "prompt": {
-        "native_to_other": "[to be translated]:Native-to-other prompt",
-        "other_to_native": "[to be translated]:Other-to-native prompt",
-        "polish": "[to be translated]:Polish prompt"
+        "native_to_other": "母語譯外語提示詞",
+        "other_to_native": "外語譯母語提示詞",
+        "polish": "潤飾提示詞"
       },
       "regex_rules": {
-        "title": "[to be translated]:Regex replacements"
+        "title": "正規表示式取代"
       },
-      "scroll_sync": "滾動同步設定",
+      "scroll_sync": "同步捲動設定",
       "title": "翻譯設定"
     },
     "source_language": "來源語言",
@@ -8725,6 +8736,7 @@
     "target_language": "目標語言",
     "title": "翻譯",
     "tooltip": {
+      "force_refresh": "{{modifier}}+點擊：重新翻譯並覆蓋已儲存結果",
       "newline": "換行"
     }
   },

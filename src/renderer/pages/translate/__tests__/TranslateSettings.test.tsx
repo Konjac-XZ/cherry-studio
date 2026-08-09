@@ -70,6 +70,24 @@ vi.mock('@cherrystudio/ui', () => ({
       {title}
     </button>
   ),
+  Dialog: ({
+    children,
+    open,
+    onOpenChange
+  }: {
+    children: React.ReactNode
+    open?: boolean
+    onOpenChange?: (open: boolean) => void
+  }) =>
+    open ? (
+      <div role="dialog">
+        <button type="button" aria-label="mock-close-dialog" onClick={() => onOpenChange?.(false)} />
+        {children}
+      </div>
+    ) : null,
+  DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DialogTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
   Field: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   FieldDescription: ({ children, ...props }: React.ComponentProps<'p'>) => <p {...props}>{children}</p>,
   FieldLabel: ({ children, ...props }: React.ComponentProps<'label'>) => <label {...props}>{children}</label>,
@@ -268,6 +286,20 @@ describe('TranslateSettings', () => {
     fireEvent.click(screen.getByText('translate.detect.method.llm.label'))
 
     await waitFor(() => expect(setAutoDetectionMethod).toHaveBeenCalledWith('llm'))
+  })
+
+  it('renders settings in a modal dialog and closes through the dialog lifecycle', () => {
+    const onClose = vi.fn()
+    const { rerender } = render(<TranslateSettings visible onClose={onClose} />)
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'translate.settings.title' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'mock-close-dialog' }))
+    expect(onClose).toHaveBeenCalledTimes(1)
+
+    rerender(<TranslateSettings visible={false} onClose={onClose} />)
+    expect(screen.queryByRole('dialog')).toBeNull()
   })
 })
 

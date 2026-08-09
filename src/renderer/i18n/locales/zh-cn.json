@@ -2167,6 +2167,7 @@
     "config_json_hint": "粘贴或编辑原始 JSON，可与上方参数双向同步",
     "configure": "配置",
     "configuring_provider": "配置 {{provider}}",
+    "count": "{{count}} 种语言",
     "count_one": "{{count}} 个",
     "count_other": "{{count}} 个",
     "current_config": "当前",
@@ -7368,6 +7369,7 @@
       "not_enabled_models": "已禁用",
       "painting_model": "绘画模型",
       "painting_model_description": "图像生成使用的模型",
+      "polish_model": "润色模型",
       "provider_id": "服务商 ID",
       "provider_key_add_confirm": "是否要为 {{provider}} 添加 API 密钥？",
       "provider_key_add_failed_by_empty_data": "添加服务商 API 密钥失败，数据为空",
@@ -8580,6 +8582,7 @@
         "check_type": "检查文件类型时发生错误",
         "multiple": "不允许上传多个文件",
         "ocr": "识别图片文字失败",
+        "read_content": "读取文件内容失败",
         "too_large": "文件过大",
         "unknown": "读取文件内容失败"
       },
@@ -8627,7 +8630,8 @@
     },
     "html_conversion": "将剪贴板富文本 HTML 转换为 Markdown",
     "info": {
-      "aborted": "翻译中止"
+      "aborted": "翻译中止",
+      "reused_cached": "已复用之前的翻译结果。{{modifier}}+点击“翻译”可强制刷新。"
     },
     "input": {
       "placeholder": "请输入文本..."
@@ -8648,6 +8652,7 @@
     },
     "paste": "从剪贴板粘贴",
     "post_processing": {
+      "applied": "后处理已应用",
       "enable": "启用后处理",
       "english_straight_quotes": "规范英文直引号",
       "zh_smart_quotes": "使用中文智能引号",
@@ -8668,8 +8673,13 @@
       "error": {
         "save": "保存翻译设置失败"
       },
+      "follow_global_models": "跟随全局模型",
       "font_size": "字体大小",
       "global_translate_model": "全局翻译模型",
+      "group_display": "显示",
+      "group_json_view": "JSON 视图",
+      "group_language": "语言",
+      "group_misc": "杂项",
       "group_model": "模型",
       "group_post_processing": "后处理",
       "json_structure_view": {
@@ -8681,7 +8691,8 @@
           "colon_space": "冒号加空格",
           "label": "选择复制分隔符"
         },
-        "label": "JSON 结构视图"
+        "label": "JSON 结构视图",
+        "tip": "将完整的 JSON 对象和数组显示为缩进表格。完整复制和翻译历史仍保留模型的原始输出。"
       },
       "layout": {
         "auto": "自动",
@@ -8725,6 +8736,7 @@
     "target_language": "目标语言",
     "title": "翻译",
     "tooltip": {
+      "force_refresh": "{{modifier}}+点击：重新翻译并覆盖已保存结果",
       "newline": "换行"
     }
   },

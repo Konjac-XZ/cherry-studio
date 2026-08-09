@@ -1,6 +1,10 @@
 import {
   Button,
   ConfirmDialog,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
   Field,
   FieldDescription,
   FieldLabel,
@@ -10,7 +14,6 @@ import {
   InputGroupAddon,
   InputGroupButton,
   InputGroupInput,
-  PageSidePanel,
   PageSidePanelItem,
   PageSidePanelSection,
   Popover,
@@ -61,6 +64,7 @@ type Props = {
 const BUILTIN_LANG_CODES = new Set<string>(BUILTIN_TRANSLATE_LANGUAGES.map((lang) => lang.langCode))
 const EMOJI_OPTIONS = ['🌐', '🇺🇸', '🇬🇧', '🇨🇳', '🇯🇵', '🇰🇷', '🇫🇷', '🇩🇪', '🇪🇸', '🇵🇹', '🇮🇳', '🇧🇷']
 const logger = loggerService.withContext('TranslateSettings')
+const settingsCardClassName = 'min-w-0 rounded-2xl border border-border-subtle bg-background/40 p-4 shadow-xs'
 
 const TranslateSettings: FC<Props> = ({ visible, onClose }) => {
   const { t } = useTranslation()
@@ -156,258 +160,300 @@ const TranslateSettings: FC<Props> = ({ visible, onClose }) => {
   ]
 
   return (
-    <PageSidePanel
-      open={visible}
-      onClose={onClose}
-      title={t('translate.settings.title')}
-      closeLabel={t('translate.close')}>
-      <div className="flex flex-col gap-8">
-        <div className="flex flex-col gap-5">
-          {toggleItems.map((item) => (
-            <PageSidePanelItem
-              key={item.key}
-              title={item.label}
-              action={<Switch size="sm" checked={item.value} onCheckedChange={item.onChange} />}
-            />
-          ))}
+    <Dialog open={visible} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        size="xl"
+        motion="fade-scale"
+        aria-describedby={undefined}
+        className="flex h-[min(860px,calc(100vh-2rem))] max-h-[calc(100vh-2rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-[960px]">
+        <DialogHeader className="shrink-0 border-border-subtle border-b px-6 py-5">
+          <DialogTitle>{t('translate.settings.title')}</DialogTitle>
+        </DialogHeader>
 
-          <PageSidePanelItem
-            title={
-              <span className="flex items-center gap-1">
-                <span>{t('translate.detect.method.label')}</span>
-                <HelpTooltip
-                  content={t('translate.detect.method.tip')}
-                  iconProps={{ className: 'text-foreground-tertiary' }}
-                />
-              </span>
-            }
-            action={
-              <SegmentedControl<AutoDetectionMethod>
-                size="sm"
-                aria-label={t('translate.detect.method.label')}
-                value={autoDetectionMethod}
-                onValueChange={(value) =>
-                  void safePersist(setAutoDetectionMethod(value), 'translate auto detection method')
-                }
-                options={detectionOptions.map((opt) => ({
-                  value: opt.value,
-                  label: (
-                    <Tooltip content={opt.tip} placement="top">
-                      <span>{opt.label}</span>
-                    </Tooltip>
-                  )
-                }))}
-              />
-            }
-          />
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6">
+          <div className="grid items-start gap-4 lg:grid-cols-2">
+            <div className="flex min-w-0 flex-col gap-4">
+              <TranslateModelSettings safePersist={safePersist} className={settingsCardClassName} />
 
-          <PageSidePanelItem
-            title={
-              <span className="flex items-center gap-1">
-                <span>{t('translate.settings.bidirectional')}</span>
-                <HelpTooltip
-                  content={t('translate.settings.bidirectional_tip')}
-                  iconProps={{ className: 'text-foreground-tertiary' }}
-                />
-              </span>
-            }
-            action={
-              <Switch
-                size="sm"
-                checked={isBidirectional}
-                onCheckedChange={(next) =>
-                  void safePersist(setIsBidirectional(next), 'translate bidirectional enabled preference')
-                }
-              />
-            }>
-            {isBidirectional && (
-              <div className="flex items-center gap-2">
-                <div className="flex-1">
-                  <LanguagePicker
-                    value={bidirectionalPair[0]}
-                    onChange={(value) => updateBidirectionalPair([value, bidirectionalPair[1]])}
+              <PageSidePanelSection title={t('translate.settings.group_misc')} className={settingsCardClassName}>
+                <div className="flex flex-col gap-4">
+                  {toggleItems
+                    .filter((item) => item.key === 'autoCopy')
+                    .map((item) => (
+                      <PageSidePanelItem
+                        key={item.key}
+                        title={item.label}
+                        action={<Switch size="sm" checked={item.value} onCheckedChange={item.onChange} />}
+                      />
+                    ))}
+                  <PageSidePanelItem
+                    title={t('translate.settings.polish_enabled')}
+                    action={
+                      <Switch
+                        size="sm"
+                        checked={polishEnabled}
+                        onCheckedChange={(value) =>
+                          void safePersist(setPolishEnabled(value), 'translate polish enabled')
+                        }
+                      />
+                    }
                   />
                 </div>
-                <ArrowLeftRight size={12} className="shrink-0 text-foreground-tertiary" />
-                <div className="flex-1">
-                  <LanguagePicker
-                    value={bidirectionalPair[1]}
-                    onChange={(value) => updateBidirectionalPair([bidirectionalPair[0], value])}
+              </PageSidePanelSection>
+
+              <PageSidePanelSection
+                title={
+                  <span className="flex items-center gap-1">
+                    <span>{t('translate.settings.group_json_view')}</span>
+                    <HelpTooltip
+                      content={t('translate.settings.json_structure_view.tip')}
+                      iconProps={{ className: 'text-foreground-tertiary' }}
+                    />
+                  </span>
+                }
+                className={settingsCardClassName}>
+                <div className="flex flex-col gap-4">
+                  <PageSidePanelItem
+                    title={t('translate.settings.json_structure_view.label')}
+                    action={
+                      <Switch
+                        size="sm"
+                        checked={jsonStructureView}
+                        onCheckedChange={(value) =>
+                          void safePersist(setJsonStructureView(value), 'translate JSON structure view')
+                        }
+                      />
+                    }
+                  />
+                  <PageSidePanelItem title={t('translate.settings.json_structure_view.copy_separator.label')}>
+                    <SegmentedControl
+                      size="sm"
+                      disabled={!jsonStructureView}
+                      value={jsonCopySeparator}
+                      className="grid w-full grid-cols-2 rounded-xl"
+                      onValueChange={(value) =>
+                        void safePersist(setJsonCopySeparator(value), 'translate JSON copy separator')
+                      }
+                      options={[
+                        {
+                          value: 'colon-space',
+                          label: t('translate.settings.json_structure_view.copy_separator.colon_space')
+                        },
+                        {
+                          value: 'colon-newline',
+                          label: t('translate.settings.json_structure_view.copy_separator.colon_newline')
+                        },
+                        {
+                          value: 'chinese-colon',
+                          label: t('translate.settings.json_structure_view.copy_separator.chinese_colon')
+                        },
+                        {
+                          value: 'chinese-colon-newline',
+                          label: t('translate.settings.json_structure_view.copy_separator.chinese_colon_newline')
+                        }
+                      ]}
+                    />
+                  </PageSidePanelItem>
+                  <PageSidePanelItem
+                    title={t('translate.settings.json_structure_view.copy_blank_line_between_rows')}
+                    action={
+                      <Switch
+                        size="sm"
+                        disabled={!jsonStructureView}
+                        checked={jsonCopyBlankLine}
+                        onCheckedChange={(value) =>
+                          void safePersist(setJsonCopyBlankLine(value), 'translate JSON copy blank line')
+                        }
+                      />
+                    }
                   />
                 </div>
-              </div>
-            )}
-          </PageSidePanelItem>
+              </PageSidePanelSection>
+            </div>
 
-          <PageSidePanelItem
-            title={t('translate.settings.native_language')}
-            action={
-              <div className="w-48">
-                <LanguagePicker
-                  value={nativeLanguage ?? UNKNOWN_LANG_CODE}
-                  onChange={(value) =>
-                    void safePersist(
-                      setNativeLanguage(value === UNKNOWN_LANG_CODE ? null : value),
-                      'translate native language'
-                    )
-                  }
-                />
-              </div>
-            }
-          />
+            <div className="flex min-w-0 flex-col gap-4">
+              <PageSidePanelSection title={t('translate.settings.group_language')} className={settingsCardClassName}>
+                <div className="flex flex-col gap-4">
+                  <PageSidePanelItem
+                    title={
+                      <span className="flex items-center gap-1">
+                        <span>{t('translate.detect.method.label')}</span>
+                        <HelpTooltip
+                          content={t('translate.detect.method.tip')}
+                          iconProps={{ className: 'text-foreground-tertiary' }}
+                        />
+                      </span>
+                    }>
+                    <SegmentedControl<AutoDetectionMethod>
+                      size="sm"
+                      aria-label={t('translate.detect.method.label')}
+                      value={autoDetectionMethod}
+                      className="grid w-full grid-cols-2 rounded-xl sm:grid-cols-4"
+                      onValueChange={(value) =>
+                        void safePersist(setAutoDetectionMethod(value), 'translate auto detection method')
+                      }
+                      options={detectionOptions.map((opt) => ({
+                        value: opt.value,
+                        label: (
+                          <Tooltip content={opt.tip} placement="top">
+                            <span>{opt.label}</span>
+                          </Tooltip>
+                        )
+                      }))}
+                    />
+                  </PageSidePanelItem>
 
-          <PageSidePanelItem
-            title={t('translate.settings.font_size')}
-            action={
-              <Input
-                type="number"
-                min={12}
-                max={24}
-                step={1}
-                value={normalizePersistedTranslateFontSize(fontSize)}
-                aria-label={t('translate.settings.font_size')}
-                className="w-20"
-                onChange={(event) => {
-                  const value = normalizeEditedTranslateFontSize(event.target.value)
-                  void safePersist(setFontSize(value), 'translate font size')
-                }}
-              />
-            }
-          />
+                  <PageSidePanelItem
+                    title={
+                      <span className="flex items-center gap-1">
+                        <span>{t('translate.settings.bidirectional')}</span>
+                        <HelpTooltip
+                          content={t('translate.settings.bidirectional_tip')}
+                          iconProps={{ className: 'text-foreground-tertiary' }}
+                        />
+                      </span>
+                    }
+                    action={
+                      <Switch
+                        size="sm"
+                        checked={isBidirectional}
+                        onCheckedChange={(next) =>
+                          void safePersist(setIsBidirectional(next), 'translate bidirectional enabled preference')
+                        }
+                      />
+                    }>
+                    {isBidirectional && (
+                      <div className="flex items-center gap-2">
+                        <div className="min-w-0 flex-1">
+                          <LanguagePicker
+                            value={bidirectionalPair[0]}
+                            onChange={(value) => updateBidirectionalPair([value, bidirectionalPair[1]])}
+                          />
+                        </div>
+                        <ArrowLeftRight size={12} className="shrink-0 text-foreground-tertiary" />
+                        <div className="min-w-0 flex-1">
+                          <LanguagePicker
+                            value={bidirectionalPair[1]}
+                            onChange={(value) => updateBidirectionalPair([bidirectionalPair[0], value])}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </PageSidePanelItem>
 
-          <PageSidePanelItem
-            title={t('translate.settings.layout.label')}
-            action={
-              <SegmentedControl
-                size="sm"
-                value={layoutOverride}
-                onValueChange={(value) => void safePersist(setLayoutOverride(value), 'translate layout override')}
-                options={[
-                  { value: 'auto', label: t('translate.settings.layout.auto') },
-                  { value: 'horizontal', label: t('translate.settings.layout.horizontal') },
-                  { value: 'vertical', label: t('translate.settings.layout.vertical') }
-                ]}
-              />
-            }
-          />
+                  <PageSidePanelItem title={t('translate.settings.native_language')}>
+                    <LanguagePicker
+                      value={nativeLanguage ?? UNKNOWN_LANG_CODE}
+                      onChange={(value) =>
+                        void safePersist(
+                          setNativeLanguage(value === UNKNOWN_LANG_CODE ? null : value),
+                          'translate native language'
+                        )
+                      }
+                    />
+                  </PageSidePanelItem>
+                </div>
+              </PageSidePanelSection>
 
-          <PageSidePanelItem
-            title={t('translate.settings.polish_enabled')}
-            action={
-              <Switch
-                size="sm"
-                checked={polishEnabled}
-                onCheckedChange={(value) => void safePersist(setPolishEnabled(value), 'translate polish enabled')}
-              />
-            }
-          />
+              <PageSidePanelSection title={t('translate.settings.group_display')} className={settingsCardClassName}>
+                <div className="flex flex-col gap-4">
+                  {toggleItems
+                    .filter((item) => item.key !== 'autoCopy')
+                    .map((item) => (
+                      <PageSidePanelItem
+                        key={item.key}
+                        title={item.label}
+                        action={<Switch size="sm" checked={item.value} onCheckedChange={item.onChange} />}
+                      />
+                    ))}
+                  <PageSidePanelItem
+                    title={t('translate.settings.font_size')}
+                    action={
+                      <Input
+                        type="number"
+                        min={12}
+                        max={24}
+                        step={1}
+                        value={normalizePersistedTranslateFontSize(fontSize)}
+                        aria-label={t('translate.settings.font_size')}
+                        className="w-20"
+                        onChange={(event) => {
+                          const value = normalizeEditedTranslateFontSize(event.target.value)
+                          void safePersist(setFontSize(value), 'translate font size')
+                        }}
+                      />
+                    }
+                  />
+                  <PageSidePanelItem title={t('translate.settings.layout.label')}>
+                    <SegmentedControl
+                      size="sm"
+                      value={layoutOverride}
+                      className="grid w-full grid-cols-3"
+                      onValueChange={(value) => void safePersist(setLayoutOverride(value), 'translate layout override')}
+                      options={[
+                        { value: 'auto', label: t('translate.settings.layout.auto') },
+                        { value: 'horizontal', label: t('translate.settings.layout.horizontal') },
+                        { value: 'vertical', label: t('translate.settings.layout.vertical') }
+                      ]}
+                    />
+                  </PageSidePanelItem>
+                </div>
+              </PageSidePanelSection>
+
+              <PageSidePanelSection
+                title={t('translate.settings.group_post_processing')}
+                className={settingsCardClassName}>
+                <div className="flex flex-col gap-4">
+                  {[
+                    [t('translate.post_processing.enable'), postProcessingEnabled, setPostProcessingEnabled],
+                    [
+                      t('translate.post_processing.english_straight_quotes'),
+                      englishStraightQuotes,
+                      setEnglishStraightQuotes
+                    ],
+                    [t('translate.post_processing.zh_smart_quotes'), zhSmartQuotes, setZhSmartQuotes],
+                    [t('translate.post_processing.zh_text_spacing'), zhTextSpacing, setZhTextSpacing]
+                  ].map(([label, checked, setter]) => (
+                    <PageSidePanelItem
+                      key={String(label)}
+                      title={String(label)}
+                      action={
+                        <Switch
+                          size="sm"
+                          disabled={!postProcessingEnabled && setter !== setPostProcessingEnabled}
+                          checked={Boolean(checked)}
+                          onCheckedChange={(value) =>
+                            void safePersist((setter as (value: boolean) => Promise<unknown>)(value), String(label))
+                          }
+                        />
+                      }
+                    />
+                  ))}
+                </div>
+              </PageSidePanelSection>
+            </div>
+          </div>
+
+          <div className="mt-6 border-border-subtle border-t pt-6">
+            <h3 className="mb-4 font-semibold text-base text-foreground">{t('settings.moresetting.label')}</h3>
+            <div className="grid items-start gap-4 lg:grid-cols-2">
+              <TranslatePromptField className={cn(settingsCardClassName, 'lg:col-span-2')} />
+              <TranslateRequestSettings safePersist={safePersist} className={settingsCardClassName} />
+              <RegexRulesSettings safePersist={safePersist} className={settingsCardClassName} />
+              <CustomLanguageList className={settingsCardClassName} />
+              <GlossarySettings className={settingsCardClassName} />
+            </div>
+          </div>
         </div>
-
-        <TranslateModelSettings safePersist={safePersist} />
-
-        <PageSidePanelSection title={t('translate.settings.json_structure_view.label')}>
-          <div className="flex flex-col gap-4">
-            <PageSidePanelItem
-              title={t('translate.settings.json_structure_view.label')}
-              action={
-                <Switch
-                  size="sm"
-                  checked={jsonStructureView}
-                  onCheckedChange={(value) =>
-                    void safePersist(setJsonStructureView(value), 'translate JSON structure view')
-                  }
-                />
-              }
-            />
-            <PageSidePanelItem
-              title={t('translate.settings.json_structure_view.copy_separator.label')}
-              action={
-                <SegmentedControl
-                  size="sm"
-                  value={jsonCopySeparator}
-                  onValueChange={(value) =>
-                    void safePersist(setJsonCopySeparator(value), 'translate JSON copy separator')
-                  }
-                  options={[
-                    {
-                      value: 'colon-space',
-                      label: t('translate.settings.json_structure_view.copy_separator.colon_space')
-                    },
-                    {
-                      value: 'colon-newline',
-                      label: t('translate.settings.json_structure_view.copy_separator.colon_newline')
-                    },
-                    {
-                      value: 'chinese-colon',
-                      label: t('translate.settings.json_structure_view.copy_separator.chinese_colon')
-                    },
-                    {
-                      value: 'chinese-colon-newline',
-                      label: t('translate.settings.json_structure_view.copy_separator.chinese_colon_newline')
-                    }
-                  ]}
-                />
-              }
-            />
-            <PageSidePanelItem
-              title={t('translate.settings.json_structure_view.copy_blank_line_between_rows')}
-              action={
-                <Switch
-                  size="sm"
-                  disabled={!jsonStructureView}
-                  checked={jsonStructureView && jsonCopyBlankLine}
-                  onCheckedChange={(value) =>
-                    void safePersist(setJsonCopyBlankLine(value), 'translate JSON copy blank line')
-                  }
-                />
-              }
-            />
-          </div>
-        </PageSidePanelSection>
-
-        <PageSidePanelSection title={t('translate.settings.group_post_processing')}>
-          <div className="flex flex-col gap-4">
-            {[
-              [t('translate.post_processing.enable'), postProcessingEnabled, setPostProcessingEnabled],
-              [t('translate.post_processing.english_straight_quotes'), englishStraightQuotes, setEnglishStraightQuotes],
-              [t('translate.post_processing.zh_smart_quotes'), zhSmartQuotes, setZhSmartQuotes],
-              [t('translate.post_processing.zh_text_spacing'), zhTextSpacing, setZhTextSpacing]
-            ].map(([label, checked, setter]) => (
-              <PageSidePanelItem
-                key={String(label)}
-                title={String(label)}
-                action={
-                  <Switch
-                    size="sm"
-                    disabled={!postProcessingEnabled && setter !== setPostProcessingEnabled}
-                    checked={Boolean(checked)}
-                    onCheckedChange={(value) =>
-                      void safePersist((setter as (value: boolean) => Promise<unknown>)(value), String(label))
-                    }
-                  />
-                }
-              />
-            ))}
-          </div>
-        </PageSidePanelSection>
-
-        <RegexRulesSettings safePersist={safePersist} />
-
-        <TranslateRequestSettings safePersist={safePersist} />
-
-        <TranslatePromptField />
-
-        <CustomLanguageList />
-
-        <GlossarySettings />
-      </div>
-    </PageSidePanel>
+      </DialogContent>
+    </Dialog>
   )
 }
 
 const TranslateModelSettings: FC<{
   safePersist: (persistPromise: Promise<unknown>, actionName: string) => Promise<void>
-}> = ({ safePersist }) => {
+  className?: string
+}> = ({ safePersist, className }) => {
   const { t } = useTranslation()
   const [globalModelId, setGlobalModelId] = usePreference('feature.translate.model_id')
   const [nativeToOtherId, setNativeToOtherId] = usePreference('feature.translate.model.native_to_other_id')
@@ -463,7 +509,7 @@ const TranslateModelSettings: FC<{
   ]
 
   return (
-    <PageSidePanelSection title={t('translate.settings.group_model')}>
+    <PageSidePanelSection title={t('translate.settings.group_model')} className={className}>
       <div className="flex flex-col gap-4">
         {fields.map((field) => {
           const followsGlobal = field.follows?.value === true
@@ -471,6 +517,7 @@ const TranslateModelSettings: FC<{
             <PageSidePanelItem
               key={field.key}
               title={field.label}
+              description={field.follows ? t('translate.settings.follow_global_models') : undefined}
               action={
                 field.follows ? (
                   <Switch
@@ -517,7 +564,10 @@ const defaultPersist: PersistPreference = async (persistPromise) => {
   }
 }
 
-const TranslateRequestSettings: FC<{ safePersist?: PersistPreference }> = ({ safePersist = defaultPersist }) => {
+const TranslateRequestSettings: FC<{ safePersist?: PersistPreference; className?: string }> = ({
+  safePersist = defaultPersist,
+  className
+}) => {
   const { t } = useTranslation()
   const [translateParams, setTranslateParams] = usePreference('feature.translate.request.custom_parameters')
   const [polishParams, setPolishParams] = usePreference('feature.translate.request.polish_custom_parameters')
@@ -546,7 +596,7 @@ const TranslateRequestSettings: FC<{ safePersist?: PersistPreference }> = ({ saf
   ] as const
 
   return (
-    <PageSidePanelSection title={t('translate.settings.custom_body.title')}>
+    <PageSidePanelSection title={t('translate.settings.custom_body.title')} className={className}>
       <div className="flex flex-col gap-6">
         {scopes.map((scope) => (
           <div key={scope.key} className="flex flex-col gap-2">
@@ -672,7 +722,10 @@ const CustomParameterRow: FC<{
   )
 }
 
-const RegexRulesSettings: FC<{ safePersist?: PersistPreference }> = ({ safePersist = defaultPersist }) => {
+const RegexRulesSettings: FC<{ safePersist?: PersistPreference; className?: string }> = ({
+  safePersist = defaultPersist,
+  className
+}) => {
   const { t } = useTranslation()
   const [rules, setRules] = usePreference('feature.translate.post_processing.regex_rules')
 
@@ -682,6 +735,7 @@ const RegexRulesSettings: FC<{ safePersist?: PersistPreference }> = ({ safePersi
   return (
     <PageSidePanelSection
       title={t('translate.settings.regex_rules.title')}
+      className={className}
       actions={
         <Button
           type="button"
@@ -745,7 +799,7 @@ const TranslateSettingsCoreContent: FC = () => {
   )
 }
 
-const TranslatePromptField: FC = () => {
+const TranslatePromptField: FC<{ className?: string }> = ({ className }) => {
   const { t } = useTranslation()
   const [persisted, setPersisted] = usePreference('feature.translate.prompt.native_to_other')
   const [, setLegacyPrompt] = usePreference('feature.translate.model_prompt')
@@ -827,7 +881,7 @@ const TranslatePromptField: FC = () => {
   }
 
   return (
-    <>
+    <div className={cn('flex flex-col gap-6', className)}>
       <PageSidePanelSection
         title={t('translate.settings.prompt.native_to_other')}
         actions={
@@ -857,7 +911,7 @@ const TranslatePromptField: FC = () => {
         titleKey="translate.settings.prompt.polish"
         defaultValue={POLISH_PROMPT}
       />
-    </>
+    </div>
   )
 }
 
@@ -916,7 +970,7 @@ const AdditionalPromptField: FC<{
   )
 }
 
-const CustomLanguageList: FC = () => {
+const CustomLanguageList: FC<{ className?: string }> = ({ className }) => {
   const { t, i18n } = useTranslation()
   const { languages } = useLanguages()
   const [isAdding, setIsAdding] = useState(false)
@@ -936,6 +990,7 @@ const CustomLanguageList: FC = () => {
   return (
     <PageSidePanelSection
       title={t('translate.custom.label')}
+      className={className}
       actions={
         customLanguages.length > 0 && (
           <span className="text-foreground-tertiary text-xs">{t('code.count', { count: customLanguages.length })}</span>
@@ -973,7 +1028,7 @@ const CustomLanguageList: FC = () => {
   )
 }
 
-const GlossarySettings: FC = () => {
+const GlossarySettings: FC<{ className?: string }> = ({ className }) => {
   const { t } = useTranslation()
   const { languages } = useLanguages()
   const { entries, create, update, remove } = useTranslateGlossary()
@@ -1018,6 +1073,7 @@ const GlossarySettings: FC = () => {
   return (
     <PageSidePanelSection
       title={t('settings.translate.glossary.title')}
+      className={className}
       actions={
         !isAdding && (
           <Button type="button" variant="ghost" size="sm" onClick={() => setIsAdding(true)}>

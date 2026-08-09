@@ -2167,6 +2167,7 @@
     "config_json_hint": "Pega o edita JSON en bruto; se mantiene sincronizado con los campos de arriba",
     "configure": "Configurar",
     "configuring_provider": "Configurar {{provider}}",
+    "count": "[to be translated]:{{count}} languages",
     "count_one": "{{count}} artículo",
     "count_other": "{{count}} artículos",
     "current_config": "Actual",
@@ -7368,6 +7369,7 @@
       "not_enabled_models": "Deshabilitados",
       "painting_model": "Modelo de pintura",
       "painting_model_description": "Modelo utilizado para la generación de imágenes",
+      "polish_model": "[to be translated]:Polish Model",
       "provider_id": "ID del proveedor",
       "provider_key_add_confirm": "¿Desea agregar una clave API para {{provider}}?",
       "provider_key_add_failed_by_empty_data": "Error al agregar la clave API del proveedor: los datos están vacíos",
@@ -8580,6 +8582,7 @@
         "check_type": "Se produjo un error al verificar el tipo de archivo",
         "multiple": "No se permite cargar varios archivos",
         "ocr": "No se pudo reconocer el texto de la imagen",
+        "read_content": "[to be translated]:Failed to read file content",
         "too_large": "El archivo es demasiado grande",
         "unknown": "Error al leer el contenido del archivo"
       },
@@ -8627,7 +8630,8 @@
     },
     "html_conversion": "[to be translated]:Convert rich HTML clipboard content to Markdown",
     "info": {
-      "aborted": "Traducción cancelada"
+      "aborted": "Traducción cancelada",
+      "reused_cached": "[to be translated]:Reused a previous translation. {{modifier}}+Click Translate to refresh it."
     },
     "input": {
       "placeholder": "Puede pegar o arrastrar texto, archivos de texto o imágenes (compatible con OCR)"
@@ -8648,6 +8652,7 @@
     },
     "paste": "[to be translated]:Paste from clipboard",
     "post_processing": {
+      "applied": "[to be translated]:Post-processing applied",
       "enable": "[to be translated]:Enable post-processing",
       "english_straight_quotes": "[to be translated]:Normalize English straight quotes",
       "zh_smart_quotes": "[to be translated]:Use Chinese smart quotes",
@@ -8668,8 +8673,13 @@
       "error": {
         "save": "Error al guardar la configuración de traducción"
       },
+      "follow_global_models": "[to be translated]:Use global model",
       "font_size": "[to be translated]:Font size",
       "global_translate_model": "[to be translated]:Global translation model",
+      "group_display": "[to be translated]:Display",
+      "group_json_view": "[to be translated]:JSON view",
+      "group_language": "[to be translated]:Languages",
+      "group_misc": "[to be translated]:Miscellaneous",
       "group_model": "[to be translated]:Models",
       "group_post_processing": "[to be translated]:Post-processing",
       "json_structure_view": {
@@ -8681,7 +8691,8 @@
           "colon_space": "[to be translated]:Colon + space",
           "label": "[to be translated]:Selection copy separator"
         },
-        "label": "[to be translated]:JSON structure view"
+        "label": "[to be translated]:JSON structure view",
+        "tip": "[to be translated]:Displays complete JSON objects and arrays as an indented table. Full copy and translation history keep the original model output."
       },
       "layout": {
         "auto": "[to be translated]:Auto",
@@ -8725,6 +8736,7 @@
     "target_language": "Idioma de destino",
     "title": "Traducción",
     "tooltip": {
+      "force_refresh": "[to be translated]:{{modifier}}+Click: refresh and overwrite the saved result",
       "newline": "Salto de línea"
     }
   },

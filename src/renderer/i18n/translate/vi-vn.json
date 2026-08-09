@@ -2167,6 +2167,7 @@
     "config_json_hint": "Dán hoặc chỉnh sửa JSON thô; nó đồng bộ với các trường ở trên",
     "configure": "Cấu hình",
     "configuring_provider": "Cấu hình {{provider}}",
+    "count": "[to be translated]:{{count}} languages",
     "count_one": "{{count}} mục",
     "count_other": "{{count}} mục",
     "current_config": "Hiện tại",
@@ -7368,6 +7369,7 @@
       "not_enabled_models": "Đã tắt",
       "painting_model": "Mô hình vẽ tranh",
       "painting_model_description": "Mô hình được sử dụng để tạo hình ảnh",
+      "polish_model": "[to be translated]:Polish Model",
       "provider_id": "ID Nhà cung cấp",
       "provider_key_add_confirm": "Bạn có muốn thêm khóa API cho {{provider}} không?",
       "provider_key_add_failed_by_empty_data": "Không thể thêm khóa API của nhà cung cấp, dữ liệu trống",
@@ -8580,6 +8582,7 @@
         "check_type": "Đã xảy ra lỗi khi kiểm tra loại tệp",
         "multiple": "No se permiten múltiples cargas de archivos.",
         "ocr": "Không thể nhận dạng văn bản trong hình ảnh",
+        "read_content": "[to be translated]:Failed to read file content",
         "too_large": "Tập tin quá lớn",
         "unknown": "Không đọc được nội dung tệp"
       },
@@ -8627,7 +8630,8 @@
     },
     "html_conversion": "[to be translated]:Convert rich HTML clipboard content to Markdown",
     "info": {
-      "aborted": "Dịch bị hủy"
+      "aborted": "Dịch bị hủy",
+      "reused_cached": "[to be translated]:Reused a previous translation. {{modifier}}+Click Translate to refresh it."
     },
     "input": {
       "placeholder": "Văn bản, tệp văn bản hoặc hình ảnh (hỗ trợ OCR) có thể được dán hoặc kéo vào"
@@ -8648,6 +8652,7 @@
     },
     "paste": "[to be translated]:Paste from clipboard",
     "post_processing": {
+      "applied": "[to be translated]:Post-processing applied",
       "enable": "[to be translated]:Enable post-processing",
       "english_straight_quotes": "[to be translated]:Normalize English straight quotes",
       "zh_smart_quotes": "[to be translated]:Use Chinese smart quotes",
@@ -8668,8 +8673,13 @@
       "error": {
         "save": "Không lưu được cài đặt dịch"
       },
+      "follow_global_models": "[to be translated]:Use global model",
       "font_size": "[to be translated]:Font size",
       "global_translate_model": "[to be translated]:Global translation model",
+      "group_display": "[to be translated]:Display",
+      "group_json_view": "[to be translated]:JSON view",
+      "group_language": "[to be translated]:Languages",
+      "group_misc": "[to be translated]:Miscellaneous",
       "group_model": "[to be translated]:Models",
       "group_post_processing": "[to be translated]:Post-processing",
       "json_structure_view": {
@@ -8681,7 +8691,8 @@
           "colon_space": "[to be translated]:Colon + space",
           "label": "[to be translated]:Selection copy separator"
         },
-        "label": "[to be translated]:JSON structure view"
+        "label": "[to be translated]:JSON structure view",
+        "tip": "[to be translated]:Displays complete JSON objects and arrays as an indented table. Full copy and translation history keep the original model output."
       },
       "layout": {
         "auto": "[to be translated]:Auto",
@@ -8725,6 +8736,7 @@
     "target_language": "Ngôn ngữ đích",
     "title": "Dịch",
     "tooltip": {
+      "force_refresh": "[to be translated]:{{modifier}}+Click: refresh and overwrite the saved result",
       "newline": "Dòng mới"
     }
   },

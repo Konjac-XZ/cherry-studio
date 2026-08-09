@@ -2167,6 +2167,7 @@
     "config_json_hint": "JSON-Text einfügen oder bearbeiten; er bleibt mit den Feldern oben synchronisiert",
     "configure": "Konfigurieren",
     "configuring_provider": "{{provider}} konfigurieren",
+    "count": "[to be translated]:{{count}} languages",
     "count_one": "{{count}} Artikel",
     "count_other": "{{count}} Artikel",
     "current_config": "Aktuell",
@@ -7368,6 +7369,7 @@
       "not_enabled_models": "Deaktiviert",
       "painting_model": "Malermodell",
       "painting_model_description": "Modell für die Bildgenerierung",
+      "polish_model": "[to be translated]:Polish Model",
       "provider_id": "Dienstanbieter-ID",
       "provider_key_add_confirm": "API-Schlüssel für {{provider}} hinzufügen?",
       "provider_key_add_failed_by_empty_data": "API-Schlüssel für Dienstanbieter hinzufügen fehlgeschlagen, Daten sind leer",
@@ -8580,6 +8582,7 @@
         "check_type": "Fehler beim Überprüfen des Dateityps",
         "multiple": "Mehrfach-Upload nicht erlaubt",
         "ocr": "Erkennung des Bildtextes fehlgeschlagen",
+        "read_content": "[to be translated]:Failed to read file content",
         "too_large": "Datei zu groß",
         "unknown": "Dateiinhalt lesen fehlgeschlagen"
       },
@@ -8627,7 +8630,8 @@
     },
     "html_conversion": "[to be translated]:Convert rich HTML clipboard content to Markdown",
     "info": {
-      "aborted": "Übersetzung abgebrochen"
+      "aborted": "Übersetzung abgebrochen",
+      "reused_cached": "[to be translated]:Reused a previous translation. {{modifier}}+Click Translate to refresh it."
     },
     "input": {
       "placeholder": "Text, Textdatei, Bild (OCR unterstützt) können eingefügt oder gezogen werden"
@@ -8648,6 +8652,7 @@
     },
     "paste": "[to be translated]:Paste from clipboard",
     "post_processing": {
+      "applied": "[to be translated]:Post-processing applied",
       "enable": "[to be translated]:Enable post-processing",
       "english_straight_quotes": "[to be translated]:Normalize English straight quotes",
       "zh_smart_quotes": "[to be translated]:Use Chinese smart quotes",
@@ -8668,8 +8673,13 @@
       "error": {
         "save": "Fehler beim Speichern der Übersetzungseinstellungen"
       },
+      "follow_global_models": "[to be translated]:Use global model",
       "font_size": "[to be translated]:Font size",
       "global_translate_model": "[to be translated]:Global translation model",
+      "group_display": "[to be translated]:Display",
+      "group_json_view": "[to be translated]:JSON view",
+      "group_language": "[to be translated]:Languages",
+      "group_misc": "[to be translated]:Miscellaneous",
       "group_model": "[to be translated]:Models",
       "group_post_processing": "[to be translated]:Post-processing",
       "json_structure_view": {
@@ -8681,7 +8691,8 @@
           "colon_space": "[to be translated]:Colon + space",
           "label": "[to be translated]:Selection copy separator"
         },
-        "label": "[to be translated]:JSON structure view"
+        "label": "[to be translated]:JSON structure view",
+        "tip": "[to be translated]:Displays complete JSON objects and arrays as an indented table. Full copy and translation history keep the original model output."
       },
       "layout": {
         "auto": "[to be translated]:Auto",
@@ -8725,6 +8736,7 @@
     "target_language": "Zielsprache",
     "title": "Übersetzen",
     "tooltip": {
+      "force_refresh": "[to be translated]:{{modifier}}+Click: refresh and overwrite the saved result",
       "newline": "Zeilenumbruch"
     }
   },
