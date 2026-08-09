@@ -14,9 +14,71 @@ function run(command, args, env) {
   }
 }
 
-function cleanupOldInstallers() {
+function runNative(command, args, env) {
+  const result = spawnSync(command, args, {
+    env,
+    shell: false,
+    stdio: 'inherit'
+  })
+
+  if (result.status !== 0) {
+    process.exit(result.status || 1)
+  }
+}
+
+function verifyWorkspaceBetterSqlite3(env) {
+  const electronExecutable = require('electron')
+  const betterSqlite3Entry = require.resolve('better-sqlite3')
+  const script = `
+    try {
+      const Database = require(${JSON.stringify(betterSqlite3Entry)})
+      const database = new Database(':memory:')
+      database.close()
+      console.log('[build:win:x64] better-sqlite3 Electron ABI verification passed')
+    } catch (error) {
+      console.error(error)
+      process.exit(1)
+    }
+  `
+
+  runNative(electronExecutable, ['-e', script], { ...env, ELECTRON_RUN_AS_NODE: '1' })
+}
+
+function verifyPackagedBetterSqlite3(env) {
+  const distDir = path.resolve(__dirname, '..', 'dist')
+  const packagedExecutable = path.join(distDir, 'win-unpacked', 'Cherry Studio.exe')
+  const nativeModule = path.join(
+    distDir,
+    'win-unpacked',
+    'resources',
+    'app.asar.unpacked',
+    'node_modules',
+    'better-sqlite3',
+    'build',
+    'Release',
+    'better_sqlite3.node'
+  )
+
+  if (!fs.existsSync(packagedExecutable) || !fs.existsSync(nativeModule)) {
+    throw new Error(`Cannot verify packaged better-sqlite3: ${packagedExecutable} or ${nativeModule} is missing`)
+  }
+
+  const script = `
+    try {
+      require(${JSON.stringify(nativeModule)})
+      console.log('[build:win:x64] Packaged better-sqlite3 ABI verification passed')
+    } catch (error) {
+      console.error(error)
+      process.exit(1)
+    }
+  `
+
+  runNative(packagedExecutable, ['-e', script], { ...env, ELECTRON_RUN_AS_NODE: '1' })
+}
+
+function cleanupOldPortableArtifacts() {
   const packageJson = require('../package.json')
-  const currentInstallerName = `Cherry-Studio-${packageJson.version}-x64-setup.exe`
+  const currentPortableName = `Cherry-Studio-${packageJson.version}-x64-portable.exe`
   const distDir = path.resolve(__dirname, '..', 'dist')
 
   if (!fs.existsSync(distDir)) return
@@ -24,16 +86,16 @@ function cleanupOldInstallers() {
   for (const entry of fs.readdirSync(distDir, { withFileTypes: true })) {
     if (!entry.isFile()) continue
 
-    const isX64Installer = /^Cherry-Studio-.+-x64-setup\.exe$/.test(entry.name)
-    if (!isX64Installer || entry.name === currentInstallerName) continue
+    const isX64Portable = /^Cherry-Studio-.+-x64-portable\.exe$/.test(entry.name)
+    if (!isX64Portable || entry.name === currentPortableName) continue
 
     const filePath = path.resolve(distDir, entry.name)
     if (path.dirname(filePath) !== distDir) {
-      throw new Error(`Refusing to remove installer outside dist: ${filePath}`)
+      throw new Error(`Refusing to remove portable artifact outside dist: ${filePath}`)
     }
 
     fs.rmSync(filePath, { force: true })
-    console.log(`[build:win:x64] Removed old installer: ${entry.name}`)
+    console.log(`[build:win:x64] Removed old portable artifact: ${entry.name}`)
   }
 }
 
@@ -55,9 +117,8 @@ const env = {
 }
 
 run('dotenv', ['pnpm', 'run', 'build'], env)
-run(
-  'electron-builder',
-  ['--win', 'nsis', '--x64', '--config.nsis.packElevateHelper=false', '--config.compression=store'],
-  env
-)
-cleanupOldInstallers()
+run('pnpm', ['run', 'rebuild:electron'], env)
+verifyWorkspaceBetterSqlite3(env)
+run('electron-builder', ['--win', 'portable', '--x64', '--config.compression=store'], env)
+verifyPackagedBetterSqlite3(env)
+cleanupOldPortableArtifacts()
