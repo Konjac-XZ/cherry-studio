@@ -30,7 +30,7 @@ const REQUIRED_TABLES = [
 ]
 
 // Optional tables that may not exist in older versions
-const OPTIONAL_TABLES = ['settings', 'translate_history', 'quick_phrases', 'translate_languages']
+const OPTIONAL_TABLES = ['settings', 'translate_history', 'quick_phrases', 'translate_languages', 'translate_glossary']
 
 function isIrrecoverableRecord(error: unknown): error is DOMException {
   return error instanceof DOMException && error.name === 'NotReadableError'

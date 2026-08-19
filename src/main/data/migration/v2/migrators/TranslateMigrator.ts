@@ -1,7 +1,7 @@
 /**
  * Translate Migrator - Migrates translate history, custom languages, and glossary from Dexie to SQLite
  *
- * Handles two tables in a single migrator since they belong to the same feature domain:
+ * Handles three tables in a single migrator since they belong to the same feature domain:
  *
  * 1. translate_history → translateHistoryTable
  *    - `createdAt`: ISO string → integer timestamp (fallback to Date.now() if parse fails)
@@ -11,6 +11,10 @@
  * 2. translate_languages → translateLanguageTable
  *    - `createdAt` / `updatedAt`: generated as Date.now() (not present in old data)
  *    - All other fields preserved as-is
+ *
+ * 3. translate_glossary → translateGlossaryTable
+ *    - Preserves phrases, target language, enabled state, and timestamps
+ *    - Runs after builtin/custom languages exist so every retained FK resolves
  */
 
 import { translateGlossaryTable } from '@data/db/schemas/translateGlossary'
@@ -55,7 +59,6 @@ interface OldGlossaryEntry {
 // ─── New data interfaces ────────────────────────────────────────────
 
 interface NewTranslateLanguage {
-  id: string
   langCode: string
   value: string
   emoji: string
@@ -67,7 +70,6 @@ interface NewTranslateLanguage {
 
 function transformLanguageRecord(old: OldCustomTranslateLanguage, now: number): NewTranslateLanguage {
   return {
-    id: old.id,
     langCode: old.langCode,
     value: old.value,
     emoji: old.emoji,
@@ -81,7 +83,7 @@ function transformLanguageRecord(old: OldCustomTranslateLanguage, now: number): 
 export class TranslateMigrator extends BaseMigrator {
   readonly id = 'translate'
   readonly name = 'Translate'
-  readonly description = 'Migrate translate history and custom languages'
+  readonly description = 'Migrate translate history, custom languages, and glossary'
   readonly order = 5
 
   private historySourceCount = 0

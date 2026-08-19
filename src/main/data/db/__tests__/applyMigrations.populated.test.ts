@@ -175,6 +175,94 @@ describe('applyMigrations over a populated database', () => {
     expect(sqlite.prepare('SELECT count(*) AS count FROM agent_session_message').get()).toEqual({ count: 2 })
   })
 
+  it('accepts the legacy personal translate migrations without losing their data', () => {
+    applyMigrations(db, baselineMigrationsFolder(join(tempDir, 'baseline'), '0006_mean_morg'))
+    const now = Date.now()
+
+    sqlite
+      .prepare(
+        `INSERT INTO translate_language (lang_code, value, emoji, created_at, updated_at)
+         VALUES ('zh-cn', 'Chinese', 'CN', ?, ?)`
+      )
+      .run(now, now)
+    sqlite
+      .prepare(
+        `INSERT INTO translate_history
+          (id, source_text, target_text, source_language, target_language, star, created_at, updated_at)
+         VALUES ('legacy-history', 'OpenAI', '开放人工智能', NULL, 'zh-cn', 1, ?, ?)`
+      )
+      .run(now, now)
+
+    // Exact schema shipped by the old personal 0006/0007 migrations. Their
+    // journal timestamps predate the now-current upstream 0006 migration, so
+    // drizzle correctly resumes with upstream 0006 and eventually replays 0012.
+    // applyMigrations has already reconciled the two history columns on this
+    // stopped-at-0005 baseline; add the remaining old 0007 schema verbatim.
+    sqlite.exec(`
+      CREATE TABLE translate_glossary (
+        id text PRIMARY KEY NOT NULL,
+        source_phrase text NOT NULL,
+        target_phrase text NOT NULL,
+        target_language text NOT NULL,
+        enabled integer DEFAULT true NOT NULL,
+        created_at integer NOT NULL,
+        updated_at integer NOT NULL,
+        FOREIGN KEY (target_language) REFERENCES translate_language(lang_code) ON DELETE cascade
+      );
+      CREATE INDEX translate_glossary_target_language_idx
+        ON translate_glossary (target_language, created_at);
+    `)
+    sqlite
+      .prepare(
+        `UPDATE translate_history SET model_id = 'legacy-model', cache_key = 'legacy-cache'
+         WHERE id = 'legacy-history'`
+      )
+      .run()
+    sqlite
+      .prepare(
+        `INSERT INTO translate_glossary
+          (id, source_phrase, target_phrase, target_language, enabled, created_at, updated_at)
+         VALUES ('legacy-glossary', 'OpenAI', '开放人工智能', 'zh-cn', 1, ?, ?)`
+      )
+      .run(now, now)
+    const insertMigration = sqlite.prepare('INSERT INTO __drizzle_migrations (hash, created_at) VALUES (?, ?)')
+    insertMigration.run('8b5958bf81b792c33ea4cbfbb98480d1307fdbb46f42ecceb8d9cbe02c3eab9b', 1785946064521)
+    insertMigration.run('4e481cb771360250b3c745d8e779c85f3c19b11f4393fb95ab033c830fec8d93', 1785948445971)
+
+    expect(() => applyMigrations(db, resolveMigrationsPath())).not.toThrow()
+
+    expect(
+      sqlite
+        .prepare(
+          `SELECT id, kind, source_text, target_text, model_id, cache_key
+           FROM translate_history WHERE id = 'legacy-history'`
+        )
+        .get()
+    ).toEqual({
+      id: 'legacy-history',
+      kind: 'text',
+      source_text: 'OpenAI',
+      target_text: '开放人工智能',
+      model_id: 'legacy-model',
+      cache_key: 'legacy-cache'
+    })
+    expect(
+      sqlite
+        .prepare(
+          `SELECT id, source_phrase, target_phrase, target_language
+           FROM translate_glossary WHERE id = 'legacy-glossary'`
+        )
+        .get()
+    ).toEqual({
+      id: 'legacy-glossary',
+      source_phrase: 'OpenAI',
+      target_phrase: '开放人工智能',
+      target_language: 'zh-cn'
+    })
+    expect(sqlite.pragma('foreign_key_check')).toEqual([])
+    expect(String(sqlite.pragma('integrity_check', { simple: true }))).toBe('ok')
+  })
+
   it('preserves every file_entry row and its references across the cleanup_policy recreate', () => {
     applyMigrations(db, baselineMigrationsFolder(join(tempDir, 'baseline'), '0004_fresh_roland_deschain'))
     seedBaselineRows()

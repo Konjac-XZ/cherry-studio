@@ -163,6 +163,28 @@ describe('DexieExporter', () => {
     expect(writeCalls[0]?.[4]).toBe('overwrite')
   })
 
+  it('exports the optional translate glossary for the main-process migrator', async () => {
+    const rows = [
+      {
+        id: 'glossary-1',
+        sourcePhrase: 'OpenAI',
+        targetPhrase: '开放人工智能',
+        targetLanguage: 'zh-cn',
+        enabled: true,
+        createdAt: 1_700_000_000_000,
+        updatedAt: 1_700_000_001_000
+      }
+    ]
+    dexieMock.tableNames.splice(0, dexieMock.tableNames.length, 'translate_glossary')
+    dexieMock.table.mockReturnValue(createTableMock(rows))
+
+    await new DexieExporter('/export').exportAll()
+
+    expect(JSON.parse(exportedText())).toEqual(rows)
+    const writeCalls = invoke.mock.calls.filter(([channel]) => channel === MigrationIpcChannels.WriteExportFile)
+    expect(writeCalls.every(([, , tableName]) => tableName === 'translate_glossary')).toBe(true)
+  })
+
   it('closes the database when appending a chunk fails', async () => {
     dexieMock.table.mockReturnValue(
       createTableMock([{ id: 'block-1', payload: 'a'.repeat(EXPORT_CHUNK_CHAR_LIMIT + 1) }])

@@ -1,6 +1,7 @@
 # TranslateMigrator
 
-The `TranslateMigrator` handles migration of translate history and custom languages from Dexie/IndexedDB to SQLite.
+The `TranslateMigrator` handles migration of translate history, custom languages, and glossary entries from
+Dexie/IndexedDB to SQLite.
 
 ## Data Sources
 
@@ -8,6 +9,7 @@ The `TranslateMigrator` handles migration of translate history and custom langua
 |------|--------|-----------|
 | Translate history records | Dexie `translate_history` table | `translate_history.json` |
 | Custom translate languages | Dexie `translate_languages` table | `translate_languages.json` |
+| Glossary entries | Dexie `translate_glossary` table | `translate_glossary.json` |
 
 ## Translate History
 
@@ -50,14 +52,21 @@ old cache key is retained as migration evidence but cannot be matched as a curre
 
 | Source (Dexie) | Target (translateLanguageTable) | Notes |
 |----------------|--------------------------------|-------|
-| `id` | `id` | Direct copy |
 | `langCode` | `langCode` | Direct copy, unique constraint |
 | `value` | `value` | Direct copy |
 | `emoji` | `emoji` | Direct copy |
 | (none) | `createdAt` | Generated as `Date.now()`, consistent across batch |
 | (none) | `updatedAt` | Generated as `Date.now()`, consistent across batch |
 
-**Dropped fields**: None
+The legacy UUID `id` is not copied because V2 uses `langCode` as the natural primary key. No user-visible language
+field is dropped.
+
+## Translate Glossary
+
+Glossary rows are exported by the migration window and inserted only after custom and builtin languages exist.
+Rows retain their UUID, source/target phrases, target language, enabled state, and timestamps. A malformed row or a
+row whose target language cannot resolve is skipped and included in the migrator's skipped count rather than
+aborting every other translation record.
 
 ## Implementation Files
 

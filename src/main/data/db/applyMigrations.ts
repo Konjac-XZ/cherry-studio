@@ -35,6 +35,18 @@ export function applyMigrations(db: DbType, migrationsFolder: string): void {
     db.run(sql.raw(`PRAGMA foreign_keys = ${enforced ? 'ON' : 'OFF'}`))
   }
 
+  // The personal V2 preview originally shipped these translate-history columns
+  // as migrations 0006/0007. After merging the upstream migration chain, the
+  // same schema landed in 0012. Databases that ran the preview therefore already
+  // have some or all of this schema even though the current drizzle journal does
+  // not contain the old hashes. Keep 0012 safe to replay and reconcile the two
+  // columns here, where SQLite schema introspection can make ADD COLUMN conditional.
+  // This preserves both existing V2 rows and fresh V1 -> V2 migration targets.
+  ensureColumn(db, 'translate_history', 'model_id', 'text')
+  ensureColumn(db, 'translate_history', 'cache_key', 'text')
+  db.run(sql.raw('CREATE INDEX IF NOT EXISTS `translate_history_cache_key_idx` ON `translate_history` (`cache_key`)'))
+  db.run(sql.raw('CREATE INDEX IF NOT EXISTS `translate_history_model_id_idx` ON `translate_history` (`model_id`)'))
+
   // Enforcement was on before the call, so anything reported now is a dangling
   // reference the migration itself introduced. Boot must not be blocked over it —
   // applyMigrations is also the restore and test-harness path, and a hard failure
@@ -54,4 +66,11 @@ export function applyMigrations(db: DbType, migrationsFolder: string): void {
 function isForeignKeysEnforced(db: DbType): boolean {
   const rows = db.all(sql.raw('PRAGMA foreign_keys')) as Array<{ foreign_keys?: number }>
   return Number(rows[0]?.foreign_keys ?? 0) === 1
+}
+
+function ensureColumn(db: DbType, table: string, column: string, definition: string): void {
+  const columns = db.all(sql.raw(`PRAGMA table_info(\`${table}\`)`)) as Array<{ name?: string }>
+  if (!columns.some((candidate) => candidate.name === column)) {
+    db.run(sql.raw(`ALTER TABLE \`${table}\` ADD \`${column}\` ${definition}`))
+  }
 }
