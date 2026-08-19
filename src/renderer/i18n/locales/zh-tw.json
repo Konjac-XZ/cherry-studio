@@ -12,7 +12,7 @@
       "customPlaceholder": "輸入你的答案...",
       "next": "下一個",
       "previous": "上一個",
-      "progress": "第{{current}}項，共{{total}}項",
+      "progress": "第 {{current}} 項，共 {{total}} 項",
       "skip": "跳過",
       "submit": "提交",
       "title": "來自 Agent 的提問"
@@ -54,7 +54,7 @@
         "chatIdsHint": "逗號分隔的聊天 ID。留空以允許所有聊天。",
         "chatIdsPlaceholder": "oc_xxxxx, oc_yyyyy",
         "connected": "已登入",
-        "description": "透過 WebSocket 使用飛書/Lark 機器人接收並回覆訊息。",
+        "description": "透過 WebSocket 使用飛書 / Lark 機器人接收並回覆訊息。",
         "domain": "網域",
         "domainFeishu": "飛書（中國）",
         "domainLark": "Lark（國際版）",
@@ -351,8 +351,8 @@
           "error": {
             "failed": "刪除工作目錄失敗"
           },
-          "more_count_one": "…以及另外 {{count}} 個項目",
-          "more_count_other": "…以及另外 {{count}} 個項目",
+          "more_count_one": "… 以及另外 {{count}} 個項目",
+          "more_count_other": "… 以及另外 {{count}} 個項目",
           "preview": "刪除「{{name}}」會移除其工作階段，並將相關頻道與排程任務變更為無工作目錄。此操作無法復原。",
           "preview_failed": "無法載入刪除影響，因此目前無法刪除此工作目錄",
           "preview_loading": "正在載入刪除影響…",
@@ -477,7 +477,7 @@
       "frequency": {
         "label": "執行頻率"
       },
-      "intervalPlaceholder": "至少1",
+      "intervalPlaceholder": "至少 1",
       "intervalUnit": "分鐘",
       "lastRun": "上次執行",
       "logs": {
@@ -1181,13 +1181,13 @@
         "text_generation": "文字產生",
         "text_output": "文字輸出",
         "tokens": "{{value}} Token",
-        "tokens_per_second_value": "{{value}} Token/秒",
+        "tokens_per_second_value": "{{value}} Token / 秒",
         "total_duration": "端到端持續時間",
         "uncached": "未快取",
         "usage": "Token 使用量",
         "waiting_first_token": "等待"
       },
-      "translate_native": "翻譯成{{language}}",
+      "translate_native": "翻譯成 {{language}}",
       "useful": {
         "label": "設為上下文",
         "tip": "在這組訊息中，該訊息將被選擇加入上下文"
@@ -1484,7 +1484,7 @@
         "model_column": "實際請求模型",
         "model_roles_hint": "覆寫背景子任務（如壓縮、標題）使用的模型。留空則跟隨主模型。",
         "opus_model": "Opus",
-        "permissions_hint": "預授權或拒絕工具模式。支援萬用字元，如 Read(secrets-*/config.json)。",
+        "permissions_hint": "預授權或拒絕工具模式。支援萬用字元，如 Read (secrets-*/config.json)。",
         "role_column": "角色",
         "sonnet_model": "Sonnet",
         "subagent_model": "子 Agent"
@@ -1881,7 +1881,7 @@
       "content": "訊息內容被安全系統攔截，請修改後重試",
       "context_length": "對話內容過長，請清除歷史記錄或開啟新對話",
       "deprecated": "此模型已停用，請切換至其他模型",
-      "free_model_unavailable": "AI診斷暫時無法使用",
+      "free_model_unavailable": "AI 診斷暫時無法使用",
       "go_to_settings": "前往設定",
       "knowledge": "知識庫向量化失敗",
       "mcp": "MCP 伺服器連線失敗，請檢查服務是否已啟動",
@@ -1969,7 +1969,7 @@
     "value": "值",
     "values": "值",
     "web_lookup_network_error": "網頁存取失敗。請檢查您的網路連線後再試一次。",
-    "web_search_api_host_invalid": "網頁搜尋無法使用，因為設定的供應商 API 主機無效。請在「設定 → 網頁搜尋」中輸入有效的 HTTP(S) 網址，然後再試一次。",
+    "web_search_api_host_invalid": "網頁搜尋無法使用，因為設定的供應商 API 主機無效。請在「設定 → 網頁搜尋」中輸入有效的 HTTP (S) 網址，然後再試一次。",
     "web_search_api_host_missing": "網頁搜尋無法使用，因為設定的供應商缺少 API 主機。請在「設定」→「網頁搜尋」中新增一個，然後再試一次。",
     "web_search_api_key_missing": "網頁搜尋無法使用，因為設定的供應商缺少 API 金鑰。請前往「設定 → 網頁搜尋」新增金鑰後再試一次。",
     "web_search_provider_unavailable": "網頁搜尋無法使用，因為未設定相容的供應商。請在「設定」→「網頁搜尋」中設定一個供應商，然後再試一次。"
@@ -2071,7 +2071,7 @@
     "delete": {
       "label": "刪除"
     },
-    "delete_or_remove": "刪除/移除",
+    "delete_or_remove": "刪除 / 移除",
     "document": "文件",
     "drag_upload": "拖曳檔案到此處上傳",
     "empty": {
@@ -2656,7 +2656,7 @@
             "placeholder": "這個 Agent 的用途…"
           },
           "env_vars": {
-            "help": "每行一個 KEY=VALUE",
+            "help": "每行一個 KEY = VALUE",
             "label": "環境變數",
             "placeholder": "KEY=value\nANOTHER_KEY=another_value"
           },
@@ -2942,7 +2942,7 @@
       }
     },
     "create_menu": {
-      "create": "新增{{type}}"
+      "create": "新增 {{type}}"
     },
     "delete": {
       "agent": {
@@ -3245,7 +3245,7 @@
       "success": "還原成功"
     },
     "retry": {
-      "status": "正在使用 {{model}} 重試 · 第 {{attempt}} 次"
+      "status": "正在使用 {{model}} 重試・第 {{attempt}} 次"
     },
     "save": {
       "success": {
@@ -3403,10 +3403,10 @@
       "pending": "等待中",
       "placeholder": {
         "elapsed": {
-          "days": "{{days}}天 {{hours}}時 {{minutes}}分 {{seconds}}秒",
-          "hours": "{{hours}}時 {{minutes}}分 {{seconds}}秒",
-          "minutes": "{{minutes}}分 {{seconds}}秒",
-          "seconds": "{{seconds}}秒"
+          "days": "{{days}} 天 {{hours}} 時 {{minutes}} 分 {{seconds}} 秒",
+          "hours": "{{hours}} 時 {{minutes}} 分 {{seconds}} 秒",
+          "minutes": "{{minutes}} 分 {{seconds}} 秒",
+          "seconds": "{{seconds}} 秒"
         },
         "generating": "撰寫回應",
         "preparing": "準備回應",
@@ -3752,13 +3752,13 @@
       "title": "筆記"
     },
     "show_starred": "顯示收藏的筆記",
-    "sort_a2z": "檔名（A-Z）",
+    "sort_a2z": "檔名（A - Z）",
     "sort_created_asc": "建立時間（從舊到新）",
     "sort_created_desc": "建立時間（從新到舊）",
     "sort_updated_asc": "更新時間（從舊到新）",
     "sort_updated_desc": "更新時間（從新到舊）",
-    "sort_z2a": "檔名（Z-A）",
-    "spell_check_tooltip": "啟用/停用拼字檢查",
+    "sort_z2a": "檔名（Z - A）",
+    "spell_check_tooltip": "啟用 / 停用拼字檢查",
     "star": "收藏筆記",
     "target_name_exists": "已存在同名筆記或資料夾",
     "title": "筆記",
@@ -3833,7 +3833,7 @@
       "stop": "停止 OVMS",
       "stopping": "停止中"
     },
-    "description": "<div><p>1. 下載 OV 模型。</p><p>2. 在「管理」中新增模型。</p><p>僅支援 Windows。</p><p>OVMS 安裝路徑：'%USERPROFILE%\\.cherrystudio\\ovms'。</p><p>請參閱 <a href=\"https://github.com/openvinotoolkit/model_server/blob/c55551763d02825829337b62c2dcef9339706f79/docs/deploying_server_baremetal.md\">Intel OVMS 指南</a>。</p></div>",
+    "description": "<div><p>1. 下載 OV 模型。</p><p>2. 在「管理」中新增模型。</p><p>僅支援 Windows。</p><p>OVMS 安裝路徑：'% USERPROFILE%\\.cherrystudio\\ovms'。</p><p>請參閱 <a href=\"https://github.com/openvinotoolkit/model_server/blob/c55551763d02825829337b62c2dcef9339706f79/docs/deploying_server_baremetal.md\">Intel OVMS 指南</a>。</p></div>",
     "download": {
       "button": "下載",
       "model_id": {
@@ -3849,7 +3849,7 @@
       },
       "model_source": "模型來源：",
       "model_task": "模型任務：",
-      "success_desc": "模型\"{{modelName}}\"-\"{{modelId}}\"下載成功，請前往 OVMS 管理介面新增模型",
+      "success_desc": "模型 \"{{modelName}}\"-\"{{modelId}}\" 下載成功，請前往 OVMS 管理介面新增模型",
       "task": {
         "embeddings": "嵌入",
         "image_generation": "圖片產生",
@@ -3862,7 +3862,7 @@
     "failed": {
       "install": "安裝 OVMS 失敗：",
       "install_code_100": "未知錯誤",
-      "install_code_101": "僅支援 Intel(R) CPU",
+      "install_code_101": "僅支援 Intel (R) CPU",
       "install_code_102": "僅支援 Windows",
       "install_code_103": "下載 OVMS runtime 失敗",
       "install_code_104": "安裝 OVMS runtime 失敗",
@@ -4434,7 +4434,7 @@
     "math": {
       "placeholder": "輸入 LaTeX 公式"
     },
-    "placeholder": "輸入'/'呼叫命令",
+    "placeholder": "輸入 '/' 呼叫命令",
     "plusButton": "點選以在下方新增",
     "toolbar": {
       "blockMath": "數學公式塊",
@@ -4827,7 +4827,7 @@
         "success": {
           "email_copied": "已複製支援電子郵件",
           "local_only": "檔案僅儲存在您的電腦上，並未上傳。傳送電子郵件給支援人員時，請手動附上 ZIP 檔。",
-          "summary": "檔案大小 {{size}} · 已收集 {{included}} 個檔案 · 未收集 {{omitted}} 個檔案",
+          "summary": "檔案大小 {{size}}・已收集 {{included}} 個檔案・未收集 {{omitted}} 個檔案",
           "title": "已匯出診斷包"
         },
         "unknown": "未知",
@@ -4861,7 +4861,7 @@
             "submission_rejected": "回饋表單拒絕了本次提交。"
           },
           "success": {
-            "description": "檔案大小 {{size}} · 已收集 {{included}} 個檔案 · 未收集 {{omitted}} 個檔案",
+            "description": "檔案大小 {{size}}・已收集 {{included}} 個檔案・未收集 {{omitted}} 個檔案",
             "title": "診斷包已上傳"
           },
           "unknown": {
@@ -5523,7 +5523,7 @@
     },
     "dependencies": {
       "addTool": "新增工具",
-      "addToolDescription": "使用 mise 工具鍵新增工具（例如 github:sharkdp/fd、uv、bun）。",
+      "addToolDescription": "使用 mise 工具鍵新增工具（例如 github:sharkdp / fd、uv、bun）。",
       "checkUpdates": "檢查更新",
       "description": "管理應用程式執行所需的二進位工具與執行階段相依套件。",
       "duplicateName": "已存在相同名稱的工具",
@@ -5568,7 +5568,7 @@
         "presets": "預設",
         "title": "進階安裝設定",
         "verifySignatures": {
-          "help": "驗證 aqua 類工具的 Sigstore/SLSA 簽章。僅當你的網路無法完成驗證時才關閉——關閉會略過供應鏈驗證。",
+          "help": "驗證 aqua 類工具的 Sigstore / SLSA 簽章。僅當你的網路無法完成驗證時才關閉 —— 關閉會略過供應鏈驗證。",
           "label": "驗證工具簽章"
         }
       },
@@ -5585,7 +5585,7 @@
         "download": "下載",
         "embedding": {
           "name": "本機嵌入模型",
-          "subtitle": "Qwen3 Embedding 0.6B · 約 614 MB"
+          "subtitle": "Qwen3 Embedding 0.6B・約 614 MB"
         },
         "notice": {
           "downloadFailed": "下載失敗，請檢查網路後重試。",
@@ -5595,7 +5595,7 @@
         },
         "ocr": {
           "name": "本機 OCR 模型",
-          "subtitle": "PaddleOCR PP-OCRv6 · 約 140 MB"
+          "subtitle": "PaddleOCR PP-OCRv6・約 140 MB"
         },
         "remove": "刪除",
         "status": {
@@ -5616,7 +5616,7 @@
       "removeErrorHint": "清理命令失敗。複製以下記錄以進行疑難排解或分享以尋求協助。",
       "removeRuntimeConfirmMessage": "要從 Cherry Studio 移除「{{name}}」嗎？Cherry 只會清理完全相符且由 mise 管理的複本，絕不會變更系統或內建執行階段。如已安裝的 npm 或 pip 工具相依於此執行階段，可能會阻止移除。",
       "runtimeDependency": "執行階段相依性",
-      "runtimeDependencyHint": "npm/pip 工具使用的執行時",
+      "runtimeDependencyHint": "npm / pip 工具使用的執行時",
       "searchFailed": "搜尋失敗，請檢視記錄",
       "searchRegistry": "搜尋 mise 工具儲存庫...",
       "source": {
@@ -5636,7 +5636,7 @@
         "ntn": "Notion 官方 CLI，支援身分驗證、Workers 管理，並可從終端機完整存取 Notion API。",
         "openclaw": "跨平台個人 AI 助理，提供聊天、語音、畫布、攝影機和螢幕擷取等功能。",
         "opencode": "開源 AI 程式設計 Agent，支援 75+ 模型並整合 GitHub Actions 自動化工作流程。",
-        "pi": "AI Agent 工具包，包含程式設計 Agent CLI、統一 LLM API、TUI/Web UI 和 Slack 機器人。",
+        "pi": "AI Agent 工具包，包含程式設計 Agent CLI、統一 LLM API、TUI / Web UI 和 Slack 機器人。",
         "rg": "快速文字搜尋工具（ripgrep），grep 的替代方案。",
         "rtk": "CLI 代理工具，透過壓縮終端輸出來減少 LLM Token 消耗。",
         "uv": "用於 MCP 服務與相依套件安裝的 Python 套件管理工具。"
@@ -5823,7 +5823,7 @@
       "description": "描述",
       "discover": "發現",
       "env": "環境變數",
-      "envTooltip": "格式：KEY=value，每行一個",
+      "envTooltip": "格式：KEY = value，每行一個",
       "fetch": {
         "button": "取得伺服器",
         "success": "已成功取得 MCP 伺服器"
@@ -5846,7 +5846,7 @@
         "glama": "Glama MCP 伺服器目錄",
         "higress": "Higress MCP 伺服器",
         "mcpso": "MCP 伺服器發現平台",
-        "mcpworld": "百度旗下MCP聚合平台網站",
+        "mcpworld": "百度旗下 MCP 聚合平台網站",
         "modelscope": "魔搭社群 MCP 伺服器",
         "official": "官方 MCP 伺服器集合",
         "pulsemcp": "Pulse MCP 伺服器",
@@ -6164,7 +6164,7 @@
         "select_api_key": "選擇要使用的 API 金鑰",
         "single": "單一模型",
         "single_model": "單一模型",
-        "skip_reason_generation_cost": "此模型的健康檢查會實際產生{{output}}並消耗額度，因此預設略過。",
+        "skip_reason_generation_cost": "此模型的健康檢查會實際產生 {{output}} 並消耗額度，因此預設略過。",
         "skip_reason_unsupported_probe": "此類模型目前沒有低成本的健康檢查方式，因此預設略過。",
         "start": "開始",
         "status_checking": "檢查中…",
@@ -6454,7 +6454,7 @@
       "claude_code": {
         "agent_only_note": "Claude Code 供應商僅供 Agent 使用 — 無法在聊天或助理中使用。",
         "description": "使用 Claude 訂閱登入",
-        "description_detail": "此供應商會沿用 Claude Code CLI 的登入資訊（Claude Pro/Max），且僅供 Agent 使用。請開啟終端機並執行 `claude /login` 登入。",
+        "description_detail": "此供應商會沿用 Claude Code CLI 的登入資訊（Claude Pro / Max），且僅供 Agent 使用。請開啟終端機並執行 `claude /login` 登入。",
         "launch_failed": "無法開啟終端機。請手動執行 `claude /login` 登入。",
         "legal_link": "法律與合規",
         "logged_in": "已登入 Claude Code",
@@ -6465,7 +6465,7 @@
       "codex": {
         "account": "帳號:{{accountId}}",
         "description": "使用你的 ChatGPT 訂閱登入",
-        "description_detail": "此供應商透過你的 ChatGPT Plus/Pro 登入(OAuth)存取 OpenAI Codex 模型。將開啟瀏覽器完成登入。",
+        "description_detail": "此供應商透過你的 ChatGPT Plus / Pro 登入 (OAuth) 存取 OpenAI Codex 模型。將開啟瀏覽器完成登入。",
         "logged_in": "已登入 OpenAI Codex",
         "sign_in_button": "使用 ChatGPT 登入",
         "sign_in_failed": "登入失敗，請再試一次。",
@@ -6641,7 +6641,7 @@
       "radeon_cloud": {
         "benefits": {
           "cta": "開啟 Token Factory",
-          "description": "每日 10 美元等值 API 額度，按目前費率約可使用 1,000 萬–1.11 億輸入/輸出 Token，實際用量依模型和 Token 類型而異。額度每日重設，目前暫不支援儲值。",
+          "description": "每日 10 美元等值 API 額度，按目前費率約可使用 1,000 萬–1.11 億輸入 / 輸出 Token，實際用量依模型和 Token 類型而異。額度每日重設，目前暫不支援儲值。",
           "title": "每日 10 美元免費 API 額度"
         }
       },
@@ -6701,7 +6701,7 @@
         "system": "系統代理伺服器",
         "title": "代理伺服器模式"
       },
-      "tip": "支援模糊比對（*.test.com，192.168.0.0/16）"
+      "tip": "支援模糊比對（*.test.com，192.168.0.0 / 16）"
     },
     "quickAssistant": {
       "click_tray_to_show": "點選系統匣圖示啟動",
@@ -6750,7 +6750,7 @@
       "notFoundDescription": "此任務可能已被刪除，或連結無效。",
       "notFoundTitle": "任務未找到",
       "paginationLabel": "排程任務分頁",
-      "paginationStatus": "第 {{page}} 頁，共 {{pageCount}} 頁 · {{total}} 個任務",
+      "paginationStatus": "第 {{page}} 頁，共 {{pageCount}} 頁・{{total}} 個任務",
       "search": "搜尋排程工作",
       "searchPlaceholder": "搜尋任務或 Agent",
       "title": "排程工作",
@@ -7334,7 +7334,7 @@
       },
       "ocr_completed": "圖片 OCR 完成",
       "reading": "讀取檔案內容中...",
-      "upload": "拖入或點選上傳圖片/文件"
+      "upload": "拖入或點選上傳圖片 / 文件"
     },
     "flip": {
       "label": "修正偵測方向並重新翻譯",
@@ -7386,7 +7386,7 @@
     "html_conversion": "將剪貼簿富文字 HTML 轉換為 Markdown",
     "info": {
       "aborted": "翻譯中止",
-      "reused_cached": "已重用先前的翻譯結果。{{modifier}}+點擊「翻譯」可強制重新整理。"
+      "reused_cached": "已重用先前的翻譯結果。{{modifier}}+ 點擊「翻譯」可強制重新整理。"
     },
     "input": {
       "placeholder": "請輸入文字..."
@@ -7522,7 +7522,7 @@
     "target_language": "目標語言",
     "title": "翻譯",
     "tooltip": {
-      "force_refresh": "{{modifier}}+點擊：重新翻譯並覆蓋已儲存結果",
+      "force_refresh": "{{modifier}}+ 點擊：重新翻譯並覆蓋已儲存結果",
       "newline": "換行"
     }
   },
