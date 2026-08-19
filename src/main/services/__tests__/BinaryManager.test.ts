@@ -3201,6 +3201,15 @@ describe('BinaryManager', () => {
       mockFsp = fspModule.default as unknown as Record<string, ReturnType<typeof vi.fn>>
     })
 
+    it('skips extraction when the build omits bundled CLI tools', async () => {
+      const service = new BinaryManager()
+
+      await (service as any).extractBundledBinaries()
+
+      expect(mockFsp.mkdir).not.toHaveBeenCalled()
+      expect(mockFsp.copyFile).not.toHaveBeenCalled()
+    })
+
     it('skips extraction when bundled version matches installed version', async () => {
       const service = new BinaryManager()
       ;(service as any).miseBin = '/mock/mise'
@@ -3270,6 +3279,7 @@ describe('BinaryManager', () => {
         })
         mockFs.existsSync.mockImplementation((...args: unknown[]) => {
           const p = String(args[0])
+          if (p.endsWith('app.root.resources.binaries/win32-x64')) return true
           if (p.includes('app.root.resources.binaries/win32-x64/mise')) return true
           return p.endsWith('cherry.bin/mise.exe')
         })

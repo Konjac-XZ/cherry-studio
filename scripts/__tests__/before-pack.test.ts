@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vitest'
 import { parse } from 'yaml'
 
 // CJS build script — vitest interops the module.exports fine.
-import { assertPrebuiltPackages, keepPackages } from '../before-pack'
+import { assertPrebuiltPackages, keepPackages, WINDOWS_TEST_EXCLUDE_FILTERS } from '../before-pack'
 
 const hostPlatform = process.platform === 'darwin' ? 'darwin' : process.platform === 'win32' ? 'win32' : 'linux'
 const foreignPlatform = hostPlatform === 'darwin' ? 'win32' : 'darwin'
@@ -55,5 +55,15 @@ describe('keepPackages', () => {
 
   it.each(['win32', 'linux'])('drops it on %s, which is what excludes it from the package', (platform) => {
     expect(keepPackages(platform, 'x64')).not.toContain('node-mac-permissions')
+  })
+})
+
+describe('Windows test build filters', () => {
+  it('omits the bundled CLI payload and Claude Code runtime', () => {
+    expect(WINDOWS_TEST_EXCLUDE_FILTERS).toEqual([
+      '!resources/binaries/**',
+      '!node_modules/@anthropic-ai/claude-agent-sdk/**',
+      '!node_modules/@anthropic-ai/claude-agent-sdk-*/**'
+    ])
   })
 })

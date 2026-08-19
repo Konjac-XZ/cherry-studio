@@ -7,6 +7,14 @@ const { parse } = require('yaml')
 
 const { ensureLinuxNativeArtifact } = require('./linux-native/download')
 
+const WINDOWS_TEST_BUILD = process.env.CHERRY_WINDOWS_TEST_BUILD === '1'
+const WINDOWS_TEST_EXCLUDE_FILTERS = [
+  '!resources/binaries/**',
+  '!node_modules/@anthropic-ai/claude-agent-sdk/**',
+  '!node_modules/@anthropic-ai/claude-agent-sdk-*/**'
+]
+exports.WINDOWS_TEST_EXCLUDE_FILTERS = WINDOWS_TEST_EXCLUDE_FILTERS
+
 // if you want to add new prebuild binaries packages with different architectures, you can add them here
 // please add to allX64 and allArm64 from pnpm-lock.yaml
 const packages = [
@@ -222,10 +230,14 @@ exports.default = async function (context) {
     )
   }
 
-  console.log(`Downloading bundled binaries for ${platform}-${arch}...`)
-  execSync(`node "${path.join(__dirname, 'download-binaries.js')}" ${platform} ${arch}`, { stdio: 'inherit' })
-  // Fail the build rather than ship a half-empty resources/binaries/<platform>.
-  require('./download-binaries').verifyBundledBinaries(platform, arch)
+  if (WINDOWS_TEST_BUILD) {
+    console.log('Windows test build: excluding bundled CLI tools and Claude Code runtime')
+  } else {
+    console.log(`Downloading bundled binaries for ${platform}-${arch}...`)
+    execSync(`node "${path.join(__dirname, 'download-binaries.js')}" ${platform} ${arch}`, { stdio: 'inherit' })
+    // Fail the build rather than ship a half-empty resources/binaries/<platform>.
+    require('./download-binaries').verifyBundledBinaries(platform, arch)
+  }
 
   const excludePackages = async (packagesToExclude) => {
     // 从项目根目录的 electron-builder.yml 读取 files 配置，避免多次覆盖配置导致出错
@@ -259,8 +271,16 @@ exports.default = async function (context) {
     .map((p) => '!resources/binaries/' + p + '/**')
 
   if (context.arch === Arch.arm64) {
-    await excludePackages([...arm64ExcludePackages, ...excludeBundledBinaryFilters])
+    await excludePackages([
+      ...arm64ExcludePackages,
+      ...excludeBundledBinaryFilters,
+      ...(WINDOWS_TEST_BUILD ? WINDOWS_TEST_EXCLUDE_FILTERS : [])
+    ])
   } else {
-    await excludePackages([...x64ExcludePackages, ...excludeBundledBinaryFilters])
+    await excludePackages([
+      ...x64ExcludePackages,
+      ...excludeBundledBinaryFilters,
+      ...(WINDOWS_TEST_BUILD ? WINDOWS_TEST_EXCLUDE_FILTERS : [])
+    ])
   }
 }

@@ -676,6 +676,10 @@ export class BinaryManager extends BaseService {
   private async extractBundledBinaries(): Promise<void> {
     const platformKey = `${process.platform}-${process.arch}`
     const bundledDir = path.join(application.getPath('app.root.resources.binaries'), platformKey)
+    if (!fs.existsSync(bundledDir)) {
+      logger.info('Bundled CLI tools are not included in this build')
+      return
+    }
     const binDir = application.getPath('cherry.bin')
     await fsp.mkdir(binDir, { recursive: true })
 

@@ -76,29 +76,6 @@ function verifyPackagedBetterSqlite3(env) {
   runNative(packagedExecutable, ['-e', script], { ...env, ELECTRON_RUN_AS_NODE: '1' })
 }
 
-function cleanupOldPortableArtifacts() {
-  const packageJson = require('../package.json')
-  const currentPortableName = `Cherry-Studio-${packageJson.version}-x64-portable.exe`
-  const distDir = path.resolve(__dirname, '..', 'dist')
-
-  if (!fs.existsSync(distDir)) return
-
-  for (const entry of fs.readdirSync(distDir, { withFileTypes: true })) {
-    if (!entry.isFile()) continue
-
-    const isX64Portable = /^Cherry-Studio-.+-x64-portable\.exe$/.test(entry.name)
-    if (!isX64Portable || entry.name === currentPortableName) continue
-
-    const filePath = path.resolve(distDir, entry.name)
-    if (path.dirname(filePath) !== distDir) {
-      throw new Error(`Refusing to remove portable artifact outside dist: ${filePath}`)
-    }
-
-    fs.rmSync(filePath, { force: true })
-    console.log(`[build:win:x64] Removed old portable artifact: ${entry.name}`)
-  }
-}
-
 const localBin = path.resolve(__dirname, '..', 'node_modules', '.bin')
 const env = {
   ...process.env,
@@ -113,12 +90,12 @@ const env = {
   WIN_SIGN: '',
   CHERRY_CERT_PATH: '',
   CHERRY_CERT_KEY: '',
-  CHERRY_CERT_CSP: ''
+  CHERRY_CERT_CSP: '',
+  CHERRY_WINDOWS_TEST_BUILD: '1'
 }
 
 run('dotenv', ['pnpm', 'run', 'build'], env)
 run('pnpm', ['run', 'rebuild:electron'], env)
 verifyWorkspaceBetterSqlite3(env)
-run('electron-builder', ['--win', 'portable', '--x64', '--config.compression=store'], env)
+run('electron-builder', ['--win', 'nsis', '--x64', '--config.compression=store'], env)
 verifyPackagedBetterSqlite3(env)
-cleanupOldPortableArtifacts()
