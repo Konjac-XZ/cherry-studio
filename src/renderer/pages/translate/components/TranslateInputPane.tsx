@@ -1,18 +1,11 @@
 import { Button, NormalTooltip, Scrollbar } from '@cherrystudio/ui'
-import uploadExcelIcon from '@renderer/assets/images/translate/upload-excel.svg'
-import uploadImageIcon from '@renderer/assets/images/translate/upload-image.svg'
-import uploadPdfIcon from '@renderer/assets/images/translate/upload-pdf.svg'
-import uploadPptIcon from '@renderer/assets/images/translate/upload-ppt.svg'
-import uploadTextIcon from '@renderer/assets/images/translate/upload-text.svg'
-import uploadWordIcon from '@renderer/assets/images/translate/upload-word.svg'
 import { useDrag } from '@renderer/hooks/useDrag'
-import { ClipboardPaste, CodeXml, Copy, LoaderCircle, X } from 'lucide-react'
+import { ClipboardPaste, LoaderCircle, Plus, X } from 'lucide-react'
 import type { KeyboardEvent, Ref } from 'react'
 import { useCallback, useLayoutEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import FloatingActionBar from './FloatingActionBar'
-import IconButton from './IconButton'
 
 type Props = {
   ref?: Ref<HTMLDivElement>
@@ -23,14 +16,12 @@ type Props = {
   onPaste: (event: React.ClipboardEvent<HTMLTextAreaElement>) => void
   onDrop: (event: React.DragEvent<HTMLDivElement>) => void
   onSelectFile: () => void
-  onCopy: () => void
   onPasteFromClipboard: () => Promise<string>
-  htmlConversionEnabled: boolean
-  onToggleHtmlConversion: () => void
   onCancelOcr: () => void
   disabled: boolean
   ocrProcessing: boolean
   selecting: boolean
+  busyLabel?: string | null
   fontSize?: number
   tokenCount?: number
   wordCount?: number
@@ -45,14 +36,12 @@ const TranslateInputPane = ({
   onPaste,
   onDrop,
   onSelectFile,
-  onCopy,
   onPasteFromClipboard,
-  htmlConversionEnabled,
-  onToggleHtmlConversion,
   onCancelOcr,
   disabled,
   ocrProcessing,
   selecting,
+  busyLabel,
   fontSize = 16,
   tokenCount = 0,
   wordCount = 0
@@ -94,12 +83,10 @@ const TranslateInputPane = ({
     textarea.style.height = `${textarea.scrollHeight}px`
   }, [text])
 
-  const uploadIcons = [uploadImageIcon, uploadPdfIcon, uploadWordIcon, uploadPptIcon, uploadTextIcon, uploadExcelIcon]
-
   return (
     <div
       data-ui="translate.input"
-      className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background"
+      className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-[10px] border border-border-subtle bg-background"
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDragOver={handleDragOver}
@@ -116,7 +103,7 @@ const TranslateInputPane = ({
             spellCheck={false}
             style={{ fontSize }}
             placeholder={t('translate.input.placeholder')}
-            className="min-h-full w-full resize-none overflow-hidden bg-transparent p-4 pr-12 text-base text-foreground leading-relaxed outline-none placeholder:font-normal placeholder:text-muted-foreground"
+            className="min-h-full w-full resize-none overflow-hidden bg-transparent pt-[15px] pr-[77px] pb-[5px] pl-[21px] text-base text-foreground leading-relaxed outline-none placeholder:font-normal placeholder:text-muted-foreground"
           />
         </Scrollbar>
         <FloatingActionBar
@@ -134,52 +121,33 @@ const TranslateInputPane = ({
               onClick: () => void handlePasteFromClipboard(),
               disabled,
               icon: <ClipboardPaste size={14} />
-            },
-            {
-              key: 'copy',
-              label: t('common.copy'),
-              onClick: onCopy,
-              disabled: disabled || !text,
-              icon: <Copy size={14} />
             }
           ]}
         />
       </div>
-      {!text && (
-        <button
+      <div className="group absolute bottom-[2px] left-[2px] z-10 flex size-[51px] items-center justify-center">
+        <Button
           type="button"
+          variant="default"
+          size="icon-sm"
           onClick={onSelectFile}
           disabled={disabled || selecting}
           aria-label={t('translate.files.upload')}
-          className="mx-3 mb-4 flex shrink-0 flex-col items-center justify-center gap-3 rounded-md border border-border-subtle border-dashed px-4 py-4 text-muted-foreground transition-colors hover:border-border-strong hover:bg-muted/30 hover:text-foreground focus-visible:border-border-strong focus-visible:bg-muted/30 focus-visible:text-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60">
-          <span className="text-sm">{t('translate.files.upload')}</span>
-          <span className="flex items-center gap-6">
-            {uploadIcons.map((icon) => (
-              <img key={icon} src={icon} alt="" aria-hidden="true" className="size-7" />
-            ))}
+          title={t('translate.files.upload')}
+          className="size-[35px] rounded-full opacity-0 transition-opacity delay-300 duration-200 group-hover:opacity-100 group-hover:delay-0">
+          <Plus size={15} />
+        </Button>
+      </div>
+      <div className="flex shrink-0 items-center justify-end px-3 py-1">
+        <NormalTooltip content={t('translate.counter.tip')} side="top">
+          <span className="text-foreground-tertiary text-xs tabular-nums">
+            {wordCount} {t('translate.counter.words')} / {tokenCount} {t('translate.counter.tokens')}
           </span>
-        </button>
-      )}
-      {!disabled && (
-        <div className="flex shrink-0 items-center gap-1 px-3 py-3">
-          <IconButton
-            size="sm"
-            onClick={onToggleHtmlConversion}
-            aria-label={t('translate.html_conversion')}
-            aria-pressed={htmlConversionEnabled}
-            className={htmlConversionEnabled ? 'text-foreground' : 'text-foreground-tertiary'}>
-            <CodeXml size={14} />
-          </IconButton>
-          <NormalTooltip content={t('translate.counter.tip')} side="top">
-            <span className="ml-auto text-foreground-tertiary text-xs tabular-nums">
-              {wordCount} {t('translate.counter.words')} / {tokenCount} {t('translate.counter.tokens')}
-            </span>
-          </NormalTooltip>
-        </div>
-      )}
+        </NormalTooltip>
+      </div>
       {isDragging && (
         <div className="fade-in-0 pointer-events-none absolute inset-0 z-10 flex animate-in items-center justify-center bg-background p-3 duration-150">
-          <div className="flex h-full w-full items-center justify-center rounded-md border border-border-subtle border-dashed">
+          <div className="flex h-full w-full flex-col items-center justify-center gap-3 rounded-md border border-border-subtle border-dashed">
             {/* Drawn as a single path so the translucent foreground token paints
                 evenly: lucide's Plus uses two crossing paths, which composites
                 the alpha twice and darkens the center. */}
@@ -195,7 +163,18 @@ const TranslateInputPane = ({
               aria-hidden="true">
               <path d="M5 12h14M12 5v14" />
             </svg>
-            <span className="sr-only">{t('translate.files.drag_text')}</span>
+            <span className="text-muted-foreground text-sm">{t('translate.files.drag_text')}</span>
+          </div>
+        </div>
+      )}
+      {busyLabel && !ocrProcessing && (
+        <div className="pointer-events-none absolute inset-[10px_5px_28px] z-10 flex items-center justify-center bg-background/20">
+          <div
+            role="status"
+            aria-live="polite"
+            className="flex max-w-[calc(100%-32px)] items-center gap-2 rounded-lg border border-border-subtle bg-background/95 px-3 py-2 text-foreground text-sm shadow-sm">
+            <span className="size-2 shrink-0 animate-pulse rounded-full bg-primary" aria-hidden="true" />
+            <span className="truncate">{busyLabel}</span>
           </div>
         </div>
       )}

@@ -7061,6 +7061,7 @@
         }
       },
       "glossary": {
+        "action": "Thao tác",
         "delete": {
           "description": "Delete this glossary entry?",
           "title": "Delete glossary entry"
@@ -7370,6 +7371,7 @@
         "starred": "Chỉ có dấu sao"
       },
       "reuse": "Tái sử dụng",
+      "search_placeholder": "Tìm kiếm trong lịch sử...",
       "source": "Nguồn",
       "star": "Yêu thích",
       "success": {
@@ -7445,6 +7447,7 @@
       },
       "success": "Đã tạo PDF đã dịch"
     },
+    "polishing": "Đang trau chuốt...",
     "post_processing": {
       "applied": "Post-processing applied",
       "enable": "Enable post-processing",
@@ -7459,6 +7462,7 @@
       "bidirectional": "Cài đặt Dịch thuật Hai chiều",
       "bidirectional_tip": "Khi được bật, chỉ hỗ trợ dịch hai chiều giữa ngôn ngữ nguồn và ngôn ngữ đích",
       "custom_body": {
+        "add_parameter": "Thêm tham số",
         "polish": "Polish request",
         "reasoning_override": "Reasoning-related custom parameters override the Minimize reasoning switch for this request type.",
         "title": "Custom request parameters",

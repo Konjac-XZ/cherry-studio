@@ -77,7 +77,7 @@ export const useTranslateLayout = ({
     const { maximum } = getTranslatePanelBounds(false, width, window.innerWidth)
     const originalColumns = container.style.gridTemplateColumns
     const nextSize = findEqualizedTranslatePanelSize(maximum, (candidate) => {
-      container.style.gridTemplateColumns = `${candidate}% 4px minmax(0, 1fr)`
+      container.style.gridTemplateColumns = `${candidate}% 6px minmax(0, 1fr)`
       return {
         input: input.scrollHeight - input.clientHeight,
         output: output.scrollHeight - output.clientHeight

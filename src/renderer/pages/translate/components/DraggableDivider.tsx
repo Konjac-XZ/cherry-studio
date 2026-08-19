@@ -30,8 +30,8 @@ const DraggableDivider = ({ containerRef, vertical, value, onChange, onEqualizeS
       aria-orientation={vertical ? 'horizontal' : 'vertical'}
       tabIndex={0}
       className={cn(
-        'group relative z-10 shrink-0 touch-none bg-border-subtle outline-none transition-colors hover:bg-primary/50 focus-visible:bg-primary/50',
-        vertical ? 'h-1 cursor-row-resize' : 'w-1 cursor-col-resize'
+        'group relative z-10 flex shrink-0 touch-none items-center justify-center outline-none transition-colors hover:bg-primary/20 focus-visible:bg-primary/20',
+        vertical ? 'h-1.5 cursor-row-resize' : 'w-1.5 cursor-col-resize'
       )}
       onPointerDown={(event) => {
         event.currentTarget.setPointerCapture(event.pointerId)
@@ -58,8 +58,15 @@ const DraggableDivider = ({ containerRef, vertical, value, onChange, onEqualizeS
         onChange(
           clampTranslatePanelSize(value + delta, vertical, vertical ? bounds.height : bounds.width, window.innerWidth)
         )
-      }}
-    />
+      }}>
+      <span
+        aria-hidden="true"
+        className={cn(
+          'block rounded-sm bg-border transition-colors group-hover:bg-primary/60 group-focus-visible:bg-primary/60',
+          vertical ? 'h-1 w-10' : 'h-10 w-1'
+        )}
+      />
+    </div>
   )
 }
 

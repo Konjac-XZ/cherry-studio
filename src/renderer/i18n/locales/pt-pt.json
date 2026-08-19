@@ -7061,6 +7061,7 @@
         }
       },
       "glossary": {
+        "action": "Ações",
         "delete": {
           "description": "Delete this glossary entry?",
           "title": "Delete glossary entry"
@@ -7370,6 +7371,7 @@
         "starred": "Apenas marcado com estrela"
       },
       "reuse": "Reutilizar",
+      "search_placeholder": "Pesquisar no histórico...",
       "source": "Fonte",
       "star": "Favorito",
       "success": {
@@ -7445,6 +7447,7 @@
       },
       "success": "PDF traduzido gerado"
     },
+    "polishing": "A aperfeiçoar...",
     "post_processing": {
       "applied": "Post-processing applied",
       "enable": "Enable post-processing",
@@ -7459,6 +7462,7 @@
       "bidirectional": "Configuração de Tradução Bidirecional",
       "bidirectional_tip": "Quando ativado, suporta apenas tradução bidirecional entre o idioma de origem e o idioma de destino",
       "custom_body": {
+        "add_parameter": "Adicionar parâmetro",
         "polish": "Polish request",
         "reasoning_override": "Reasoning-related custom parameters override the Minimize reasoning switch for this request type.",
         "title": "Custom request parameters",

@@ -219,7 +219,7 @@ describe('TranslateHistory', () => {
   it('queries text plus localized language matches and caps the rendered history', () => {
     renderHistory()
 
-    fireEvent.change(screen.getByPlaceholderText('translate.history.search.placeholder'), {
+    fireEvent.change(screen.getByPlaceholderText('translate.history.search_placeholder'), {
       target: { value: 'English' }
     })
 

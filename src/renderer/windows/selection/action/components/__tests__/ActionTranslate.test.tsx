@@ -11,7 +11,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 const state = vi.hoisted(() => {
   const english = { langCode: 'en-us', value: 'English', emoji: '🇺🇸' }
   const chinese = { langCode: 'zh-cn', value: 'Chinese (Simplified)', emoji: '🇨🇳' }
-  const traditionalChinese = { langCode: 'zh-tw', value: 'Chinese (Traditional)', emoji: '🇭🇰' }
+  const traditionalChinese = { langCode: 'zh-tw', value: 'Chinese (Traditional)', emoji: '🇹🇼' }
   const japanese = { langCode: 'ja-jp', value: 'Japanese', emoji: '🇯🇵' }
   const languages = [chinese, traditionalChinese, english, japanese]
 

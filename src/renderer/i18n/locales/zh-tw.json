@@ -7061,6 +7061,7 @@
         }
       },
       "glossary": {
+        "action": "操作",
         "delete": {
           "description": "確定刪除這條術語嗎？",
           "title": "刪除術語"
@@ -7370,6 +7371,7 @@
         "starred": "僅顯示收藏"
       },
       "reuse": "使用此翻譯",
+      "search_placeholder": "搜尋歷史記錄...",
       "source": "原文",
       "star": "最愛",
       "success": {
@@ -7445,6 +7447,7 @@
       },
       "success": "譯文 PDF 已產生"
     },
+    "polishing": "正在潤飾...",
     "post_processing": {
       "applied": "後處理已套用",
       "enable": "啟用後處理",
@@ -7459,6 +7462,7 @@
       "bidirectional": "雙向翻譯設定",
       "bidirectional_tip": "開啟後，僅支援在來源語言和目標語言之間進行雙向翻譯",
       "custom_body": {
+        "add_parameter": "新增參數",
         "polish": "潤飾請求",
         "reasoning_override": "此請求類型中的推理相關自訂參數會覆寫「盡量關閉推理」開關。",
         "title": "自訂請求參數",

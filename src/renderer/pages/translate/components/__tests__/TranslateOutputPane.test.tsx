@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 import TranslateOutputPane from '../TranslateOutputPane'
@@ -31,19 +31,24 @@ const baseProps = () => ({
   translating: false,
   copied: false,
   onCopy: vi.fn(),
-  onExportToNotes: vi.fn(),
   onScroll: vi.fn()
 })
 
 describe('TranslateOutputPane', () => {
-  it('shows translated content, length, and a copy button', () => {
+  it('shows the V1 placeholder while the output is empty', () => {
+    render(<TranslateOutputPane {...baseProps()} />)
+
+    expect(screen.getByText('translate.output.placeholder')).toBeInTheDocument()
+  })
+
+  it('shows translated content and a copy button without an extra footer', () => {
     const props = baseProps()
     props.translatedContent = 'partial output'
 
     render(<TranslateOutputPane {...props} />)
 
     expect(screen.getByText('partial output')).toBeInTheDocument()
-    expect(screen.getByText('14')).toBeInTheDocument()
+    expect(screen.queryByText('14')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'common.copy' })).toBeEnabled()
   })
 
@@ -84,20 +89,5 @@ describe('TranslateOutputPane', () => {
 
     expect(screen.queryByTestId('json-structure-view')).not.toBeInTheDocument()
     expect(screen.getByText('{"value":1}')).toBeInTheDocument()
-  })
-
-  it('shows an export-to-notes button in the bottom-right footer and calls it for translated content', () => {
-    const props = baseProps()
-    props.translatedContent = 'translated output'
-
-    render(<TranslateOutputPane {...props} />)
-
-    const buttons = screen.getAllByRole('button')
-    expect(buttons.map((button) => button.getAttribute('aria-label'))).toEqual(['common.copy', 'notes.save'])
-    expect(screen.getByRole('button', { name: 'notes.save' })).toHaveClass('ml-auto')
-
-    fireEvent.click(screen.getByRole('button', { name: 'notes.save' }))
-
-    expect(props.onExportToNotes).toHaveBeenCalledTimes(1)
   })
 })

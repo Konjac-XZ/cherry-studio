@@ -7061,6 +7061,7 @@
         }
       },
       "glossary": {
+        "action": "Acțiuni",
         "delete": {
           "description": "Delete this glossary entry?",
           "title": "Delete glossary entry"
@@ -7370,6 +7371,7 @@
         "starred": "Doar cu stea"
       },
       "reuse": "Reutilizare",
+      "search_placeholder": "Caută în istoric...",
       "source": "Sursă",
       "star": "Preferat",
       "success": {
@@ -7445,6 +7447,7 @@
       },
       "success": "PDF-ul tradus a fost generat"
     },
+    "polishing": "Se îmbunătățește...",
     "post_processing": {
       "applied": "Post-processing applied",
       "enable": "Enable post-processing",
@@ -7459,6 +7462,7 @@
       "bidirectional": "Setări traducere bidirecțională",
       "bidirectional_tip": "Când este activat, este acceptată doar traducerea bidirecțională între limbile sursă și țintă",
       "custom_body": {
+        "add_parameter": "Adaugă parametru",
         "polish": "Polish request",
         "reasoning_override": "Reasoning-related custom parameters override the Minimize reasoning switch for this request type.",
         "title": "Custom request parameters",

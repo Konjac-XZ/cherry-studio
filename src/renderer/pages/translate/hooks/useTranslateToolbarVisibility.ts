@@ -2,7 +2,7 @@ import type { RefObject } from 'react'
 import { useEffect, useRef, useState } from 'react'
 
 export const TRANSLATE_TOOLBAR_COMPACT_WIDTH = 900
-export const isTranslateToolbarCompact = (width: number) => width < TRANSLATE_TOOLBAR_COMPACT_WIDTH
+export const isTranslateToolbarCompact = (width: number) => width <= TRANSLATE_TOOLBAR_COMPACT_WIDTH
 
 export const useTranslateToolbarVisibility = (): {
   compact: boolean

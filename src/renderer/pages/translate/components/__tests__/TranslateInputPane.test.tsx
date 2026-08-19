@@ -45,10 +45,7 @@ const baseProps = () => ({
   onPaste: vi.fn(),
   onDrop: vi.fn(),
   onSelectFile: vi.fn(),
-  onCopy: vi.fn(),
   onPasteFromClipboard: vi.fn(async () => 'pasted'),
-  htmlConversionEnabled: true,
-  onToggleHtmlConversion: vi.fn(),
   onCancelOcr: vi.fn(),
   disabled: false,
   ocrProcessing: false,
@@ -70,13 +67,13 @@ describe('TranslateInputPane', () => {
     expect(props.onSelectFile).not.toHaveBeenCalled()
   })
 
-  it('shows the input value and hides the upload area once input has text', () => {
+  it('shows the input value and keeps the compact upload action available', () => {
     const props = baseProps()
     props.text = 'hello'
 
     render(<TranslateInputPane {...props} />)
 
-    expect(screen.queryByRole('button', { name: 'translate.files.upload' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'translate.files.upload' })).toBeEnabled()
     expect(screen.getByRole('textbox')).toHaveValue('hello')
   })
 
@@ -90,17 +87,6 @@ describe('TranslateInputPane', () => {
     fireEvent.click(screen.getByRole('button', { name: 'translate.paste' }))
 
     await waitFor(() => expect(props.onTextChange).toHaveBeenCalledWith('hepastedllo'))
-  })
-
-  it('exposes the persisted HTML conversion state and toggle', () => {
-    const props = baseProps()
-    render(<TranslateInputPane {...props} />)
-    const toggle = screen.getByRole('button', { name: 'translate.html_conversion' })
-    expect(toggle).toHaveAttribute('aria-pressed', 'true')
-
-    fireEvent.click(toggle)
-
-    expect(props.onToggleHtmlConversion).toHaveBeenCalledOnce()
   })
 
   it('clears the input and restores textarea focus', async () => {

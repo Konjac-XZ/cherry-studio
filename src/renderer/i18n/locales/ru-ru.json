@@ -7061,6 +7061,7 @@
         }
       },
       "glossary": {
+        "action": "Действия",
         "delete": {
           "description": "Delete this glossary entry?",
           "title": "Delete glossary entry"
@@ -7370,6 +7371,7 @@
         "starred": "Только с отметкой звёздочкой"
       },
       "reuse": "Повторное использование",
+      "search_placeholder": "Поиск в истории...",
       "source": "Источник",
       "star": "Избранное",
       "success": {
@@ -7445,6 +7447,7 @@
       },
       "success": "Переведённый PDF создан"
     },
+    "polishing": "Улучшение текста...",
     "post_processing": {
       "applied": "Post-processing applied",
       "enable": "Enable post-processing",
@@ -7459,6 +7462,7 @@
       "bidirectional": "Настройки двунаправленного перевода",
       "bidirectional_tip": "Если включено, перевод будет выполняться в обоих направлениях, исходный текст будет переведен на целевой язык и наоборот.",
       "custom_body": {
+        "add_parameter": "Добавить параметр",
         "polish": "Polish request",
         "reasoning_override": "Reasoning-related custom parameters override the Minimize reasoning switch for this request type.",
         "title": "Custom request parameters",

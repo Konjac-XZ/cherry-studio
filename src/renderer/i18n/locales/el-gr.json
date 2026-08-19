@@ -7061,6 +7061,7 @@
         }
       },
       "glossary": {
+        "action": "Ενέργειες",
         "delete": {
           "description": "Delete this glossary entry?",
           "title": "Delete glossary entry"
@@ -7370,6 +7371,7 @@
         "starred": "Μόνο με αστερίσκο"
       },
       "reuse": "Επαναχρησιμοποίηση",
+      "search_placeholder": "Αναζήτηση στο ιστορικό...",
       "source": "Πηγή",
       "star": "Αγαπημένο",
       "success": {
@@ -7445,6 +7447,7 @@
       },
       "success": "Το μεταφρασμένο PDF δημιουργήθηκε"
     },
+    "polishing": "Βελτίωση κειμένου...",
     "post_processing": {
       "applied": "Post-processing applied",
       "enable": "Enable post-processing",
@@ -7459,6 +7462,7 @@
       "bidirectional": "Ρύθμιση διπλής κατεύθυνσης μετάφρασης",
       "bidirectional_tip": "Όταν ενεργοποιηθεί, υποστηρίζεται μόνο διπλής κατεύθυνσης μετάφραση μεταξύ της πηγαίας και της στόχου γλώσσας",
       "custom_body": {
+        "add_parameter": "Προσθήκη παραμέτρου",
         "polish": "Polish request",
         "reasoning_override": "Reasoning-related custom parameters override the Minimize reasoning switch for this request type.",
         "title": "Custom request parameters",

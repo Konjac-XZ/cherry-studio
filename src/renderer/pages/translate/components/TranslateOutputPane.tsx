@@ -1,11 +1,10 @@
 import { Scrollbar } from '@cherrystudio/ui'
 import { getJsonStructureForDisplay, type JsonStructureCopySeparator } from '@renderer/utils/translate'
-import { Check, Copy, NotebookPen } from 'lucide-react'
+import { Check, Copy } from 'lucide-react'
 import { type Ref, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import FloatingActionBar from './FloatingActionBar'
-import IconButton from './IconButton'
 import JsonStructureView from './JsonStructureView'
 
 type Props = {
@@ -20,7 +19,6 @@ type Props = {
   fontSize?: number
   copied: boolean
   onCopy: () => void
-  onExportToNotes: () => void
   onScroll: () => void
 }
 
@@ -36,7 +34,6 @@ const TranslateOutputPane = ({
   fontSize = 16,
   copied,
   onCopy,
-  onExportToNotes,
   onScroll
 }: Props) => {
   const { t } = useTranslation()
@@ -48,12 +45,12 @@ const TranslateOutputPane = ({
   return (
     <div
       data-ui="translate.output"
-      className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background">
+      className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-[10px] bg-muted/30">
       <Scrollbar
         ref={ref}
         onScroll={onScroll}
         style={{ fontSize }}
-        className="selectable min-h-0 flex-1 overflow-x-hidden p-4 pr-12 text-base leading-relaxed">
+        className="selectable min-h-0 flex-1 overflow-x-auto pt-[15px] pr-[21px] pb-[15px] pl-[21px] text-base leading-relaxed">
         <div className="flex min-h-full flex-col">
           {translating && !translatedContent ? (
             <div className="flex items-center gap-2 text-muted-foreground">
@@ -72,7 +69,9 @@ const TranslateOutputPane = ({
             ) : (
               <div className="wrap-break-word whitespace-pre-wrap text-foreground">{translatedContent}</div>
             )
-          ) : null}
+          ) : (
+            <div className="select-none text-muted-foreground">{t('translate.output.placeholder')}</div>
+          )}
         </div>
       </Scrollbar>
       <FloatingActionBar
@@ -86,17 +85,6 @@ const TranslateOutputPane = ({
           }
         ]}
       />
-      <div className="flex shrink-0 items-center px-3 py-4">
-        {translatedContent && <span className="text-foreground-tertiary text-xs">{translatedContent.length}</span>}
-        <IconButton
-          size="sm"
-          onClick={onExportToNotes}
-          disabled={!translatedContent.trim()}
-          aria-label={t('notes.save')}
-          className="ml-auto">
-          <NotebookPen size={14} />
-        </IconButton>
-      </div>
     </div>
   )
 }

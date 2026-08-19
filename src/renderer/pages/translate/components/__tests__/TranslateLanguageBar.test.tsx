@@ -108,16 +108,16 @@ describe('TranslateLanguageBar', () => {
     mockUseLanguages.mockReturnValue(createLanguagesHookResult())
   })
 
-  it('sizes language selectors from the longest option label', () => {
+  it('keeps language selectors fluid within the V1 width range', () => {
     mockUseLanguages.mockReturnValue(createLanguagesHookResult([english, chinese, japanese, longNamedLanguage]))
 
     render(<TranslateLanguageBar {...baseProps()} />)
 
     expect(screen.getByRole('button', { name: sourceLanguageButtonName })).toHaveStyle({
-      width: 'clamp(150px, calc(34ch + 72px), 260px)'
+      width: 'clamp(64px, 16vw, 200px)'
     })
     expect(screen.getByRole('button', { name: targetLanguageButtonName })).toHaveStyle({
-      width: 'clamp(150px, calc(34ch + 72px), 260px)'
+      width: 'clamp(64px, 16vw, 200px)'
     })
   })
 
@@ -185,7 +185,7 @@ describe('TranslateLanguageBar', () => {
     expect(swapButton).toHaveAttribute('disabled')
   })
 
-  it('renders bidirectional pair display without the source dropdown', () => {
+  it('keeps the source dropdown and exchange control beside the bidirectional pair display', () => {
     const props = baseProps()
     props.isBidirectional = true
     const { container } = render(<TranslateLanguageBar {...props} />)
@@ -196,7 +196,8 @@ describe('TranslateLanguageBar', () => {
     const pairButton = screen.getByRole('button', { name: 'English ⇆ Chinese' })
     expect(pairButton).toHaveClass('h-8', 'text-sm')
     expect(pairButton).not.toHaveClass('h-9')
-    expect(screen.queryByRole('button', { name: sourceLanguageButtonName })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: sourceLanguageButtonName })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'translate.exchange.label' })).toBeInTheDocument()
   })
 
   it('uses contained focus feedback on language trigger buttons', () => {
@@ -232,7 +233,7 @@ describe('TranslateLanguageBar', () => {
     expect(within(sourceTrigger).getByText(/translate\.detected\.language \(Chinese\)/)).toBeInTheDocument()
   })
 
-  it('accounts for CJK label width when sizing the auto detected source selector', () => {
+  it('keeps the fluid selector width for CJK auto-detection labels', () => {
     const simplifiedChinese = createLanguage('zh-cn', '简体中文', '🇨🇳')
     mockT.mockImplementation((key: string) => (key === 'translate.detected.language' ? '自动检测' : key))
     mockUseLanguages.mockReturnValue(createLanguagesHookResult([english, simplifiedChinese, japanese]))
@@ -242,7 +243,7 @@ describe('TranslateLanguageBar', () => {
     render(<TranslateLanguageBar {...props} />)
 
     expect(screen.getByRole('button', { name: sourceLanguageButtonName })).toHaveStyle({
-      width: 'clamp(150px, calc(19ch + 72px), 260px)'
+      width: 'clamp(64px, 16vw, 200px)'
     })
   })
 

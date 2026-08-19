@@ -35,6 +35,10 @@ vi.mock('@renderer/hooks/translate', () => ({
   useTranslateLanguages: () => translateLanguageMutationsMock
 }))
 
+vi.mock('@renderer/hooks/useModel', () => ({
+  useModels: () => ({ models: [] })
+}))
+
 vi.mock('@renderer/utils/style', () => ({
   cn: (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(' ')
 }))
@@ -163,7 +167,7 @@ vi.mock('@cherrystudio/ui', () => ({
 
 import TranslateSettings, { TranslateSettingsPanelContent } from '../TranslateSettings'
 
-const getPromptTextarea = () => screen.getAllByRole('textbox')[0]
+const getPromptTextarea = () => screen.getByRole('textbox', { name: 'translate.settings.prompt.native_to_other' })
 const getAddLanguageButton = () => screen.getByRole('button', { name: 'common.add common.language' })
 const openAddLanguageForm = () => {
   fireEvent.click(getAddLanguageButton())
@@ -300,6 +304,18 @@ describe('TranslateSettings', () => {
 
     rerender(<TranslateSettings visible={false} onClose={onClose} />)
     expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('keeps advanced settings behind the V1 more-settings level', () => {
+    render(<TranslateSettings visible onClose={vi.fn()} />)
+
+    expect(screen.queryByRole('textbox', { name: 'translate.settings.prompt.native_to_other' })).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: 'settings.moresetting.label' }))
+
+    expect(screen.getByRole('textbox', { name: 'translate.settings.prompt.other_to_native' })).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'translate.settings.prompt.native_to_other' })).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'translate.settings.prompt.polish' })).toBeInTheDocument()
   })
 })
 

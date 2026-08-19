@@ -7061,6 +7061,7 @@
         }
       },
       "glossary": {
+        "action": "操作",
         "delete": {
           "description": "Delete this glossary entry?",
           "title": "Delete glossary entry"
@@ -7370,6 +7371,7 @@
         "starred": "スター付きのみ"
       },
       "reuse": "再利用",
+      "search_placeholder": "履歴を検索...",
       "source": "ソース",
       "star": "お気に入り",
       "success": {
@@ -7445,6 +7447,7 @@
       },
       "success": "翻訳済み PDF を生成しました"
     },
+    "polishing": "推敲中...",
     "post_processing": {
       "applied": "Post-processing applied",
       "enable": "Enable post-processing",
@@ -7459,6 +7462,7 @@
       "bidirectional": "双方向翻訳設定",
       "bidirectional_tip": "有効にすると、ソース言語と目標言語間の双方向翻訳のみがサポートされます",
       "custom_body": {
+        "add_parameter": "パラメータを追加",
         "polish": "Polish request",
         "reasoning_override": "Reasoning-related custom parameters override the Minimize reasoning switch for this request type.",
         "title": "Custom request parameters",

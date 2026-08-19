@@ -8,6 +8,10 @@ const baseLocale = process.env.TRANSLATION_BASE_LOCALE ?? 'en-us'
 const baseFileName = `${baseLocale}.json`
 
 const rendererLocalesDir = path.join(__dirname, '../src/renderer/i18n/locales')
+const rendererTranslateSourceDirs = [
+  path.join(__dirname, '../src/renderer/components/translate'),
+  path.join(__dirname, '../src/renderer/pages/translate')
+]
 const mainI18nDir = path.join(__dirname, '../src/main/i18n')
 const mainSrcDir = path.join(__dirname, '../src/main')
 
@@ -203,8 +207,44 @@ function checkMainKeyCoverage(mainBaseJson: I18N): void {
   }
 }
 
+/**
+ * Verify literal renderer translation keys in the Translate feature against the renderer catalog.
+ *
+ * Renderer code can legitimately use dynamic keys and window-local catalogs, so the repository-wide
+ * main-process rule cannot be applied wholesale here. The Translate feature uses the shared renderer
+ * catalog and is scanned recursively; dynamic calls remain covered by their typed source values/tests.
+ */
+function checkRendererTranslateKeyCoverage(rendererBaseJson: I18N): void {
+  const literalTCall = /(?<![\w.])t\(\s*(['"])([\w.-]+)\1/g
+  const missing = new Set<string>()
+
+  for (const sourceDir of rendererTranslateSourceDirs) {
+    for (const file of collectSourceFiles(sourceDir)) {
+      const content = fs.readFileSync(file, 'utf-8')
+      const rel = path.relative(path.join(__dirname, '..'), file)
+      for (const match of content.matchAll(literalTCall)) {
+        const key = match[2]
+        if (!keyExists(rendererBaseJson, key)) {
+          missing.add(`${key}  (${rel})`)
+        }
+      }
+    }
+  }
+
+  if (missing.size > 0) {
+    throw new Error(
+      `Translate renderer source uses i18n keys missing from the renderer catalog:\n${[...missing].join('\n')}`
+    )
+  }
+}
+
 function checkTranslations(): void {
-  checkCatalog('renderer', path.join(rendererLocalesDir, baseFileName), listJsonFiles(rendererLocalesDir))
+  const rendererBaseJson = checkCatalog(
+    'renderer',
+    path.join(rendererLocalesDir, baseFileName),
+    listJsonFiles(rendererLocalesDir)
+  )
+  checkRendererTranslateKeyCoverage(rendererBaseJson)
 
   const mainBaseFilePath = path.join(mainI18nDir, 'locales', baseFileName)
   const mainFiles = listJsonFiles(path.join(mainI18nDir, 'locales'))

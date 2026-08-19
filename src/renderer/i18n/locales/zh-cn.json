@@ -7061,6 +7061,7 @@
         }
       },
       "glossary": {
+        "action": "操作",
         "delete": {
           "description": "确定删除这条术语吗？",
           "title": "删除术语"
@@ -7370,6 +7371,7 @@
         "starred": "仅显示收藏"
       },
       "reuse": "使用此翻译",
+      "search_placeholder": "搜索历史记录...",
       "source": "原文",
       "star": "收藏",
       "success": {
@@ -7445,6 +7447,7 @@
       },
       "success": "译文 PDF 已生成"
     },
+    "polishing": "正在润色...",
     "post_processing": {
       "applied": "后处理已应用",
       "enable": "启用后处理",
@@ -7459,6 +7462,7 @@
       "bidirectional": "双向翻译设置",
       "bidirectional_tip": "开启后，仅支持在源语言和目标语言之间进行双向翻译",
       "custom_body": {
+        "add_parameter": "添加参数",
         "polish": "润色请求",
         "reasoning_override": "此请求类型中的推理相关自定义参数会覆盖“尽量关闭思考”开关。",
         "title": "自定义请求参数",
