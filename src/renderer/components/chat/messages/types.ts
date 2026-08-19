@@ -5,6 +5,7 @@ import type { Citation } from '@renderer/types/message'
 import type { MessageExportView } from '@renderer/types/messageExport'
 import type { McpTool } from '@renderer/types/tool'
 import type { Topic } from '@renderer/types/topic'
+import type { AgentSessionDelivery } from '@shared/ai/agentSessionDelivery'
 import type {
   ChatMessageStyle,
   MultiModelGridPopoverTrigger,
@@ -199,6 +200,7 @@ export interface MessageListItem {
   /** Presentation-only; the persisted row remains available to prompt/context construction. */
   hiddenInChat?: boolean
   stats?: MessageStats
+  delivery?: AgentSessionDelivery
   mentions?: Array<{
     id: string
     name: string
@@ -406,9 +408,10 @@ export interface MessageListActions {
   getMessageDeleteAvailability?: (messageId: string) => MessageDeleteAvailability
   deleteMessage?: (messageId: string, options?: DeleteMessageOptions) => void | Promise<void>
   startMessageBranch?: (messageId: string) => void | Promise<void>
+  copyBranchToNewTopic?: (messageId: string) => void | Promise<void>
   setActiveBranch?: (messageId: string) => void | Promise<void>
-  deleteMessageGroup?: (parentId: string) => void | Promise<void>
-  deleteMessageGroupWithConfirm?: (parentId: string) => void | Promise<void>
+  deleteMessageGroup?: (messageIds: readonly string[]) => void | Promise<void>
+  deleteMessageGroupWithConfirm?: (messageIds: readonly string[]) => void | Promise<void>
   regenerateMessage?: (messageId: string) => void | Promise<void>
 }
 

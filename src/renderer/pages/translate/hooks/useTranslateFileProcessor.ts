@@ -14,12 +14,14 @@ const logger = loggerService.withContext('TranslateFileProcessor')
 type UseTranslateFileProcessorParams = {
   appendText: (value: string) => void
   onOcrStarted: (jobId: string) => void
+  onPdfSelected?: (file: FileMetadata) => void | Promise<void>
   fileContentGateway?: FileContentGateway
 }
 
 export const useTranslateFileProcessor = ({
   appendText,
   onOcrStarted,
+  onPdfSelected,
   fileContentGateway = ipcFileContentGateway
 }: UseTranslateFileProcessorParams) => {
   const { t } = useTranslation()
@@ -73,6 +75,16 @@ export const useTranslateFileProcessor = ({
 
   const processFile = useCallback(
     async (file: FileMetadata) => {
+      if (getFileExtension(file.path) === '.pdf' && onPdfSelected) {
+        const maxSize = 20 * MB
+        if (file.size > maxSize) {
+          toast.error(t('translate.files.error.too_large', { maxSize: '20MB' }))
+          return
+        }
+        await onPdfSelected(file)
+        return
+      }
+
       if (!isImageFileMetadata(file)) {
         await readFile(file)
         return
@@ -85,7 +97,7 @@ export const useTranslateFileProcessor = ({
         toast.error(formatErrorMessageWithPrefix(error, t('translate.files.error.ocr')))
       }
     },
-    [fileContentGateway, onOcrStarted, readFile, t]
+    [fileContentGateway, onOcrStarted, onPdfSelected, readFile, t]
   )
 
   const getSingleFile = useCallback(

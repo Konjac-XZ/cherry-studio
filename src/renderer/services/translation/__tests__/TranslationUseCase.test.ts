@@ -19,7 +19,8 @@ const history = (overrides: Partial<TranslateHistory> = {}): TranslateHistory =>
   star: false,
   createdAt: '2026-08-06T00:00:00.000Z',
   updatedAt: '2026-08-06T00:00:00.000Z',
-  ...overrides
+  ...overrides,
+  kind: overrides.kind ?? 'text'
 })
 
 const ports = (overrides: Partial<TranslationPreparationPorts> = {}): TranslationPreparationPorts => ({

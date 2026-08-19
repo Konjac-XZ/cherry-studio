@@ -1,5 +1,5 @@
 import { realpathSync } from 'node:fs'
-import { dirname, isAbsolute, relative } from 'node:path'
+import { basename, dirname, isAbsolute, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { application } from '@application'
@@ -26,40 +26,25 @@ function resolveAppRoot(appRootDir: string): string {
   }
 }
 
-/**
- * Whether a renderer file belongs to the app root, accounting for filesystem
- * aliases on either side of the comparison.
- *
- * Windows portable executables are extracted below a temporary directory. In
- * that environment Chromium can report the sender URL through an 8.3 alias
- * (`C:\\Users\\NAME~1\\...`) while `app.getAppPath()` uses the long path. A
- * direct `path.relative()` comparison rejects those two spellings even though
- * they resolve to the same `app.asar`.
- *
- * Renderer paths below an asar cannot always be passed to native realpath (the
- * archive is a file to the OS), so walk upward to the nearest resolvable
- * ancestor and compare its canonical path with the canonical app root. The
- * raw comparison remains the fallback for synthetic/nonexistent test roots.
- */
-function isRendererPathInsideAppRoot(filePath: string, appRootDir: string): boolean {
-  const resolvedAppRoot = resolveAppRoot(appRootDir)
-  if (isPathInside(filePath, resolvedAppRoot)) return true
-
+/** Resolve aliases in the existing portion of a path while preserving an ASAR virtual suffix. */
+function resolveRendererPath(filePath: string): string | undefined {
   let candidate = filePath
+  const missingSegments: string[] = []
+
   while (true) {
     try {
-      if (isPathInside(realpathSync.native(candidate), resolvedAppRoot)) return true
-    } catch {
-      // The candidate may be an asar-internal virtual path. Walk upward to
-      // the archive (or another real ancestor) before falling back below.
+      return join(realpathSync.native(candidate), ...missingSegments)
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code
+      if (code !== 'ENOENT' && code !== 'ENOTDIR') return undefined
+
+      const parent = dirname(candidate)
+      if (parent === candidate) return undefined
+
+      missingSegments.unshift(basename(candidate))
+      candidate = parent
     }
-
-    const parent = dirname(candidate)
-    if (parent === candidate) break
-    candidate = parent
   }
-
-  return isPathInside(filePath, appRootDir)
 }
 
 /**
@@ -76,8 +61,8 @@ function isRendererPathInsideAppRoot(filePath: string, appRootDir: string): bool
  * that origin.
  *
  * A `file:` URL is trusted only when its path is **inside `appRootDir`** — not any
- * `file:` wholesale. The app root is resolved to its real path first because Chromium
- * canonicalizes renderer URLs while Electron may report a symlinked launch path.
+ * `file:` wholesale. Filesystem aliases may appear on either side, so existing path
+ * portions are compared canonically while preserving the virtual path below `app.asar`.
  * Reaching IpcApi does not require the app preload (a
  * `nodeIntegration` window can call `ipcRenderer.invoke` directly), so a
  * downloaded/exported HTML opened in such a window would otherwise be trusted, and
@@ -108,7 +93,11 @@ export function isAppRendererUrl(
     } catch {
       return false
     }
-    return isRendererPathInsideAppRoot(filePath, appRootDir)
+    const appRoot = resolveAppRoot(appRootDir)
+    if (isPathInside(filePath, appRoot)) return true
+
+    const resolvedFilePath = resolveRendererPath(filePath)
+    return resolvedFilePath !== undefined && isPathInside(resolvedFilePath, appRoot)
   }
 
   if (devServerUrl) {

@@ -25,6 +25,7 @@ type UseTranslateFileInputParams = {
   isProcessing: boolean
   isTranslating: boolean
   onOcrStarted: (jobId: string) => void
+  onPdfSelected?: (file: FileMetadata) => void | Promise<void>
   setIsProcessing: (value: boolean) => void
   setText: Dispatch<SetStateAction<string>>
   fileContentGateway?: FileContentGateway
@@ -38,13 +39,19 @@ export const useTranslateFileInput = ({
   isProcessing,
   isTranslating,
   onOcrStarted,
+  onPdfSelected,
   setIsProcessing,
   setText,
   fileContentGateway = ipcFileContentGateway
 }: UseTranslateFileInputParams) => {
   const { t } = useTranslation()
   const { onSelectFile, selecting, clearFiles } = useFiles({ extensions: [...imageExts, ...textExts, ...documentExts] })
-  const { getSingleFile, processFile } = useTranslateFileProcessor({ appendText, fileContentGateway, onOcrStarted })
+  const { getSingleFile, processFile } = useTranslateFileProcessor({
+    appendText,
+    fileContentGateway,
+    onOcrStarted,
+    onPdfSelected
+  })
 
   const handleSelectFile = useCallback(async () => {
     if (selecting || isTranslating || isOcrRunning) return
@@ -66,7 +73,7 @@ export const useTranslateFileInput = ({
 
   const onDrop = useCallback(
     async (event: DragEvent<HTMLDivElement>) => {
-      if (isProcessing || isOcrRunning) return
+      if (isProcessing || isOcrRunning || isTranslating) return
       setIsProcessing(true)
       try {
         const data = await getTextFromDropEvent(event).catch((error) => {
@@ -88,12 +95,12 @@ export const useTranslateFileInput = ({
         setIsProcessing(false)
       }
     },
-    [appendText, getSingleFile, isOcrRunning, isProcessing, processFile, setIsProcessing, t]
+    [appendText, getSingleFile, isOcrRunning, isProcessing, isTranslating, processFile, setIsProcessing, t]
   )
 
   const onPaste = useCallback(
     async (event: ClipboardEvent<HTMLTextAreaElement>) => {
-      if (isProcessing || isOcrRunning) return
+      if (isProcessing || isOcrRunning || isTranslating) return
       const forcePlainTextPaste = forcePlainTextPasteRef.current
       forcePlainTextPasteRef.current = false
       const hasFiles = !!event.clipboardData.files && event.clipboardData.files.length > 0
@@ -160,6 +167,7 @@ export const useTranslateFileInput = ({
       htmlConversionEnabled,
       isOcrRunning,
       isProcessing,
+      isTranslating,
       processFile,
       setIsProcessing,
       setText,

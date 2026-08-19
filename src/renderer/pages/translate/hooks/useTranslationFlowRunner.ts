@@ -313,5 +313,14 @@ export const useTranslationFlowRunner = ({
     toast.info(t('translate.info.aborted'))
   }, [cancel, flowStage, isDetecting, isTranslating, setFlowStage, setIsDetecting, t])
 
-  return { onAbort, onTranslate }
+  const abortSilently = useCallback(() => {
+    activeFlowRef.current += 1
+    activeFlowControllerRef.current?.abort()
+    activeFlowControllerRef.current = null
+    cancel()
+    setIsDetecting(false)
+    setFlowStage('idle')
+  }, [cancel, setFlowStage, setIsDetecting])
+
+  return { abortSilently, onAbort, onTranslate }
 }

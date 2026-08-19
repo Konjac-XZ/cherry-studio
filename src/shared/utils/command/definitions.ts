@@ -95,7 +95,10 @@ export const COMMAND_DEFINITIONS = [
     scope: 'main',
     keybinding: {
       defaultBinding: ['CommandOrControl', '='],
-      additionalBindings: [['CommandOrControl', 'numadd']],
+      additionalBindings: [
+        ['CommandOrControl', 'Shift', '='],
+        ['CommandOrControl', 'numadd']
+      ],
       editable: false
     }
   }),
@@ -222,6 +225,19 @@ export const COMMAND_DEFINITIONS = [
     }
   }),
   defineCommand({
+    id: 'screenshot.capture',
+    titleKey: 'settings.shortcuts.screenshot_capture',
+    categoryKey: 'settings.shortcuts.feature.screenshot',
+    scope: 'main',
+    enablement: 'feature.screenshot.enabled',
+    keybinding: {
+      defaultBinding: ['CommandOrControl', 'Shift', 'A'],
+      global: true,
+      when: 'feature.screenshot.enabled',
+      supportedPlatforms: ['darwin', 'win32', 'linux']
+    }
+  }),
+  defineCommand({
     id: 'topic.create',
     titleKey: 'settings.shortcuts.new_topic',
     categoryKey: 'settings.shortcuts.topic',
@@ -246,6 +262,25 @@ export const COMMAND_DEFINITIONS = [
     scope: 'renderer',
     keybinding: {
       defaultBinding: ['CommandOrControl', ']']
+    }
+  }),
+  defineCommand({
+    id: 'tab.next',
+    titleKey: 'settings.shortcuts.next_tab',
+    categoryKey: 'settings.shortcuts.general',
+    scope: 'renderer',
+    keybinding: {
+      // macOS reserves Cmd+Tab for the system app switcher.
+      defaultBinding: { default: ['CommandOrControl', 'Tab'], darwin: ['Ctrl', 'Tab'] }
+    }
+  }),
+  defineCommand({
+    id: 'tab.prev',
+    titleKey: 'settings.shortcuts.prev_tab',
+    categoryKey: 'settings.shortcuts.general',
+    scope: 'renderer',
+    keybinding: {
+      defaultBinding: { default: ['CommandOrControl', 'Shift', 'Tab'], darwin: ['Ctrl', 'Shift', 'Tab'] }
     }
   })
 ] as const satisfies readonly CommandDefinition[]

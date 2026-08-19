@@ -156,6 +156,7 @@ function SessionInspector() {
         {tabs.map((tab) => `${tab.id}:${tab.isDormant ? 'dormant' : 'awake'}`).join(',')}
       </div>
       <div data-testid="session-ids">{tabs.map((tab) => tab.id).join(',')}</div>
+      <div data-testid="session-urls">{tabs.map((tab) => `${tab.id}=${tab.url}`).join(',')}</div>
     </div>
   )
 }
@@ -291,6 +292,29 @@ function PinnedTabMaterializer() {
   }, [openTab])
 
   return <div data-testid="detached-pinned">{String(tabs.find((tab) => tab.id === 'detached')?.isPinned)}</div>
+}
+
+function PinnedOverflowSeeder() {
+  const { addTab } = useTabsContext()
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        for (let i = 0; i <= TAB_LIMITS.hardCap; i++) {
+          addTab({
+            id: `pinned-${i}`,
+            type: 'route',
+            url: `/app/chat?topicId=pinned-${i}`,
+            title: `Pinned ${i}`,
+            lastAccessTime: i,
+            isDormant: false,
+            isPinned: true
+          })
+        }
+      }}>
+      Seed pinned overflow
+    </button>
+  )
 }
 
 beforeEach(() => {
@@ -429,14 +453,14 @@ describe('TabsProvider', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Seed tabs' }))
-    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,translate,b,c,d'))
+    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,b,c,d'))
 
     fireEvent.click(screen.getByRole('button', { name: 'Activate C' }))
     await waitFor(() => expect(screen.getByTestId('active-tab-id')).toHaveTextContent('c'))
 
     fireEvent.click(screen.getByRole('button', { name: 'Close B and C' }))
 
-    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,translate,d'))
+    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,d'))
     // Chrome-style: the surviving right neighbor takes over the active slot.
     expect(screen.getByTestId('active-tab-id')).toHaveTextContent('d')
   })
@@ -449,7 +473,7 @@ describe('TabsProvider', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Seed tabs' }))
-    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,translate,b,c,d'))
+    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,b,c,d'))
 
     // Active tab (home) sits left of the designated survivor (c) with the
     // pinned files tab further left — without activateId the nearest-left rule
@@ -459,7 +483,7 @@ describe('TabsProvider', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Close others around C' }))
 
-    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,translate,c'))
+    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,c'))
     expect(screen.getByTestId('active-tab-id')).toHaveTextContent('c')
   })
 
@@ -471,7 +495,7 @@ describe('TabsProvider', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Seed tabs' }))
-    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,translate,b,c,d'))
+    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,b,c,d'))
 
     fireEvent.click(screen.getByRole('button', { name: 'Hibernate C' }))
     await waitFor(() => expect(screen.getByTestId('dormant-ids')).toHaveTextContent('c'))
@@ -484,8 +508,8 @@ describe('TabsProvider', () => {
     // The dormant survivor must be woken, not just pointed at — a dormant tab
     // is not rendered, so activating without waking would blank the content.
     await waitFor(() => expect(screen.getByTestId('active-tab-id')).toHaveTextContent('c'))
-    expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,translate,c')
-    expect(screen.getByTestId('dormant-ids')).toHaveTextContent('translate')
+    expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,c')
+    expect(screen.getByTestId('dormant-ids')).toHaveTextContent(/^$/)
   })
 
   it('wakes the active tab when it is unexpectedly dormant', async () => {
@@ -514,7 +538,7 @@ describe('TabsProvider', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Seed tabs' }))
-    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,translate,b,c,d'))
+    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,b,c,d'))
 
     fireEvent.click(screen.getByRole('button', { name: 'Activate C' }))
     await waitFor(() => expect(screen.getByTestId('active-tab-id')).toHaveTextContent('c'))
@@ -523,7 +547,7 @@ describe('TabsProvider', () => {
     // Chrome-style fallback selects the right neighbor that slides into place.
     fireEvent.click(screen.getByRole('button', { name: 'Close B and C keeping C' }))
 
-    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,translate,d'))
+    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,d'))
     expect(screen.getByTestId('active-tab-id')).toHaveTextContent('d')
   })
 
@@ -535,13 +559,13 @@ describe('TabsProvider', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Seed tabs' }))
-    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,translate,b,c,d'))
+    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,b,c,d'))
 
     fireEvent.click(screen.getByRole('button', { name: 'Activate D' }))
     await waitFor(() => expect(screen.getByTestId('active-tab-id')).toHaveTextContent('d'))
     fireEvent.click(screen.getByRole('button', { name: 'Close D' }))
 
-    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,translate,b,c'))
+    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,b,c'))
     expect(screen.getByTestId('active-tab-id')).toHaveTextContent('c')
   })
 
@@ -555,7 +579,7 @@ describe('TabsProvider', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Seed tabs' }))
-    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,translate,b,c,d'))
+    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,b,c,d'))
 
     fireEvent.click(screen.getByRole('button', { name: 'Activate Home' }))
     await waitFor(() => expect(screen.getByTestId('active-tab-id')).toHaveTextContent('home'))
@@ -597,18 +621,6 @@ describe('TabsProvider', () => {
     expect(screen.getByTestId('active-tab-id')).toHaveTextContent('agents')
   })
 
-  it('restores and refuses to close the protected Translate tab', async () => {
-    render(
-      <TabsProvider initialDefaultTab={HOME_TAB}>
-        <CloseTabOnMount tabId="translate" />
-      </TabsProvider>
-    )
-
-    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('translate'))
-    expect(screen.getByTestId('tab-urls')).toHaveTextContent('/app/translate')
-    expect(screen.getByTestId('tab-urls')).not.toHaveTextContent('/app/launchpad')
-  })
-
   it('creates a second tab for an already-open URL when forceNew is set', async () => {
     render(
       <TabsProvider
@@ -633,6 +645,37 @@ describe('TabsProvider', () => {
 })
 
 describe('TabsProvider session restore', () => {
+  it('drops transient mini-app tabs whose in-memory descriptor disappears on restart', async () => {
+    const codeTab: Tab = {
+      id: 'code',
+      type: 'route',
+      url: '/app/code',
+      title: 'Code',
+      lastAccessTime: 1,
+      isDormant: false
+    }
+    const transientMiniAppTab: Tab = {
+      id: 'deepseek-harness',
+      type: 'route',
+      url: '/app/mini-app/deepseek-harness-web',
+      title: 'DeepSeek Harness',
+      metadata: { transientMiniApp: true },
+      lastAccessTime: 2,
+      isDormant: false
+    }
+    normalTabsValue = [codeTab, transientMiniAppTab]
+    activeTabIdValue = transientMiniAppTab.id
+
+    render(
+      <TabsProvider initialDefaultTab={null}>
+        <SessionInspector />
+      </TabsProvider>
+    )
+
+    await waitFor(() => expect(screen.getByTestId('active')).toHaveTextContent(codeTab.id))
+    expect(screen.getByTestId('session-ids')).not.toHaveTextContent(transientMiniAppTab.id)
+  })
+
   it('restores the persisted session and keeps only the active tab awake', async () => {
     const tabA: Tab = { id: 'a', type: 'route', url: '/app/chat', title: '', lastAccessTime: 1, isDormant: false }
     const tabB: Tab = { id: 'b', type: 'route', url: '/app/agents', title: '', lastAccessTime: 2, isDormant: false }
@@ -649,7 +692,6 @@ describe('TabsProvider session restore', () => {
     const dump = screen.getByTestId('session-tabs').textContent ?? ''
     expect(dump).toContain('a:dormant')
     expect(dump).toContain('b:awake')
-    expect(dump).toContain('translate:dormant')
     expect(dump.split(',').filter((tab) => tab.endsWith(':awake'))).toHaveLength(1)
   })
 
@@ -714,8 +756,8 @@ describe('TabsProvider session restore', () => {
     expect(ids).not.toContain('a')
   })
 
-  it('preserves dormant tabs beyond the active-tab LRU hard cap', async () => {
-    const overflow = TAB_LIMITS.hardCap + 5
+  it('preserves dormant tabs beyond the active-tab LRU budget', async () => {
+    const overflow = TAB_LIMITS.softCap + 5
     const many: Tab[] = Array.from({ length: overflow }, (_, i) => ({
       id: `n${i}`,
       type: 'route',
@@ -742,9 +784,38 @@ describe('TabsProvider session restore', () => {
     const dump = screen.getByTestId('session-tabs').textContent ?? ''
     expect(dump.split(',').filter((tab) => tab.endsWith(':awake'))).toEqual(['n0:awake'])
   })
+
+  it('applies the hard fuse across a batch of pinned additions', () => {
+    render(
+      <TabsProvider>
+        <PinnedOverflowSeeder />
+      </TabsProvider>
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seed pinned overflow' }))
+
+    const updaters = setPinnedTabsMock.mock.calls.map(([arg]) => arg).filter((arg) => typeof arg === 'function')
+    const persisted = updaters.reduce<Tab[]>((tabs, update) => update(tabs), [{ ...PINNED_FILES_TAB, isDormant: true }])
+    expect(persisted.some((tab) => tab.isDormant)).toBe(true)
+    expect(persisted.filter((tab) => !tab.isDormant)).toHaveLength(TAB_LIMITS.softCap)
+    expect(persisted.find((tab) => tab.id === `pinned-${TAB_LIMITS.hardCap}`)?.isDormant).toBe(false)
+  })
 })
 
 describe('migratePinnedTabs', () => {
+  it('drops pinned transient mini-app tabs on restore', () => {
+    const transientMiniAppTab: Tab = {
+      ...PINNED_FILES_TAB,
+      id: 'transient-mini-app',
+      url: '/app/mini-app/transient',
+      metadata: { transientMiniApp: true }
+    }
+
+    const { tabs, changed } = migratePinnedTabs([transientMiniAppTab, PINNED_FILES_TAB])
+    expect(changed).toBe(true)
+    expect(tabs).toEqual([PINNED_FILES_TAB])
+  })
+
   it('redirects an OpenClaw pin to the Code page and flags the change', () => {
     const { tabs, changed } = migratePinnedTabs([PINNED_OPENCLAW_TAB, PINNED_FILES_TAB])
     expect(changed).toBe(true)

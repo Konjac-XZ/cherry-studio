@@ -38,13 +38,13 @@ function resolveChatModelPreference(preferenceKey: string, value: unknown): stri
 /**
  * Transform legacy LLM Model objects into UniqueModelId preference values.
  *
- * Sources: llm.defaultModel, llm.topicNamingModel, llm.quickModel,
- * llm.translateModel, llm.polishModel
+ * Sources: llm.defaultModel, llm.quickModel, llm.translateModel, llm.polishModel
+ * Targets: chat.default_model_id, feature.quick_assistant.model_id,
+ * feature.translate.model_id, feature.translate.model.polish_global_id
  */
 export function transformLlmModelIds(sources: Record<string, unknown>): TransformResult {
   return {
     'chat.default_model_id': resolveChatModelPreference('chat.default_model_id', sources.defaultModel),
-    'topic.naming.model_id': resolveChatModelPreference('topic.naming.model_id', sources.topicNamingModel),
     'feature.quick_assistant.model_id': resolveChatModelPreference(
       'feature.quick_assistant.model_id',
       sources.quickModel

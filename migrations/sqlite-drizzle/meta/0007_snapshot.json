@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "d474a2d5-3eb2-438c-97c8-d583805f5c6a",
-  "prevId": "2e82c83c-d44d-4c58-a729-98f71523521d",
+  "id": "0f5fea5a-c909-4d37-b8ba-6d1f61856523",
+  "prevId": "749b7a35-ec67-4508-bccf-495941a94a9d",
   "tables": {
     "agent": {
       "name": "agent",
@@ -543,6 +543,13 @@
           "notNull": true,
           "autoincrement": false
         },
+        "last_activity_at": {
+          "name": "last_activity_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "integer",
@@ -567,6 +574,11 @@
         "agent_session_order_key_idx": {
           "name": "agent_session_order_key_idx",
           "columns": ["order_key"],
+          "isUnique": false
+        },
+        "agent_session_last_activity_at_idx": {
+          "name": "agent_session_last_activity_at_idx",
+          "columns": ["last_activity_at"],
           "isUnique": false
         },
         "agent_session_updated_at_idx": {
@@ -1840,6 +1852,98 @@
         "fe_size_internal_only": {
           "name": "fe_size_internal_only",
           "value": "(\"file_entry\".\"origin\" = 'internal' AND \"file_entry\".\"size\" IS NOT NULL AND \"file_entry\".\"size\" >= 0) OR (\"file_entry\".\"origin\" = 'external' AND \"file_entry\".\"size\" IS NULL)"
+        }
+      }
+    },
+    "agent_session_message_file_ref": {
+      "name": "agent_session_message_file_ref",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "file_entry_id": {
+          "name": "file_entry_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "source_id": {
+          "name": "source_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "role": {
+          "name": "role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "asmfr_entry_id_idx": {
+          "name": "asmfr_entry_id_idx",
+          "columns": ["file_entry_id"],
+          "isUnique": false
+        },
+        "asmfr_source_id_idx": {
+          "name": "asmfr_source_id_idx",
+          "columns": ["source_id"],
+          "isUnique": false
+        },
+        "asmfr_unique_idx": {
+          "name": "asmfr_unique_idx",
+          "columns": ["file_entry_id", "source_id", "role"],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "agent_session_message_file_ref_file_entry_id_file_entry_id_fk": {
+          "name": "agent_session_message_file_ref_file_entry_id_file_entry_id_fk",
+          "tableFrom": "agent_session_message_file_ref",
+          "tableTo": "file_entry",
+          "columnsFrom": ["file_entry_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "agent_session_message_file_ref_source_id_agent_session_message_id_fk": {
+          "name": "agent_session_message_file_ref_source_id_agent_session_message_id_fk",
+          "tableFrom": "agent_session_message_file_ref",
+          "tableTo": "agent_session_message",
+          "columnsFrom": ["source_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "asmfr_role_check": {
+          "name": "asmfr_role_check",
+          "value": "\"agent_session_message_file_ref\".\"role\" IN ('attachment')"
         }
       }
     },
@@ -4009,6 +4113,13 @@
           "notNull": true,
           "autoincrement": false
         },
+        "last_activity_at": {
+          "name": "last_activity_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "integer",
@@ -4032,6 +4143,11 @@
         }
       },
       "indexes": {
+        "topic_last_activity_at_idx": {
+          "name": "topic_last_activity_at_idx",
+          "columns": ["last_activity_at"],
+          "isUnique": false
+        },
         "topic_updated_at_idx": {
           "name": "topic_updated_at_idx",
           "columns": ["updated_at"],
@@ -4056,82 +4172,6 @@
           "columnsFrom": ["assistant_id"],
           "columnsTo": ["id"],
           "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "translate_glossary": {
-      "name": "translate_glossary",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "source_phrase": {
-          "name": "source_phrase",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "target_phrase": {
-          "name": "target_phrase",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "target_language": {
-          "name": "target_language",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "enabled": {
-          "name": "enabled",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "translate_glossary_target_language_idx": {
-          "name": "translate_glossary_target_language_idx",
-          "columns": ["target_language", "created_at"],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "translate_glossary_target_language_translate_language_lang_code_fk": {
-          "name": "translate_glossary_target_language_translate_language_lang_code_fk",
-          "tableFrom": "translate_glossary",
-          "tableTo": "translate_language",
-          "columnsFrom": ["target_language"],
-          "columnsTo": ["lang_code"],
-          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
@@ -4177,20 +4217,6 @@
           "notNull": false,
           "autoincrement": false
         },
-        "model_id": {
-          "name": "model_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "cache_key": {
-          "name": "cache_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
         "star": {
           "name": "star",
           "type": "integer",
@@ -4223,16 +4249,6 @@
         "translate_history_star_created_at_idx": {
           "name": "translate_history_star_created_at_idx",
           "columns": ["star", "created_at"],
-          "isUnique": false
-        },
-        "translate_history_cache_key_idx": {
-          "name": "translate_history_cache_key_idx",
-          "columns": ["cache_key"],
-          "isUnique": false
-        },
-        "translate_history_model_id_idx": {
-          "name": "translate_history_model_id_idx",
-          "columns": ["model_id"],
           "isUnique": false
         }
       },

@@ -1,6 +1,6 @@
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 import type { IpcMainInvokeEvent } from 'electron'
@@ -8,9 +8,9 @@ import { describe, expect, it } from 'vitest'
 
 import { isAppRendererUrl, validateSender } from '../validateSender'
 
-// A representative packaged app root (asar bundle); construct URLs through
-// pathToFileURL so the fixture means the same thing on Windows and POSIX.
-const APP_ROOT = join(tmpdir(), 'CherryStudio.app', 'Contents', 'Resources', 'app.asar')
+// A representative packaged app root (asar bundle); the renderer entry lives under it.
+// Resolved because `fileURLToPath` rejects a driveless file: url on Windows.
+const APP_ROOT = resolve('/Applications/CherryStudio.app/Contents/Resources/app.asar')
 const appFileUrl = (...segments: string[]) => pathToFileURL(join(APP_ROOT, ...segments)).href
 
 describe('isAppRendererUrl', () => {
@@ -38,28 +38,30 @@ describe('isAppRendererUrl', () => {
     }
   })
 
-  it('trusts a packaged app page when Chromium reports an aliased path to the canonical app root', () => {
-    const fixtureRoot = mkdtempSync(join(tmpdir(), 'cherry-sender-frame-link-'))
+  it('trusts a packaged app page when the renderer path reaches the app through a directory link', () => {
+    const fixtureRoot = mkdtempSync(join(tmpdir(), 'cherry-sender-renderer-link-'))
     const realProgramsDir = join(fixtureRoot, 'real-programs')
     const linkedProgramsDir = join(fixtureRoot, 'linked-programs')
     const realAppRoot = join(realProgramsDir, 'Cherry Studio', 'resources', 'app.asar')
-    const appRootFromRendererUrl = join(linkedProgramsDir, 'Cherry Studio', 'resources', 'app.asar')
+    const appRootFromRendererPath = join(linkedProgramsDir, 'Cherry Studio', 'resources', 'app.asar')
 
     try {
       mkdirSync(dirname(realAppRoot), { recursive: true })
       writeFileSync(realAppRoot, '')
       symlinkSync(realProgramsDir, linkedProgramsDir, process.platform === 'win32' ? 'junction' : 'dir')
 
-      const rendererPath = join(appRootFromRendererUrl, 'out', 'renderer', 'windows', 'main', 'index.html')
+      const rendererPath = join(appRootFromRendererPath, 'out', 'renderer', 'windows', 'main', 'index.html')
 
-      expect(isAppRendererUrl(pathToFileURL(rendererPath).href, null, realAppRoot)).toBe(true)
+      expect(isAppRendererUrl(pathToFileURL(rendererPath).href, null, realpathSync.native(realAppRoot))).toBe(true)
     } finally {
       rmSync(fixtureRoot, { recursive: true, force: true })
     }
   })
 
   it('rejects a file:// page outside the app root (downloaded/exported HTML)', () => {
-    expect(isAppRendererUrl('file:///Users/victim/Downloads/evil.html', null, APP_ROOT)).toBe(false)
+    expect(isAppRendererUrl(pathToFileURL(resolve('/Users/victim/Downloads/evil.html')).href, null, APP_ROOT)).toBe(
+      false
+    )
   })
 
   it('rejects a file:// path that merely shares a prefix with the app root', () => {
@@ -106,7 +108,8 @@ describe('isAppRendererUrl', () => {
 })
 
 describe('validateSender', () => {
-  const APP_ROOT = join(tmpdir(), 'app')
+  const APP_ROOT = resolve('/app')
+  const indexUrl = pathToFileURL(join(APP_ROOT, 'index.html')).href
   // `parent` defaults to null (a top-level frame); pass a non-null frame to model a sub-frame.
   const evt = (type: string, url: string | null, parent: unknown = null): IpcMainInvokeEvent =>
     ({
@@ -115,7 +118,7 @@ describe('validateSender', () => {
     }) as unknown as IpcMainInvokeEvent
 
   it('rejects embedded <webview> guests regardless of url', () => {
-    expect(validateSender(evt('webview', pathToFileURL(join(APP_ROOT, 'index.html')).href), APP_ROOT)).toBe(false)
+    expect(validateSender(evt('webview', indexUrl), APP_ROOT)).toBe(false)
   })
 
   it('rejects a null senderFrame', () => {
@@ -123,14 +126,13 @@ describe('validateSender', () => {
   })
 
   it('accepts a top-level window loading a packaged file:// page inside the app root', () => {
-    expect(validateSender(evt('window', pathToFileURL(join(APP_ROOT, 'index.html')).href), APP_ROOT)).toBe(true)
+    expect(validateSender(evt('window', indexUrl), APP_ROOT)).toBe(true)
   })
 
   it('rejects a sub-frame (iframe) even when its url is an app file:// page', () => {
-    const parentFrame = { url: pathToFileURL(join(APP_ROOT, 'index.html')).href }
-    expect(
-      validateSender(evt('window', pathToFileURL(join(APP_ROOT, 'embedded.html')).href, parentFrame), APP_ROOT)
-    ).toBe(false)
+    const parentFrame = { url: indexUrl }
+    const embeddedUrl = pathToFileURL(join(APP_ROOT, 'embedded.html')).href
+    expect(validateSender(evt('window', embeddedUrl, parentFrame), APP_ROOT)).toBe(false)
   })
 
   it('rejects a window navigated to a remote origin', () => {
@@ -138,6 +140,6 @@ describe('validateSender', () => {
   })
 
   it('rejects a top-level window loading a file:// page outside the app root', () => {
-    expect(validateSender(evt('window', 'file:///tmp/evil.html'), APP_ROOT)).toBe(false)
+    expect(validateSender(evt('window', pathToFileURL(resolve('/tmp/evil.html')).href), APP_ROOT)).toBe(false)
   })
 })

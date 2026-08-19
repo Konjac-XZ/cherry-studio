@@ -87,20 +87,28 @@ const ManageModelRow = memo(function ManageModelRow({
   onRemoveModels: (modelIds: UniqueModelId[]) => void | Promise<void>
 }) {
   const { t } = useTranslation()
+  const apiModelId = modelIdLine(model)
+  const apiModelIdId = `${model.id}-api-model-id`
   const actionTooltip = isAdded
     ? isDefaultModel
       ? t('settings.models.manage.default_model_cannot_remove')
       : t('settings.models.manage.remove_model')
     : t('button.add')
-  const rawModelId = modelIdLine(model)
-  const displayName = model.name?.trim() || rawModelId
-
   return (
     <div className={modelSyncClasses.manageRow} data-added={isAdded}>
       <ModelGlyph model={model} />
       <div className="min-w-0 flex-1">
         <div className={modelSyncClasses.manageRowTitleLine}>
-          <p className={modelSyncClasses.manageRowTitle}>{displayName}</p>
+          {/* Friendly names can collide, so the raw id must stay reachable without a mouse: the title
+              is focusable (opening the tooltip on focus) and described by an off-screen copy of it. */}
+          <Tooltip content={apiModelId} placement="top" classNames={{ placeholder: 'min-w-0' }}>
+            <p tabIndex={0} aria-describedby={apiModelIdId} className={modelSyncClasses.manageRowTitle}>
+              {model.name || apiModelId}
+            </p>
+          </Tooltip>
+          <span id={apiModelIdId} className="sr-only">
+            {apiModelId}
+          </span>
           {model.description ? (
             <Tooltip content={model.description} placement="top">
               <span tabIndex={0} aria-label={model.description} className={modelSyncClasses.manageRowDescriptionHelp}>
@@ -114,9 +122,6 @@ const ManageModelRow = memo(function ManageModelRow({
             </Badge>
           ) : null}
         </div>
-        {displayName !== rawModelId ? (
-          <p className="select-text truncate text-muted-foreground text-xs leading-4">{rawModelId}</p>
-        ) : null}
       </div>
       <div className={modelSyncClasses.fetchCapabilityStrip}>
         <ModelTagsWithLabel

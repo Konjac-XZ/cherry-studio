@@ -1,6 +1,16 @@
 import type { ReasoningWireProfile } from '../schemas/reasoningWire'
 import { defineProvider } from './types'
 
+const webToolModels = [
+  'claude-opus-4',
+  'claude-sonnet-4',
+  'claude-sonnet-5',
+  'claude-haiku-4',
+  'claude-3-5-haiku',
+  'claude-3-5-sonnet',
+  'claude-3-7-sonnet'
+]
+
 const bedrockBudgetWire: ReasoningWireProfile = {
   off: {
     operations: [{ target: 'reasoningConfig.type', value: { source: 'literal', value: 'disabled' } }]
@@ -59,8 +69,8 @@ export default defineProvider({
     }
   },
   serverTools: [
-    { id: 'web-search', modelScope: 'model-dependent' },
-    { id: 'url-context', modelScope: 'model-dependent' }
+    { id: 'web-search', modelScope: 'model-dependent', modelIdPrefixes: webToolModels },
+    { id: 'url-context', modelScope: 'model-dependent', modelIdPrefixes: webToolModels }
   ],
   metadata: {
     website: {

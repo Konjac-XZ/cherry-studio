@@ -1,3 +1,4 @@
+import { usePersistCache } from '@data/hooks/useCache'
 import { useReorder } from '@data/hooks/useReorder'
 import ConfirmActionPopup from '@renderer/components/popups/ConfirmActionPopup'
 import { usePreference } from '@renderer/data/hooks/usePreference'
@@ -47,7 +48,9 @@ export default function ProviderList({ selectedProviderId, filterModeHint, onSel
   const { applyReorderedList } = useReorder('/providers', { revalidateOnSuccess: false })
   const { isSupported: isOvmsSupported } = useOvmsSupport()
 
-  const [filterMode, setFilterMode] = useState<ProviderFilterMode>(filterModeHint ?? 'all')
+  const [persistedFilterMode, setPersistedFilterMode] = usePersistCache('settings.provider.filter_mode')
+  const [filterModeOverride, setFilterModeOverride] = useState<ProviderFilterMode | undefined>(filterModeHint)
+  const filterMode = filterModeOverride ?? persistedFilterMode
   const [searchText, setSearchText] = useState('')
   const { models: allModels } = useModels(undefined, { fetchEnabled: Boolean(searchText.trim()) })
   const [dragging, setDragging] = useState(false)
@@ -81,8 +84,16 @@ export default function ProviderList({ selectedProviderId, filterModeHint, onSel
       return
     }
 
-    setFilterMode(filterModeHint)
+    setFilterModeOverride(filterModeHint)
   }, [filterModeHint])
+
+  const handleFilterChange = useCallback(
+    (mode: ProviderFilterMode) => {
+      setFilterModeOverride(mode)
+      setPersistedFilterMode(mode)
+    },
+    [setPersistedFilterMode]
+  )
 
   useEffect(() => {
     if (!selectedProviderId) return
@@ -259,20 +270,20 @@ export default function ProviderList({ selectedProviderId, filterModeHint, onSel
           await setHiddenBuiltInIds(Array.from(new Set([...hiddenBuiltInIds, provider.id])))
           const fallback = filterRuntimeVisibleProviders(providers, [...hiddenBuiltInIds, provider.id])[0]
           if (fallback) onSelectProvider(fallback.id)
-          setFilterMode('all')
+          handleFilterChange('all')
         }
       })
     },
-    [hiddenBuiltInIds, onSelectProvider, providers, setHiddenBuiltInIds, t, updateProviderById]
+    [handleFilterChange, hiddenBuiltInIds, onSelectProvider, providers, setHiddenBuiltInIds, t, updateProviderById]
   )
 
   const handleRestoreProvider = useCallback(
     async (providerId: string) => {
       await setHiddenBuiltInIds(hiddenBuiltInIds.filter((id) => id !== providerId))
       onSelectProvider(providerId)
-      setFilterMode('all')
+      handleFilterChange('all')
     },
-    [hiddenBuiltInIds, onSelectProvider, setHiddenBuiltInIds]
+    [handleFilterChange, hiddenBuiltInIds, onSelectProvider, setHiddenBuiltInIds]
   )
 
   const renderProviderItem = (provider: Provider, _index: number, state: ProviderListContentItemState) => {
@@ -333,7 +344,7 @@ export default function ProviderList({ selectedProviderId, filterModeHint, onSel
             disabled={dragging}
             triggerClassName={providerListClasses.searchInlineAddButton}
             triggerIconSize={12}
-            onFilterChange={setFilterMode}
+            onFilterChange={handleFilterChange}
           />
         }
       />
