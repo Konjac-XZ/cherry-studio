@@ -118,6 +118,7 @@ describe('Translate entity schemas are strict', () => {
     expect(
       TranslateHistorySchema.safeParse({
         id: '019b0830-2e52-7000-8000-000000000001',
+        kind: 'text',
         sourceText: 'Hello',
         targetText: '你好',
         sourceLanguage: 'en-us',
