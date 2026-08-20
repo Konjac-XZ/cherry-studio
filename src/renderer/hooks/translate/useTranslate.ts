@@ -143,6 +143,15 @@ export function useTranslate(options?: UseTranslateOptions): UseTranslateResult 
             onResponse(chunkText, isComplete)
           }
         : undefined
+      const guardedRunOptions = runOptions?.onOutputTokens
+        ? {
+            ...runOptions,
+            onOutputTokens: (outputTokens: number) => {
+              if (activeAbortKeyRef.current !== abortKey) return
+              runOptions.onOutputTokens?.(outputTokens)
+            }
+          }
+        : runOptions
 
       const wasSuperseded = () => activeAbortKeyRef.current !== abortKey
       const finishIfActive = () => {
@@ -154,7 +163,13 @@ export function useTranslate(options?: UseTranslateOptions): UseTranslateResult 
       }
 
       try {
-        const result = await translateText(text, targetLanguage, guardedOnResponse, controller.signal, runOptions)
+        const result = await translateText(
+          text,
+          targetLanguage,
+          guardedOnResponse,
+          controller.signal,
+          guardedRunOptions
+        )
         if (wasSuperseded()) {
           // Cancelled or superseded mid-flight — discard the result so the
           // caller's `if (result)` success branch stays gated.

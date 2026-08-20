@@ -194,8 +194,11 @@ describe('TranslateLanguageBar', () => {
     expect(container.textContent).toContain('English ⇆ Chinese')
 
     const pairButton = screen.getByRole('button', { name: 'English ⇆ Chinese' })
-    expect(pairButton).toHaveClass('h-8', 'text-sm')
+    expect(pairButton).toHaveClass('h-8', 'justify-center', 'text-sm')
+    expect(pairButton).not.toHaveClass('justify-start')
     expect(pairButton).not.toHaveClass('h-9')
+    expect(within(pairButton).queryByText('🇺🇸')).not.toBeInTheDocument()
+    expect(within(pairButton).queryByText('🇨🇳')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: sourceLanguageButtonName })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'translate.exchange.label' })).toBeInTheDocument()
   })
@@ -231,6 +234,16 @@ describe('TranslateLanguageBar', () => {
 
     const sourceTrigger = screen.getByRole('button', { name: sourceLanguageButtonName })
     expect(within(sourceTrigger).getByText(/translate\.detected\.language \(Chinese\)/)).toBeInTheDocument()
+    expect(within(sourceTrigger).queryByText('🇨🇳')).not.toBeInTheDocument()
+  })
+
+  it('shows the source flag after the language is selected manually', () => {
+    const props = baseProps()
+    props.sourceLanguage = chinese.langCode
+    render(<TranslateLanguageBar {...props} />)
+
+    const sourceTrigger = screen.getByRole('button', { name: sourceLanguageButtonName })
+    expect(within(sourceTrigger).getByText('🇨🇳')).toBeInTheDocument()
   })
 
   it('keeps the fluid selector width for CJK auto-detection labels', () => {
@@ -253,7 +266,7 @@ describe('TranslateLanguageBar', () => {
     render(<TranslateLanguageBar {...props} />)
 
     const sourceTrigger = screen.getByRole('button', { name: sourceLanguageButtonName })
-    expect(within(sourceTrigger).getByText('🌐')).toBeInTheDocument()
+    expect(within(sourceTrigger).queryByText('🌐')).not.toBeInTheDocument()
     expect(within(sourceTrigger).getByText('translate.detected.language')).toBeInTheDocument()
     expect(within(sourceTrigger).queryByText(/Unknown/)).not.toBeInTheDocument()
   })

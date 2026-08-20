@@ -1,8 +1,8 @@
-import { Button } from '@cherrystudio/ui'
-import { cn } from '@renderer/utils/style'
 import { Sparkles } from 'lucide-react'
 import type { MouseEvent } from 'react'
 import { useTranslation } from 'react-i18next'
+
+import TranslateToolbarToggleButton from './TranslateToolbarToggleButton'
 
 type Props = {
   disabled?: boolean
@@ -21,9 +21,10 @@ const PolishTranslateToggleButton = ({ disabled, enabled, onToggle, onTranslateO
   }
 
   return (
-    <Button
+    <TranslateToolbarToggleButton
       type="button"
-      variant={enabled ? 'default' : 'outline'}
+      enabled={enabled}
+      tone="polish"
       size="icon-sm"
       disabled={disabled}
       onClick={onToggle}
@@ -31,12 +32,9 @@ const PolishTranslateToggleButton = ({ disabled, enabled, onToggle, onTranslateO
       onMouseDown={(event) => {
         if (event.button === 1) event.preventDefault()
       }}
-      aria-label={t('translate.button.polish_and_translate')}
-      aria-pressed={enabled}
-      title={t('translate.button.polish_and_translate')}
-      className={cn('size-8')}>
+      aria-label={t('translate.button.polish_and_translate')}>
       <Sparkles size={16} />
-    </Button>
+    </TranslateToolbarToggleButton>
   )
 }
 

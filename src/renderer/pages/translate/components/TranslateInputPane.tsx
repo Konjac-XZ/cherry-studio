@@ -125,20 +125,21 @@ const TranslateInputPane = ({
           ]}
         />
       </div>
-      <div className="group absolute bottom-[2px] left-[2px] z-10 flex size-[51px] items-center justify-center">
-        <Button
-          type="button"
-          variant="default"
-          size="icon-sm"
-          onClick={onSelectFile}
-          disabled={disabled || selecting}
-          aria-label={t('translate.files.upload')}
-          title={t('translate.files.upload')}
-          className="size-[35px] rounded-full opacity-0 transition-opacity delay-300 duration-200 group-hover:opacity-100 group-hover:delay-0">
-          <Plus size={15} />
-        </Button>
-      </div>
-      <div className="flex shrink-0 items-center justify-end px-3 py-1">
+      {!disabled && !selecting && (
+        <div className="group absolute bottom-[2px] left-[2px] z-10 flex size-[51px] items-center justify-center">
+          <Button
+            type="button"
+            variant="default"
+            size="icon-sm"
+            onClick={onSelectFile}
+            aria-label={t('translate.files.upload')}
+            title={t('translate.files.upload')}
+            className="size-[35px] rounded-full opacity-0 transition-opacity delay-300 duration-200 group-hover:opacity-100 group-hover:delay-0">
+            <Plus size={15} />
+          </Button>
+        </div>
+      )}
+      <div className="flex shrink-0 items-center justify-end px-3 pt-1 pb-2">
         <NormalTooltip content={t('translate.counter.tip')} side="top">
           <span className="text-foreground-tertiary text-xs tabular-nums">
             {wordCount} {t('translate.counter.words')} / {tokenCount} {t('translate.counter.tokens')}
@@ -168,7 +169,9 @@ const TranslateInputPane = ({
         </div>
       )}
       {busyLabel && !ocrProcessing && (
-        <div className="pointer-events-none absolute inset-[10px_5px_28px] z-10 flex items-center justify-center bg-background/20">
+        <div
+          data-testid="translate-input-busy-overlay"
+          className="fade-in-0 pointer-events-none absolute inset-0 z-10 flex animate-in items-center justify-center bg-background/70 p-3 backdrop-blur-[1px] duration-200">
           <div
             role="status"
             aria-live="polite"

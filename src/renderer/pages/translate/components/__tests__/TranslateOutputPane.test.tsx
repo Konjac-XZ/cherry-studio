@@ -41,14 +41,14 @@ describe('TranslateOutputPane', () => {
     expect(screen.getByText('translate.output.placeholder')).toBeInTheDocument()
   })
 
-  it('shows translated content and a copy button without an extra footer', () => {
+  it('shows translated content with its word and token counter', () => {
     const props = baseProps()
     props.translatedContent = 'partial output'
 
-    render(<TranslateOutputPane {...props} />)
+    render(<TranslateOutputPane {...props} wordCount={2} tokenCount={7} />)
 
     expect(screen.getByText('partial output')).toBeInTheDocument()
-    expect(screen.queryByText('14')).not.toBeInTheDocument()
+    expect(screen.getByText('2 translate.counter.words / 7 translate.counter.tokens')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'common.copy' })).toBeEnabled()
   })
 

@@ -29,6 +29,7 @@ import { formatErrorMessageWithPrefix } from '@renderer/utils/error'
 import { getModelLogoRef } from '@renderer/utils/model'
 import { cn } from '@renderer/utils/style'
 import {
+  applyRegexReplacementRules,
   applyTranslationPostProcessors,
   determineTargetLanguage,
   getTranslateModifierLabel,
@@ -48,7 +49,6 @@ import { isEmpty } from 'es-toolkit/compat'
 import {
   CirclePause,
   ClipboardCheck,
-  ClipboardCopy,
   CodeXml,
   Columns2,
   History,
@@ -71,8 +71,10 @@ import TranslateHistoryList from './components/TranslateHistory'
 import TranslateInputPane from './components/TranslateInputPane'
 import TranslateLanguageBar from './components/TranslateLanguageBar'
 import TranslateOutputPane from './components/TranslateOutputPane'
+import TranslateToolbarToggleButton from './components/TranslateToolbarToggleButton'
 import { useTranslateAutoPasteTrigger } from './hooks/useTranslateAutoPasteTrigger'
-import { useTranslateCounters } from './hooks/useTranslateCounters'
+import { type TranslateBusyStatus, useTranslateBusyLabel } from './hooks/useTranslateBusyLabel'
+import { useTranslateCounters, useTranslateOutputCounters } from './hooks/useTranslateCounters'
 import { useTranslateFileInput } from './hooks/useTranslateFileInput'
 import { useTranslateInvocationMode } from './hooks/useTranslateInvocationMode'
 import { useTranslateLanguageControls } from './hooks/useTranslateLanguageControls'
@@ -190,6 +192,7 @@ const TranslatePage: FC = () => {
   const [isDetecting, setIsDetecting] = useCache('translate.detecting')
 
   const { reset: smoothReset, update: smoothUpdate } = useSmoothStream({ onUpdate: setTranslateOutput })
+  const smoothComplete = useCallback((value: string) => smoothUpdate(value, true), [smoothUpdate])
 
   const {
     translate: runTranslate,
@@ -202,6 +205,7 @@ const TranslatePage: FC = () => {
 
   const [renderedMarkdown, setRenderedMarkdown] = useState<string>('')
   const [rawOutput, setRawOutput] = useState(translateOutput)
+  const [reportedOutputTokens, setReportedOutputTokens] = useState<number | undefined>()
   const [outputTargetLanguage, setOutputTargetLanguage] = useState<TranslateLangCode>(targetLanguage)
   const [flowStage, setFlowStage] = useState<TranslateFlowStage>('idle')
   const [historyOpen, setHistoryOpen] = useState(false)
@@ -229,6 +233,10 @@ const TranslatePage: FC = () => {
     polishPrompt: flowSettings.polishPrompt,
     targetLanguage
   })
+  const { tokenCount: outputTokenCount, wordCount: outputWordCount } = useTranslateOutputCounters(
+    translateOutput,
+    reportedOutputTokens
+  )
 
   const inputScrollRef = useRef<HTMLDivElement>(null)
   const outputTextRef = useRef<HTMLDivElement>(null)
@@ -246,6 +254,19 @@ const TranslatePage: FC = () => {
   rawOutputRef.current = rawOutput
   translateOutputRef.current = translateOutput
 
+  const beforeTranslationRegexRules = useMemo(
+    () => flowSettings.regexRules.filter((rule) => rule.stage === 'before'),
+    [flowSettings.regexRules]
+  )
+  const afterTranslationRegexRules = useMemo(
+    () => flowSettings.regexRules.filter((rule) => rule.stage !== 'before'),
+    [flowSettings.regexRules]
+  )
+  const preprocessTranslation = useCallback(
+    (source: string) => applyRegexReplacementRules(source, beforeTranslationRegexRules),
+    [beforeTranslationRegexRules]
+  )
+
   const processTranslation = useCallback(
     (raw: string, actualTargetLanguage: TranslateLangCode) =>
       applyTranslationPostProcessors(raw, {
@@ -257,13 +278,13 @@ const TranslatePage: FC = () => {
           zhCnMarkdownSmartQuotes: flowSettings.zhSmartQuotes,
           zhMarkdownTextSpacing: flowSettings.zhTextSpacing
         },
-        regexReplacementRules: flowSettings.regexRules
+        regexReplacementRules: afterTranslationRegexRules
       }),
     [
       enableMarkdown,
       flowSettings.englishStraightQuotes,
       flowSettings.postProcessingEnabled,
-      flowSettings.regexRules,
+      afterTranslationRegexRules,
       flowSettings.zhSmartQuotes,
       flowSettings.zhTextSpacing
     ]
@@ -350,6 +371,7 @@ const TranslatePage: FC = () => {
     isDetecting,
     isTranslating,
     mode: flowSettings.polishEnabled ? 'polish_then_translate' : 'translate',
+    preprocessTranslation,
     processTranslation,
     runTranslate,
     selectedModelAvailable: selectedModelId !== undefined,
@@ -357,9 +379,11 @@ const TranslatePage: FC = () => {
     setFlowStage,
     setIsDetecting,
     setOutputTargetLanguage,
+    setReportedOutputTokens,
     setRawOutput,
     setTranslateOutput,
     setTimeoutTimer,
+    smoothComplete,
     smoothReset,
     sourceLanguage,
     sourceText: translateInput,
@@ -376,6 +400,15 @@ const TranslatePage: FC = () => {
     run: runTextTranslation
   })
   const isFlowBusy = flowStage !== 'idle' || isTranslating || isDetecting
+  const busyStatus: TranslateBusyStatus | null =
+    isDetecting || flowStage === 'detecting'
+      ? 'detecting'
+      : flowStage === 'polishing'
+        ? 'polishing'
+        : isFlowBusy || isProcessing
+          ? 'processing'
+          : null
+  const translateBusyLabel = useTranslateBusyLabel(busyStatus)
 
   const resetPdfMode = useCallback(() => {
     pdfTextRequestIdRef.current += 1
@@ -397,6 +430,7 @@ const TranslatePage: FC = () => {
     setPdfTextOcrRequired(false)
     setIsPdfTextExtracting(false)
     setIsProcessing(false)
+    setReportedOutputTokens(undefined)
     setPdfFile(null)
     setRestoredPdf(null)
   }, [abortTextTranslationSilently, pdfTextFallbackActive, setTranslateOutput])
@@ -492,9 +526,10 @@ const TranslatePage: FC = () => {
 
   useTranslateAutoPasteTrigger({
     busy: isFlowBusy || isProcessing || isOcrRunning,
+    notReadyReason: modelsLoading ? 'models-loading' : 'model-unavailable',
     prepareInput: prepareShortcutInput,
     readClipboardForTranslate,
-    ready: !modelsLoading,
+    ready: !modelsLoading && selectedModelId !== undefined,
     setSourceLanguageToAuto: () => setSourceLanguage('auto'),
     trigger: onPrimaryTranslate
   })
@@ -556,6 +591,7 @@ const TranslatePage: FC = () => {
         resetPdfMode()
         setTranslateInput(history.sourceText)
         setRawOutput(history.targetText)
+        setReportedOutputTokens(undefined)
         setOutputTargetLanguage(historyTarget)
         setTranslateOutput(processTranslation(history.targetText, historyTarget))
       }
@@ -568,6 +604,7 @@ const TranslatePage: FC = () => {
       processTranslation,
       resetPdfMode,
       safePersist,
+      setReportedOutputTokens,
       setSourceLanguage,
       setTargetLanguage,
       setTranslateInput,
@@ -783,7 +820,7 @@ const TranslatePage: FC = () => {
                   className={cn(
                     'flex h-8 items-center gap-1.5 rounded-md px-3 text-sm transition-all focus-visible:outline-none',
                     couldTranslate
-                      ? 'bg-primary text-primary-foreground hover:opacity-90'
+                      ? 'bg-neutral-900 text-white hover:bg-neutral-800 focus-visible:bg-neutral-800'
                       : 'cursor-not-allowed bg-muted text-foreground-disabled'
                   )}>
                   <Languages size={16} className="lucide-custom" />
@@ -803,19 +840,14 @@ const TranslatePage: FC = () => {
                 }
                 onTranslateOnce={() => void triggerPolishOnce()}
               />
-              <Button
-                variant="ghost"
+              <TranslateToolbarToggleButton
+                enabled={clipboardWatch.enabled}
+                tone="clipboardWatch"
                 size="icon-sm"
                 onClick={clipboardWatch.toggle}
-                className={cn(
-                  'size-8',
-                  clipboardWatch.enabled ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
-                )}
-                aria-label={t('translate.clipboard_watch')}
-                aria-pressed={clipboardWatch.enabled}
-                title={t('translate.clipboard_watch')}>
-                {clipboardWatch.enabled ? <ClipboardCheck size={16} /> : <ClipboardCopy size={16} />}
-              </Button>
+                aria-label={t('translate.clipboard_watch')}>
+                <ClipboardCheck size={16} />
+              </TranslateToolbarToggleButton>
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
@@ -870,33 +902,29 @@ const TranslatePage: FC = () => {
               aria-pressed={settingsOpen}>
               <SlidersHorizontal size={18} />
             </Button>
-            <Button
-              variant={flowSettings.postProcessingEnabled ? 'secondary' : 'ghost'}
+            <TranslateToolbarToggleButton
+              enabled={flowSettings.postProcessingEnabled}
+              tone="postProcessing"
               size="icon-sm"
-              className="size-8"
               onClick={() =>
                 void safePersist(
                   updateFlowSettings({ postProcessingEnabled: !flowSettings.postProcessingEnabled }),
                   'translate post-processing enabled'
                 )
               }
-              aria-label={t('translate.post_processing.enable')}
-              aria-pressed={flowSettings.postProcessingEnabled}
-              title={t('translate.post_processing.enable')}>
+              aria-label={t('translate.post_processing.enable')}>
               <WandSparkles size={16} />
-            </Button>
-            <Button
-              variant={htmlConversionEnabled ? 'secondary' : 'ghost'}
+            </TranslateToolbarToggleButton>
+            <TranslateToolbarToggleButton
+              enabled={htmlConversionEnabled}
+              tone="htmlConversion"
               size="icon-sm"
-              className="size-8"
               onClick={() =>
                 void safePersist(setHtmlConversionEnabled(!htmlConversionEnabled), 'HTML conversion on paste')
               }
-              aria-label={t('translate.html_conversion')}
-              aria-pressed={htmlConversionEnabled}
-              title={t('translate.html_conversion')}>
+              aria-label={t('translate.html_conversion')}>
               <CodeXml size={16} />
-            </Button>
+            </TranslateToolbarToggleButton>
           </div>
         </div>
 
@@ -933,6 +961,8 @@ const TranslatePage: FC = () => {
                           copied={copied}
                           onCopy={onCopyOutput}
                           onScroll={outputScrollHandler}
+                          tokenCount={outputTokenCount}
+                          wordCount={outputWordCount}
                         />
                       )
                     }
@@ -984,15 +1014,7 @@ const TranslatePage: FC = () => {
                 disabled={isTranslating || isDetecting || isProcessing || isOcrRunning}
                 ocrProcessing={isOcrRunning}
                 selecting={selecting}
-                busyLabel={
-                  isDetecting || flowStage === 'detecting'
-                    ? t('translate.detecting')
-                    : flowStage === 'polishing'
-                      ? t('translate.polishing')
-                      : isFlowBusy || isProcessing
-                        ? t('translate.processing')
-                        : null
-                }
+                busyLabel={translateBusyLabel}
                 fontSize={normalizePersistedTranslateFontSize(flowSettings.fontSize)}
                 tokenCount={tokenCount}
                 wordCount={wordCount}
@@ -1021,6 +1043,8 @@ const TranslatePage: FC = () => {
                 copied={copied}
                 onCopy={onCopyOutput}
                 onScroll={outputScrollHandler}
+                tokenCount={outputTokenCount}
+                wordCount={outputWordCount}
               />
             </section>
           </div>

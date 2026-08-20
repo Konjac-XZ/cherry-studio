@@ -1,10 +1,11 @@
-import { ConfirmDialog, EmptyState, Input, PageSidePanel } from '@cherrystudio/ui'
+import { Button, ConfirmDialog, EmptyState, Input, PageSidePanel } from '@cherrystudio/ui'
 import { loggerService } from '@logger'
 import { DynamicVirtualList } from '@renderer/components/VirtualList'
 import { useLanguages, useTranslateHistories, useTranslateHistory } from '@renderer/hooks/translate'
 import { ipcApi } from '@renderer/ipc'
 import { toast } from '@renderer/services/toast'
 import { cn } from '@renderer/utils/style'
+import { formatDate } from '@renderer/utils/time'
 import type { TranslateLangCode } from '@shared/data/preference/preferenceTypes'
 import type { FileEntryId } from '@shared/data/types/file'
 import type { TranslateHistory, TranslateLanguage } from '@shared/data/types/translate'
@@ -65,7 +66,7 @@ const formatCreatedAt = (value: unknown, locale: string): string => {
     d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate()
   const time = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit', hour12: false }).format(d)
   if (isSameDay) return time
-  const date = new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' }).format(d)
+  const date = formatDate(d)
   return `${date} ${time}`
 }
 
@@ -200,6 +201,15 @@ const TranslateHistoryList: FC<Props> = ({ isOpen, onHistoryItemClick, onClose }
   const showHistoryActions = showStared || history.length > 0
   const header = (
     <div className="flex min-w-0 flex-1 items-center gap-2">
+      {selectedItem && (
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={() => setSelectedId(null)}
+          aria-label={t('translate.history.back')}>
+          <ChevronRight className="rotate-180" />
+        </Button>
+      )}
       <span className="truncate font-semibold text-base text-foreground">{`${t('translate.history.title')} (${total})`}</span>
       <span className="flex-1" />
       {!selectedItem && showHistoryActions && (
@@ -258,7 +268,6 @@ const TranslateHistoryList: FC<Props> = ({ isOpen, onHistoryItemClick, onClose }
           {selectedItem ? (
             <HistoryDetail
               item={selectedItem}
-              onBack={() => setSelectedId(null)}
               onCopy={copyText}
               onReuse={handleReuse}
               onDeleted={() => setSelectedId(null)}
@@ -415,11 +424,10 @@ const HistoryRow: FC<{
 
 const HistoryDetail: FC<{
   item: DisplayedTranslateHistoryItem
-  onBack: () => void
   onCopy: (value: string) => Promise<void>
   onReuse: (item: DisplayedTranslateHistoryItem, files?: TranslationFiles) => void
   onDeleted: () => void
-}> = ({ item, onBack, onCopy, onReuse, onDeleted }) => {
+}> = ({ item, onCopy, onReuse, onDeleted }) => {
   const { t } = useTranslation()
   const { update: updateHistory, remove: deleteHistory } = useTranslateHistory()
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
@@ -442,14 +450,7 @@ const HistoryDetail: FC<{
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-      <button
-        type="button"
-        onClick={onBack}
-        className="mb-3 flex items-center gap-1 rounded-md text-muted-foreground text-sm transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:underline focus-visible:outline-none">
-        <ChevronRight size={11} className="rotate-180" />
-        <span>{t('translate.history.back')}</span>
-      </button>
+    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 pt-3 pb-6">
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <span className="rounded-sm bg-muted px-1.5 py-0.5 text-muted-foreground text-sm">
@@ -505,20 +506,14 @@ const HistoryDetail: FC<{
               </p>
             </div>
             <div className="flex items-center gap-2 pt-1">
-              <button
-                type="button"
-                onClick={() => onReuse(item)}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-md bg-accent py-1.5 text-muted-foreground text-sm transition-colors hover:bg-accent hover:text-foreground focus-visible:text-foreground focus-visible:outline-none">
+              <Button variant="secondary" onClick={() => onReuse(item)} className="flex-1 shadow-none">
                 <Repeat size={11} />
                 <span>{t('translate.history.reuse')}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => void onCopy(item.targetText)}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-md bg-primary py-1.5 text-primary-foreground text-sm transition-colors hover:opacity-90 focus-visible:opacity-90 focus-visible:outline-none">
+              </Button>
+              <Button onClick={() => void onCopy(item.targetText)} className="flex-1 shadow-none">
                 <Copy size={11} />
                 <span>{t('translate.history.copy_target')}</span>
-              </button>
+              </Button>
             </div>
           </>
         )}

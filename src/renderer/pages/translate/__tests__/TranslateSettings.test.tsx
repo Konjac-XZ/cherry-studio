@@ -35,8 +35,14 @@ vi.mock('@renderer/hooks/translate', () => ({
   useTranslateLanguages: () => translateLanguageMutationsMock
 }))
 
+const modelCatalogMock = vi.hoisted(() => ({ models: [] as Array<{ id: string; name: string }> }))
+
 vi.mock('@renderer/hooks/useModel', () => ({
-  useModels: () => ({ models: [] })
+  useModels: () => ({ models: modelCatalogMock.models })
+}))
+
+vi.mock('@renderer/components/Avatar/ModelAvatar', () => ({
+  default: ({ model }: { model: { name: string } }) => <span data-testid="model-avatar">{model.name}</span>
 }))
 
 vi.mock('@renderer/utils/style', () => ({
@@ -44,7 +50,36 @@ vi.mock('@renderer/utils/style', () => ({
 }))
 
 vi.mock('@renderer/components/ModelSelector', () => ({
-  ModelSelector: ({ trigger }: { trigger: React.ReactNode }) => <>{trigger}</>
+  ModelSelector: ({
+    trigger,
+    fixedTopOption,
+    onSelect
+  }: {
+    trigger: React.ReactNode
+    fixedTopOption?: { label: React.ReactNode; selected: boolean; onSelect: () => void }
+    onSelect: (value: string) => void
+  }) => (
+    <>
+      {trigger}
+      {fixedTopOption ? (
+        <>
+          <button
+            type="button"
+            data-testid="model-selector-fixed-option"
+            aria-pressed={fixedTopOption.selected}
+            onClick={fixedTopOption.onSelect}>
+            {fixedTopOption.label}
+          </button>
+          <button
+            type="button"
+            data-testid="model-selector-direction-model"
+            onClick={() => onSelect('openai::directional')}>
+            directional model
+          </button>
+        </>
+      ) : null}
+    </>
+  )
 }))
 
 vi.mock('@renderer/components/translate/LanguagePicker', () => ({
@@ -56,11 +91,22 @@ vi.mock('@renderer/components/translate/LanguagePicker', () => ({
 }))
 
 vi.mock('@renderer/components/translate/IconButton', () => ({
-  default: ({ children, ...props }: React.ComponentProps<'button'> & { active?: boolean; size?: string }) => (
-    <button type="button" {...props}>
-      {children}
-    </button>
-  )
+  default: ({
+    children,
+    active,
+    size,
+    tooltip,
+    ...props
+  }: React.ComponentProps<'button'> & { active?: boolean; size?: string; tooltip?: React.ReactNode }) => {
+    void active
+    void size
+    void tooltip
+    return (
+      <button type="button" {...props}>
+        {children}
+      </button>
+    )
+  }
 }))
 
 vi.mock('@cherrystudio/ui', () => ({
@@ -89,8 +135,13 @@ vi.mock('@cherrystudio/ui', () => ({
         {children}
       </div>
     ) : null,
-  DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DialogContent: ({ children, className }: React.ComponentProps<'div'>) => (
+    <div data-testid="dialog-content" className={className}>
+      {children}
+    </div>
+  ),
+  DialogClose: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  DialogHeader: ({ children, ...props }: React.ComponentProps<'div'>) => <div {...props}>{children}</div>,
   DialogTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
   Field: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   FieldDescription: ({ children, ...props }: React.ComponentProps<'p'>) => <p {...props}>{children}</p>,
@@ -239,11 +290,14 @@ describe('TranslateSettings', () => {
   const setScrollSync = vi.fn().mockResolvedValue(undefined)
   const setBidirectionalEnabled = vi.fn().mockResolvedValue(undefined)
   const setModelPrompt = vi.fn().mockResolvedValue(undefined)
+  const setNativeToOtherModel = vi.fn().mockResolvedValue(undefined)
+  const setNativeFollowsGlobal = vi.fn().mockResolvedValue(undefined)
   const fallbackSetter = vi.fn().mockResolvedValue(undefined)
 
   beforeEach(() => {
     MockUsePreferenceUtils.resetMocks()
     mockLanguages = []
+    modelCatalogMock.models = []
     translateGlossaryMock.entries = []
 
     setBidirectionalPair.mockReset()
@@ -253,6 +307,8 @@ describe('TranslateSettings', () => {
     setScrollSync.mockReset()
     setBidirectionalEnabled.mockReset()
     setModelPrompt.mockReset()
+    setNativeToOtherModel.mockReset()
+    setNativeFollowsGlobal.mockReset()
     fallbackSetter.mockReset()
 
     setBasePreferenceMocks()
@@ -264,7 +320,9 @@ describe('TranslateSettings', () => {
       ['feature.translate.page.auto_copy', setAutoCopy],
       ['feature.translate.page.scroll_sync', setScrollSync],
       ['feature.translate.page.bidirectional_enabled', setBidirectionalEnabled],
-      ['feature.translate.model_prompt', setModelPrompt]
+      ['feature.translate.model_prompt', setModelPrompt],
+      ['feature.translate.model.native_to_other_id', setNativeToOtherModel],
+      ['feature.translate.model.native_to_other_follows_global', setNativeFollowsGlobal]
     ])
     mockUsePreference.mockImplementation((key: string) => {
       return [MockUsePreferenceUtils.getPreferenceValue(key as any), settersByPreference.get(key) ?? fallbackSetter]
@@ -306,16 +364,110 @@ describe('TranslateSettings', () => {
     expect(screen.queryByRole('dialog')).toBeNull()
   })
 
-  it('keeps advanced settings behind the V1 more-settings level', () => {
+  it('keeps dialog margins and lets each desktop column size its cards independently', () => {
     render(<TranslateSettings visible onClose={vi.fn()} />)
 
+    const dialogContent = screen.getByTestId('dialog-content')
+    expect(dialogContent).toHaveClass('w-[calc(100%-2rem)]', 'sm:w-[calc(100%-3rem)]', 'sm:max-w-[960px]')
+    // Dialog-scoped tooltip portals must escape the shell while the inner content areas retain scrolling.
+    expect(dialogContent).toHaveClass('overflow-visible')
+    expect(dialogContent.className).not.toContain('h-[min(')
+    expect(screen.getByTestId('translate-settings-card-container')).toHaveClass('@container/translate-settings')
+    expect(screen.getByTestId('translate-settings-card-grid')).toHaveClass(
+      'grid-cols-1',
+      '@[800px]/translate-settings:grid-cols-2'
+    )
+    expect(screen.getByTestId('translate-settings-left-column')).toHaveClass(
+      '@[800px]/translate-settings:flex',
+      '@[800px]/translate-settings:flex-col'
+    )
+    expect(screen.getByTestId('translate-settings-right-column')).toHaveClass(
+      '@[800px]/translate-settings:flex',
+      '@[800px]/translate-settings:flex-col'
+    )
+  })
+
+  it('opens advanced settings from the header, moves JSON settings there, and returns to the main view', () => {
+    render(<TranslateSettings visible onClose={vi.fn()} />)
+
+    const dialogContent = screen.getByTestId('dialog-content')
+    const dialogHeader = screen.getByTestId('translate-settings-header')
     expect(screen.queryByRole('textbox', { name: 'translate.settings.prompt.native_to_other' })).toBeNull()
+    expect(screen.queryByText('translate.settings.group_json_view')).toBeNull()
+    expect(dialogHeader).toHaveClass('h-14', 'flex-row', 'items-center')
+    expect(dialogHeader.className).not.toContain('relative')
+    expect(screen.getByTestId('translate-settings-header-actions')).toHaveClass('ml-auto', 'flex', 'items-center')
+    expect(screen.getByRole('button', { name: 'common.close' })).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'settings.moresetting.label' }))
 
+    expect(screen.getByTestId('dialog-content')).toBe(dialogContent)
+    expect(screen.getByTestId('translate-settings-header')).toBe(dialogHeader)
+    expect(screen.getByRole('heading', { name: 'settings.moresetting.label' })).toBeInTheDocument()
+    expect(screen.getByText('translate.settings.group_json_view')).toBeInTheDocument()
     expect(screen.getByRole('textbox', { name: 'translate.settings.prompt.other_to_native' })).toBeInTheDocument()
     expect(screen.getByRole('textbox', { name: 'translate.settings.prompt.native_to_other' })).toBeInTheDocument()
     expect(screen.getByRole('textbox', { name: 'translate.settings.prompt.polish' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'common.back' }))
+
+    expect(screen.getByTestId('dialog-content')).toBe(dialogContent)
+    expect(screen.getByRole('heading', { name: 'translate.settings.title' })).toBeInTheDocument()
+    expect(screen.queryByText('translate.settings.group_json_view')).toBeNull()
+  })
+
+  it('groups before and after regex rules in one card and places JSON settings immediately after it', async () => {
+    render(<TranslateSettings visible onClose={vi.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: 'settings.moresetting.label' }))
+
+    const beforeGroup = screen.getByRole('group', { name: 'translate.settings.regex_rules.before_translation' })
+    expect(screen.getByRole('group', { name: 'translate.settings.regex_rules.after_translation' })).toBeInTheDocument()
+
+    const regexTitle = screen.getByText('translate.settings.regex_rules.title')
+    const jsonTitle = screen.getByText('translate.settings.group_json_view')
+    expect(regexTitle.compareDocumentPosition(jsonTitle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+
+    fireEvent.click(within(beforeGroup).getByRole('button', { name: 'common.add' }))
+    await waitFor(() =>
+      expect(fallbackSetter).toHaveBeenCalledWith([
+        expect.objectContaining({ stage: 'before', pattern: '', flags: 'g', replacement: '' })
+      ])
+    )
+  })
+
+  it('selects follow-global or a direction model from the same model menu', async () => {
+    render(<TranslateSettings visible onClose={vi.fn()} />)
+
+    fireEvent.click(screen.getAllByTestId('model-selector-fixed-option')[0])
+    await waitFor(() => expect(setNativeFollowsGlobal).toHaveBeenCalledWith(true))
+
+    fireEvent.click(screen.getAllByTestId('model-selector-direction-model')[0])
+    await waitFor(() => {
+      expect(setNativeToOtherModel).toHaveBeenCalledWith('openai::directional')
+      expect(setNativeFollowsGlobal).toHaveBeenCalledWith(false)
+    })
+  })
+
+  it('shows the effective model icon in each configured model selector', () => {
+    modelCatalogMock.models = [
+      { id: 'deepseek::v4', name: 'DeepSeek V4 Flash' },
+      { id: 'qwen::3.5', name: 'Qwen3.5 Flash' }
+    ]
+    MockUsePreferenceUtils.setMultiplePreferenceValues({
+      'feature.translate.model_id': 'deepseek::v4',
+      'feature.translate.model.native_to_other_id': 'openai::directional',
+      'feature.translate.model.other_to_native_id': 'openai::directional',
+      'feature.translate.model.polish_id': 'qwen::3.5'
+    })
+
+    render(<TranslateSettings visible onClose={vi.fn()} />)
+
+    expect(screen.getAllByTestId('model-avatar').map((avatar) => avatar.textContent)).toEqual([
+      'DeepSeek V4 Flash',
+      'DeepSeek V4 Flash',
+      'DeepSeek V4 Flash',
+      'Qwen3.5 Flash'
+    ])
   })
 })
 
@@ -325,6 +477,7 @@ describe('TranslateSettingsPanelContent', () => {
   beforeEach(() => {
     MockUsePreferenceUtils.resetMocks()
     mockLanguages = []
+    modelCatalogMock.models = []
     translateGlossaryMock.entries = []
 
     setPersisted.mockReset()

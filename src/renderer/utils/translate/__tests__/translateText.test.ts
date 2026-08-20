@@ -133,6 +133,12 @@ function emitChunk(listeners: MockListeners, delta: string, topicId: string) {
   }
 }
 
+function emitOutputTokens(listeners: MockListeners, outputTokens: number, topicId: string) {
+  for (const cb of [...listeners.chunk]) {
+    cb({ topicId, chunk: { type: 'message-metadata', messageMetadata: { stats: { outputTokens } } } })
+  }
+}
+
 function emitDone(listeners: MockListeners, topicId: string) {
   for (const cb of [...listeners.done]) cb({ topicId })
 }
@@ -220,6 +226,34 @@ describe('translateText (main-driven streaming)', () => {
       expect(onResponse).toHaveBeenNthCalledWith(1, 'Hi', false)
       expect(onResponse).toHaveBeenNthCalledWith(2, 'Hi there', false)
       expect(onResponse).toHaveBeenNthCalledWith(3, 'Hi there', true)
+    })
+
+    it('reports cumulative output tokens from upstream stream metadata', async () => {
+      const onOutputTokens = vi.fn()
+      const promise = translateText('source', TARGET, undefined, undefined, { onOutputTokens })
+      await waitForOpen(mockRequest)
+      const streamId = lastStreamId(mockRequest)
+
+      emitChunk(mockListeners, 'translated', streamId)
+      emitOutputTokens(mockListeners, 7, streamId)
+      emitDone(mockListeners, streamId)
+      await promise
+
+      expect(onOutputTokens).toHaveBeenCalledWith(7)
+    })
+
+    it('treats a zero output-token snapshot as unavailable', async () => {
+      const onOutputTokens = vi.fn()
+      const promise = translateText('source', TARGET, undefined, undefined, { onOutputTokens })
+      await waitForOpen(mockRequest)
+      const streamId = lastStreamId(mockRequest)
+
+      emitChunk(mockListeners, 'translated', streamId)
+      emitOutputTokens(mockListeners, 0, streamId)
+      emitDone(mockListeners, streamId)
+      await promise
+
+      expect(onOutputTokens).not.toHaveBeenCalled()
     })
 
     it('ignores chunks routed to a different streamId', async () => {

@@ -57,14 +57,18 @@ describe('TranslateInputPane', () => {
     dragState.isDragging = false
   })
 
-  it('disables file upload while the parent pane is disabled', () => {
+  it('hides file upload while the parent pane is disabled', () => {
     const props = baseProps()
     render(<TranslateInputPane {...props} disabled />)
 
-    fireEvent.click(screen.getByRole('button', { name: 'translate.files.upload' }))
-
-    expect(screen.getByRole('button', { name: 'translate.files.upload' })).toBeDisabled()
+    expect(screen.queryByRole('button', { name: 'translate.files.upload' })).not.toBeInTheDocument()
     expect(props.onSelectFile).not.toHaveBeenCalled()
+  })
+
+  it('hides file upload while a file selection is in progress', () => {
+    render(<TranslateInputPane {...baseProps()} selecting />)
+
+    expect(screen.queryByRole('button', { name: 'translate.files.upload' })).not.toBeInTheDocument()
   })
 
   it('shows the input value and keeps the compact upload action available', () => {
@@ -114,6 +118,21 @@ describe('TranslateInputPane', () => {
 
     expect(screen.getByText('translate.files.drag_text')).toBeInTheDocument()
   })
+
+  it.each(['translate.detecting', 'translate.polishing', 'translate.processing'])(
+    'fades the source pane while showing the %s work status',
+    (busyLabel) => {
+      render(<TranslateInputPane {...baseProps()} disabled busyLabel={busyLabel} />)
+
+      expect(screen.getByTestId('translate-input-busy-overlay')).toHaveClass(
+        'animate-in',
+        'fade-in-0',
+        'bg-background/70',
+        'backdrop-blur-[1px]'
+      )
+      expect(screen.getByRole('status')).toHaveTextContent(busyLabel)
+    }
+  )
 
   it('does not show the OCR processing overlay by default', () => {
     render(<TranslateInputPane {...baseProps()} />)

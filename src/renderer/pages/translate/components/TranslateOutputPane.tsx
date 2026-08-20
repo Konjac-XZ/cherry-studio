@@ -20,6 +20,8 @@ type Props = {
   copied: boolean
   onCopy: () => void
   onScroll: () => void
+  tokenCount?: number
+  wordCount?: number
 }
 
 const TranslateOutputPane = ({
@@ -34,7 +36,9 @@ const TranslateOutputPane = ({
   fontSize = 16,
   copied,
   onCopy,
-  onScroll
+  onScroll,
+  tokenCount = 0,
+  wordCount = 0
 }: Props) => {
   const { t } = useTranslation()
   const jsonStructure = useMemo(
@@ -74,6 +78,11 @@ const TranslateOutputPane = ({
           )}
         </div>
       </Scrollbar>
+      <div className="flex shrink-0 items-center justify-end px-3 pt-1 pb-2">
+        <span className="text-foreground-tertiary text-xs tabular-nums">
+          {wordCount} {t('translate.counter.words')} / {tokenCount} {t('translate.counter.tokens')}
+        </span>
+      </div>
       <FloatingActionBar
         actions={[
           {

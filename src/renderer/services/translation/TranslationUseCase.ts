@@ -12,6 +12,7 @@ export type TranslationPreparationCommand = {
   mode: TranslationMode
   sourceLanguage: TranslateLangCode | 'auto'
   sourceText: string
+  requestText?: string
   targetLanguage: TranslateLangCode
 }
 
@@ -34,6 +35,7 @@ export type PreparedTranslation = {
   polishModelId?: UniqueModelId
   sourceLanguage: TranslateLangCode
   sourceText: string
+  requestText?: string
   targetLanguage: TranslateLangCode
   translateModelId: UniqueModelId
 }
@@ -98,16 +100,17 @@ const buildPreparedTranslation = async (
     command.mode === 'polish_then_translate' ? await ports.plan(targetLanguage, 'polish') : undefined
   throwIfAborted(signal)
 
+  const requestText = command.requestText ?? command.sourceText
   const cacheKey = polishModelId
     ? createPolishTranslateHistoryCacheKey({
-        sourceText: command.sourceText,
+        sourceText: requestText,
         sourceLanguage,
         targetLanguage,
         modelId: translateModelId,
         polishModelId
       })
     : createTranslateHistoryCacheKey({
-        sourceText: command.sourceText,
+        sourceText: requestText,
         sourceLanguage,
         targetLanguage,
         modelId: translateModelId
@@ -119,6 +122,7 @@ const buildPreparedTranslation = async (
     polishModelId,
     sourceLanguage,
     sourceText: command.sourceText,
+    requestText,
     targetLanguage,
     translateModelId
   }
@@ -186,7 +190,7 @@ export const executePreparedTranslation = async (
   ports: TranslationExecutionPorts,
   options: { onProgress?: (progress: TranslationExecutionProgress) => void; signal?: AbortSignal } = {}
 ): Promise<TranslationExecutionResult | undefined> => {
-  let textToTranslate = command.sourceText
+  let textToTranslate = command.requestText ?? command.sourceText
   let polishedText: string | undefined
 
   if (command.mode === 'polish_then_translate') {

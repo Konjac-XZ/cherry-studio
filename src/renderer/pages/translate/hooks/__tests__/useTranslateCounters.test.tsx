@@ -2,7 +2,7 @@ import type { TranslateLangCode } from '@shared/data/preference/preferenceTypes'
 import { renderHook } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
-import { countTranslateWords, useTranslateCounters } from '../useTranslateCounters'
+import { countTranslateWords, useTranslateCounters, useTranslateOutputCounters } from '../useTranslateCounters'
 
 type CounterProps = Parameters<typeof useTranslateCounters>[0]
 
@@ -52,5 +52,24 @@ describe('useTranslateCounters', () => {
       targetLanguage: 'zh-cn'
     })
     expect(result.current.tokenCount).toBeGreaterThan(withoutPolish)
+  })
+
+  it('prefers reported output tokens and falls back to estimating the translated text', () => {
+    const { result, rerender } = renderHook(
+      ({ output, reportedOutputTokens }: { output: string; reportedOutputTokens?: number }) =>
+        useTranslateOutputCounters(output, reportedOutputTokens),
+      {
+        initialProps: {
+          output: 'Hello translated world',
+          reportedOutputTokens: undefined as number | undefined
+        }
+      }
+    )
+    const estimatedTokens = result.current.tokenCount
+
+    rerender({ output: 'Hello translated world', reportedOutputTokens: 17 })
+
+    expect(result.current).toEqual({ wordCount: 3, tokenCount: 17 })
+    expect(estimatedTokens).toBeGreaterThan(0)
   })
 })

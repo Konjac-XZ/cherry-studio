@@ -47,6 +47,7 @@ type UseTranslationFlowRunnerParams = {
   isDetecting: boolean
   isTranslating: boolean
   mode: TranslationMode
+  preprocessTranslation: (text: string) => string
   processTranslation: (raw: string, targetLanguage: TranslateLangCode) => string
   runTranslate: UseTranslateResult['translate']
   selectedModelAvailable: boolean
@@ -54,9 +55,11 @@ type UseTranslationFlowRunnerParams = {
   setFlowStage: Dispatch<SetStateAction<TranslateFlowStage>>
   setIsDetecting: (value: boolean) => void
   setOutputTargetLanguage: Dispatch<SetStateAction<TranslateLangCode>>
+  setReportedOutputTokens: Dispatch<SetStateAction<number | undefined>>
   setRawOutput: Dispatch<SetStateAction<string>>
   setTranslateOutput: (value: string) => void
   setTimeoutTimer: ReturnType<typeof useTimer>['setTimeoutTimer']
+  smoothComplete: (value: string) => void
   smoothReset: (value?: string) => void
   sourceLanguage: TranslateLangCode | 'auto'
   sourceText: string
@@ -76,6 +79,7 @@ export const useTranslationFlowRunner = ({
   isDetecting,
   isTranslating,
   mode,
+  preprocessTranslation,
   processTranslation,
   runTranslate,
   selectedModelAvailable,
@@ -83,9 +87,11 @@ export const useTranslationFlowRunner = ({
   setFlowStage,
   setIsDetecting,
   setOutputTargetLanguage,
+  setReportedOutputTokens,
   setRawOutput,
   setTranslateOutput,
   setTimeoutTimer,
+  smoothComplete,
   smoothReset,
   sourceLanguage,
   sourceText,
@@ -110,11 +116,12 @@ export const useTranslationFlowRunner = ({
     (cached: TranslateHistory, actualTargetLanguage: TranslateLangCode) => {
       const processed = processTranslation(cached.targetText, actualTargetLanguage)
       setRawOutput(cached.targetText)
+      setReportedOutputTokens(undefined)
       setOutputTargetLanguage(actualTargetLanguage)
       setTranslateOutput(processed)
       toast.info(t('translate.info.reused_cached', { modifier: getTranslateModifierLabel() }))
     },
-    [processTranslation, setOutputTargetLanguage, setRawOutput, setTranslateOutput, t]
+    [processTranslation, setOutputTargetLanguage, setRawOutput, setReportedOutputTokens, setTranslateOutput, t]
   )
 
   const onTranslate = useCallback(
@@ -147,12 +154,17 @@ export const useTranslationFlowRunner = ({
       const isCurrent = () => activeFlowRef.current === flowId
 
       try {
-        if (effectiveSourceLanguage === 'auto') {
-          setFlowStage('detecting')
-          setIsDetecting(true)
-        } else {
+        if (effectiveSourceLanguage !== 'auto') {
           setDetectedLanguage(null)
         }
+
+        setFlowStage(
+          effectiveSourceLanguage === 'auto' && effectiveMode === 'translate' && !forceRefresh
+            ? 'cache'
+            : effectiveSourceLanguage === 'auto'
+              ? 'detecting'
+              : 'planning'
+        )
 
         const prepared = await prepareTranslation(
           {
@@ -160,14 +172,26 @@ export const useTranslationFlowRunner = ({
             forceRefresh,
             isBidirectional: effectiveBidirectional,
             mode: effectiveMode,
+            requestText: preprocessTranslation(effectiveSourceText),
             sourceLanguage: effectiveSourceLanguage,
             sourceText: effectiveSourceText,
             targetLanguage: effectiveTargetLanguage
           },
           {
-            detectLanguage,
+            detectLanguage: async (text, detectionSignal) => {
+              setFlowStage('detecting')
+              setIsDetecting(true)
+              try {
+                return await detectLanguage(text, detectionSignal)
+              } finally {
+                if (isCurrent()) setIsDetecting(false)
+              }
+            },
             determineTargetLanguage,
-            findBySourceText: history.findBySourceText,
+            findBySourceText: async (text) => {
+              setFlowStage('cache')
+              return history.findBySourceText(text)
+            },
             findCached: async (cacheKey) => {
               setFlowStage('cache')
               return history.findCached(cacheKey)
@@ -209,7 +233,17 @@ export const useTranslationFlowRunner = ({
               text,
               signal: executionSignal
             }) =>
-              runTranslate(text, actualTarget, { modelId, operation, sourceLangCode: actualSource }, executionSignal)
+              runTranslate(
+                text,
+                actualTarget,
+                {
+                  modelId,
+                  operation,
+                  sourceLangCode: actualSource,
+                  ...(operation === 'translate' && { onOutputTokens: setReportedOutputTokens })
+                },
+                executionSignal
+              )
           },
           {
             onProgress: (progress) => {
@@ -221,6 +255,7 @@ export const useTranslationFlowRunner = ({
                   break
                 case 'translation_started':
                   setFlowStage('translating')
+                  setReportedOutputTokens(undefined)
                   smoothReset('')
                   break
                 case 'display_ready':
@@ -235,7 +270,7 @@ export const useTranslationFlowRunner = ({
 
         setRawOutput(result.rawText)
         setOutputTargetLanguage(prepared.value.targetLanguage)
-        setTranslateOutput(result.displayText)
+        smoothComplete(result.displayText)
         toast.success(t('translate.complete'))
 
         if (result.historyError) {
@@ -283,6 +318,7 @@ export const useTranslationFlowRunner = ({
       isDetecting,
       isTranslating,
       mode,
+      preprocessTranslation,
       processTranslation,
       runTranslate,
       selectedModelAvailable,
@@ -290,10 +326,11 @@ export const useTranslationFlowRunner = ({
       setFlowStage,
       setIsDetecting,
       setOutputTargetLanguage,
+      setReportedOutputTokens,
       setRawOutput,
       setTimeoutTimer,
-      setTranslateOutput,
       showCached,
+      smoothComplete,
       smoothReset,
       sourceLanguage,
       sourceText,

@@ -14,7 +14,8 @@ const translateTextMock =
       text: string,
       lang: unknown,
       onResponse?: (text: string, done: boolean) => void,
-      signal?: AbortSignal
+      signal?: AbortSignal,
+      options?: { onOutputTokens?: (outputTokens: number) => void }
     ) => Promise<string>
   >()
 vi.mock('@renderer/utils/translate/translateText', () => ({
@@ -265,6 +266,29 @@ describe('useTranslate', () => {
         onResponseFromService?.('late chunk', true)
       })
       expect(onResponse).not.toHaveBeenCalled()
+    })
+
+    it('suppresses late output usage after cancel()', async () => {
+      let onOutputTokensFromService: ((outputTokens: number) => void) | undefined
+      translateTextMock.mockImplementationOnce(async (_text, _lang, _onResponse, _signal, options) => {
+        onOutputTokensFromService = options?.onOutputTokens
+        return new Promise<string>(() => {
+          /* never resolves — test controls timing */
+        })
+      })
+
+      const onOutputTokens = vi.fn()
+      const { result } = renderHook(() => useTranslate())
+
+      act(() => {
+        void result.current.translate('源', TARGET, { onOutputTokens })
+      })
+      act(() => {
+        result.current.cancel()
+        onOutputTokensFromService?.(9)
+      })
+
+      expect(onOutputTokens).not.toHaveBeenCalled()
     })
 
     it('is a no-op when nothing is in flight', () => {

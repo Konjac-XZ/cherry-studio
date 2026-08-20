@@ -40,3 +40,12 @@ export const useTranslateCounters = ({
     [activePrompt, input, polishEnabled, polishPrompt]
   )
 }
+
+export const useTranslateOutputCounters = (output: string, reportedOutputTokens?: number) =>
+  useMemo(
+    () => ({
+      wordCount: countTranslateWords(output),
+      tokenCount: output ? (reportedOutputTokens ?? estimateTokenCount(output)) : 0
+    }),
+    [output, reportedOutputTokens]
+  )

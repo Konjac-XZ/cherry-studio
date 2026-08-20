@@ -1,5 +1,6 @@
 import { ipcApi } from '@renderer/ipc'
 import { isTranslateLangCode, type TranslateLangCode } from '@shared/data/preference/preferenceTypes'
+import type { CherryUIMessageChunk } from '@shared/data/types/message'
 import type { UniqueModelId } from '@shared/data/types/model'
 import type { TranslateLanguage, TranslateOperation } from '@shared/data/types/translate'
 import { t } from 'i18next'
@@ -12,6 +13,7 @@ export interface TranslateTextOptions {
   operation?: TranslateOperation
   sourceLangCode?: TranslateLangCode
   modelId?: UniqueModelId
+  onOutputTokens?: (outputTokens: number) => void
 }
 
 export const resolveTranslatePlan = async (
@@ -79,6 +81,14 @@ export const translateText = async (
     unsubscribers.push(
       ipcApi.on('ai.stream.chunk', ({ topicId, chunk }) => {
         if (topicId !== streamId) return
+        if (chunk?.type === 'message-metadata') {
+          const outputTokens = (chunk as Extract<CherryUIMessageChunk, { type: 'message-metadata' }>).messageMetadata
+            ?.stats?.outputTokens
+          if (typeof outputTokens === 'number' && Number.isFinite(outputTokens) && outputTokens > 0) {
+            options?.onOutputTokens?.(outputTokens)
+          }
+          return
+        }
         if (
           chunk &&
           (chunk as { type?: string }).type === 'text-delta' &&

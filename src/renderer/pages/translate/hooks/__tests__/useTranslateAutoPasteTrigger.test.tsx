@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const routerMocks = vi.hoisted(() => ({
   navigate: vi.fn(),
-  search: { paste: '1', _: 'nonce-1' } as Record<string, unknown>
+  search: { paste: 1, _: 'nonce-1' } as Record<string, unknown>
 }))
 
 vi.mock('@tanstack/react-router', () => ({
@@ -14,7 +14,7 @@ vi.mock('@tanstack/react-router', () => ({
 
 vi.mock('@logger', () => ({
   loggerService: {
-    withContext: () => ({ warn: vi.fn() })
+    withContext: () => ({ info: vi.fn(), warn: vi.fn() })
   }
 }))
 
@@ -22,6 +22,7 @@ import { useTranslateAutoPasteTrigger } from '../useTranslateAutoPasteTrigger'
 
 const createProps = () => ({
   busy: false,
+  notReadyReason: 'model-unavailable' as const,
   prepareInput: vi.fn(),
   readClipboardForTranslate: vi.fn(async () => 'clipboard text'),
   ready: true,
@@ -31,7 +32,7 @@ const createProps = () => ({
 
 describe('useTranslateAutoPasteTrigger', () => {
   beforeEach(() => {
-    routerMocks.search = { paste: '1', _: 'nonce-1' }
+    routerMocks.search = { paste: 1, _: 'nonce-1' }
     sessionStorage.clear()
     vi.clearAllMocks()
   })
@@ -54,7 +55,7 @@ describe('useTranslateAutoPasteTrigger', () => {
     expect(routerMocks.navigate).toHaveBeenCalledWith({ to: '/app/translate', replace: true })
   })
 
-  it('waits for page dependencies before consuming the route command', async () => {
+  it('preserves the route command until a translation model is available', async () => {
     const props = createProps()
     props.ready = false
     const { rerender } = renderHook(() => useTranslateAutoPasteTrigger(props))
@@ -64,6 +65,41 @@ describe('useTranslateAutoPasteTrigger', () => {
     props.ready = true
     rerender()
     await waitFor(() => expect(props.readClipboardForTranslate).toHaveBeenCalledTimes(1))
+  })
+
+  it('starts translation without waiting for source-language preference persistence', async () => {
+    let resolveSourceLanguage!: (value: undefined) => void
+    const sourceLanguagePending = new Promise<undefined>((resolve) => {
+      resolveSourceLanguage = resolve
+    })
+    const props = createProps()
+    props.setSourceLanguageToAuto.mockImplementation(() => sourceLanguagePending)
+
+    renderHook(() => useTranslateAutoPasteTrigger(props))
+
+    await waitFor(() => expect(props.trigger).toHaveBeenCalledTimes(1))
+    expect(props.trigger).toHaveBeenCalledWith(undefined, 'clipboard text', { sourceLanguage: 'auto' })
+    resolveSourceLanguage(undefined)
+  })
+
+  it('keeps one clipboard read alive across callback-only rerenders', async () => {
+    let resolveClipboard!: (text: string) => void
+    const clipboardPending = new Promise<string>((resolve) => {
+      resolveClipboard = resolve
+    })
+    const props = createProps()
+    props.readClipboardForTranslate.mockImplementation(() => clipboardPending)
+    const { rerender } = renderHook(() => useTranslateAutoPasteTrigger(props))
+
+    await waitFor(() => expect(props.readClipboardForTranslate).toHaveBeenCalledTimes(1))
+    const latestTrigger = vi.fn(async () => undefined)
+    props.trigger = latestTrigger
+    props.setSourceLanguageToAuto = vi.fn(async () => undefined)
+    rerender()
+    resolveClipboard('clipboard text')
+
+    await waitFor(() => expect(latestTrigger).toHaveBeenCalledTimes(1))
+    expect(props.readClipboardForTranslate).toHaveBeenCalledTimes(1)
   })
 
   it('suppresses a handled nonce across page recreation', async () => {

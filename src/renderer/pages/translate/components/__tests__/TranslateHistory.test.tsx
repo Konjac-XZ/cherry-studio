@@ -72,6 +72,15 @@ vi.mock('@renderer/utils/style', () => ({
 }))
 
 vi.mock('@cherrystudio/ui', () => ({
+  Button: ({
+    variant = 'default',
+    size: _size,
+    type = 'button',
+    ...props
+  }: React.ComponentProps<'button'> & {
+    variant?: 'default' | 'ghost' | 'secondary'
+    size?: 'icon-sm'
+  }) => <button type={type} data-variant={variant} {...props} />,
   ConfirmDialog: (props: {
     onConfirm?: () => void | Promise<void>
     onOpenChange?: (open: boolean) => void
@@ -242,7 +251,9 @@ describe('TranslateHistory', () => {
     renderHistory(onHistoryItemClick)
 
     fireEvent.click(screen.getByText('hello'))
-    expect(screen.getByText('translate.history.back')).toBeInTheDocument()
+    const backButton = screen.getByRole('button', { name: 'translate.history.back' })
+    expect(screen.getByTestId('page-side-panel-header')).toContainElement(backButton)
+    expect(screen.getByText('translate.history.source').closest('.overflow-y-auto')).toHaveClass('px-6', 'pt-3', 'pb-6')
 
     fireEvent.click(screen.getByRole('button', { name: 'translate.history.reuse' }))
     expect(onHistoryItemClick).toHaveBeenCalledWith(expect.objectContaining({ id: '1', sourceText: 'hello' }))
@@ -405,7 +416,7 @@ describe('TranslateHistory', () => {
     fireEvent.click(screen.getByText('hello'))
     expect(screen.getByRole('button', { name: 'translate.history.star' })).toHaveAttribute('aria-pressed', 'false')
 
-    fireEvent.click(screen.getByText('translate.history.back'))
+    fireEvent.click(screen.getByRole('button', { name: 'translate.history.back' }))
     fireEvent.click(screen.getByText('bye'))
     expect(screen.getByRole('button', { name: 'translate.history.star' })).toHaveAttribute('aria-pressed', 'true')
   })
@@ -429,7 +440,7 @@ describe('TranslateHistory', () => {
     const detailStarIndex = actionLabels.indexOf('translate.history.star')
     expect(actionLabels.indexOf('translate.history.delete')).toBeLessThan(detailStarIndex)
     const copyTargetButton = screen.getByRole('button', { name: 'translate.history.copy_target' })
-    expect(copyTargetButton).toHaveClass('text-primary-foreground')
+    expect(copyTargetButton).toHaveAttribute('data-variant', 'default')
     fireEvent.click(copyTargetButton)
 
     await waitFor(() => expect(writeTextMock).toHaveBeenCalledWith('你好'))

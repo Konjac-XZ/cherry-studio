@@ -151,7 +151,7 @@ const TranslateLanguageBar: FC<Props> = ({
           return (
             <div className="flex min-w-0 flex-1 items-center gap-2 truncate">
               <span className="sr-only">{t('translate.source_language')}</span>
-              {option?.icon}
+              {value !== 'auto' && option?.icon}
               <span className="truncate">{option?.label ?? sourceDisplay.label}</span>
             </div>
           )
@@ -178,17 +178,11 @@ const TranslateLanguageBar: FC<Props> = ({
           disabled
           aria-label={`${bidirectionalSource.label} ⇆ ${bidirectionalTarget.label}`}
           style={{ width: LANGUAGE_SELECT_WIDTH }}
-          className="h-8 min-w-0 max-w-[200px] justify-start gap-2 overflow-hidden bg-background-subtle px-3 text-foreground text-sm shadow-none disabled:opacity-100">
+          className="h-8 min-w-0 max-w-[200px] justify-center gap-2 overflow-hidden bg-background-subtle px-3 text-foreground text-sm shadow-none disabled:opacity-100">
           <span className="sr-only">{`${bidirectionalSource.label} ⇆ ${bidirectionalTarget.label}`}</span>
-          <span className="flex min-w-0 items-center gap-1.5">
-            <span className="text-sm leading-none">{bidirectionalSource.emoji}</span>
-            <span className="truncate">{bidirectionalSource.label}</span>
-          </span>
+          <span className="min-w-0 truncate">{bidirectionalSource.label}</span>
           <ArrowLeftRight size={14} className="shrink-0 text-foreground-tertiary" />
-          <span className="flex min-w-0 items-center gap-1.5">
-            <span className="text-sm leading-none">{bidirectionalTarget.emoji}</span>
-            <span className="truncate">{bidirectionalTarget.label}</span>
-          </span>
+          <span className="min-w-0 truncate">{bidirectionalTarget.label}</span>
         </Button>
       ) : (
         <Combobox

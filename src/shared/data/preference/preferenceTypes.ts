@@ -166,6 +166,7 @@ export type TranslateRegexReplacementRule = {
   flags: string
   replacement: string
   enabled?: boolean
+  stage?: 'after' | 'before'
 }
 
 /**

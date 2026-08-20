@@ -88,6 +88,21 @@ describe('TranslationUseCase', () => {
     })
   })
 
+  it('uses preprocessed request text for execution identity while preserving the original source', async () => {
+    const adapter = ports()
+    const result = await prepareTranslation({ ...command, requestText: 'hello normalized' }, adapter)
+
+    expect(result).toMatchObject({
+      status: 'ready',
+      value: {
+        sourceText: 'hello',
+        requestText: 'hello normalized',
+        cacheKey: `translate:${modelId}:en-us:zh-cn:hello normalized`
+      }
+    })
+    expect(adapter.detectLanguage).toHaveBeenCalledWith('hello', undefined)
+  })
+
   it('keeps same-language and outside-pair decisions distinct', async () => {
     await expect(
       prepareTranslation(
@@ -115,6 +130,7 @@ describe('TranslationUseCase', () => {
         cacheKey: `polish-translate:${modelId}:${polishModelId}:en-us:zh-cn:hello`,
         mode: 'polish_then_translate',
         polishModelId,
+        requestText: 'normalized hello',
         sourceLanguage: 'en-us',
         sourceText: 'hello',
         targetLanguage: 'zh-cn',
@@ -142,7 +158,7 @@ describe('TranslationUseCase', () => {
       rawText: 'raw translation',
       displayText: 'processed:raw translation'
     })
-    expect(events).toEqual(['polish:hello', 'translate:polished', 'process', 'save:raw translation'])
+    expect(events).toEqual(['polish:normalized hello', 'translate:polished', 'process', 'save:raw translation'])
   })
 
   it('returns the translated result when history persistence fails', async () => {
