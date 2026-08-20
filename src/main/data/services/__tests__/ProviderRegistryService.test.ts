@@ -931,5 +931,85 @@ describe('ProviderRegistryService', () => {
 
       expect(result.reasoningProfile.format).toBe('openai-chat')
     })
+
+    it('uses the model vendor reasoning contract for New API models', () => {
+      mockReadModels.mockReturnValue({
+        version: '1.0',
+        models: [
+          {
+            id: 'qwen3-5-flash',
+            name: 'Qwen3.5 Flash',
+            capabilities: ['reasoning'],
+            reasoning: { controls: [{ kind: 'toggle' }], supportedEfforts: ['none', 'auto'] }
+          }
+        ]
+      } as ReturnType<typeof readModelRegistry>)
+      mockReadProviderModels.mockReturnValue({
+        version: '1.0',
+        overrides: [
+          {
+            providerId: 'dashscope',
+            modelId: 'qwen3-5-flash',
+            reasoningContracts: {
+              'openai-chat-completions': {
+                wire: {
+                  off: {
+                    operations: [{ target: 'enable_thinking', value: { source: 'literal', value: false } }]
+                  }
+                }
+              }
+            }
+          }
+        ]
+      } as ReturnType<typeof readProviderModelRegistry>)
+      mockReadProviders.mockReturnValue({
+        version: '1.0',
+        providers: [
+          {
+            id: 'new-api',
+            name: 'New API',
+            endpointConfigs: {
+              'openai-chat-completions': {
+                baseUrl: 'http://localhost:3000',
+                reasoningFormat: { type: 'openai-chat' }
+              }
+            },
+            metadata: {}
+          },
+          {
+            id: 'dashscope',
+            name: 'Bailian',
+            defaultChatEndpoint: 'openai-chat-completions',
+            endpointConfigs: {
+              'openai-chat-completions': { baseUrl: 'https://dashscope.example/v1' }
+            },
+            metadata: {}
+          }
+        ]
+      } as ReturnType<typeof readProviderRegistry>)
+      clearServiceCache()
+
+      const resolved = providerRegistryService.resolveReasoningProfile(
+        {
+          id: 'custom-new-api',
+          presetProviderId: 'new-api',
+          defaultChatEndpoint: 'openai-chat-completions'
+        },
+        {
+          id: 'custom-new-api::qwen3.5-flash',
+          providerId: 'custom-new-api',
+          apiModelId: 'qwen3.5-flash',
+          presetModelId: 'qwen3-5-flash',
+          name: 'Qwen3.5 Flash',
+          capabilities: ['reasoning'],
+          reasoning: { controls: [{ kind: 'toggle' }], selectableEfforts: ['none', 'auto'] }
+        } as never,
+        'openai-chat-completions'
+      )
+
+      expect(resolved.wire.off?.operations).toEqual([
+        { target: 'enable_thinking', value: { source: 'literal', value: false } }
+      ])
+    })
   })
 })

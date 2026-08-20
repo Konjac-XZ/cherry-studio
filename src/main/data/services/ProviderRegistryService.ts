@@ -36,7 +36,9 @@ import {
   inferReasoningControls,
   inferReasoningMembership,
   inferReasoningOwnedBy,
+  matchVendor,
   MODEL_CAPABILITY,
+  normalizeModelId,
   REASONING_EFFORT,
   REASONING_FORMAT_PROFILES,
   selectFormatWire,
@@ -889,6 +891,16 @@ class ProviderRegistryService {
     )
   }
 
+  private findNewApiModelProfileProvider(context: ReasoningProviderContext, model: Model) {
+    const profileProvider = this.findProfileProvider(context)
+    if (profileProvider?.id !== 'new-api') return undefined
+
+    const vendor = matchVendor(normalizeModelId(model.apiModelId ?? model.presetModelId ?? model.name))
+    if (!vendor) return undefined
+
+    return this.findRegistryProvider(vendor === 'qwen' ? 'dashscope' : vendor)
+  }
+
   private resolveProfileForModelData(
     context: ReasoningProviderContext,
     presetModel: ProtoModelConfig | null,
@@ -924,21 +936,30 @@ class ProviderRegistryService {
     endpointType?: EndpointType
   ): ResolvedReasoningProfile {
     const profileProvider = this.findProfileProvider(provider)
+    const modelProfileProvider = this.findNewApiModelProfileProvider(provider, model)
     const effectiveEndpoint =
       endpointType ?? resolveReasoningEndpointType(model.endpointTypes, provider.defaultChatEndpoint)
     const providerIds = Array.from(
-      new Set([provider.id, profileProvider?.id, provider.presetProviderId].filter((value): value is string => !!value))
+      new Set(
+        [provider.id, profileProvider?.id, provider.presetProviderId, modelProfileProvider?.id].filter(
+          (value): value is string => !!value
+        )
+      )
     )
     const modelIds = Array.from(
       new Set([model.apiModelId, model.presetModelId].filter((value): value is string => !!value))
     )
     let contract: ProviderModelReasoningContract | undefined
     let matchedOverride: ProtoProviderModelOverride | null = null
+    let matchedContractProvider: ProtoProviderConfig | undefined
     for (const providerId of providerIds) {
       for (const modelId of modelIds) {
         const candidate = this.getLoader().findOverride(providerId, modelId)
         contract = effectiveEndpoint ? candidate?.reasoningContracts?.[effectiveEndpoint] : undefined
-        if (contract) matchedOverride = candidate
+        if (contract) {
+          matchedOverride = candidate
+          matchedContractProvider = this.findRegistryProvider(providerId)
+        }
         if (contract) break
       }
       if (contract) break
@@ -956,9 +977,15 @@ class ProviderRegistryService {
     const wireDialect =
       support?.wireDialect ?? this.getLoader().findModel(model.apiModelId ?? '')?.reasoning?.wireDialect
 
+    const formatProvider =
+      matchedContractProvider ??
+      (effectiveEndpoint && modelProfileProvider?.endpointConfigs?.[effectiveEndpoint]
+        ? modelProfileProvider
+        : profileProvider)
+
     const resolved = resolveReasoningProfileFromRegistry({
       endpointType: effectiveEndpoint,
-      format: effectiveEndpoint ? profileProvider?.endpointConfigs?.[effectiveEndpoint]?.reasoningFormat : undefined,
+      format: effectiveEndpoint ? formatProvider?.endpointConfigs?.[effectiveEndpoint]?.reasoningFormat : undefined,
       contract,
       wireDialect
     })
