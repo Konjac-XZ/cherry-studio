@@ -1,5 +1,6 @@
 import { Avatar, AvatarFallback, Button, Checkbox, Tooltip } from '@cherrystudio/ui'
 import { useIcon } from '@cherrystudio/ui/icons'
+import { cn } from '@cherrystudio/ui/lib/utils'
 import { loggerService } from '@logger'
 import { getModelDisplayTags, ModelTag } from '@renderer/components/tags/Model'
 import { DynamicVirtualList, type DynamicVirtualListRef } from '@renderer/components/VirtualList'
@@ -11,7 +12,7 @@ import { isDev } from '@renderer/utils/platform'
 import { isUniqueModelId, type Model, type UniqueModelId } from '@shared/data/types/model'
 import type { SettingsPath } from '@shared/data/types/settingsPath'
 import { first } from 'es-toolkit/compat'
-import { CircleSlash, Pin, Settings2 } from 'lucide-react'
+import { CircleSlash, Globe2, Pin, Settings2 } from 'lucide-react'
 import {
   type KeyboardEvent,
   startTransition,
@@ -29,7 +30,7 @@ import type { SelectorShellBottomAction, SelectorShellLayout } from '../Selector
 import { SelectorShell } from '../SelectorShell'
 import type { ModelSelectorTag } from './filters'
 import { ModelSelectorDetailCard } from './ModelSelectorDetailCard'
-import { ModelSelectorRow, ModelSelectorRowActionButton } from './ModelSelectorRow'
+import { MODEL_SELECTOR_ROW_CLASS, ModelSelectorRow, ModelSelectorRowActionButton } from './ModelSelectorRow'
 import { computeCollapsedSelection, computeToggledSelection } from './selection'
 import type { FlatListItem, ModelSelectorModelItem, ModelSelectorProps, ModelSelectorSelectionType } from './types'
 import { DEFAULT_MODEL_SELECTOR_PAGE_SIZE, useModelListKeyboardNav } from './useModelListKeyboardNav'
@@ -327,6 +328,7 @@ export function ModelSelector(props: ModelSelectorProps) {
     showTagFilter = true,
     showPinnedModels = true,
     showPinActions = true,
+    fixedTopOption,
     prioritizedProviderIds = DEFAULT_PRIORITIZED_PROVIDER_IDS,
     side = 'bottom',
     align = 'start',
@@ -639,6 +641,11 @@ export function ModelSelector(props: ModelSelectorProps) {
     setOpen(false)
   }, [emitSelection, setOpen])
 
+  const handleSelectFixedTopOption = useCallback(() => {
+    fixedTopOption?.onSelect()
+    setOpen(false)
+  }, [fixedTopOption, setOpen])
+
   const handleTogglePin = useCallback(
     (modelId: UniqueModelId) => {
       if (isPinActionDisabled) {
@@ -913,7 +920,8 @@ export function ModelSelector(props: ModelSelectorProps) {
     return actions
   }, [handleNavigateToCustomModelSettings, handleSelectNone, noneOptionLabel, rawSelectedModelIds.length, t])
 
-  const initialListHeight = Math.min(listHeight, MODEL_SELECTOR_CONTENT_HEIGHT)
+  const fixedTopOptionHeight = fixedTopOption ? ITEM_HEIGHT : 0
+  const initialListHeight = Math.min(listHeight + fixedTopOptionHeight, MODEL_SELECTOR_CONTENT_HEIGHT)
 
   return (
     <>
@@ -938,33 +946,63 @@ export function ModelSelector(props: ModelSelectorProps) {
         data-testid="model-selector-content">
         {({ availableListHeight, portalContainer: detailPortalContainer }) => {
           const visibleListHeight = availableListHeight === undefined ? initialListHeight : availableListHeight
-          const virtualListHeight = Math.max(0, visibleListHeight - MODEL_SELECTOR_LIST_VERTICAL_PADDING)
+          const virtualListHeight = Math.max(
+            0,
+            visibleListHeight - MODEL_SELECTOR_LIST_VERTICAL_PADDING - fixedTopOptionHeight
+          )
 
-          return listItems.length > 0 ? (
-            <div
-              className="py-1"
-              role="listbox"
-              aria-multiselectable={multiple && multiSelectMode}
-              style={{ height: visibleListHeight }}>
-              <DynamicVirtualList
-                ref={listRef}
-                list={listItems}
-                size={virtualListHeight}
-                estimateSize={estimateModelSelectorItemSize}
-                getItemKey={getListItemKey}
-                isSticky={isStickyListItem}
-                scrollPaddingStart={ITEM_HEIGHT}
-                onScroll={handleListScroll}
-                overscan={6}>
-                {(item) => rowRenderer(item, detailPortalContainer)}
-              </DynamicVirtualList>
-            </div>
-          ) : (
-            <div
-              className="flex items-center justify-center px-3 py-4 text-muted-foreground text-xs"
-              style={{ height: visibleListHeight }}
-              data-testid="model-selector-empty">
-              {t('models.no_matches')}
+          return (
+            <div className="flex flex-col py-1" style={{ height: visibleListHeight }}>
+              {fixedTopOption ? (
+                <div className="h-9 shrink-0">
+                  <button
+                    type="button"
+                    aria-pressed={fixedTopOption.selected}
+                    onClick={handleSelectFixedTopOption}
+                    className={cn(
+                      MODEL_SELECTOR_ROW_CLASS,
+                      'pr-0.5',
+                      fixedTopOption.selected
+                        ? 'bg-accent/70 text-accent-foreground'
+                        : 'text-foreground hover:bg-accent/60'
+                    )}>
+                    {fixedTopOption.selected ? (
+                      <span
+                        aria-hidden="true"
+                        className="-translate-y-1/2 absolute top-1/2 left-0 block h-[60%] w-0.75 rounded-full bg-primary"
+                      />
+                    ) : null}
+                    <span className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+                      <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-border bg-muted/40">
+                        <Globe2 className="size-3.5" />
+                      </span>
+                      <span className="min-w-0 flex-1 truncate text-left">{fixedTopOption.label}</span>
+                    </span>
+                  </button>
+                </div>
+              ) : null}
+              {listItems.length > 0 ? (
+                <div className="min-h-0 flex-1" role="listbox" aria-multiselectable={multiple && multiSelectMode}>
+                  <DynamicVirtualList
+                    ref={listRef}
+                    list={listItems}
+                    size={virtualListHeight}
+                    estimateSize={estimateModelSelectorItemSize}
+                    getItemKey={getListItemKey}
+                    isSticky={isStickyListItem}
+                    scrollPaddingStart={ITEM_HEIGHT}
+                    onScroll={handleListScroll}
+                    overscan={6}>
+                    {(item) => rowRenderer(item, detailPortalContainer)}
+                  </DynamicVirtualList>
+                </div>
+              ) : (
+                <div
+                  className="flex min-h-0 flex-1 items-center justify-center px-3 py-4 text-muted-foreground text-xs"
+                  data-testid="model-selector-empty">
+                  {t('models.no_matches')}
+                </div>
+              )}
             </div>
           )
         }}

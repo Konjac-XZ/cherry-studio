@@ -272,6 +272,33 @@ describe('ModelSelector', () => {
     expect(onOpenChange).toHaveBeenCalledWith(false)
   })
 
+  it('keeps a fixed top option visually integrated with the model list and closes after selection', async () => {
+    const user = userEvent.setup()
+    const onOpenChange = vi.fn()
+    const onSelect = vi.fn()
+
+    render(
+      <ModelSelector
+        open
+        multiple={false}
+        fixedTopOption={{ label: 'Use global model', selected: true, onSelect }}
+        trigger={<button type="button">open</button>}
+        onOpenChange={onOpenChange}
+        onSelect={vi.fn()}
+      />
+    )
+
+    const fixedOption = screen.getByRole('button', { name: 'Use global model' })
+    expect(fixedOption).toHaveAttribute('aria-pressed', 'true')
+    // The frozen choice intentionally shares the model-row geometry instead of becoming separate selector chrome.
+    expect(fixedOption).toHaveClass('h-8', 'rounded-[10px]', 'px-2', 'bg-accent/70')
+
+    await user.click(fixedOption)
+
+    expect(onSelect).toHaveBeenCalledOnce()
+    expect(onOpenChange).toHaveBeenCalledWith(false)
+  })
+
   it('tears down the lazy shell before resetting an active tag filter on close', async () => {
     const user = userEvent.setup()
     const resetTags = vi.fn(() => {

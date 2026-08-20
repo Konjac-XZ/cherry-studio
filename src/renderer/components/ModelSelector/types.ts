@@ -10,6 +10,11 @@ export type ModelSelectorAlign = 'start' | 'center' | 'end'
 export type ModelSelectorSelectionType = 'model' | 'id'
 export type ModelSelectorMountStrategy = 'destroy' | 'lazy-keep'
 export type ModelSelectorFilter = (model: Model, provider?: Provider) => boolean
+export type ModelSelectorFixedTopOption = {
+  label: ReactNode
+  selected: boolean
+  onSelect: () => void
+}
 
 interface ModelSelectorCommonProps {
   trigger: ReactNode
@@ -19,6 +24,7 @@ interface ModelSelectorCommonProps {
   showTagFilter?: boolean
   showPinnedModels?: boolean
   showPinActions?: boolean
+  fixedTopOption?: ModelSelectorFixedTopOption
   prioritizedProviderIds?: readonly string[]
   side?: ModelSelectorSide
   align?: ModelSelectorAlign
