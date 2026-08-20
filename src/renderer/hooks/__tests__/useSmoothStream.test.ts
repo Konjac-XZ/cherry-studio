@@ -307,4 +307,15 @@ describe('useSmoothStream', () => {
 
     expect(lastText(onUpdate)).toBe('hello')
   })
+
+  it('drains a typical completed tail within 750ms', () => {
+    const onUpdate = vi.fn()
+    const text = 'a'.repeat(300)
+    const { result } = renderHook(() => useSmoothStream({ onUpdate, minDelay: 0 }))
+
+    act(() => result.current.update(text, true))
+    act(() => tick(16, 45))
+
+    expect(lastText(onUpdate)).toBe(text)
+  })
 })

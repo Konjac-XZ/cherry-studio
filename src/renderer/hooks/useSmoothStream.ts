@@ -82,11 +82,11 @@ const MAX_FRAME_DT_MS = 100
  * After the upstream stream ends there are no more arrivals, so `rate_est`
  * decays to ~0. The tail then plays out at `max(POST_STREAM_STEP per frame,
  * fast enough to finish within POST_STREAM_DRAIN_SEC)`: a short tail keeps
- * the gentle typewriter; a multi-thousand-char tail finishes in a couple of
- * seconds instead of crawling at MIN_STEP.
+ * the gentle typewriter; a multi-thousand-char tail finishes in about a
+ * second instead of crawling at MIN_STEP.
  */
-const POST_STREAM_STEP = 5
-const POST_STREAM_DRAIN_SEC = 2.0
+const POST_STREAM_STEP = 8
+const POST_STREAM_DRAIN_SEC = 1.0
 
 const MIN_STEP = 1
 
