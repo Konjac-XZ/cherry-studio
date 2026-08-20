@@ -260,21 +260,13 @@ export default function ProviderList({ selectedProviderId, filterModeHint, onSel
 
   const handleHideProvider = useCallback(
     async (provider: Provider) => {
-      await ConfirmActionPopup.show({
-        title: t('settings.provider.hide.title'),
-        content: t('settings.provider.hide.content'),
-        danger: true,
-        okText: t('settings.provider.hide.action'),
-        action: async () => {
-          await updateProviderById(provider.id, { isEnabled: false })
-          await setHiddenBuiltInIds(Array.from(new Set([...hiddenBuiltInIds, provider.id])))
-          const fallback = filterRuntimeVisibleProviders(providers, [...hiddenBuiltInIds, provider.id])[0]
-          if (fallback) onSelectProvider(fallback.id)
-          handleFilterChange('all')
-        }
-      })
+      await updateProviderById(provider.id, { isEnabled: false })
+      await setHiddenBuiltInIds(Array.from(new Set([...hiddenBuiltInIds, provider.id])))
+      const fallback = filterRuntimeVisibleProviders(providers, [...hiddenBuiltInIds, provider.id])[0]
+      if (fallback) onSelectProvider(fallback.id)
+      handleFilterChange('all')
     },
-    [handleFilterChange, hiddenBuiltInIds, onSelectProvider, providers, setHiddenBuiltInIds, t, updateProviderById]
+    [handleFilterChange, hiddenBuiltInIds, onSelectProvider, providers, setHiddenBuiltInIds, updateProviderById]
   )
 
   const handleRestoreProvider = useCallback(
@@ -360,6 +352,7 @@ export default function ProviderList({ selectedProviderId, filterModeHint, onSel
         onDragStateChange={handleDragStateChange}
         onReorder={applyReorderedList}
         onReorderError={handleReorderError}
+        onHideProvider={handleHideProvider}
         renderItem={renderProviderItem}
       />
       <div className={providerListClasses.addFooter}>{addProviderButton}</div>

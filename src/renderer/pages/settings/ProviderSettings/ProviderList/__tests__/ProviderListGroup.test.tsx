@@ -12,6 +12,20 @@ vi.mock('@cherrystudio/ui', () => ({
   }
 }))
 
+vi.mock('@renderer/components/command', () => ({
+  CommandContextMenu: ({ children }: { children: React.ReactNode }) => children,
+  CommandPopupMenu: ({ children, extraItems }: { children: React.ReactNode; extraItems: any[] }) => (
+    <div>
+      {children}
+      {extraItems.map((item) => (
+        <button key={item.id} type="button" onClick={item.onSelect}>
+          {item.label}
+        </button>
+      ))}
+    </div>
+  )
+}))
+
 vi.mock('@renderer/i18n/label', () => ({ getProviderLabelKey: (id: string) => id }))
 vi.mock('@renderer/pages/settings/ProviderSettings/components/ProviderAvatar', () => ({
   ProviderAvatar: (props: any) => {
@@ -173,6 +187,29 @@ describe('ProviderListGroup', () => {
 
     expect(screen.getByTestId('provider-list-group-enabled-dot-zhipu')).toBeInTheDocument()
     expect(screen.getByTestId('provider-list-group-chevron-zhipu')).toBeInTheDocument()
+  })
+
+  it('offers the canonical provider hide action from a collapsed group header', () => {
+    const onHide = vi.fn()
+
+    render(
+      <ProviderListGroup
+        presetProviderId="zhipu"
+        members={providers}
+        items={providers}
+        expanded={false}
+        containsSelected={false}
+        onToggle={() => {}}
+        onHide={onHide}
+        onDragStateChange={() => {}}
+        onReorder={() => {}}
+        renderItem={() => null}
+      />
+    )
+
+    fireEvent.click(screen.getByText('settings.provider.hide.action'))
+
+    expect(onHide).toHaveBeenCalledTimes(1)
   })
 
   it('stops pointer/key events in the expanded body from reaching the outer drag surface', () => {

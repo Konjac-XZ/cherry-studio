@@ -25,6 +25,7 @@ interface ProviderListContentProps {
   onDragStateChange: (nextDragging: boolean) => void
   onReorder: (reorderedProviders: Provider[]) => void | Promise<void>
   onReorderError?: (error: unknown) => void
+  onHideProvider?: (provider: Provider) => void
   renderItem: (provider: Provider, index: number, state: ProviderListContentItemState) => ReactNode
 }
 
@@ -100,6 +101,7 @@ export default function ProviderListContent({
   onDragStateChange,
   onReorder,
   onReorderError,
+  onHideProvider,
   renderItem
 }: ProviderListContentProps) {
   const { t } = useTranslation()
@@ -201,6 +203,7 @@ export default function ProviderListContent({
           // matches and shouldn't have to click through a chevron to see them.
           const expanded = !state.overlay && (searchActive || (expandedGroups[item.presetProviderId] ?? false))
           const containsSelected = !!selectedProviderId && item.members.some((m) => m.id === selectedProviderId)
+          const canonicalProvider = item.members.find((member) => member.id === item.presetProviderId)
 
           return (
             <ProviderListGroup
@@ -214,6 +217,7 @@ export default function ProviderListContent({
               onDragStateChange={onDragStateChange}
               onReorder={onReorder}
               onReorderError={onReorderError}
+              onHide={canonicalProvider && onHideProvider ? () => onHideProvider(canonicalProvider) : undefined}
               renderItem={renderItem}
             />
           )

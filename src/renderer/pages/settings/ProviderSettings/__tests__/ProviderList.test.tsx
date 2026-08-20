@@ -2,6 +2,7 @@ import { toast } from '@renderer/services/toast'
 import { ENDPOINT_TYPE } from '@shared/data/types/model'
 import { MockUseCacheUtils } from '@test-mocks/renderer/useCache'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ProviderList } from '../ProviderList'
@@ -444,7 +445,7 @@ describe('ProviderList', () => {
     expect(MockUseCacheUtils.getPersistCacheValue('settings.provider.filter_mode')).toBe('all')
   })
 
-  it('shows management actions for preset-derived and custom providers but not canonical presets', () => {
+  it('shows management actions for user providers but not registry providers with aliased presets', () => {
     useProvidersMock.mockReturnValue({
       providers: [
         {
@@ -462,6 +463,13 @@ describe('ProviderList', () => {
           isEnabled: true
         },
         {
+          id: 'zai',
+          name: 'Z.ai',
+          presetProviderId: 'zhipu',
+          defaultChatEndpoint: ENDPOINT_TYPE.OPENAI_CHAT_COMPLETIONS,
+          isEnabled: true
+        },
+        {
           id: 'my-local-llm',
           name: 'My Local LLM',
           defaultChatEndpoint: ENDPOINT_TYPE.OPENAI_CHAT_COMPLETIONS,
@@ -475,6 +483,7 @@ describe('ProviderList', () => {
 
     expect(screen.getByTestId('provider-list-manage-openai')).toHaveTextContent('false')
     expect(screen.getByTestId('provider-list-manage-openai-work')).toHaveTextContent('true')
+    expect(screen.getByTestId('provider-list-manage-zai')).toHaveTextContent('false')
     expect(screen.getByTestId('provider-list-manage-my-local-llm')).toHaveTextContent('true')
   })
 
@@ -494,14 +503,16 @@ describe('ProviderList', () => {
     await vi.waitFor(() => expect(deleteProviderMock).toHaveBeenCalledWith('openai'))
   })
 
-  it('disables and hides a canonical built-in provider after confirmation', async () => {
+  it('disables and hides a canonical built-in provider immediately', async () => {
+    const user = userEvent.setup()
     const updateProviderById = vi.fn().mockResolvedValue(undefined)
     const onSelectProvider = vi.fn()
     useProviderActionsMock.mockReturnValue({ updateProviderById, deleteProviderById: vi.fn() })
 
     render(<ProviderList selectedProviderId="openai" onSelectProvider={onSelectProvider} />)
-    fireEvent.click(screen.getByTestId('provider-list-hide-openai'))
+    await user.click(screen.getByTestId('provider-list-hide-openai'))
 
+    expect(confirmActionShow).not.toHaveBeenCalled()
     await waitFor(() => expect(updateProviderById).toHaveBeenCalledWith('openai', { isEnabled: false }))
     expect(setHiddenBuiltInIdsMock).toHaveBeenCalledWith(['openai'])
     expect(onSelectProvider).toHaveBeenCalledWith('anthropic')

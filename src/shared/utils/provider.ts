@@ -14,6 +14,7 @@ import type { Provider } from '@shared/data/types/provider'
 
 import { getLowerBaseModelName, getRawModelId, isFunctionCallingModel, isGeminiModel, isNonChatModel } from './model'
 import { getProviderHostTopology } from './providerTopology'
+import { isSystemProviderId } from './systemProviderId'
 
 // Azure/Vertex/Bedrock reuse other vendors' endpoint protocols, so authType
 // is the only reliable discriminator (seeded skeletons may lack a distinct
@@ -130,11 +131,11 @@ export function matchesPreset(provider: Pick<Provider, 'id' | 'presetProviderId'
 }
 
 /**
- * Canonical preset providers are seeded built-ins whose runtime ID equals the
- * linked preset ID. Preset-derived user providers remain user-manageable.
+ * Registry providers are seeded built-ins and cannot be managed as user rows.
+ * Preset-derived user providers remain user-manageable.
  */
 export function canManageProvider(provider: Provider): boolean {
-  return provider.presetProviderId == null || provider.presetProviderId !== provider.id
+  return !isSystemProviderId(provider.id)
 }
 
 /**

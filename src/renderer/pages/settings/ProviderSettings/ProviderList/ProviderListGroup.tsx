@@ -1,11 +1,12 @@
 import { ReorderableList } from '@cherrystudio/ui'
+import { CommandContextMenu, type CommandContextMenuExtraItem, CommandPopupMenu } from '@renderer/components/command'
 import { getProviderLabelKey } from '@renderer/i18n/label'
 import { ProviderAvatar } from '@renderer/pages/settings/ProviderSettings/components/ProviderAvatar'
 import { providerListClasses } from '@renderer/pages/settings/ProviderSettings/primitives/ProviderSettingsPrimitives'
 import { cn } from '@renderer/utils/style'
 import type { Provider } from '@shared/data/types/provider'
-import { ChevronRight, GripVertical, Plus } from 'lucide-react'
-import { type ReactNode, useId } from 'react'
+import { ChevronRight, EyeOff, GripVertical, MoreVertical, Plus } from 'lucide-react'
+import { type KeyboardEvent, type MouseEvent, type ReactNode, useId, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type { ProviderListContentItemState } from './ProviderListContent'
@@ -28,6 +29,7 @@ export interface ProviderListGroupProps {
   onDragStateChange: (dragging: boolean) => void
   onReorder: (reorderedProviders: Provider[]) => void | Promise<void>
   onReorderError?: (error: unknown) => void
+  onHide?: () => void
   renderItem: (provider: Provider, index: number, state: ProviderListContentItemState) => ReactNode
 }
 
@@ -50,6 +52,7 @@ export default function ProviderListGroup({
   onDragStateChange,
   onReorder,
   onReorderError,
+  onHide,
   renderItem
 }: ProviderListGroupProps) {
   const { t } = useTranslation()
@@ -57,53 +60,107 @@ export default function ProviderListGroup({
   const label = t(getProviderLabelKey(presetProviderId))
   const headerHighlight = !expanded && containsSelected
   const hasEnabledMember = members.some((member) => member.isEnabled)
+  const menuItems = useMemo<readonly CommandContextMenuExtraItem[]>(
+    () =>
+      onHide
+        ? [
+            {
+              type: 'item',
+              id: 'hide',
+              label: t('settings.provider.hide.action'),
+              icon: <EyeOff size={14} />,
+              destructive: true,
+              onSelect: onHide
+            }
+          ]
+        : [],
+    [onHide, t]
+  )
+
+  const handleHeaderKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.currentTarget !== event.target) return
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      onToggle()
+    }
+  }
+
+  const handleMenuClick = (event: MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation()
+  }
 
   return (
     <div className="w-full">
-      <button
-        type="button"
-        aria-expanded={expanded}
-        aria-controls={bodyId}
-        data-testid={`provider-list-group-${presetProviderId}`}
-        data-has-selected={containsSelected ? 'true' : 'false'}
-        onClick={onToggle}
-        className={cn(providerListClasses.groupHeader, headerHighlight && providerListClasses.groupHeaderHasSelected)}>
-        <div className={providerListClasses.itemMain}>
-          <span
-            aria-hidden
-            data-testid={`provider-list-group-drag-handle-${presetProviderId}`}
-            className={providerListClasses.itemDragHandle}>
-            <GripVertical size={16} />
-          </span>
-          <div className={providerListClasses.itemIdentity}>
-            <ProviderAvatar
-              provider={{ id: presetProviderId, name: label }}
-              size={26}
-              className={providerListClasses.itemAvatar}
-              displayContext="provider-list"
-            />
-            <span className={cn(providerListClasses.itemLabel, 'text-foreground')}>{label}</span>
-          </div>
-        </div>
-        <div className={providerListClasses.groupTrailing}>
-          {hasEnabledMember && (
+      <CommandContextMenu location="webcontents.context" extraItems={menuItems} disabled={!onHide}>
+        <div
+          role="button"
+          tabIndex={0}
+          aria-expanded={expanded}
+          aria-controls={bodyId}
+          data-testid={`provider-list-group-${presetProviderId}`}
+          data-has-selected={containsSelected ? 'true' : 'false'}
+          onClick={onToggle}
+          onKeyDown={handleHeaderKeyDown}
+          className={cn(
+            providerListClasses.groupHeader,
+            headerHighlight && providerListClasses.groupHeaderHasSelected
+          )}>
+          <div className={providerListClasses.itemMain}>
             <span
               aria-hidden
-              data-testid={`provider-list-group-enabled-dot-${presetProviderId}`}
-              className={providerListClasses.groupEnabledDot}
-            />
-          )}
-          <ChevronRight
-            size={12}
-            data-testid={`provider-list-group-chevron-${presetProviderId}`}
-            className={cn(
-              providerListClasses.groupChevron,
-              expanded && providerListClasses.groupChevronOpen,
-              hasEnabledMember && providerListClasses.groupChevronHiddenUntilHover
+              data-testid={`provider-list-group-drag-handle-${presetProviderId}`}
+              className={providerListClasses.itemDragHandle}>
+              <GripVertical size={16} />
+            </span>
+            <div className={providerListClasses.itemIdentity}>
+              <ProviderAvatar
+                provider={{ id: presetProviderId, name: label }}
+                size={26}
+                className={providerListClasses.itemAvatar}
+                displayContext="provider-list"
+              />
+              <span className={cn(providerListClasses.itemLabel, 'text-foreground')}>{label}</span>
+            </div>
+          </div>
+          <div className={cn(providerListClasses.groupTrailing, onHide && 'size-5')}>
+            {hasEnabledMember && (
+              <span
+                aria-hidden
+                data-testid={`provider-list-group-enabled-dot-${presetProviderId}`}
+                className={providerListClasses.groupEnabledDot}
+              />
             )}
-          />
+            {onHide ? (
+              <CommandPopupMenu
+                location="webcontents.context"
+                extraItems={menuItems}
+                align="end"
+                contentClassName={providerListClasses.itemMenuContent}>
+                <button
+                  type="button"
+                  aria-label={t('common.more')}
+                  data-testid={`provider-list-group-menu-${presetProviderId}`}
+                  onClick={handleMenuClick}
+                  className={providerListClasses.itemMoreActions}>
+                  <MoreVertical size={14} />
+                </button>
+              </CommandPopupMenu>
+            ) : null}
+            <ChevronRight
+              size={12}
+              data-testid={`provider-list-group-chevron-${presetProviderId}`}
+              className={cn(
+                providerListClasses.groupChevron,
+                expanded && providerListClasses.groupChevronOpen,
+                hasEnabledMember && 'absolute opacity-0',
+                onHide
+                  ? 'group-focus-within/row:opacity-0 group-hover/row:opacity-0'
+                  : hasEnabledMember && providerListClasses.groupChevronHiddenUntilHover
+              )}
+            />
+          </div>
         </div>
-      </button>
+      </CommandContextMenu>
       {expanded && (
         <div
           id={bodyId}

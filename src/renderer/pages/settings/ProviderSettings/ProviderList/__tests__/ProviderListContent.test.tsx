@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 // Capture every <ReorderableList> mount's `items` prop so we can assert the
 // grouped path feeds the full cache (C1 regression).
 const reorderableItemsCalls: Provider[][] = []
-const groupExpandedCalls: Array<{ presetProviderId: string; expanded: boolean }> = []
+const groupCalls: Array<{ presetProviderId: string; expanded: boolean; onHide?: () => void }> = []
 const sortableCalls: Array<{
   items: Array<{ id: string }>
   collisionDetection?: unknown
@@ -60,7 +60,7 @@ vi.mock('@cherrystudio/ui', () => {
 vi.mock('../ProviderListGroup', () => ({
   default: (props: any) => {
     reorderableItemsCalls.push(props.items)
-    groupExpandedCalls.push({ presetProviderId: props.presetProviderId, expanded: props.expanded })
+    groupCalls.push({ presetProviderId: props.presetProviderId, expanded: props.expanded, onHide: props.onHide })
     return <div data-testid={`provider-list-group-${props.presetProviderId}`} />
   }
 }))
@@ -101,7 +101,7 @@ describe('ProviderListContent — C1 grouped reorder', () => {
   beforeEach(() => {
     reorderableItemsCalls.length = 0
     sortableCalls.length = 0
-    groupExpandedCalls.length = 0
+    groupCalls.length = 0
   })
 
   // Standard block-reorder fixture: an expanded 2-member group flanked by two
@@ -156,6 +156,30 @@ describe('ProviderListContent — C1 grouped reorder', () => {
     // 2-item filtered view — otherwise computeMinimalMoves throws on reorder.
     expect(reorderableItemsCalls.length).toBeGreaterThan(0)
     expect(reorderableItemsCalls.every((items) => items.length === all.length)).toBe(true)
+  })
+
+  it('routes a grouped hide action to the canonical provider instead of its instances', () => {
+    const canonical = provider('zhipu', 'zhipu')
+    const instance = provider('zhipu-work', 'zhipu')
+    const onHideProvider = vi.fn()
+
+    render(
+      <ProviderListContent
+        providers={[canonical, instance]}
+        visibleProviders={[canonical, instance]}
+        searchActive={false}
+        expandedGroups={{}}
+        onToggleGroup={() => {}}
+        onDragStateChange={() => {}}
+        onReorder={() => {}}
+        onHideProvider={onHideProvider}
+        renderItem={() => null}
+      />
+    )
+
+    groupCalls[0]?.onHide?.()
+
+    expect(onHideProvider).toHaveBeenCalledWith(canonical)
   })
 
   it('reorders a ProviderListGroup as one full provider block', () => {
@@ -381,15 +405,15 @@ describe('ProviderListContent — C1 grouped reorder', () => {
     const groupItem = sortableCalls[0].items.find((item) => item.id === 'group:zhipu')!
 
     // Overlay copy: collapsed header-only, regardless of expandedGroups.
-    groupExpandedCalls.length = 0
+    groupCalls.length = 0
     render(<div>{sortableCalls[0].renderItem(groupItem, { dragging: false, overlay: true })}</div>)
-    expect(groupExpandedCalls.at(-1)).toMatchObject({ presetProviderId: 'zhipu', expanded: false })
+    expect(groupCalls.at(-1)).toMatchObject({ presetProviderId: 'zhipu', expanded: false })
 
     // In-list placeholder: still expanded (expandedGroups.zhipu === true) so it
     // reserves the full height.
-    groupExpandedCalls.length = 0
+    groupCalls.length = 0
     render(<div>{sortableCalls[0].renderItem(groupItem, { dragging: false, overlay: false })}</div>)
-    expect(groupExpandedCalls.at(-1)).toMatchObject({ presetProviderId: 'zhipu', expanded: true })
+    expect(groupCalls.at(-1)).toMatchObject({ presetProviderId: 'zhipu', expanded: true })
   })
 
   it('reports the outer drag state to the parent while the Sortable is active', () => {
