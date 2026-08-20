@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest'
 
 import { PersistedLangCodeSchema, TranslateLangCodeSchema } from '../../../preference/preferenceTypes'
 import { TranslateHistorySchema, TranslateLanguageSchema } from '../../../types/translate'
-import { CreateTranslateHistorySchema, CreateTranslateLanguageSchema, UpdateTranslateHistorySchema } from '../translate'
+import {
+  CreateTranslateHistorySchema,
+  CreateTranslateLanguageSchema,
+  TranslateHistoryQuerySchema,
+  UpdateTranslateHistorySchema
+} from '../translate'
 
 describe('PersistedLangCodeSchema', () => {
   it.each(['en-us', 'zh-cn', 'ja', 'ja-jp', 'zh-tw', 'fr-fr'])('accepts %s', (code) => {
@@ -61,6 +66,20 @@ describe('Translate API DTOs reject the "unknown" sentinel at the persistence bo
         ...baseHistory,
         sourceLanguage: 'en-us',
         targetLanguage: 'zh-cn'
+      }).success
+    ).toBe(true)
+  })
+
+  it('accepts cache keys longer than 4096 characters for lookup and persistence', () => {
+    const cacheKey = `translate:model:en-us:zh-cn:${'a'.repeat(4096)}`
+
+    expect(TranslateHistoryQuerySchema.safeParse({ cacheKey }).success).toBe(true)
+    expect(
+      CreateTranslateHistorySchema.safeParse({
+        ...baseHistory,
+        sourceLanguage: 'en-us',
+        targetLanguage: 'zh-cn',
+        cacheKey
       }).success
     ).toBe(true)
   })
@@ -137,6 +156,7 @@ describe('Translate entity schemas are strict', () => {
     expect(
       TranslateHistorySchema.safeParse({
         id: '019b0830-2e52-7000-8000-000000000001',
+        kind: 'text',
         sourceText: 'Hello',
         targetText: '你好',
         sourceLanguage: 'en-us',

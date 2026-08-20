@@ -32,7 +32,7 @@ export const CreateTranslateHistorySchema = TranslateHistorySchema.pick({
 }).extend({
   modelId: TranslateHistorySchema.shape.modelId.optional(),
   /** Optional caller-computed mode-aware cache identity (e.g. polish + translate). */
-  cacheKey: TranslateHistorySchema.shape.cacheKey.unwrap().max(4096).optional()
+  cacheKey: TranslateHistorySchema.shape.cacheKey.unwrap().optional()
 })
 /**
  * DTO for creating a translate history record. Uses `.strict()` — unknown
@@ -76,7 +76,7 @@ export const TranslateHistoryQuerySchema = z
     /** Language codes whose localized renderer labels match the active search text. */
     languageCodes: z.array(TranslateLanguageSchema.shape.langCode).max(50).optional(),
     /** Exact indexed lookup used by the translation flow cache. */
-    cacheKey: z.string().min(1).max(4096).optional(),
+    cacheKey: z.string().min(1).optional(),
     /** Exact source-text lookup used to restore a compatible language decision before auto-detection. */
     sourceText: TranslateHistorySchema.shape.sourceText.optional(),
     /** Filter by starred status */
