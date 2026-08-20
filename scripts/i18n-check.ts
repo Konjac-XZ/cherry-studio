@@ -1,6 +1,7 @@
 import * as fs from 'fs'
 import * as path from 'path'
 
+import { checkRuntimeChineseSpacing } from './i18n-check-runtime-spacing'
 import { checkTranslationValues } from './i18n-check-values'
 import { sortedObjectByKeys } from './sort'
 
@@ -260,6 +261,16 @@ export function main() {
     if (failures.length > 0) {
       for (const failure of failures) console.error(`  x ${failure}`)
       throw new Error(`${failures.length} translations failed validation`)
+    }
+    const runtimeSpacingFindings = checkRuntimeChineseSpacing()
+    if (runtimeSpacingFindings.length > 0) {
+      for (const finding of runtimeSpacingFindings) {
+        console.error(
+          `  x ${path.relative(path.join(__dirname, '..'), finding.file)}:${finding.line} ${finding.reason}`
+        )
+        console.error(`    ${finding.snippet}`)
+      }
+      throw new Error(`${runtimeSpacingFindings.length} runtime Chinese spacing risks found`)
     }
     console.log(`i18n 检查已通过（已校验 ${checked} 条翻译）`)
   } catch (e) {

@@ -5771,7 +5771,7 @@
         "create": "Creare rapidă",
         "createDescription": "Completează detaliile conexiunii pentru a crea serverul; toate celelalte setări pot fi ajustate ulterior.",
         "importFrom": {
-          "connectionFailed": "Conexiune eșuată",
+          "connectionFailed": "Conexiune eșuată: {{name}}",
           "dxt": "Importă pachet DXT",
           "dxtFile": "Fișier pachet DXT",
           "dxtHelp": "Selectează un fișier .dxt care conține un pachet de server MCP",
@@ -7500,7 +7500,7 @@
         "tip": "Disable reasoning unless custom parameters explicitly control it"
       },
       "model_placeholder": "Selectează modelul de traducere",
-      "native_language": "Native language",
+      "native_language": "Limba maternă a utilizatorului",
       "native_to_other_model": "Native to other languages",
       "other_to_native_model": "Other languages to native",
       "polish_enabled": "Polish before translation",
@@ -7512,6 +7512,8 @@
         "polish": "Polish prompt"
       },
       "regex_rules": {
+        "after_translation": "După traducere",
+        "before_translation": "Înainte de traducere",
         "title": "Regex replacements"
       },
       "scroll_sync": "Setări sincronizare derulare",
@@ -7521,6 +7523,13 @@
     "stop": "Oprește traducerea",
     "target_language": "Limbă țintă",
     "title": "Traducere",
+    "toolbar_toggle": {
+      "clipboard_watch": "Clipboard watch",
+      "html_conversion": "HTML conversion",
+      "polish": "Polish",
+      "post_processing": "Post-processing",
+      "status": "{{feature}}: {{status}}"
+    },
     "tooltip": {
       "force_refresh": "{{modifier}}+Click: refresh and overwrite the saved result",
       "newline": "Linie nouă"

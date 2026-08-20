@@ -1,5 +1,6 @@
 /** Checks source and translated catalog values before changes merge. */
 import * as fs from 'fs'
+import pangu from 'pangu'
 import * as path from 'path'
 
 type I18NValue = string | { [key: string]: I18NValue }
@@ -9,7 +10,11 @@ type Glossary = { doNotTranslate: string[] }
 const ROOT = path.resolve(__dirname, '..')
 const BASE_LOCALE = process.env.TRANSLATION_BASE_LOCALE ?? 'en-us'
 const CATALOG_DIRECTORIES = ['src/renderer/i18n/locales', 'src/main/i18n/locales']
+const CHINESE_LOCALES = ['zh-cn', 'zh-tw']
 const ALLOWED_EMPTY_SOURCE_KEYS = new Set(['src/renderer/i18n/locales:settings.provider.oauth.provided_by_suffix'])
+const BLOCK_TAG_PATTERN =
+  /<\/?(?:address|article|aside|blockquote|br|div|footer|h[1-6]|header|hr|li|main|nav|ol|p|pre|section|table|td|th|tr|ul)\b[^>]*>/gi
+const INLINE_TAG_PATTERN = /<\/?(?:[A-Za-z][\w-]*|\d+)(?:\s[^<>]*?)?\s*\/?>/g
 
 const flatten = (obj: I18N, prefix = '', out: Record<string, string> = {}): Record<string, string> => {
   for (const [key, value] of Object.entries(obj)) {
@@ -26,6 +31,18 @@ const flatten = (obj: I18N, prefix = '', out: Record<string, string> = {}): Reco
 const interpolations = (text: string) => (text.match(/{{[^}]*}}/g) ?? []).sort()
 const tagPlaceholders = (text: string) => (text.match(/<\/?[\w-]+\s*\/?>/g) ?? []).sort()
 const nestedKeys = (text: string) => (text.match(/\$t\([^)]*\)/g) ?? []).sort()
+
+const visibleTextProjection = (text: string) =>
+  text.replace(BLOCK_TAG_PATTERN, ' ').replace(INLINE_TAG_PATTERN, '').replace(/\s+/g, ' ').trim()
+
+export const validateChineseSpacing = (text: string): string | null => {
+  const projected = visibleTextProjection(text)
+  const actual = projected === text ? text : projected
+  const suggested = pangu.spacingText(actual)
+
+  if (typeof suggested !== 'string' || suggested === actual) return null
+  return `Chinese spacing: actual ${JSON.stringify(actual)}, suggested ${JSON.stringify(suggested)}`
+}
 
 /** Case and separators vary legitimately: "Github", "Cherry-Studio-Diagnose". Spelling does not. */
 const foldForTermMatch = (text: string) => text.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '')
@@ -103,6 +120,17 @@ export const checkTranslationValues = (): { checked: number; failures: string[] 
 
         checked++
         const reason = validate(english, translation, glossary.doNotTranslate)
+        if (reason) failures.push(`${catalogDirectory}/${filename} ${key}: ${reason}`)
+      }
+    }
+
+    for (const locale of CHINESE_LOCALES) {
+      const filename = `${locale}.json`
+      const target = flatten(readJson(path.join(catalogPath, filename)))
+
+      for (const [key, translation] of Object.entries(target)) {
+        checked++
+        const reason = validateChineseSpacing(translation)
         if (reason) failures.push(`${catalogDirectory}/${filename} ${key}: ${reason}`)
       }
     }

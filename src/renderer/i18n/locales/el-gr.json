@@ -5771,7 +5771,7 @@
         "create": "Γρήγορη Δημιουργία",
         "createDescription": "Συμπληρώστε τα στοιχεία σύνδεσης για να δημιουργήσετε τον διακομιστή· όλα τα υπόλοιπα μπορούν να προσαρμοστούν αργότερα.",
         "importFrom": {
-          "connectionFailed": "Αποτυχία Σύνδεσης",
+          "connectionFailed": "Αποτυχία Σύνδεσης: {{name}}",
           "dxt": "Εισαγωγή Πακέτου DXT",
           "dxtFile": "Αρχείο Πακέτου DXT",
           "dxtHelp": "Επιλέξτε ένα αρχείο .dxt που περιέχει διακομιστή MCP",
@@ -7500,7 +7500,7 @@
         "tip": "Disable reasoning unless custom parameters explicitly control it"
       },
       "model_placeholder": "Επιλέξτε μοντέλο μετάφρασης",
-      "native_language": "Native language",
+      "native_language": "Μητρική γλώσσα χρήστη",
       "native_to_other_model": "Native to other languages",
       "other_to_native_model": "Other languages to native",
       "polish_enabled": "Polish before translation",
@@ -7512,6 +7512,8 @@
         "polish": "Polish prompt"
       },
       "regex_rules": {
+        "after_translation": "Μετά τη μετάφραση",
+        "before_translation": "Πριν από τη μετάφραση",
         "title": "Regex replacements"
       },
       "scroll_sync": "Ρύθμιση συγχρονισμού κύλισης",
@@ -7521,6 +7523,13 @@
     "stop": "Σταματήστε τη μετάφραση",
     "target_language": "Γλώσσα προορισμού",
     "title": "Μετάφραση",
+    "toolbar_toggle": {
+      "clipboard_watch": "Clipboard watch",
+      "html_conversion": "HTML conversion",
+      "polish": "Polish",
+      "post_processing": "Post-processing",
+      "status": "{{feature}}: {{status}}"
+    },
     "tooltip": {
       "force_refresh": "{{modifier}}+Click: refresh and overwrite the saved result",
       "newline": "Αλλαγή γραμμής"

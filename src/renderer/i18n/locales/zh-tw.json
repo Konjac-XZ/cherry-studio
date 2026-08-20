@@ -5771,7 +5771,7 @@
         "create": "快速建立",
         "createDescription": "填寫連線詳細資訊以建立伺服器；其他所有設定稍後都可以調整。",
         "importFrom": {
-          "connectionFailed": "連線失敗",
+          "connectionFailed": "連線失敗：{{name}}",
           "dxt": "匯入 DXT 套件",
           "dxtFile": "DXT 套件檔案",
           "dxtHelp": "選擇包含 MCP 伺服器的 .dxt 檔案",
@@ -7500,9 +7500,9 @@
         "tip": "除非自訂參數明確控制推理，否則關閉模型推理"
       },
       "model_placeholder": "選擇翻譯模型",
-      "native_language": "母語",
-      "native_to_other_model": "母語譯為其他語言",
-      "other_to_native_model": "其他語言譯為母語",
+      "native_language": "使用者母語",
+      "native_to_other_model": "母語 → 外語",
+      "other_to_native_model": "外語 → 母語",
       "polish_enabled": "翻譯前潤飾",
       "polish_model": "潤飾模型",
       "preview": "Markdown 預覽",
@@ -7512,6 +7512,8 @@
         "polish": "潤飾提示詞"
       },
       "regex_rules": {
+        "after_translation": "翻譯後",
+        "before_translation": "翻譯前",
         "title": "正規表示式取代"
       },
       "scroll_sync": "同步捲動設定",
@@ -7521,6 +7523,13 @@
     "stop": "停止翻譯",
     "target_language": "目標語言",
     "title": "翻譯",
+    "toolbar_toggle": {
+      "clipboard_watch": "剪貼簿監聽",
+      "html_conversion": "HTML 轉換",
+      "polish": "潤飾",
+      "post_processing": "後處理",
+      "status": "{{feature}}{{status}}"
+    },
     "tooltip": {
       "force_refresh": "{{modifier}}+ 點擊：重新翻譯並覆蓋已儲存結果",
       "newline": "換行"

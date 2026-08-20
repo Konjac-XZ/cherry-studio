@@ -1,7 +1,7 @@
 /** Covers known broken translations and prevents false positives from stranding valid text. */
 import { describe, expect, it } from 'vitest'
 
-import { checkTranslationValues, validate, validateSource } from '../i18n-check-values'
+import { checkTranslationValues, validate, validateChineseSpacing, validateSource } from '../i18n-check-values'
 
 describe('validate rejects broken translations', () => {
   it('rejects a translation that drops an interpolation variable', () => {
@@ -76,6 +76,29 @@ describe('validateSource rejects broken source values', () => {
 
   it('rejects a translation placeholder in the source locale', () => {
     expect(validateSource('[to be translated]: Settings')).toMatch(/marker/)
+  })
+})
+
+describe('validateChineseSpacing', () => {
+  it.each(['18.1秒', '2.8万', '总Token数', '耗时{{seconds}}秒', '共{{count}}', '<strong>API</strong>设置'])(
+    'rejects missing Chinese display spacing in %s',
+    (text) => {
+      expect(validateChineseSpacing(text)).toMatch(/actual.*suggested/)
+    }
+  )
+
+  it.each([
+    '18.1 秒',
+    '2.8 万',
+    '总 Token 数',
+    '10MB',
+    'Qwen3',
+    '「{{name}}」',
+    '<strong>API</strong> 设置',
+    '<p>API</p><p>设置</p>',
+    '<a href="https://example.com">API</a> 设置'
+  ])('accepts valid Chinese display spacing in %s', (text) => {
+    expect(validateChineseSpacing(text)).toBeNull()
   })
 })
 

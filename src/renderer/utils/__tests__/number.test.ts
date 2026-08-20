@@ -43,7 +43,9 @@ describe('formatCompactNumber', () => {
 
   it('follows the active language', async () => {
     await i18n.changeLanguage('zh-CN')
-    expect(formatCompactNumber(12_000)).toBe('1.2万')
+    expect(formatCompactNumber(12_000)).toBe('1.2 万')
+    await i18n.changeLanguage('zh-TW')
+    expect(formatCompactNumber(12_000)).toBe('1.2 萬')
     await i18n.changeLanguage('en-US')
   })
 

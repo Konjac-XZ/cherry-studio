@@ -5771,7 +5771,7 @@
         "create": "Быстрое создание",
         "createDescription": "Заполните данные подключения, чтобы создать сервер; всё остальное можно настроить позже.",
         "importFrom": {
-          "connectionFailed": "Сбой подключения",
+          "connectionFailed": "Сбой подключения: {{name}}",
           "dxt": "Импорт DXT-пакета",
           "dxtFile": "DXT-пакет",
           "dxtHelp": "Выберите .dxt файл, содержащий MCP сервер",
@@ -7500,7 +7500,7 @@
         "tip": "Disable reasoning unless custom parameters explicitly control it"
       },
       "model_placeholder": "Выберите модель перевода",
-      "native_language": "Native language",
+      "native_language": "Родной язык пользователя",
       "native_to_other_model": "Native to other languages",
       "other_to_native_model": "Other languages to native",
       "polish_enabled": "Polish before translation",
@@ -7512,6 +7512,8 @@
         "polish": "Polish prompt"
       },
       "regex_rules": {
+        "after_translation": "После перевода",
+        "before_translation": "До перевода",
         "title": "Regex replacements"
       },
       "scroll_sync": "Настройки синхронизации прокрутки",
@@ -7521,6 +7523,13 @@
     "stop": "Остановить перевод",
     "target_language": "Целевой язык",
     "title": "Перевод",
+    "toolbar_toggle": {
+      "clipboard_watch": "Clipboard watch",
+      "html_conversion": "HTML conversion",
+      "polish": "Polish",
+      "post_processing": "Post-processing",
+      "status": "{{feature}}: {{status}}"
+    },
     "tooltip": {
       "force_refresh": "{{modifier}}+Click: refresh and overwrite the saved result",
       "newline": "Перевести"

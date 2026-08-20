@@ -5771,7 +5771,7 @@
         "create": "快速创建",
         "createDescription": "填写连接信息后创建，其余配置可稍后在详情页调整。",
         "importFrom": {
-          "connectionFailed": "连接失败",
+          "connectionFailed": "连接失败：{{name}}",
           "dxt": "导入 DXT 包",
           "dxtFile": "DXT 包文件",
           "dxtHelp": "选择包含 MCP 服务器的 .dxt 文件",
@@ -7070,7 +7070,7 @@
           "add": "添加术语失败",
           "required": "原文词语和指定译法不能为空"
         },
-        "hint": "启用且命中的词条会通过翻译提示词中的 {{customized_dictionary}} 注入。",
+        "hint": "启用且命中的词条会通过翻译提示词中的 {{customized_dictionary}} 注入",
         "source": "原文词语",
         "source_placeholder": "原文中的词语",
         "target": "指定译法",
@@ -7272,7 +7272,7 @@
     "complete": "翻译完成",
     "copied": "翻译内容已复制",
     "counter": {
-      "tip": "Token 估算包含当前生效的翻译提示词。",
+      "tip": "Token 估算包含当前生效的翻译提示词",
       "tokens": "Token",
       "words": "词"
     },
@@ -7296,7 +7296,7 @@
         "label": "自动检测方法",
         "llm": {
           "label": "LLM",
-          "tip": "使用快速模型进行语言检测，消耗少量 token。"
+          "tip": "使用快速模型进行语言检测，消耗少量 token"
         },
         "tip": "自动检测输入语言时使用的方法"
       }
@@ -7338,7 +7338,7 @@
     },
     "flip": {
       "label": "纠正检测方向并重新翻译",
-      "native_language_not_in_pair": "当前双向语言对不包含母语。",
+      "native_language_not_in_pair": "当前双向语言对不包含母语",
       "success": "已纠正翻译方向"
     },
     "history": {
@@ -7347,7 +7347,7 @@
       "clear_description": "清空历史将删除所有翻译历史记录，并一并回收其中生成的译文文件，是否继续？",
       "copy_target": "复制译文",
       "delete": "删除翻译历史",
-      "delete_description": "确定要删除这条翻译历史记录吗？若是文件翻译，生成的译文文件也会一并回收。此操作不可撤销。",
+      "delete_description": "确定要删除这条翻译历史记录吗？若是文件翻译，生成的译文文件也会一并回收，此操作不可撤销。",
       "empty": "暂无翻译历史",
       "error": {
         "add": "添加翻译历史失败",
@@ -7386,7 +7386,7 @@
     "html_conversion": "将剪贴板富文本 HTML 转换为 Markdown",
     "info": {
       "aborted": "翻译中止",
-      "reused_cached": "已复用之前的翻译结果。{{modifier}}+ 点击 “翻译” 可强制刷新。"
+      "reused_cached": "已复用之前的翻译结果，{{modifier}}+ 点击 “翻译” 可强制刷新"
     },
     "input": {
       "placeholder": "请输入文本..."
@@ -7442,7 +7442,7 @@
         "value": "{{stage}}，阶段 {{stageProgress}}%，总体 {{overallProgress}}%"
       },
       "ready": {
-        "description": "选择目标语言并开始翻译。",
+        "description": "选择目标语言并开始翻译",
         "title": "等待翻译"
       },
       "success": "译文 PDF 已生成"
@@ -7481,13 +7481,13 @@
         "copy_blank_line_between_rows": "复制多行时插入空行",
         "copy_separator": {
           "chinese_colon": "中文冒号",
-          "chinese_colon_newline": "中文冒号加换行",
-          "colon_newline": "冒号加换行",
-          "colon_space": "冒号加空格",
+          "chinese_colon_newline": "中文冒号 + 换行",
+          "colon_newline": "冒号 + 换行",
+          "colon_space": "冒号 + 空格",
           "label": "选择复制分隔符"
         },
         "label": "JSON 结构视图",
-        "tip": "将完整的 JSON 对象和数组显示为缩进表格。完整复制和翻译历史仍保留模型的原始输出。"
+        "tip": "将完整的 JSON 对象和数组显示为缩进表格，完整复制和翻译历史仍保留模型的原始输出"
       },
       "layout": {
         "auto": "自动",
@@ -7500,18 +7500,22 @@
         "tip": "除非自定义参数显式控制推理，否则关闭模型推理"
       },
       "model_placeholder": "选择翻译模型",
-      "native_language": "母语",
-      "native_to_other_model": "母语译为其他语言",
-      "other_to_native_model": "其他语言译为母语",
+      "native_language": "用户母语",
+      "native_to_other_model": "母语 → 外语",
+      "other_to_native_model": "外语 → 母语",
+      "other_to_native_prompt": "外语 → 母语 提示词",
+      "native_to_other_prompt": "母语 → 外语 提示词",
       "polish_enabled": "翻译前润色",
       "polish_model": "润色模型",
       "preview": "Markdown 预览",
       "prompt": {
-        "native_to_other": "母语译外语提示词",
-        "other_to_native": "外语译母语提示词",
+        "native_to_other": "翻译提示词（母语 → 外语）",
+        "other_to_native": "翻译提示词（外语 → 母语）",
         "polish": "润色提示词"
       },
       "regex_rules": {
+        "after_translation": "翻译后",
+        "before_translation": "翻译前",
         "title": "正则替换"
       },
       "scroll_sync": "滚动同步设置",
@@ -7521,6 +7525,13 @@
     "stop": "停止翻译",
     "target_language": "目标语言",
     "title": "翻译",
+    "toolbar_toggle": {
+      "clipboard_watch": "剪贴板监听",
+      "html_conversion": "HTML 转换",
+      "polish": "润色",
+      "post_processing": "后处理",
+      "status": "{{feature}}{{status}}"
+    },
     "tooltip": {
       "force_refresh": "{{modifier}}+ 点击：重新翻译并覆盖已保存结果",
       "newline": "换行"
