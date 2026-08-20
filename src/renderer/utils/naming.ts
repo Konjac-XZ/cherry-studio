@@ -125,7 +125,7 @@ const MODEL_NAME_WORDS: Record<string, string> = {
   yi: 'Yi'
 }
 
-const VERSION_FAMILY_WORDS = new Set(['claude'])
+const VERSION_FAMILY_WORDS = new Set(['claude', 'doubao'])
 const HYPHENATED_VERSION_FAMILY_WORDS = new Set(['glm', 'gpt'])
 const SPACED_VERSION_FAMILY_WORDS = new Set(['qwen'])
 
@@ -184,6 +184,14 @@ const shouldMergeVersionPair = (tokens: string[], index: number): boolean =>
 const shouldMergeDatePair = (tokens: string[], index: number): boolean =>
   /^\d{2,4}$/.test(tokens[index]) && /^\d{2}$/.test(tokens[index + 1]) && index >= tokens.length - 2
 
+const shouldMergeMonthYearPair = (tokens: string[], index: number): boolean =>
+  /^(?:0[1-9]|1[0-2])$/.test(tokens[index]) && /^\d{4}$/.test(tokens[index + 1]) && index === tokens.length - 2
+
+const shouldMergeYearCompactMonthDayPair = (tokens: string[], index: number): boolean =>
+  /^\d{4}$/.test(tokens[index]) &&
+  /^(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])$/.test(tokens[index + 1]) &&
+  index === tokens.length - 2
+
 const shouldMergeDateTriple = (tokens: string[], index: number): boolean =>
   /^\d{4}$/.test(tokens[index]) &&
   /^\d{2}$/.test(tokens[index + 1]) &&
@@ -204,6 +212,13 @@ export function inferModelNameFromId(id: string): string {
 
     if (/^\d{8}$/.test(token)) {
       result.push(`${token.slice(0, 4)}-${token.slice(4, 6)}-${token.slice(6)}`)
+    } else if (/^\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])$/.test(token)) {
+      result.push(`${token.slice(0, 2)}-${token.slice(2, 4)}-${token.slice(4)}`)
+    } else if (shouldMergeMonthYearPair(rawTokens, i)) {
+      result.push(`${token}-${rawTokens[++i]}`)
+    } else if (shouldMergeYearCompactMonthDayPair(rawTokens, i)) {
+      result.push(`${token}-${rawTokens[i + 1].slice(0, 2)}-${rawTokens[i + 1].slice(2)}`)
+      i += 1
     } else if (/^\d{4}$/.test(token) && i === rawTokens.length - 1) {
       result.push(`${token.slice(0, 2)}-${token.slice(2)}`)
     } else if (shouldMergeVersionPair(rawTokens, i)) {
@@ -220,7 +235,8 @@ export function inferModelNameFromId(id: string): string {
     }
   }
 
-  return result.join(' ')
+  const inferredName = result.join(' ')
+  return rawTokens[0]?.toLowerCase().startsWith('glm') ? inferredName.replace(/x$/i, 'X') : inferredName
 }
 
 /**

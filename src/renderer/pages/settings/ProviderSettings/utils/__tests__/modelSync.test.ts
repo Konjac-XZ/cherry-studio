@@ -124,7 +124,7 @@ describe('fetchResolvedProviderModels', () => {
     })
   })
 
-  it('uses the resolved friendly name when the provider only echoes the raw id', async () => {
+  it('uses the V1 name inferrer instead of the registry display name', async () => {
     listModelsMock.mockResolvedValueOnce([
       {
         id: 'dashscope::qwen1.5-1.8b-chat',
@@ -138,16 +138,16 @@ describe('fetchResolvedProviderModels', () => {
         id: 'dashscope::qwen1.5-1.8b-chat',
         providerId: 'dashscope',
         apiModelId: 'qwen1.5-1.8b-chat',
-        name: 'Qwen1.5 1.8b Chat'
+        name: 'Registry: Qwen Model'
       }
     ])
 
     const models = await fetchResolvedProviderModels('dashscope')
 
-    expect(models[0].name).toBe('Qwen1.5 1.8b Chat')
+    expect(models[0].name).toBe('Qwen 1.5 1.8B Chat')
   })
 
-  it('keeps a provider display name for an unmatched custom model', async () => {
+  it('uses the V1 name inferrer instead of an unmatched provider display name', async () => {
     listModelsMock.mockResolvedValueOnce([
       {
         id: 'custom::custom-model',
@@ -167,10 +167,10 @@ describe('fetchResolvedProviderModels', () => {
 
     const models = await fetchResolvedProviderModels('custom')
 
-    expect(models[0].name).toBe('Provider Display Name')
+    expect(models[0].name).toBe('Custom Model')
   })
 
-  it('preserves an explicit upstream name when registry metadata is available', async () => {
+  it('uses the V1 name inferrer when both upstream and registry provide names', async () => {
     listModelsMock.mockResolvedValueOnce([
       {
         id: 'custom::model-v2',
@@ -189,17 +189,26 @@ describe('fetchResolvedProviderModels', () => {
     ])
 
     await expect(fetchResolvedProviderModels('custom')).resolves.toEqual([
-      expect.objectContaining({ name: 'My Server Label' })
+      expect.objectContaining({ name: 'Model V2' })
     ])
   })
 })
 
 describe('fetchProviderCatalogModels', () => {
   it('reads models from the canonical provider preset projection', async () => {
-    const models = [{ id: 'openai::gpt-4o', providerId: 'openai', name: 'GPT-4o' }]
+    const models = [
+      {
+        id: 'openai::gpt-audio-2025-0828',
+        providerId: 'openai',
+        apiModelId: 'gpt-audio-2025-0828',
+        name: 'OpenAI: GPT Audio'
+      }
+    ]
     dataApiGetMock.mockResolvedValueOnce({ models })
 
-    await expect(fetchProviderCatalogModels('openai')).resolves.toBe(models)
+    await expect(fetchProviderCatalogModels('openai')).resolves.toEqual([
+      expect.objectContaining({ name: 'GPT Audio 2025-08-28' })
+    ])
     expect(dataApiGetMock).toHaveBeenCalledWith('/providers/openai/preset', {
       query: { fields: 'models' }
     })
@@ -302,22 +311,25 @@ describe('toCreateModelDto', () => {
     })
   })
 
-  it('infers raw-ID names but preserves explicit names', () => {
-    const rawNameDto = toCreateModelDto('custom', {
-      id: 'custom::claude-opus-4-6' as UniqueModelId,
+  it.each([
+    ['claude-3-5-haiku-20241022', 'Claude 3.5 Haiku 2024-10-22'],
+    ['doubao-seed-2-0-lite-260215', 'Doubao Seed 2.0 Lite 26-02-15'],
+    ['gemini-2.5-flash-preview-09-2025', 'Gemini 2.5 Flash Preview 09-2025'],
+    ['gpt-audio-2025-0828', 'GPT Audio 2025-08-28'],
+    ['glm-4.7-flashx', 'GLM-4.7 FlashX'],
+    ['glm-4.5-airx', 'GLM-4.5 AirX'],
+    ['hermes-4-405b', 'Hermes 4 405B'],
+    ['siliconflow/deepseek-v3.1-terminus', 'DeepSeek V3.1 Terminus'],
+    ['chatgpt-4o-latest', 'ChatGPT 4o Latest']
+  ])('uses the V1 name inferrer as the final authority for %s', (apiModelId, expectedName) => {
+    const dto = toCreateModelDto('custom', {
+      id: `custom::${apiModelId}` as UniqueModelId,
       providerId: 'custom',
-      apiModelId: 'claude-opus-4-6',
-      name: 'claude-opus-4-6'
-    } as Model)
-    const explicitNameDto = toCreateModelDto('custom', {
-      id: 'custom::claude-opus-4-6' as UniqueModelId,
-      providerId: 'custom',
-      apiModelId: 'claude-opus-4-6',
-      name: 'My Claude'
+      apiModelId,
+      name: 'Provider or registry supplied name'
     } as Model)
 
-    expect(rawNameDto.name).toBe('Claude Opus 4.6')
-    expect(explicitNameDto.name).toBe('My Claude')
+    expect(dto.name).toBe(expectedName)
   })
 
   it('forwards all discovered capabilities for a custom model', () => {

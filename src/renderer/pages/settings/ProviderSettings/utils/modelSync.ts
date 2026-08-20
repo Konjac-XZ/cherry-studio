@@ -48,11 +48,8 @@ function getRawModelId(model: Pick<Partial<Model>, 'apiModelId' | 'id'>): string
   return model.apiModelId ?? (model.id ? parseUniqueModelId(model.id).modelId : '')
 }
 
-function resolveModelDisplayName(model: Pick<Partial<Model>, 'apiModelId' | 'id' | 'name'>): string {
-  const rawId = getRawModelId(model)
-  const name = model.name?.trim()
-  if (name && name !== rawId && name !== model.id) return name
-  return inferModelNameFromId(rawId)
+function applyInferredModelName<T extends Pick<Partial<Model>, 'apiModelId' | 'id'>>(model: T): T & { name: string } {
+  return { ...model, name: inferModelNameFromId(getRawModelId(model)) }
 }
 
 export function toCreateModelDto(
@@ -67,7 +64,7 @@ export function toCreateModelDto(
   return {
     providerId,
     modelId,
-    name: resolveModelDisplayName(model),
+    name: inferModelNameFromId(modelId),
     group: model.group,
     ...(capabilities ? { capabilities: [...capabilities] } : {}),
     ...(resolvedEndpointTypes?.length ? { endpointTypes: [...resolvedEndpointTypes] } : {})
@@ -103,7 +100,6 @@ async function enrichFetchedModels(providerId: string, fetchedModels: Partial<Mo
   }
 
   const REGISTRY_FIELDS = [
-    'name',
     'presetModelId',
     'description',
     'group',
@@ -128,22 +124,12 @@ async function enrichFetchedModels(providerId: string, fetchedModels: Partial<Mo
     // row, collapsing their distinct display names).
     const registry = resolvedMap.get(apiId)
 
-    if (!registry) return { ...base, name: resolveModelDisplayName(base) }
+    if (!registry) return applyInferredModelName(base)
 
     const merged = { ...base }
-    // An unmatched (custom) resolved row only carries a prettified id as its name. If the provider's
-    // /models returned a real display name — one that differs from the raw id — keep it instead of
-    // overwriting with the prettified id. Matched rows (presetModelId set) own the curated name.
-    const keepFetchedName = !registry.presetModelId && !!base.name && base.name !== base.apiModelId
 
     for (const field of REGISTRY_FIELDS) {
-      if (field === 'name' && resolveModelDisplayName(base) === base.name?.trim()) {
-        continue
-      }
       if (field === 'endpointTypes' && base.endpointTypes?.length) {
-        continue
-      }
-      if (field === 'name' && keepFetchedName) {
         continue
       }
       const value = registry[field]
@@ -152,9 +138,7 @@ async function enrichFetchedModels(providerId: string, fetchedModels: Partial<Mo
       }
     }
 
-    merged.name = resolveModelDisplayName(merged)
-
-    return merged
+    return applyInferredModelName(merged)
   })
 }
 
@@ -179,5 +163,5 @@ export async function fetchResolvedProviderModels(providerId: string): Promise<M
 export async function fetchProviderCatalogModels(providerId: string): Promise<Model[]> {
   const presetPath: ProviderPresetPath = `/providers/${providerId}/preset`
   const preset = (await dataApiService.get(presetPath, { query: { fields: 'models' } })) as ProviderPreset
-  return preset.models ?? []
+  return (preset.models ?? []).map(applyInferredModelName)
 }
