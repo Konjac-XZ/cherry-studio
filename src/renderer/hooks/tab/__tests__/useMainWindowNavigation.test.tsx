@@ -173,12 +173,13 @@ describe('useMainWindowNavigation', () => {
     expect(mocks.attachTab).toHaveBeenCalledTimes(1)
   })
 
-  it('opens a Translate navigation request as the stable Translate tab', () => {
-    mocks.openTab.mockReturnValue('translate')
+  it('opens a Translate navigation request without colliding with a repurposed tab id', () => {
+    mocks.tabs = [{ id: 'translate', type: 'route', url: '/app/chat', title: 'Home' }]
+    mocks.openTab.mockReturnValue('new-translate-tab')
     mocks.initData = { kind: 'navigation', to: '/app/translate?paste=1&_=nonce-1', requestId: 1 }
     render(<MainWindowNavigationHarness />)
 
-    expect(mocks.openTab).toHaveBeenCalledWith('/app/translate?paste=1&_=nonce-1', { id: 'translate' })
+    expect(mocks.openTab).toHaveBeenCalledWith('/app/translate?paste=1&_=nonce-1')
     expect(mocks.ipcRequest).toHaveBeenCalledWith('navigation.ack_open_route', { requestId: 1 })
   })
 

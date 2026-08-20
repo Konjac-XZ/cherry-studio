@@ -115,7 +115,7 @@ function useOpenTranslateRoute() {
         return true
       }
 
-      translateTabIdRef.current = openTab(targetPath, { id: 'translate' })
+      translateTabIdRef.current = openTab(targetPath)
       logger.info('Opened Translate route in a new tab', { path: targetPath, tabId: translateTabIdRef.current })
       return true
     },
