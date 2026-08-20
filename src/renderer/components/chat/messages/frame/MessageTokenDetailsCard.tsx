@@ -1,7 +1,7 @@
 import { cn } from '@cherrystudio/ui/lib/utils'
 import ModelAvatar from '@renderer/components/Avatar/ModelAvatar'
 import { useProviderDisplayName } from '@renderer/hooks/useProvider'
-import { createDurationFormatter } from '@renderer/utils/time'
+import { createDurationFormatter, formatDate } from '@renderer/utils/time'
 import type { AiUsageRecordEntry } from '@shared/data/types/aiUsageRecord'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -239,12 +239,9 @@ const MessageTokenDetailsCard = ({
   )
   const decimalFormatter = useMemo(() => new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }), [locale])
   const durationFormatter = useMemo(() => createDurationFormatter(locale), [locale])
-  const dateFormatter = useMemo(
+  const timeFormatter = useMemo(
     () =>
       new Intl.DateTimeFormat(locale, {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
         second: '2-digit'
@@ -289,7 +286,9 @@ const MessageTokenDetailsCard = ({
     other: t('chat.message.token_details.lane_other')
   }
   const createdAt = Date.parse(message.createdAt)
-  const createdAtLabel = Number.isFinite(createdAt) ? dateFormatter.format(new Date(createdAt)) : undefined
+  const createdAtLabel = Number.isFinite(createdAt)
+    ? `${formatDate(createdAt)} ${timeFormatter.format(new Date(createdAt))}`
+    : undefined
   const formatTokens = (value: number) =>
     t('chat.message.token_details.tokens', { value: numberFormatter.format(value) })
   const formatPercent = (value: number) => percentageFormatter.format(value)

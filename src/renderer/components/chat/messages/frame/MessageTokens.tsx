@@ -1,5 +1,6 @@
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@cherrystudio/ui'
 import { useInfiniteFlatItems, useInfiniteQuery } from '@renderer/data/hooks/useDataApi'
+import { formatCompactNumber } from '@renderer/utils/number'
 import type { MessageStats } from '@shared/data/types/message'
 import type { FC } from 'react'
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
@@ -96,14 +97,6 @@ const MessageTokens: FC<MessageTokensProps> = ({ message }) => {
   const { t, i18n } = useTranslation()
   const actions = useMessageListActions()
   const stats = message.stats
-  const compactFormatter = useMemo(
-    () =>
-      new Intl.NumberFormat(i18n.resolvedLanguage, {
-        notation: 'compact',
-        maximumFractionDigits: 1
-      }),
-    [i18n.resolvedLanguage]
-  )
   const decimalFormatter = useMemo(
     () => new Intl.NumberFormat(i18n.resolvedLanguage, { maximumFractionDigits: 1 }),
     [i18n.resolvedLanguage]
@@ -114,7 +107,9 @@ const MessageTokens: FC<MessageTokensProps> = ({ message }) => {
   }
 
   const totalTokens = getTotalTokens(stats)
-  const tokenLabel = t('chat.message.token_details.tokens', { value: compactFormatter.format(totalTokens) })
+  const tokenLabel = t('chat.message.token_details.tokens', {
+    value: formatCompactNumber(totalTokens, i18n.resolvedLanguage)
+  })
   const locateMessage = () => actions.locateMessage?.(message.id, false)
 
   if (message.role === 'user') {

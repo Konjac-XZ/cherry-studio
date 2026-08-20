@@ -20,6 +20,8 @@ const dataApiMocks = vi.hoisted(() => ({
   useInfiniteFlatItems: vi.fn(() => [])
 }))
 
+const i18nMocks = vi.hoisted(() => ({ resolvedLanguage: 'en-US' }))
+
 vi.mock('@renderer/data/hooks/useDataApi', () => dataApiMocks)
 
 vi.mock('@cherrystudio/ui', () => ({
@@ -68,7 +70,7 @@ const translations: Record<string, string> = {
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    i18n: { resolvedLanguage: 'en-US' },
+    i18n: i18nMocks,
     t: (key: string, values?: Record<string, string | number>) =>
       (translations[key] ?? key).replace(/{{(\w+)}}/g, (_, name: string) => String(values?.[name] ?? ''))
   })
@@ -146,6 +148,16 @@ function renderWithProvider(
 }
 
 describe('MessageTokens', () => {
+  it('uses the shared compact formatter for Chinese token labels', () => {
+    i18nMocks.resolvedLanguage = 'zh-CN'
+    try {
+      renderWithProvider(createMessage('user', { totalTokens: 12_000 }))
+      expect(screen.getByRole('button', { name: '1.2 万 Tokens' })).toBeInTheDocument()
+    } finally {
+      i18nMocks.resolvedLanguage = 'en-US'
+    }
+  })
+
   it('does not query invocation details until a new-format details card opens', () => {
     renderWithProvider(
       createMessage('assistant', {
@@ -250,14 +262,15 @@ describe('MessageTokens', () => {
     )
     renderWithProvider(message)
 
-    const expectedLocalTime = new Intl.DateTimeFormat('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    }).format(new Date(message.createdAt))
+    const createdAt = new Date(message.createdAt)
+    const expectedLocalTime = `${createdAt.getFullYear()}/${String(createdAt.getMonth() + 1).padStart(2, '0')}/${String(createdAt.getDate()).padStart(2, '0')} ${new Intl.DateTimeFormat(
+      'en-US',
+      {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      }
+    ).format(createdAt)}`
 
     expect(screen.getByTestId('model-avatar')).toHaveAttribute('data-model-id', 'claude-sonnet-5')
     expect(screen.getByText('Claude Sonnet 5')).toBeInTheDocument()
