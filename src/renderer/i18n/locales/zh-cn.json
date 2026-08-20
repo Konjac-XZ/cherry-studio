@@ -7503,8 +7503,6 @@
       "native_language": "用户母语",
       "native_to_other_model": "母语 → 外语",
       "other_to_native_model": "外语 → 母语",
-      "other_to_native_prompt": "外语 → 母语 提示词",
-      "native_to_other_prompt": "母语 → 外语 提示词",
       "polish_enabled": "翻译前润色",
       "polish_model": "润色模型",
       "preview": "Markdown 预览",
