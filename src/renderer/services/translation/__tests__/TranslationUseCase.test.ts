@@ -25,8 +25,9 @@ const history = (overrides: Partial<TranslateHistory> = {}): TranslateHistory =>
 
 const ports = (overrides: Partial<TranslationPreparationPorts> = {}): TranslationPreparationPorts => ({
   detectLanguage: vi.fn(async () => 'en-us'),
-  determineTargetLanguage: vi.fn((source, target, bidirectional, pair) => {
+  determineTargetLanguage: vi.fn((source, target, bidirectional, pair, nativeLanguage) => {
     if (bidirectional) {
+      if (nativeLanguage) return { success: true as const, language: nativeLanguage }
       if (source === pair[0]) return { success: true as const, language: pair[1] }
       if (source === pair[1]) return { success: true as const, language: pair[0] }
     }
@@ -42,6 +43,7 @@ const command = {
   bidirectionalPair: ['en-us', 'zh-cn'] as [TranslateLangCode, TranslateLangCode],
   isBidirectional: true,
   mode: 'translate' as const,
+  nativeLanguage: 'zh-cn' as const,
   sourceLanguage: 'auto' as const,
   sourceText: 'hello',
   targetLanguage: 'en-us' as const

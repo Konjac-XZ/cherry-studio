@@ -19,7 +19,7 @@ export const pickBidirectionalTarget = (
   if (sourceLanguageCode === UNKNOWN_LANG_CODE) {
     return preferred
   }
-  return sourceLanguageCode === preferred.langCode ? alter : preferred
+  return isEquivalentBidirectionalLanguage(sourceLanguageCode, preferred.langCode) ? alter : preferred
 }
 
 /**
@@ -61,13 +61,15 @@ const isLanguageInPair = (sourceLanguage: TranslateLangCode, languagePair: Trans
  * @param targetLanguage 用户设置的目标语言
  * @param isBidirectional 是否开启双向翻译
  * @param bidirectionalPair 双向翻译的语言对
+ * @param nativeLanguage 自动识别时用于区分翻译方向的母语
  * @returns 处理结果对象
  */
 export const determineTargetLanguage = (
   sourceLanguage: TranslateLangCode,
   targetLanguage: TranslateLangCode,
   isBidirectional: boolean,
-  bidirectionalPair: TranslateBidirectionalPair
+  bidirectionalPair: TranslateBidirectionalPair,
+  nativeLanguage?: TranslateLangCode | null
 ): { success: true; language: TranslateLangCode } | { success: false; errorType: 'same_language' | 'not_in_pair' } => {
   if (isBidirectional) {
     if (!isLanguageInPair(sourceLanguage, bidirectionalPair)) {
@@ -75,7 +77,10 @@ export const determineTargetLanguage = (
     }
     return {
       success: true,
-      language: getTargetLanguageForBidirectional(sourceLanguage, bidirectionalPair)
+      language:
+        nativeLanguage && !isEquivalentBidirectionalLanguage(sourceLanguage, nativeLanguage)
+          ? nativeLanguage
+          : getTargetLanguageForBidirectional(sourceLanguage, bidirectionalPair)
     }
   } else {
     if (sourceLanguage === targetLanguage) {

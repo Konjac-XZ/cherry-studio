@@ -371,6 +371,7 @@ const TranslatePage: FC = () => {
     isDetecting,
     isTranslating,
     mode: flowSettings.polishEnabled ? 'polish_then_translate' : 'translate',
+    nativeLanguage,
     preprocessTranslation,
     processTranslation,
     runTranslate,

@@ -10,6 +10,7 @@ export type TranslationPreparationCommand = {
   forceRefresh?: boolean
   isBidirectional: boolean
   mode: TranslationMode
+  nativeLanguage: TranslateLangCode | null
   sourceLanguage: TranslateLangCode | 'auto'
   sourceText: string
   requestText?: string
@@ -22,7 +23,8 @@ export type TranslationPreparationPorts = {
     sourceLanguage: TranslateLangCode,
     targetLanguage: TranslateLangCode,
     isBidirectional: boolean,
-    pair: [TranslateLangCode, TranslateLangCode]
+    pair: [TranslateLangCode, TranslateLangCode],
+    nativeLanguage?: TranslateLangCode | null
   ) => { success: true; language: TranslateLangCode } | { success: false; errorType?: 'same_language' | 'not_in_pair' }
   findBySourceText: (sourceText: string) => Promise<TranslateHistory[]>
   findCached: (cacheKey: string) => Promise<TranslateHistory | undefined>
@@ -145,7 +147,8 @@ const findCompatibleHistoryBeforeDetection = async (
       history.sourceLanguage,
       command.targetLanguage,
       command.isBidirectional,
-      command.bidirectionalPair
+      command.bidirectionalPair,
+      command.nativeLanguage
     )
     if (!target.success || target.language !== history.targetLanguage) continue
 
@@ -171,7 +174,8 @@ export const prepareTranslation = async (
     sourceLanguage,
     command.targetLanguage,
     command.isBidirectional && sourceLanguage !== 'unknown',
-    command.bidirectionalPair
+    command.bidirectionalPair,
+    command.sourceLanguage === 'auto' ? command.nativeLanguage : null
   )
   if (!target.success) return { status: target.errorType ?? 'same_language', sourceLanguage }
 

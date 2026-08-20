@@ -47,6 +47,7 @@ type UseTranslationFlowRunnerParams = {
   isDetecting: boolean
   isTranslating: boolean
   mode: TranslationMode
+  nativeLanguage: TranslateLangCode | null
   preprocessTranslation: (text: string) => string
   processTranslation: (raw: string, targetLanguage: TranslateLangCode) => string
   runTranslate: UseTranslateResult['translate']
@@ -79,6 +80,7 @@ export const useTranslationFlowRunner = ({
   isDetecting,
   isTranslating,
   mode,
+  nativeLanguage,
   preprocessTranslation,
   processTranslation,
   runTranslate,
@@ -172,6 +174,7 @@ export const useTranslationFlowRunner = ({
             forceRefresh,
             isBidirectional: effectiveBidirectional,
             mode: effectiveMode,
+            nativeLanguage,
             requestText: preprocessTranslation(effectiveSourceText),
             sourceLanguage: effectiveSourceLanguage,
             sourceText: effectiveSourceText,
@@ -318,6 +321,7 @@ export const useTranslationFlowRunner = ({
       isDetecting,
       isTranslating,
       mode,
+      nativeLanguage,
       preprocessTranslation,
       processTranslation,
       runTranslate,

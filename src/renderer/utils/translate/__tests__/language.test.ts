@@ -23,6 +23,7 @@ describe('translate bidirectional helpers', () => {
     it.each([
       ['uses the override target when one is provided', 'en-us', japanese, japanese],
       ['uses alter when detected source equals preferred', 'zh-cn', undefined, english],
+      ['uses alter when detected Chinese is a variant of preferred Chinese', 'zh-tw', undefined, english],
       ['uses preferred when detected source equals alter', 'en-us', undefined, chinese],
       ['uses preferred when detected source is unknown', 'unknown', undefined, chinese]
     ] as const)('%s', (_name, sourceLanguage, overrideTarget, expectedTarget) => {
@@ -67,6 +68,30 @@ describe('translate bidirectional helpers', () => {
       expect(determineTargetLanguage(sourceLanguage, targetLanguage, isBidirectional, bidirectionalPair)).toEqual(
         expected
       )
+    })
+
+    it.each([
+      ['targets Chinese when English is not the native language', 'en-us', bidirectionalPair, 'zh-cn', 'zh-cn'],
+      ['translates Simplified Chinese away from the native language', 'zh-cn', bidirectionalPair, 'zh-cn', 'en-us'],
+      [
+        'treats Traditional Chinese as the Simplified Chinese native language',
+        'zh-tw',
+        bidirectionalPair,
+        'zh-cn',
+        'en-us'
+      ],
+      [
+        'treats Simplified Chinese as the Traditional Chinese pair member and native language',
+        'zh-cn',
+        ['en-us', 'zh-tw'],
+        'zh-tw',
+        'en-us'
+      ]
+    ] as const)('%s', (_name, source, pair, nativeLanguage, expectedTarget) => {
+      expect(determineTargetLanguage(source, 'ja-jp', true, [...pair], nativeLanguage)).toEqual({
+        success: true,
+        language: expectedTarget
+      })
     })
   })
 })

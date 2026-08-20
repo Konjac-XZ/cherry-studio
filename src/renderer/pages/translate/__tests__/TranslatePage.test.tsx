@@ -1536,12 +1536,13 @@ describe('TranslatePage', () => {
     )
   })
 
-  it('uses the detected source language to choose the opposite bidirectional target', async () => {
+  it('translates detected native-language text to the other bidirectional language', async () => {
     MockUsePreferenceUtils.setMultiplePreferenceValues({
       'feature.translate.model_id': 'openai::gpt-4.1',
       'feature.translate.page.source_language': 'auto',
       'feature.translate.page.bidirectional_enabled': true,
-      'feature.translate.page.bidirectional_pair': ['en-us', 'zh-cn']
+      'feature.translate.page.bidirectional_pair': ['en-us', 'zh-cn'],
+      'feature.translate.native_language': 'zh-cn'
     })
     translateCoreMock.detectLanguage.mockResolvedValueOnce('zh-cn')
 
