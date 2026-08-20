@@ -28,6 +28,7 @@ import {
   SettingsContentColumn,
   SettingTitle
 } from '@renderer/components/SettingsPrimitives'
+import { useLanguages } from '@renderer/hooks/translate'
 import { useCodeStyle } from '@renderer/hooks/useCodeStyle'
 import { useTheme } from '@renderer/hooks/useTheme'
 import { useTimer } from '@renderer/hooks/useTimer'
@@ -41,7 +42,7 @@ import { formatErrorMessage } from '@renderer/utils/error'
 import { isLinux, isMac } from '@renderer/utils/platform'
 import { cn } from '@renderer/utils/style'
 import type { MenuPresentationMode } from '@shared/data/preference/preferenceTypes'
-import { ThemeMode } from '@shared/data/preference/preferenceTypes'
+import { parseTranslateLangCode, ThemeMode } from '@shared/data/preference/preferenceTypes'
 import { hasV1CustomCssMarker } from '@shared/utils/customCssMigration'
 import { defaultLanguage } from '@shared/utils/languages'
 import { Minus, Monitor, Moon, Plus, Sun } from 'lucide-react'
@@ -121,8 +122,10 @@ const AppearanceSettings: FC = () => {
   const { setTimeoutTimer } = useTimer()
   const { userTheme, setUserTheme } = useUserTheme()
   const { activeCmTheme } = useCodeStyle()
+  const { languages, getLabel: getLanguageLabel } = useLanguages()
 
   const [language, setLanguage] = usePreference('app.language')
+  const [nativeLanguage, setNativeLanguage] = usePreference('feature.translate.native_language')
   const [windowStyle, setWindowStyle] = usePreference('ui.window_style')
   const [menuPresentationMode, setMenuPresentationMode] = usePreference('menu.presentation_mode')
   const [customCss, setCustomCss] = usePreference('ui.custom_css')
@@ -363,6 +366,31 @@ const AppearanceSettings: FC = () => {
                         {lang.flag}
                       </span>
                       {lang.label}
+                    </Flex>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </SelectorRow>
+        </SettingRow>
+        <SettingDivider />
+        <SettingRow>
+          <SettingRowTitle>{t('translate.settings.native_language')}</SettingRowTitle>
+          <SelectorRow>
+            <Select
+              value={nativeLanguage ?? undefined}
+              onValueChange={(value) => void setNativeLanguage(parseTranslateLangCode(value))}>
+              <SelectTrigger size="sm" className="w-full text-sm" aria-label={t('translate.settings.native_language')}>
+                <SelectValue placeholder={t('common.select')} />
+              </SelectTrigger>
+              <SelectContent className="text-sm">
+                {languages?.map((item) => (
+                  <SelectItem className="text-sm" key={item.langCode} value={item.langCode}>
+                    <Flex className="items-center gap-2">
+                      <span role="img" aria-label={item.emoji}>
+                        {item.emoji}
+                      </span>
+                      {getLanguageLabel(item, false) ?? item.value}
                     </Flex>
                   </SelectItem>
                 ))}

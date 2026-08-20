@@ -19,6 +19,16 @@ vi.mock('@renderer/i18n/resolver', () => ({
   default: i18nMock
 }))
 
+vi.mock('@renderer/hooks/translate', () => ({
+  useLanguages: () => ({
+    languages: [
+      { emoji: '🇨🇳', langCode: 'zh-cn', value: 'Chinese' },
+      { emoji: '🇰🇷', langCode: 'ko-kr', value: 'Korean' }
+    ],
+    getLabel: (language: { value: string }) => language.value
+  })
+}))
+
 const mocks = vi.hoisted(() => ({ request: vi.fn() }))
 const themeMocks = vi.hoisted(() => ({ setTheme: vi.fn() }))
 vi.mock('@renderer/ipc', () => ({ ipcApi: { request: mocks.request } }))
@@ -36,6 +46,10 @@ vi.mock('@cherrystudio/ui', async () => {
   const PopoverContext = React.createContext({
     open: false,
     onOpenChange: undefined as undefined | ((open: boolean) => void)
+  })
+  const SelectContext = React.createContext({
+    onValueChange: undefined as undefined | ((value: string) => void),
+    value: undefined as string | undefined
   })
 
   return {
@@ -107,10 +121,23 @@ vi.mock('@cherrystudio/ui', async () => {
           )
         )
       ),
-    Select: ({ children }: { children?: React.ReactNode }) => React.createElement(React.Fragment, null, children),
+    Select: ({ children, onValueChange, value }: any) =>
+      React.createElement(SelectContext.Provider, { value: { onValueChange, value } }, children),
     SelectContent: passthrough('div'),
-    SelectItem: ({ children, value, ...props }: any) =>
-      React.createElement('div', { ...props, 'data-value': value }, children),
+    SelectItem: ({ children, value, ...props }: any) => {
+      const context = React.use(SelectContext)
+      return React.createElement(
+        'button',
+        {
+          ...props,
+          'data-value': value,
+          onClick: () => context.onValueChange?.(value),
+          role: 'option',
+          type: 'button'
+        },
+        children
+      )
+    },
     SelectTrigger: ({ children, size, ...props }: any) =>
       React.createElement('button', { ...props, 'data-size': size, role: 'combobox', type: 'button' }, children),
     SelectValue: () => null,
@@ -304,6 +331,19 @@ describe('AppearanceSettings selectors', () => {
 
     expect(screen.getByRole('combobox', { name: /中文/ })).toBeInTheDocument()
     expect(screen.queryByRole('combobox', { name: /English/ })).not.toBeInTheDocument()
+  })
+
+  it('persists the user native language from the display and language section', async () => {
+    MockUsePreferenceUtils.setPreferenceValue('feature.translate.native_language', null)
+
+    render(<AppearanceSettings />)
+
+    expect(screen.getByText('translate.settings.native_language')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('option', { name: /Korean/ }))
+
+    await waitFor(() => {
+      expect(MockUsePreferenceUtils.getPreferenceValue('feature.translate.native_language')).toBe('ko-kr')
+    })
   })
 
   it('does not render manual chat layout switches', async () => {
