@@ -344,7 +344,7 @@ const AddMcpServerModal: FC<AddMcpServerModalProps> = ({
             })
             .catch((connError: any) => {
               logger.error(`Connectivity check failed for ${createdServer.name}:`, connError)
-              toast.error(createdServer.name + t('settings.mcp.addServer.importFrom.connectionFailed'))
+              toast.error(t('settings.mcp.addServer.importFrom.connectionFailed', { name: createdServer.name }))
             })
         }
       }

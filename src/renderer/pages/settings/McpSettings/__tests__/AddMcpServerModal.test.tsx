@@ -9,7 +9,8 @@ import AddMcpServerModal from '../AddMcpServerModal'
 
 const mocks = vi.hoisted(() => ({
   checkConnectivity: vi.fn().mockResolvedValue(false),
-  patch: vi.fn().mockResolvedValue(undefined)
+  patch: vi.fn().mockResolvedValue(undefined),
+  toastError: vi.fn()
 }))
 
 vi.mock('@cherrystudio/ui', async (importOriginal) => {
@@ -49,13 +50,13 @@ vi.mock('@renderer/ipc', () => ({
 
 vi.mock('@renderer/services/toast', () => ({
   toast: {
-    error: vi.fn()
+    error: mocks.toastError
   }
 }))
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string) => key
+    t: (key: string, options?: { name?: string }) => (options?.name ? `${key}: ${options.name}` : key)
   })
 }))
 
@@ -117,5 +118,30 @@ describe('AddMcpServerModal', () => {
     ])
     expect(onClose).toHaveBeenCalledTimes(1)
     await waitFor(() => expect(mocks.checkConnectivity).toHaveBeenCalledTimes(2))
+  })
+
+  it('includes the server name in a localized connectivity failure', async () => {
+    mocks.checkConnectivity.mockRejectedValueOnce(new Error('offline'))
+    const onSuccess = vi.fn(async (dtos: CreateMcpServerDto[]) => toCreatedServers(dtos))
+    const user = userEvent.setup()
+
+    render(
+      <AddMcpServerModal
+        visible
+        onClose={vi.fn()}
+        onSuccess={onSuccess}
+        existingServers={[]}
+        initialImportMethod="json"
+      />
+    )
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'server config' }), {
+      target: { value: JSON.stringify({ mcpServers: { filesystem: { command: 'server' } } }) }
+    })
+    await user.click(screen.getByRole('button', { name: 'common.confirm' }))
+
+    await waitFor(() =>
+      expect(mocks.toastError).toHaveBeenCalledWith('settings.mcp.addServer.importFrom.connectionFailed: filesystem')
+    )
   })
 })
