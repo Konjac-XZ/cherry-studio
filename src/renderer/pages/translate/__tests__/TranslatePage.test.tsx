@@ -584,9 +584,10 @@ describe('TranslatePage', () => {
 
   it('uses a black fill and white text for the enabled translate action', async () => {
     MockUsePreferenceUtils.setPreferenceValue('feature.translate.model_id', 'openai::gpt-4.1')
-    render(<TranslatePage />)
+    const { rerender } = render(<TranslatePage />)
 
     fireEvent.change(screen.getByLabelText('translate.input.placeholder'), { target: { value: 'hello' } })
+    rerender(<TranslatePage />)
 
     const translateButton = screen.getByRole('button', { name: 'translate.button.translate' })
     await waitFor(() => expect(translateButton).toBeEnabled())
