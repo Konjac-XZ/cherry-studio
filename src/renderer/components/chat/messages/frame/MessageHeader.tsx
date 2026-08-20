@@ -181,7 +181,7 @@ const MessageHeader: FC<Props> = memo(
             )}
             <div
               className={`message-header-info-wrap flex shrink-0 items-center gap-1 text-[10px] text-foreground-tertiary leading-none opacity-0 transition-opacity duration-150 focus-within:opacity-100 ${hiddenContentHoverClass}`}>
-              <span>{dayjs(message?.updatedAt ?? message.createdAt).format('MM/DD HH:mm')}</span>
+              <span>{dayjs(message?.updatedAt ?? message.createdAt).format('YYYY/MM/DD HH:mm')}</span>
               {renderConfig.showEstimatedTokens &&
                 isBubbleStyle &&
                 !isAssistantMessage &&

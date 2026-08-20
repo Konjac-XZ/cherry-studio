@@ -205,7 +205,7 @@ export function LocalBackupManager({ visible, onClose, localBackupDir, restoreMe
       accessorKey: 'modifiedTime',
       header: t('settings.data.local.backup.manager.columns.modifiedTime'),
       meta: { width: 180 },
-      cell: ({ getValue }) => dayjs(getValue() as string).format('YYYY-MM-DD HH:mm:ss')
+      cell: ({ getValue }) => dayjs(getValue() as string).format('YYYY/MM/DD HH:mm:ss')
     },
     {
       accessorKey: 'size',

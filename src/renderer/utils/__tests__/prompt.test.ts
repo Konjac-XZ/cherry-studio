@@ -63,17 +63,10 @@ describe('prompt', () => {
 `
       const assistant = createMockAssistant('MyAssistant', 'Super-Model-X')
       const result = await replacePromptVariables(userPrompt, assistant.modelName)
+      const expectedDateTime = `${mockDate.getFullYear()}/${String(mockDate.getMonth() + 1).padStart(2, '0')}/${String(mockDate.getDate()).padStart(2, '0')} ${String(mockDate.getHours()).padStart(2, '0')}:${String(mockDate.getMinutes()).padStart(2, '0')}:${String(mockDate.getSeconds()).padStart(2, '0')}`
       const expectedPrompt = `
 以下是一些辅助信息:
-  - 日期和时间: ${mockDate.toLocaleString(undefined, {
-    weekday: 'short',
-    year: 'numeric',
-    month: 'numeric',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: 'numeric',
-    second: 'numeric'
-  })};
+  - 日期和时间: ${expectedDateTime};
   - 操作系统: macOS;
   - 中央处理器架构: darwin64;
   - 语言: zh-CN;

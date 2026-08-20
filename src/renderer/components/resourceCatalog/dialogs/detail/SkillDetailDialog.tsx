@@ -1,6 +1,6 @@
 import { Badge, Dialog, DialogContent, DialogHeader, DialogTitle, Separator } from '@cherrystudio/ui'
 import { DIALOG_UNMOUNT_DELAY_MS } from '@cherrystudio/ui/utils'
-import { formatRelativeTime } from '@renderer/utils/time'
+import { formatDate, formatRelativeTime } from '@renderer/utils/time'
 import type { InstalledSkill } from '@shared/types/skill'
 import { Clock, ToolCase } from 'lucide-react'
 import { type FC, useCallback, useEffect, useRef, useState } from 'react'
@@ -12,20 +12,9 @@ interface Props {
   onOpenChange: (open: boolean) => void
 }
 
-function formatDate(dateStr: string, language: string): string {
-  const date = new Date(dateStr)
-  if (Number.isNaN(date.getTime())) return dateStr
-  return new Intl.DateTimeFormat(language, {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  }).format(date)
-}
-
 const SkillDetailDialog: FC<Props> = ({ skill, open, onOpenChange }) => {
   const { t, i18n } = useTranslation()
-  // The locale that actually supplied the copy: an unbundled `en-GB` request renders `en-US` strings,
-  // and formatting the dates as `en-GB` would pair UK dates with US text.
+  // Keep relative-time wording aligned with the locale that actually supplied the copy.
   const locale = i18n.resolvedLanguage ?? i18n.language
   const [dialogOpen, setDialogOpen] = useState(open)
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -115,7 +104,7 @@ const SkillDetailDialog: FC<Props> = ({ skill, open, onOpenChange }) => {
               <span className="font-medium text-muted-foreground text-sm">{t('library.skill_detail.created_at')}</span>
               <div className="flex items-center gap-2 text-muted-foreground text-sm">
                 <Clock size={13} />
-                <span>{formatDate(skill.createdAt, locale)}</span>
+                <span>{formatDate(skill.createdAt) || skill.createdAt}</span>
               </div>
             </div>
             <div className="flex flex-col gap-2">
@@ -123,7 +112,7 @@ const SkillDetailDialog: FC<Props> = ({ skill, open, onOpenChange }) => {
               <div className="flex items-center gap-2 text-muted-foreground text-sm">
                 <Clock size={13} />
                 <span>
-                  {formatDate(skill.updatedAt, locale)} ({formatRelativeTime(skill.updatedAt, locale)})
+                  {formatDate(skill.updatedAt) || skill.updatedAt} ({formatRelativeTime(skill.updatedAt, locale)})
                 </span>
               </div>
             </div>

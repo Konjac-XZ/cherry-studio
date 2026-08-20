@@ -1,8 +1,60 @@
+import { normalizeChineseSpacing } from './chineseSpacing'
+
 const MINUTE_MS = 60 * 1000
 const HOUR_MS = 60 * MINUTE_MS
 const DAY_MS = 24 * HOUR_MS
 const MONTH_MS = 30 * DAY_MS
 const YEAR_MS = 365 * DAY_MS
+
+type DateValue = Date | number | string
+
+export interface DateFormatter {
+  format(value: Date | number): string
+}
+
+function toDate(value: DateValue): Date {
+  return value instanceof Date ? value : new Date(value)
+}
+
+function padDatePart(value: number): string {
+  return String(value).padStart(2, '0')
+}
+
+export function formatDate(value: DateValue): string {
+  const date = toDate(value)
+  if (Number.isNaN(date.getTime())) return ''
+
+  return `${date.getFullYear()}/${padDatePart(date.getMonth() + 1)}/${padDatePart(date.getDate())}`
+}
+
+export function formatMonth(value: DateValue): string {
+  const date = toDate(value)
+  if (Number.isNaN(date.getTime())) return ''
+
+  return `${date.getFullYear()}/${padDatePart(date.getMonth() + 1)}`
+}
+
+export function formatShortMonth(value: DateValue, language: string): string {
+  const date = toDate(value)
+  if (Number.isNaN(date.getTime())) return ''
+
+  const month = new Intl.DateTimeFormat(language, { month: 'short' }).format(date)
+  return normalizeChineseSpacing(month, language)
+}
+
+export function formatDateTime(
+  value: DateValue,
+  options: { includeSeconds?: boolean; includeMilliseconds?: boolean } = {}
+): string {
+  const date = toDate(value)
+  if (Number.isNaN(date.getTime())) return ''
+
+  const timeParts = [padDatePart(date.getHours()), padDatePart(date.getMinutes())]
+  if (options.includeSeconds || options.includeMilliseconds) timeParts.push(padDatePart(date.getSeconds()))
+
+  const milliseconds = options.includeMilliseconds ? `.${String(date.getMilliseconds()).padStart(3, '0')}` : ''
+  return `${formatDate(date)} ${timeParts.join(':')}${milliseconds}`
+}
 
 export function createDurationFormatter(language?: string): (durationMs: number) => string {
   const millisecondFormatter = new Intl.NumberFormat(language, {
@@ -26,14 +78,19 @@ export function createDurationFormatter(language?: string): (durationMs: number)
   const durationListFormatter = new Intl.ListFormat(language, { style: 'narrow', type: 'unit' })
 
   return (durationMs) => {
-    if (durationMs < 1000) return millisecondFormatter.format(Math.round(durationMs))
+    if (durationMs < 1000) {
+      return normalizeChineseSpacing(millisecondFormatter.format(Math.round(durationMs)), language)
+    }
 
     const roundedTenths = Math.round(durationMs / 100)
-    if (roundedTenths < 600) return secondFormatter.format(roundedTenths / 10)
+    if (roundedTenths < 600) {
+      return normalizeChineseSpacing(secondFormatter.format(roundedTenths / 10), language)
+    }
 
     const minutes = Math.floor(roundedTenths / 600)
     const seconds = (roundedTenths % 600) / 10
-    return durationListFormatter.format([minuteFormatter.format(minutes), secondFormatter.format(seconds)])
+    const duration = durationListFormatter.format([minuteFormatter.format(minutes), secondFormatter.format(seconds)])
+    return normalizeChineseSpacing(duration, language)
   }
 }
 
@@ -57,10 +114,12 @@ export const formatRelativeTime = (value: string, language: string, now = Date.n
   const magnitude = Math.abs(diffMs)
   const sign = diffMs < 0 ? -1 : 1
   const inUnit = (unitMs: number) => sign * Math.round(magnitude / unitMs)
+  const format = (value: number, unit: Intl.RelativeTimeFormatUnit) =>
+    normalizeChineseSpacing(formatter.format(value, unit), language)
 
-  if (Math.round(magnitude / MINUTE_MS) < 60) return formatter.format(inUnit(MINUTE_MS), 'minute')
-  if (Math.round(magnitude / HOUR_MS) < 24) return formatter.format(inUnit(HOUR_MS), 'hour')
-  if (Math.round(magnitude / DAY_MS) < 30) return formatter.format(inUnit(DAY_MS), 'day')
-  if (Math.round(magnitude / MONTH_MS) < 12) return formatter.format(inUnit(MONTH_MS), 'month')
-  return formatter.format(inUnit(YEAR_MS), 'year')
+  if (Math.round(magnitude / MINUTE_MS) < 60) return format(inUnit(MINUTE_MS), 'minute')
+  if (Math.round(magnitude / HOUR_MS) < 24) return format(inUnit(HOUR_MS), 'hour')
+  if (Math.round(magnitude / DAY_MS) < 30) return format(inUnit(DAY_MS), 'day')
+  if (Math.round(magnitude / MONTH_MS) < 12) return format(inUnit(MONTH_MS), 'month')
+  return format(inUnit(YEAR_MS), 'year')
 }

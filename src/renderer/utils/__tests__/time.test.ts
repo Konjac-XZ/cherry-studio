@@ -1,12 +1,46 @@
 import { describe, expect, it } from 'vitest'
 
-import { createDurationFormatter, formatRelativeTime, getLocaleFirstDayOfWeek } from '../time'
+import {
+  createDurationFormatter,
+  formatDate,
+  formatDateTime,
+  formatMonth,
+  formatRelativeTime,
+  formatShortMonth,
+  getLocaleFirstDayOfWeek
+} from '../time'
 
 const NOW = new Date('2026-04-22T12:00:00Z').getTime()
+
+describe('calendar date formatting', () => {
+  const date = new Date(2026, 0, 3, 4, 5, 6, 7)
+
+  it('uses the global slash-separated date format', () => {
+    expect(formatDate(date)).toBe('2026/01/03')
+    expect(formatMonth(date)).toBe('2026/01')
+  })
+
+  it('normalizes localized Chinese month labels', () => {
+    expect(formatShortMonth(date, 'zh-CN')).toBe('1 月')
+    expect(formatShortMonth(date, 'zh-TW')).toBe('1 月')
+    expect(formatShortMonth(date, 'en-US')).toBe('Jan')
+  })
+
+  it('preserves the requested time precision', () => {
+    expect(formatDateTime(date)).toBe('2026/01/03 04:05')
+    expect(formatDateTime(date, { includeSeconds: true })).toBe('2026/01/03 04:05:06')
+    expect(formatDateTime(date, { includeMilliseconds: true })).toBe('2026/01/03 04:05:06.007')
+  })
+})
 
 describe('formatRelativeTime', () => {
   it('formats minute-level differences within one hour', () => {
     expect(formatRelativeTime('2026-04-22T11:58:00Z', 'en-US', NOW)).toBe('2 minutes ago')
+  })
+
+  it('normalizes Chinese relative time spacing', () => {
+    expect(formatRelativeTime('2026-04-22T11:58:00Z', 'zh-CN', NOW)).toBe('2 分钟前')
+    expect(formatRelativeTime('2026-04-22T11:58:00Z', 'zh-TW', NOW)).toBe('2 分鐘前')
   })
 
   it('formats hour-level differences within one day', () => {
@@ -58,7 +92,9 @@ describe('formatRelativeTime', () => {
 describe('createDurationFormatter', () => {
   it('formats units and decimal separators for the requested locale', () => {
     expect(createDurationFormatter('de-DE')(1_200)).toBe('1,2 Sek.')
-    expect(createDurationFormatter('zh-CN')(61_200)).toBe('1分钟1.2秒')
+    expect(createDurationFormatter('zh-CN')(18_100)).toBe('18.1 秒')
+    expect(createDurationFormatter('zh-CN')(61_200)).toBe('1 分钟 1.2 秒')
+    expect(createDurationFormatter('zh-TW')(61_200)).toBe('1 分鐘 1.2 秒')
   })
 
   it('carries rounded seconds into the next minute', () => {

@@ -1,4 +1,5 @@
 import { Badge } from '@cherrystudio/ui'
+import { formatDateTime } from '@renderer/utils/time'
 import { CheckCircle, Terminal, XCircle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
@@ -113,7 +114,7 @@ export function BashOutputTool({
         )}
         {parsedOutput.timestamp && (
           <Badge variant="outline" className="py-0 font-mono text-xs">
-            {new Date(parsedOutput.timestamp).toLocaleString()}
+            {formatDateTime(parsedOutput.timestamp, { includeSeconds: true })}
           </Badge>
         )}
       </div>

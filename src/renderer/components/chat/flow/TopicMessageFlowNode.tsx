@@ -49,7 +49,7 @@ function getModelShortLabel(modelId?: string | null) {
 
 function formatNodeTime(createdAt: string) {
   const value = dayjs(createdAt)
-  return value.isValid() ? value.format('MM/DD HH:mm') : createdAt || '-'
+  return value.isValid() ? value.format('YYYY/MM/DD HH:mm') : createdAt || '-'
 }
 
 function useRoleLabel(role: MessageRole, isContextBoundary?: boolean) {

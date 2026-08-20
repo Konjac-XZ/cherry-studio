@@ -241,7 +241,7 @@ export function S3BackupManager({ visible, onClose, s3Config, restoreMethod }: S
       accessorKey: 'modifiedTime',
       header: t('settings.data.s3.manager.columns.modifiedTime'),
       meta: { width: 180 },
-      cell: ({ getValue }) => dayjs(getValue() as string).format('YYYY-MM-DD HH:mm:ss')
+      cell: ({ getValue }) => dayjs(getValue() as string).format('YYYY/MM/DD HH:mm:ss')
     },
     {
       accessorKey: 'size',

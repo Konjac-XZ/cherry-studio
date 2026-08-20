@@ -1,7 +1,7 @@
 import { EmptyState, Skeleton } from '@cherrystudio/ui'
 import { formatCompactNumber } from '@renderer/utils/number'
 import { cn } from '@renderer/utils/style'
-import { getLocaleFirstDayOfWeek } from '@renderer/utils/time'
+import { type DateFormatter, getLocaleFirstDayOfWeek } from '@renderer/utils/time'
 import type {
   AiUsageRecordGroupIdentity,
   AiUsageRecordStatsBucket,
@@ -41,8 +41,8 @@ interface UsageDistributionChartProps {
   costCurrency?: Currency
   exploreStatsLoading: boolean
   exploreTimelineLoading: boolean
-  dateFormatter: Intl.DateTimeFormat
-  monthFormatter: Intl.DateTimeFormat
+  dateFormatter: DateFormatter
+  monthFormatter: DateFormatter
   formatShare: (value: number) => string
   getBucketLabel: (bucket: AiUsageRecordGroupIdentity) => string
   renderBucketLabel: (bucket: AiUsageRecordGroupIdentity) => ReactNode

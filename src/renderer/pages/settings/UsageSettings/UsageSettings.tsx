@@ -3,6 +3,7 @@ import { usePersistCache } from '@data/hooks/useCache'
 import { useProviders } from '@renderer/hooks/useProvider'
 import { formatCompactNumber } from '@renderer/utils/number'
 import { cn } from '@renderer/utils/style'
+import { formatDate, formatMonth } from '@renderer/utils/time'
 import type {
   AiUsageRecordGroupIdentity,
   AiUsageRecordListSortBy,
@@ -182,14 +183,8 @@ function UsageSettings() {
     [overviewBuckets]
   )
 
-  const dateFormatter = useMemo(
-    () => new Intl.DateTimeFormat(i18n.language, { year: 'numeric', month: 'short', day: 'numeric' }),
-    [i18n.language]
-  )
-  const monthFormatter = useMemo(
-    () => new Intl.DateTimeFormat(i18n.language, { year: 'numeric', month: 'short' }),
-    [i18n.language]
-  )
+  const dateFormatter = useMemo(() => ({ format: formatDate }), [])
+  const monthFormatter = useMemo(() => ({ format: formatMonth }), [])
   const percentFormatter = useMemo(
     () =>
       new Intl.NumberFormat(i18n.language, {
@@ -213,15 +208,7 @@ function UsageSettings() {
     (value: number) => (value > 0 && value < 0.001 ? '<0.1%' : hitRateFormatter.format(value)),
     [hitRateFormatter]
   )
-  const entryDateFormatter = useMemo(
-    () =>
-      new Intl.DateTimeFormat(i18n.language, {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      }),
-    [i18n.language]
-  )
+  const entryDateFormatter = dateFormatter
   const entryTimeFormatter = useMemo(
     () =>
       new Intl.DateTimeFormat(i18n.language, {

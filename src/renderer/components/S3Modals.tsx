@@ -283,7 +283,7 @@ export function S3RestoreModal({
 }
 
 function formatFileOption(file: BackupFile): ComboboxOption {
-  const date = dayjs(file.modifiedTime).format('YYYY-MM-DD HH:mm:ss')
+  const date = dayjs(file.modifiedTime).format('YYYY/MM/DD HH:mm:ss')
   const size = formatFileSize(file.size)
   return {
     label: `${file.fileName} (${date}, ${size})`,

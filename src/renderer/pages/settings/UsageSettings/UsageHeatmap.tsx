@@ -1,7 +1,7 @@
 import { NormalTooltip, SegmentedControl, Skeleton } from '@cherrystudio/ui'
 import { formatCompactNumber } from '@renderer/utils/number'
 import { cn } from '@renderer/utils/style'
-import { getLocaleFirstDayOfWeek } from '@renderer/utils/time'
+import { formatDate, formatShortMonth, getLocaleFirstDayOfWeek } from '@renderer/utils/time'
 import type { AiUsageRecordTimelineBucket } from '@shared/data/api/schemas/aiUsageRecords'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -186,13 +186,13 @@ export default function UsageHeatmap({
   }, [days, heatmapRef, heatmapWidth])
 
   const monthLabels = useMemo(() => {
-    const formatter = new Intl.DateTimeFormat(i18n.language, { month: 'short' })
     let previousVisibleIndex = -Infinity
 
     return weeks.map((week, weekIndex) => {
       const day = week[0]
       const previous = weekIndex > 0 ? weeks[weekIndex - 1][0] : undefined
-      const label = !previous || previous.date.getMonth() !== day.date.getMonth() ? formatter.format(day.date) : ''
+      const label =
+        !previous || previous.date.getMonth() !== day.date.getMonth() ? formatShortMonth(day.date, i18n.language) : ''
 
       if (!label || weekIndex - previousVisibleIndex < 3) {
         return ''
@@ -202,11 +202,6 @@ export default function UsageHeatmap({
       return label
     })
   }, [i18n.language, weeks])
-
-  const dateFormatter = useMemo(
-    () => new Intl.DateTimeFormat(i18n.language, { year: 'numeric', month: 'short', day: 'numeric' }),
-    [i18n.language]
-  )
 
   const metricOptions = useMemo(
     () =>
@@ -266,7 +261,7 @@ export default function UsageHeatmap({
                         : t('settings.usage.tooltip.tokens', { value: formatCompactNumber(value) })
                     const tooltipContent = (
                       <div className="flex flex-col gap-1">
-                        <span>{dateFormatter.format(day.date)}</span>
+                        <span>{formatDate(day.date)}</span>
                         <span>{tooltipValue}</span>
                         <span>{t('settings.usage.tooltip.requests', { count: bucket?.requestCount ?? 0 })}</span>
                       </div>
@@ -277,7 +272,7 @@ export default function UsageHeatmap({
                         <button
                           type="button"
                           aria-disabled={day.isFuture}
-                          aria-label={t('settings.usage.heatmap.ariaDate', { date: dateFormatter.format(day.date) })}
+                          aria-label={t('settings.usage.heatmap.ariaDate', { date: formatDate(day.date) })}
                           onClick={() => {
                             if (!day.isFuture) {
                               onSelectDate(day.key)

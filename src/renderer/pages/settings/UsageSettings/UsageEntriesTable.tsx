@@ -11,7 +11,7 @@ import {
 } from '@cherrystudio/ui'
 import { formatCompactNumber } from '@renderer/utils/number'
 import { cn } from '@renderer/utils/style'
-import { createDurationFormatter } from '@renderer/utils/time'
+import { createDurationFormatter, type DateFormatter } from '@renderer/utils/time'
 import type { AiUsageRecordListSortBy, AiUsageRecordSortOrder } from '@shared/data/api/schemas/aiUsageRecords'
 import {
   type AiUsageRecordEntry,
@@ -51,7 +51,7 @@ interface UsageEntriesTableProps {
   onSort: (sortBy: AiUsageRecordListSortBy) => void
   onLoadNext: () => void
   getProviderInfo: (id: string, snapshotName?: string | null) => { id: string; name: string }
-  dateFormatter: Intl.DateTimeFormat
+  dateFormatter: DateFormatter
   timeFormatter: Intl.DateTimeFormat
 }
 

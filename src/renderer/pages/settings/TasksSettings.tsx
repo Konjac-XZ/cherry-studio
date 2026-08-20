@@ -87,6 +87,7 @@ import { useConversationNavigation } from '@renderer/hooks/useConversationNaviga
 import { useTheme } from '@renderer/hooks/useTheme'
 import { openRoute } from '@renderer/services/mainWindowNavigation'
 import { toast } from '@renderer/services/toast'
+import { formatDateTime } from '@renderer/utils/time'
 import type { AgentChannelEntity } from '@shared/data/api/schemas/agentChannels'
 import { AGENTS_MAX_LIMIT } from '@shared/data/api/schemas/agents'
 import { AGENT_WORKSPACE_TYPE } from '@shared/data/api/schemas/agentWorkspaces'
@@ -368,7 +369,7 @@ function getTriggerSummary(trigger: Trigger, t: TFunction) {
     case 'interval':
       return t('agent.tasks.schedule.summary.interval', { count: Number(schedule.value) })
     case 'once':
-      return new Date(schedule.value).toLocaleString()
+      return formatDateTime(schedule.value)
     case 'cron':
       return schedule.value
   }
@@ -491,7 +492,7 @@ const TaskScheduleControls: FC<{
       <DateTimePicker
         value={parseScheduleDate(value.value)}
         granularity="minute"
-        format="yyyy-MM-dd HH:mm"
+        format="yyyy/MM/dd HH:mm"
         placeholder={t('agent.tasks.oncePlaceholder')}
         disabled={disabled}
         labels={{
@@ -633,8 +634,7 @@ const TaskSessionReuseField: FC<{
 }
 
 const TaskLogsInline: FC<{ taskId: string; agentId: string }> = ({ taskId, agentId }) => {
-  const { t, i18n } = useTranslation()
-  const locale = i18n.language
+  const { t } = useTranslation()
   const { openConversation } = useConversationNavigation('agents')
   const { logs, isLoading, error: logsError } = useTaskLogs(agentId, taskId)
   const [searchText, setSearchText] = useState('')
@@ -647,9 +647,9 @@ const TaskLogsInline: FC<{ taskId: string; agentId: string }> = ({ taskId, agent
         log.result?.toLowerCase().includes(query) ||
         log.error?.toLowerCase().includes(query) ||
         log.status.toLowerCase().includes(query) ||
-        new Date(log.startedAt).toLocaleString(locale).toLowerCase().includes(query)
+        formatDateTime(log.startedAt).toLowerCase().includes(query)
     )
-  }, [locale, logs, searchText])
+  }, [logs, searchText])
 
   const columns = useMemo<ColumnDef<TaskRunLogEntity>[]>(
     () => [
@@ -657,14 +657,7 @@ const TaskLogsInline: FC<{ taskId: string; agentId: string }> = ({ taskId, agent
         accessorKey: 'startedAt',
         header: t('agent.tasks.logs.runAt'),
         meta: { width: 160 },
-        cell: ({ getValue }) =>
-          new Date(getValue() as string).toLocaleString(undefined, {
-            month: 'numeric',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false
-          })
+        cell: ({ getValue }) => formatDateTime(getValue() as string)
       },
       {
         accessorKey: 'durationMs',
@@ -805,20 +798,9 @@ const TaskDetail: FC<{
       ? t('agent.session.workspace_selector.no_project')
       : (workspaces?.find((workspace) => workspace.id === workspaceId)?.name ?? workspaceId)
 
-  const formatDateTime = (iso: string | null | undefined) => {
+  const formatTaskDateTime = (iso: string | null | undefined) => {
     if (!iso) return '-'
-    const date = new Date(iso)
-    const diff = Math.abs(Date.now() - date.getTime())
-    if (diff < 86_400_000) {
-      return date.toLocaleString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false })
-    }
-    return date.toLocaleString(undefined, {
-      month: 'numeric',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    })
+    return formatDateTime(iso)
   }
 
   const detailItems = [
@@ -858,8 +840,8 @@ const TaskDetail: FC<{
       label: t('agent.tasks.channels.label'),
       value: selectedChannels.length > 0 ? selectedChannels.map((channel) => channel.name).join(', ') : t('common.none')
     },
-    { label: t('agent.tasks.lastRun'), value: formatDateTime(task.lastRun) },
-    { label: t('agent.tasks.nextRun'), value: formatDateTime(task.nextRun) }
+    { label: t('agent.tasks.lastRun'), value: formatTaskDateTime(task.lastRun) },
+    { label: t('agent.tasks.nextRun'), value: formatTaskDateTime(task.nextRun) }
   ]
 
   const handleEditSave = useCallback(
@@ -929,7 +911,7 @@ const TaskDetail: FC<{
         </SettingTitle>
         {task.nextRun && (
           <SettingDescription>
-            {t('agent.tasks.nextRun')}: {formatDateTime(task.nextRun)}
+            {t('agent.tasks.nextRun')}: {formatTaskDateTime(task.nextRun)}
           </SettingDescription>
         )}
       </div>

@@ -3,6 +3,8 @@ import { preferenceService } from '@renderer/data/PreferenceService'
 import { ipcApi } from '@renderer/ipc'
 import { defaultLanguage } from '@shared/utils/languages'
 
+import { formatDate, formatDateTime } from './time'
+
 const logger = loggerService.withContext('Utils:Prompt')
 
 const supportedVariables = [
@@ -28,12 +30,7 @@ export const replacePromptVariables = async (userSystemPrompt: string, modelName
 
   const now = new Date()
   if (userSystemPrompt.includes('{{date}}')) {
-    const date = now.toLocaleDateString(undefined, {
-      weekday: 'short',
-      year: 'numeric',
-      month: 'numeric',
-      day: 'numeric'
-    })
+    const date = formatDate(now)
     userSystemPrompt = userSystemPrompt.replace(/{{date}}/g, date)
   }
 
@@ -43,15 +40,7 @@ export const replacePromptVariables = async (userSystemPrompt: string, modelName
   }
 
   if (userSystemPrompt.includes('{{datetime}}')) {
-    const datetime = now.toLocaleString(undefined, {
-      weekday: 'short',
-      year: 'numeric',
-      month: 'numeric',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: 'numeric',
-      second: 'numeric'
-    })
+    const datetime = formatDateTime(now, { includeSeconds: true })
     userSystemPrompt = userSystemPrompt.replace(/{{datetime}}/g, datetime)
   }
 

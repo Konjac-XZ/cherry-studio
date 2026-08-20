@@ -517,7 +517,5 @@ export function formatHistoryTime(value: string, t: TFunction) {
   if (!date.isValid()) return t('history.records.table.emptyValue')
   if (date.isSame(now, 'day')) return date.format('HH:mm')
   if (date.isSame(now.subtract(1, 'day'), 'day')) return t('common.yesterday')
-  if (date.isSame(now, 'year')) return date.format('MM/DD')
-
   return date.format('YYYY/MM/DD')
 }

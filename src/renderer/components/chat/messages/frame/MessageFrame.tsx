@@ -379,7 +379,7 @@ const UserBubbleMessage = ({
       {!isEditing && (
         <div className="MessageFooter relative mt-1 mr-[30px] flex min-h-6.5 w-[calc(100%-30px)] max-w-full items-center justify-end text-foreground-tertiary text-xs leading-none">
           <div className={cn(USER_MESSAGE_FOOTER_ACTIONS_CLASS, 'justify-end')}>
-            <span className="shrink-0">{dayjs(message.updatedAt ?? message.createdAt).format('MM/DD HH:mm')}</span>
+            <span className="shrink-0">{dayjs(message.updatedAt ?? message.createdAt).format('YYYY/MM/DD HH:mm')}</span>
             <MessageMenuBar
               message={message}
               isLastMessage={isLastMessage}

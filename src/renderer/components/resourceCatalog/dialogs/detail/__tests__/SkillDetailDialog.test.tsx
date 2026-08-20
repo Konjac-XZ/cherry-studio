@@ -106,26 +106,19 @@ describe('SkillDetailDialog', () => {
     vi.useRealTimers()
   })
 
-  // The system locale and the app language differ often enough that one machine's default hides the
-  // bug; asserting both orders means whichever locale the runner has, one case still catches it.
-  it.each([
-    ['zh-CN', /^2026\/\d{2}\/\d{2}$/],
-    ['en-US', /^\d{2}\/\d{2}\/2026$/]
-  ])('formats dates for the selected app language (%s), not the system locale', (language, expected) => {
+  it.each(['zh-CN', 'en-US'])('uses the global date format for app language %s', (language) => {
     uiLanguage.current = language
     render(<SkillDetailDialog skill={createSkill()} open onOpenChange={vi.fn()} />)
 
-    expect(screen.getByText(expected)).toBeInTheDocument()
+    expect(screen.getByText(/^2026\/05\/0[56]$/)).toBeInTheDocument()
   })
 
-  it('follows the locale that supplied the copy when the requested one has no bundle', () => {
-    // `en-GB` has no locale pack, so i18next renders `en-US` strings; formatting the date as `en-GB`
-    // would put UK-ordered dates next to US English text.
+  it('keeps the global date format when the requested language has no bundle', () => {
     uiLanguage.current = 'en-GB'
     uiLanguage.resolved = 'en-US'
     render(<SkillDetailDialog skill={createSkill()} open onOpenChange={vi.fn()} />)
 
-    expect(screen.getByText(/^\d{2}\/\d{2}\/2026$/)).toBeInTheDocument()
+    expect(screen.getByText(/^2026\/05\/0[56]$/)).toBeInTheDocument()
   })
 
   it('shows skill metadata in a dialog without file preview or delete entry points', () => {
