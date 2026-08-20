@@ -860,6 +860,32 @@ describe('TranslatePage', () => {
     await waitFor(() => expect(MockUseCacheUtils.getCacheValue('translate.output')).toBe(''))
   })
 
+  it('unlocks the PDF text fallback UI immediately when translation is stopped', async () => {
+    MockUsePreferenceUtils.setMultiplePreferenceValues({
+      'feature.translate.model_id': 'openai::gpt-4.1',
+      'feature.translate.page.source_language': 'en-us',
+      'feature.translate.page.target_language': 'zh-cn'
+    })
+    binaryMock.snapshots = {}
+    fileMock.getFileExtension.mockReturnValue('.pdf')
+    fileMock.onSelectFile.mockResolvedValue([{ name: 'input.pdf', path: '/tmp/input.pdf', size: 10, type: 'document' }])
+    fileMock.readExternal.mockResolvedValue('PDF extracted text')
+    translateCoreMock.translateText.mockReturnValueOnce(new Promise<string>(() => {}))
+
+    render(<TranslatePage />)
+    fireEvent.click(screen.getByRole('button', { name: 'translate.files.upload' }))
+
+    await waitFor(() => expect(screen.getByTestId('babeldoc-availability')).toHaveTextContent('missing'))
+    fireEvent.click(screen.getByRole('button', { name: 'translate.button.translate' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'common.stop' })).toBeInTheDocument())
+
+    fireEvent.click(screen.getByRole('button', { name: 'common.stop' }))
+
+    expect(toast.info).toHaveBeenCalledWith('translate.info.aborted')
+    await waitFor(() => expect(screen.queryByText('translate.processing')).not.toBeInTheDocument())
+    expect(screen.getByRole('button', { name: 'translate.button.translate' })).toBeEnabled()
+  })
+
   it('does not start PDF text fallback translation after closing during language detection', async () => {
     MockUsePreferenceUtils.setMultiplePreferenceValues({
       'feature.translate.model_id': 'openai::gpt-4.1',
@@ -1746,6 +1772,8 @@ describe('TranslatePage', () => {
 
     expect(signal?.aborted).toBe(true)
     expect(toast.info).toHaveBeenCalledWith('translate.info.aborted')
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'common.stop' })).not.toBeInTheDocument())
+    expect(screen.queryByText('translate.processing')).not.toBeInTheDocument()
   })
 
   it('ignores dropped and pasted files while translation is running', async () => {

@@ -512,8 +512,13 @@ const TranslatePage: FC = () => {
       toast.info(t('translate.info.aborted'))
       return
     }
+    if (pdfTextFallbackActive) {
+      pdfTextRequestIdRef.current += 1
+      setIsPdfTextExtracting(false)
+      setIsProcessing(false)
+    }
     abortTextTranslation()
-  }, [abortTextTranslation, pdfStatus.running, t])
+  }, [abortTextTranslation, pdfStatus.running, pdfTextFallbackActive, t])
 
   const prepareShortcutInput = useCallback(
     (text: string) => {
