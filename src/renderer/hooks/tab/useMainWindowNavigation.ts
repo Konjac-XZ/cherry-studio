@@ -1,12 +1,15 @@
+import { loggerService } from '@logger'
 import { useWindowInitData } from '@renderer/hooks/useWindowInitData'
 import i18n from '@renderer/i18n/resolver'
-import { ipcApi, useIpcOn } from '@renderer/ipc'
+import { ipcApi } from '@renderer/ipc'
 import { OPEN_MAIN_ROUTE_EVENT, type OpenMainRouteEvent } from '@renderer/services/mainWindowNavigation'
 import { isSettingsPath, normalizeSettingsPath, type SettingsPath } from '@shared/data/types/settingsPath'
 import type { MainWindowInitData } from '@shared/types/mainWindow'
 import { useCallback, useEffect, useRef } from 'react'
 
 import { useTabs } from './useTabs'
+
+const logger = loggerService.withContext('MainWindowNavigation')
 
 function normalizeTranslateTabUrl(url: string): string | null {
   const normalized = url === '/translate' || url.startsWith('/translate?') ? `/app${url}` : url
@@ -97,17 +100,23 @@ function useOpenTranslateRoute() {
 
       const translateTab = tabs.find((tab) => tab.type === 'route' && normalizeTranslateTabUrl(tab.url))
       if (translateTab) {
+        logger.info('Applying Translate route to existing tab', { path: targetPath, tabId: translateTab.id })
         updateTab(translateTab.id, { url: targetPath, lastAccessTime: Date.now() })
         setActiveTab(translateTab.id)
         return true
       }
 
       if (translateTabIdRef.current) {
+        logger.info('Queueing Translate route while tab is opening', {
+          path: targetPath,
+          tabId: translateTabIdRef.current
+        })
         pendingTranslatePathRef.current = targetPath
         return true
       }
 
       translateTabIdRef.current = openTab(targetPath, { id: 'translate' })
+      logger.info('Opened Translate route in a new tab', { path: targetPath, tabId: translateTabIdRef.current })
       return true
     },
     [openTab, setActiveTab, tabs, updateTab]
@@ -134,11 +143,8 @@ function useMainRouteEventBridge(handleRoute: (path: string) => void) {
  *
  * - `OPEN_MAIN_ROUTE_EVENT` DOM event — the in-window fast path used by
  *   `openRoute()` callers living in this window (preventDefault = handled ACK).
- * - `navigation.open_route_requested` IpcApi event — the running-window path
- *   for main-process/cross-window callers; ephemeral command, no request-id
- *   bookkeeping needed.
- * - Navigation init data — the cold-start path only (the window was created FOR
- *   this route); `requestId` dedupes replays of the same stored payload.
+ * - Navigation init data — both cold-start and live-window paths; `requestId`
+ *   dedupes replays and is acknowledged after the route is committed.
  * - `tab-attach` init data — the cold-start path for a detached tab being
  *   re-attached (openTabInMainWindow rebuilt the window around it); same
  *   request-id dedupe, delivered to `attachTab`.
@@ -155,6 +161,7 @@ export function useMainWindowNavigation() {
 
   const handleRoute = useCallback(
     (to: string) => {
+      logger.info('Main window route request received', { path: to })
       if (isSettingsPath(to)) {
         openSettingsRoute(to)
       } else if (openTranslateRoute(to)) {
@@ -165,8 +172,6 @@ export function useMainWindowNavigation() {
     },
     [openSettingsRoute, openTab, openTranslateRoute]
   )
-
-  useIpcOn('navigation.open_route_requested', ({ to }) => handleRoute(to))
 
   useEffect(() => {
     if (initData?.kind !== 'navigation') return

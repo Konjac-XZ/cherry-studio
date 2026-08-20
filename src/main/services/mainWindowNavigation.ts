@@ -106,9 +106,9 @@ function isTabDeliveryReady(windowId: string): boolean {
 }
 
 /**
- * Clear the stored init data for a cold-start payload after the renderer consumed it, so a
- * hot reload does not replay it. Fed by the `navigation.ack_open_route` ack — the channel
- * name predates the `tab-attach` kind, but it acks any `MainWindowInitData` by requestId.
+ * Clear stored init data after the renderer consumes it, so a reload does not replay it.
+ * Fed by the `navigation.ack_open_route` ack — the channel name predates the `tab-attach`
+ * kind, but it acknowledges any `MainWindowInitData` by requestId.
  */
 export function acknowledgeMainWindowNavigation(windowId: string, requestId: number): void {
   const windowManager = application.get('WindowManager')
@@ -127,34 +127,12 @@ export function acknowledgeMainWindowNavigation(windowId: string, requestId: num
 }
 
 /**
- * Open a route in the main window. Two delivery paths, split by whether the
- * navigation coincides with the window's lifecycle:
- *
- * - Window alive → the navigation is a one-shot COMMAND: deliver it as the
- *   directed `navigation.open_route_requested` IpcApi event (ephemeral, no
- *   store write, no replay on reload), then raise the window. Unlike tab
- *   attach this does not gate on renderer readiness: a dropped navigation is
- *   re-triggerable and harmless, while a dropped tab attach is not (the
- *   source sub-window closes).
- * - Window missing/destroyed → the window is being created FOR this route, so
- *   the route is genuine init data; `showMainWindow(initData)` stores it before
- *   creation and the renderer picks it up on cold start.
- *
- * Do NOT push navigation through init data on a live window: init data is
- * lifecycle state, persists in the store, and replays on renderer reload.
+ * Open a route in the main window through its acknowledged init-data channel.
+ * `showMainWindow(initData)` stores before a cold create or pushes `window.reused`
+ * after restoring a live window; the renderer clears the matching request by ACK.
  */
 export function openRouteInMainWindow(path: string): void {
-  const mainWindowService = application.get('MainWindowService')
-
-  const mainWindowId = resolveLiveMainWindowId()
-
-  if (mainWindowId) {
-    application.get('IpcApiService').send(mainWindowId, 'navigation.open_route_requested', { to: path })
-    mainWindowService.showMainWindow()
-    return
-  }
-
-  mainWindowService.showMainWindow({
+  application.get('MainWindowService').showMainWindow({
     kind: 'navigation',
     to: path,
     requestId: nextNavigationRequestId++

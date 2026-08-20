@@ -74,11 +74,6 @@ export const navigationRequestSchemas = {
 
 // ── Event: main→renderer pushes (pure types, never parsed) ──
 export type NavigationEventSchemas = {
-  // Sent *directed* to the main window only: a route open was requested (deep
-  // link, another window, app menu). The main-window shell decides how to land
-  // it (settings singleton tab vs regular openTab). Fact-style name on purpose —
-  // events report what happened; requests give orders.
-  'navigation.open_route_requested': { to: string }
   // Directed to each live full-chrome TabsProvider for an event-time snapshot.
   'navigation.conversation_ownership_requested': {
     requestId: string

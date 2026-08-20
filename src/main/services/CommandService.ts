@@ -92,7 +92,9 @@ export class CommandService extends BaseService {
     })
 
     this.registerHandler('translate.clipboard', () => {
-      openRouteInMainWindow(nextTranslateClipboardRoute())
+      const route = nextTranslateClipboardRoute()
+      logger.info('Translate Clipboard shortcut requested', { route })
+      openRouteInMainWindow(route)
     })
 
     this.registerHandler('app.settings.open', () => {

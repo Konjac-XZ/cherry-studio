@@ -257,7 +257,7 @@ describe('TabRouter', () => {
     expect(routerMocks.navigate).not.toHaveBeenCalled()
   })
 
-  it('navigates when the tab entry URL changes externally', () => {
+  it('preserves search parameters when the tab URL changes externally', () => {
     const { rerender } = render(
       <TabRouter
         tab={tab('chat-tab', '/app/chat?topicId=entry-topic', {
@@ -273,8 +273,8 @@ describe('TabRouter', () => {
 
     rerender(
       <TabRouter
-        tab={tab('chat-tab', '/app/chat?topicId=current-topic', {
-          title: 'Chat',
+        tab={tab('chat-tab', '/app/translate?paste=1&_=nonce-1', {
+          title: 'Translate',
           lastAccessTime: 1,
           isDormant: false
         })}
@@ -284,6 +284,6 @@ describe('TabRouter', () => {
     )
 
     expect(createMemoryHistory).toHaveBeenCalledTimes(1)
-    expect(routerMocks.navigate).toHaveBeenCalledWith({ to: '/app/chat?topicId=current-topic' })
+    expect(routerMocks.navigate).toHaveBeenCalledWith({ href: '/app/translate?paste=1&_=nonce-1' })
   })
 })

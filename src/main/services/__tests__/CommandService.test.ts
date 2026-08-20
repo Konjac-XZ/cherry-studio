@@ -4,6 +4,7 @@ vi.mock('@logger', () => ({
   loggerService: {
     withContext: () => ({
       error: vi.fn(),
+      info: vi.fn(),
       warn: vi.fn()
     })
   }

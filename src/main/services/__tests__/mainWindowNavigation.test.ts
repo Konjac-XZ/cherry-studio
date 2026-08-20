@@ -96,15 +96,17 @@ describe('mainWindowNavigation', () => {
   })
 
   describe('openRouteInMainWindow', () => {
-    it('sends the open_route_requested event and focuses when the main window is alive', () => {
+    it('pushes acknowledged navigation init data when the main window is alive', () => {
       windowManagerMock.getWindowsByType.mockReturnValue([aliveWindow])
 
       openRouteInMainWindow('/knowledge')
 
-      expect(ipcApiServiceMock.send).toHaveBeenCalledWith('main-1', 'navigation.open_route_requested', {
-        to: '/knowledge'
+      expect(ipcApiServiceMock.send).not.toHaveBeenCalled()
+      expect(mainWindowServiceMock.showMainWindow).toHaveBeenCalledWith({
+        kind: 'navigation',
+        to: '/knowledge',
+        requestId: expect.any(Number)
       })
-      expect(mainWindowServiceMock.showMainWindow).toHaveBeenCalledWith()
     })
 
     it('creates the main window with navigation init data when none exists', () => {
@@ -118,7 +120,7 @@ describe('mainWindowNavigation', () => {
       })
     })
 
-    it('uses a fresh request id for repeated cold-start navigations', () => {
+    it('uses a fresh request id for repeated navigations', () => {
       openRouteInMainWindow('/knowledge')
       openRouteInMainWindow('/agents')
 
@@ -150,15 +152,17 @@ describe('mainWindowNavigation', () => {
       })
     })
 
-    it('delivers via the event when the main window is alive', () => {
+    it('delivers acknowledged init data when the main window is alive', () => {
       windowManagerMock.getWindowsByType.mockReturnValue([aliveWindow])
 
       openSettingsInMainWindow('/settings/about')
 
-      expect(ipcApiServiceMock.send).toHaveBeenCalledWith('main-1', 'navigation.open_route_requested', {
-        to: '/settings/about'
+      expect(ipcApiServiceMock.send).not.toHaveBeenCalled()
+      expect(mainWindowServiceMock.showMainWindow).toHaveBeenCalledWith({
+        kind: 'navigation',
+        to: '/settings/about',
+        requestId: expect.any(Number)
       })
-      expect(mainWindowServiceMock.showMainWindow).toHaveBeenCalledWith()
     })
   })
 
