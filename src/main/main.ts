@@ -20,6 +20,7 @@ import { runBackupRestoreGate } from '@main/core/preboot/backupRestoreGate'
 import { configureChromiumFlags } from '@main/core/preboot/chromiumFlags'
 import { initCrashTelemetry } from '@main/core/preboot/crashTelemetry'
 import { requireSingleInstance } from '@main/core/preboot/singleInstance'
+import { configureNodeSystemCa } from '@main/core/preboot/systemCa'
 import { resolveUserDataLocation } from '@main/core/preboot/userDataLocation'
 import { runV2MigrationGate } from '@main/core/preboot/v2MigrationGate'
 import { runDataReset } from '@main/services/dataReset'
@@ -27,6 +28,7 @@ import { registerMediaSchemes } from '@main/services/mediaProtocol'
 import { runUserDataRelocation } from '@main/services/userDataRelocation'
 
 // should be the first to resolveUserDataLocation()
+configureNodeSystemCa()
 resolveUserDataLocation()
 requireSingleInstance()
 configureChromiumFlags()

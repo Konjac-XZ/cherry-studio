@@ -98,6 +98,8 @@ Chromium runtime state (`Network/`, `Partitions/`, `IndexedDB`,
 
 ```
 preboot/
+├── systemCa.ts          adds the OS trust store to Node TLS for the main
+│                        process and enables it for child Node processes
 ├── singleInstance.ts    claims Electron's single-instance lock and exits
 │                        second instances. Runs after userData resolution so
 │                        dev instances with different userData suffixes use
