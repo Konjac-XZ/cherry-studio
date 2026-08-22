@@ -22,7 +22,7 @@ import type {
  * - `MessageListMessagesContext` — the messages array itself. Streaming chunks
  *   land here.
  * - `MessageListUiStaticContext` — preference-driven static config (menuConfig,
- *   translationLanguages, externalCodeEditors). Changes when the user flips a
+ *   translationLanguages). Changes when the user flips a
  *   setting.
  * - `MessageListUiSelectorsContext` — per-message getter functions
  *   (getMessageUiState, getMessageSiblings, getMessageActivityState,

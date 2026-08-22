@@ -131,6 +131,14 @@ export type SidebarFavoriteItem =
       type: 'mini_app'
       id: string
     }
+  | {
+      type: 'agent'
+      id: string
+    }
+  | {
+      type: 'assistant'
+      id: string
+    }
 
 export type AssistantIconType = 'model' | 'emoji' | 'none'
 

@@ -67,7 +67,10 @@ export function toCreateModelDto(
     name: inferModelNameFromId(modelId),
     group: model.group,
     ...(capabilities ? { capabilities: [...capabilities] } : {}),
-    ...(resolvedEndpointTypes?.length ? { endpointTypes: [...resolvedEndpointTypes] } : {})
+    ...(resolvedEndpointTypes?.length ? { endpointTypes: [...resolvedEndpointTypes] } : {}),
+    // Discovered rather than registry-supplied for local providers — Ollama's window comes from
+    // `/api/show`, and dropping it here leaves the row without one, so no `num_ctx` is ever sent.
+    ...(model.contextWindow ? { contextWindow: model.contextWindow } : {})
   }
 }
 

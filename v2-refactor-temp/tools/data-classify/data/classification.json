@@ -2739,7 +2739,7 @@
               "type": "PreferenceTypes.PreferenceShortcutType"
             },
             {
-              "category": null,
+              "category": "preferences",
               "defaultValue": {
                 "binding": [
                   "CommandOrControl",
@@ -2748,8 +2748,8 @@
                 "enabled": true
               },
               "originalKey": "clear_topic",
-              "status": "deleted",
-              "targetKey": null,
+              "status": "classified",
+              "targetKey": "shortcut.topic.clear_messages",
               "type": "PreferenceTypes.PreferenceShortcutType"
             },
             {

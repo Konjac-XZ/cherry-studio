@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "bc2e2f53-17c3-449d-9dea-e2549fc082b5",
+  "id": "f0cb0475-dec3-4b5b-bcfc-7ab54578dd0a",
   "prevId": "f88ffda1-c02a-42a5-a3f7-15eb419fb3c3",
   "tables": {
     "agent": {
@@ -4413,82 +4413,6 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "translate_glossary": {
-      "name": "translate_glossary",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "source_phrase": {
-          "name": "source_phrase",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "target_phrase": {
-          "name": "target_phrase",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "target_language": {
-          "name": "target_language",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "enabled": {
-          "name": "enabled",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "translate_glossary_target_language_idx": {
-          "name": "translate_glossary_target_language_idx",
-          "columns": ["target_language", "created_at"],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "translate_glossary_target_language_translate_language_lang_code_fk": {
-          "name": "translate_glossary_target_language_translate_language_lang_code_fk",
-          "tableFrom": "translate_glossary",
-          "tableTo": "translate_language",
-          "columnsFrom": ["target_language"],
-          "columnsTo": ["lang_code"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
     "translate_history": {
       "name": "translate_history",
       "columns": {
@@ -4535,20 +4459,6 @@
           "notNull": false,
           "autoincrement": false
         },
-        "model_id": {
-          "name": "model_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "cache_key": {
-          "name": "cache_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
         "star": {
           "name": "star",
           "type": "integer",
@@ -4581,16 +4491,6 @@
         "translate_history_star_created_at_idx": {
           "name": "translate_history_star_created_at_idx",
           "columns": ["star", "created_at"],
-          "isUnique": false
-        },
-        "translate_history_cache_key_idx": {
-          "name": "translate_history_cache_key_idx",
-          "columns": ["cache_key"],
-          "isUnique": false
-        },
-        "translate_history_model_id_idx": {
-          "name": "translate_history_model_id_idx",
-          "columns": ["model_id"],
           "isUnique": false
         }
       },
@@ -4942,13 +4842,6 @@
         },
         "auth_config": {
           "name": "auth_config",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "api_features": {
-          "name": "api_features",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
