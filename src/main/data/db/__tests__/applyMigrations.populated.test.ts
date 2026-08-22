@@ -350,6 +350,93 @@ describe('applyMigrations over a populated database', () => {
     expect(String(sqlite.pragma('integrity_check', { simple: true }))).toBe('ok')
   })
 
+  it('upgrades the retired personal 0012 translate migration without losing data', () => {
+    applyMigrations(db, baselineMigrationsFolder(join(tempDir, 'baseline'), '0012_sink_endpoint_dialect'))
+    const now = Date.now()
+
+    sqlite.exec(`
+      CREATE TABLE translate_glossary (
+        id text PRIMARY KEY NOT NULL,
+        source_phrase text NOT NULL,
+        target_phrase text NOT NULL,
+        target_language text NOT NULL,
+        enabled integer DEFAULT true NOT NULL,
+        created_at integer NOT NULL,
+        updated_at integer NOT NULL,
+        FOREIGN KEY (target_language) REFERENCES translate_language(lang_code) ON DELETE cascade
+      );
+      CREATE INDEX translate_glossary_target_language_idx
+        ON translate_glossary (target_language, created_at);
+    `)
+    sqlite
+      .prepare(
+        `INSERT INTO translate_language (lang_code, value, emoji, created_at, updated_at)
+         VALUES ('zh-cn', 'Chinese', 'CN', ?, ?)`
+      )
+      .run(now, now)
+    sqlite
+      .prepare(
+        `INSERT INTO translate_history
+          (id, source_text, target_text, source_language, target_language, star, created_at, updated_at,
+           model_id, cache_key)
+         VALUES ('personal-history', 'OpenAI', '开放人工智能', NULL, 'zh-cn', 1, ?, ?,
+           'personal-model', 'personal-cache')`
+      )
+      .run(now, now)
+    sqlite
+      .prepare(
+        `INSERT INTO translate_glossary
+          (id, source_phrase, target_phrase, target_language, enabled, created_at, updated_at)
+         VALUES ('personal-glossary', 'OpenAI', '开放人工智能', 'zh-cn', 1, ?, ?)`
+      )
+      .run(now, now)
+    sqlite
+      .prepare('INSERT INTO __drizzle_migrations (hash, created_at) VALUES (?, ?)')
+      .run('3534ea9ed9469a07b37284a8e0117eccc0d1168f603d0892e34395d9e1a29712', 1787143685371)
+
+    expect(() => applyMigrations(db, resolveMigrationsPath())).not.toThrow()
+
+    expect(
+      sqlite
+        .prepare(
+          `SELECT id, kind, source_text, target_text, model_id, cache_key
+           FROM translate_history WHERE id = 'personal-history'`
+        )
+        .get()
+    ).toEqual({
+      id: 'personal-history',
+      kind: 'text',
+      source_text: 'OpenAI',
+      target_text: '开放人工智能',
+      model_id: 'personal-model',
+      cache_key: 'personal-cache'
+    })
+    expect(
+      sqlite
+        .prepare(
+          `SELECT id, source_phrase, target_phrase, target_language
+           FROM translate_glossary WHERE id = 'personal-glossary'`
+        )
+        .get()
+    ).toEqual({
+      id: 'personal-glossary',
+      source_phrase: 'OpenAI',
+      target_phrase: '开放人工智能',
+      target_language: 'zh-cn'
+    })
+    expect(
+      sqlite
+        .prepare(
+          `SELECT created_at FROM __drizzle_migrations
+           WHERE created_at IN (1787286408660, 1787345194710, 1787378635027)
+           ORDER BY created_at`
+        )
+        .all()
+    ).toEqual([{ created_at: 1787286408660 }, { created_at: 1787345194710 }, { created_at: 1787378635027 }])
+    expect(sqlite.pragma('foreign_key_check')).toEqual([])
+    expect(String(sqlite.pragma('integrity_check', { simple: true }))).toBe('ok')
+  })
+
   it('preserves every file_entry row and its references across the cleanup_policy recreate', () => {
     applyMigrations(db, baselineMigrationsFolder(join(tempDir, 'baseline'), '0004_fresh_roland_deschain'))
     seedBaselineRows()

@@ -35,13 +35,8 @@ export function applyMigrations(db: DbType, migrationsFolder: string): void {
     db.run(sql.raw(`PRAGMA foreign_keys = ${enforced ? 'ON' : 'OFF'}`))
   }
 
-  // The personal V2 preview originally shipped these translate-history columns
-  // as migrations 0006/0007. After merging the upstream migration chain, the
-  // same schema landed in 0012. Databases that ran the preview therefore already
-  // have some or all of this schema even though the current drizzle journal does
-  // not contain the old hashes. Keep 0012 safe to replay and reconcile the two
-  // columns here, where SQLite schema introspection can make ADD COLUMN conditional.
-  // This preserves both existing V2 rows and fresh V1 -> V2 migration targets.
+  // Personal V2 previews created this schema before it was regenerated as migration 0014.
+  // Keep 0014 idempotent; reconcile SQLite's conditional column additions here.
   ensureColumn(db, 'translate_history', 'model_id', 'text')
   ensureColumn(db, 'translate_history', 'cache_key', 'text')
   db.run(sql.raw('CREATE INDEX IF NOT EXISTS `translate_history_cache_key_idx` ON `translate_history` (`cache_key`)'))
