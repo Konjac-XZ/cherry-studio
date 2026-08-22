@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import ThinkingBlock from '../ThinkingBlock'
@@ -10,6 +11,10 @@ const mockRenderConfig = vi.hoisted(() => ({
   fontSize: 14,
   thoughtAutoCollapse: true
 }))
+const mockActions = vi.hoisted(() => ({
+  copyText: vi.fn(),
+  notifyError: vi.fn()
+}))
 type ThinkingBlockFixture = {
   id: string
   content: string
@@ -17,6 +22,7 @@ type ThinkingBlockFixture = {
 }
 
 vi.mock('../../MessageListProvider', () => ({
+  useMessageListActions: () => mockActions,
   useMessageRenderConfig: () => mockRenderConfig
 }))
 
@@ -52,11 +58,15 @@ describe('ThinkingBlock', () => {
     mockRenderConfig.messageFont = 'sans-serif'
     mockRenderConfig.fontSize = 14
     mockRenderConfig.thoughtAutoCollapse = true
+    mockActions.copyText.mockResolvedValue(undefined)
 
     mockUseTranslation.mockReturnValue({
       t: (key: string) => {
         if (key === 'message.tools.placeholder.thinking') return 'Thinking'
         if (key === 'common.reasoning_content') return 'Deep reasoning'
+        if (key === 'common.copy') return 'Copy'
+        if (key === 'common.copied') return 'Copied'
+        if (key === 'common.copy_failed') return 'Copy failed'
         return key
       }
     })
@@ -235,6 +245,52 @@ describe('ThinkingBlock', () => {
       const activeTimeText = getThinkingTimeText()
       expect(activeTimeText).toHaveTextContent('Thinking')
       expect(activeTimeText).not.toHaveTextContent('1.0s')
+    })
+  })
+
+  describe('copy behavior', () => {
+    it('copies the current streamed Markdown without toggling the disclosure', async () => {
+      vi.useRealTimers()
+      const user = userEvent.setup()
+      mockRenderConfig.thoughtAutoCollapse = false
+      const content = '**Plan**\n\n1. First thought'
+      const block = createThinkingBlock({ status: 'streaming', content })
+      renderThinkingBlock(block)
+
+      await user.click(screen.getByRole('button', { name: 'Copy' }))
+
+      expect(mockActions.copyText).toHaveBeenCalledWith(content, { successMessage: 'Copied' })
+      expect(getToggleButton()).toHaveAttribute('aria-expanded', 'true')
+    })
+
+    it('copies newly arrived streamed content on a later click', async () => {
+      vi.useRealTimers()
+      const user = userEvent.setup()
+      mockRenderConfig.thoughtAutoCollapse = false
+      const block = createThinkingBlock({ status: 'streaming', content: 'First thought' })
+      const { rerender } = renderThinkingBlock(block)
+
+      await user.click(screen.getByRole('button', { name: 'Copy' }))
+      expect(mockActions.copyText).toHaveBeenLastCalledWith('First thought', { successMessage: 'Copied' })
+
+      const updatedContent = 'First thought\n\nSecond thought'
+      rerender(<ThinkingBlock id={block.id} content={updatedContent} isStreaming />)
+
+      await user.click(screen.getByRole('button', { name: 'Copy' }))
+      expect(mockActions.copyText).toHaveBeenLastCalledWith(updatedContent, { successMessage: 'Copied' })
+    })
+
+    it('reports a clipboard failure without breaking the thinking block', async () => {
+      vi.useRealTimers()
+      const user = userEvent.setup()
+      mockRenderConfig.thoughtAutoCollapse = false
+      mockActions.copyText.mockRejectedValueOnce(new Error('Clipboard unavailable'))
+      renderThinkingBlock(createThinkingBlock())
+
+      await user.click(screen.getByRole('button', { name: 'Copy' }))
+
+      expect(mockActions.notifyError).toHaveBeenCalledWith('Copy failed')
+      expect(screen.getByRole('button', { name: 'Copy' })).toBeEnabled()
     })
   })
 

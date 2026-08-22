@@ -1,10 +1,13 @@
-import { type MarkdownSource } from '@cherrystudio/ui'
+import { type MarkdownSource, Tooltip } from '@cherrystudio/ui'
+import { loggerService } from '@logger'
+import ActionIconButton from '@renderer/components/ActionIconButton'
+import CopyIcon from '@renderer/components/icons/CopyIcon'
 import { type CSSProperties, memo, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import BeatLoader from 'react-spinners/BeatLoader'
 
 import ChatMarkdown from '../markdown/ChatMarkdown'
-import { useMessageRenderConfig } from '../MessageListProvider'
+import { useMessageListActions, useMessageRenderConfig } from '../MessageListProvider'
 import ThinkingEffect from './ThinkingEffect'
 import { normalizeThinkingPreview, scanThinkingPreview, type ThinkingPreviewScanState } from './thinkingPreview'
 import { useMinimumDisplayDuration } from './useMinimumDisplayDuration'
@@ -14,6 +17,7 @@ import { useScrollAnchor } from './useScrollAnchor'
 const THINKING_MUTED_COLOR = 'color-mix(in oklch, var(--foreground) 44.4444%, transparent)'
 const THINKING_SECONDARY_COLOR = 'var(--muted-foreground)'
 const THINKING_PREVIEW_MIN_DURATION_MS = 1000
+const logger = loggerService.withContext('ThinkingBlock')
 
 function getThinkingPreviewKey(preview: string): string {
   return preview
@@ -71,7 +75,9 @@ export const ThinkingBlockContent = memo(({ id, content, isStreaming }: Thinking
 ThinkingBlockContent.displayName = 'ThinkingBlockContent'
 
 const ThinkingBlock: React.FC<Props> = ({ id, content, isStreaming, showTitlePreview = false }) => {
+  const { copyText, notifyError } = useMessageListActions()
   const { thoughtAutoCollapse } = useMessageRenderConfig()
+  const { t } = useTranslation()
   const [isExpanded, setIsExpanded] = useState(!thoughtAutoCollapse)
   const contentId = useId()
   const thinkingPreviewScanStateRef = useRef<ThinkingPreviewScanState | undefined>(undefined)
@@ -101,6 +107,17 @@ const ThinkingBlock: React.FC<Props> = ({ id, content, isStreaming, showTitlePre
   useEffect(() => {
     setIsExpanded(!thoughtAutoCollapse)
   }, [thoughtAutoCollapse])
+
+  const handleCopy = async () => {
+    if (!copyText) return
+
+    try {
+      await copyText(content, { successMessage: t('common.copied') })
+    } catch (error) {
+      logger.error('Failed to copy thinking content', error as Error)
+      notifyError?.(t('common.copy_failed'))
+    }
+  }
 
   if (!content) {
     return null
@@ -158,12 +175,28 @@ const ThinkingBlock: React.FC<Props> = ({ id, content, isStreaming, showTitlePre
           }
         />
       </div>
-      <div
-        id={contentId}
-        hidden={!isExpanded}
-        className="mt-1.5 max-h-96 overflow-auto rounded-xl bg-muted px-4 py-3 text-[13px] leading-5"
-        style={{ color: THINKING_SECONDARY_COLOR }}>
-        <ThinkingBlockContent id={id} content={content} isStreaming={isStreaming} />
+      <div className="relative mt-1.5" hidden={!isExpanded}>
+        <div
+          id={contentId}
+          hidden={!isExpanded}
+          className="max-h-96 overflow-auto rounded-xl bg-muted px-4 py-3 text-[13px] leading-5"
+          style={{ color: THINKING_SECONDARY_COLOR }}>
+          <ThinkingBlockContent id={id} content={content} isStreaming={isStreaming} />
+        </div>
+        {copyText && (
+          <div className="absolute top-2 right-2 z-10">
+            <Tooltip content={t('common.copy')} delay={800}>
+              <ActionIconButton
+                aria-label={t('common.copy')}
+                className="size-6 rounded-md text-muted-foreground! hover:text-foreground!"
+                icon={<CopyIcon size={15} />}
+                onClick={() => {
+                  void handleCopy()
+                }}
+              />
+            </Tooltip>
+          </div>
+        )}
       </div>
     </div>
   )
