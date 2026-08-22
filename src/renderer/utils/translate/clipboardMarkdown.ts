@@ -1,5 +1,11 @@
+import remarkGfm from 'remark-gfm'
+import remarkMath from 'remark-math'
+import remarkParse from 'remark-parse'
+import remarkStringify from 'remark-stringify'
 import TurndownService from 'turndown'
 import { gfm } from 'turndown-plugin-gfm'
+import { unified } from 'unified'
+import { visit } from 'unist-util-visit'
 
 const turndown = new TurndownService({
   bulletListMarker: '-',
@@ -32,6 +38,28 @@ turndown.addRule('typoraCodeFence', {
   }
 })
 
+const markdownFormatter = unified().use(remarkParse).use(remarkGfm).use(remarkMath).use(remarkStringify, {
+  bullet: '-',
+  emphasis: '*',
+  fences: true,
+  strong: '*'
+})
+
+export const formatClipboardMarkdown = (markdown: string): string => {
+  if (!markdown.trim()) return markdown
+
+  try {
+    const root = markdownFormatter.parse(markdown)
+    let hasMarkdownSyntax = false
+    visit(root, (node) => {
+      if (node.type !== 'root' && node.type !== 'paragraph' && node.type !== 'text') hasMarkdownSyntax = true
+    })
+    return hasMarkdownSyntax ? markdownFormatter.stringify(root).trimEnd() : markdown
+  } catch {
+    return markdown
+  }
+}
+
 export const htmlToTranslateMarkdown = (html: string): string => (html.trim() ? turndown.turndown(html).trimEnd() : '')
 
 export const shouldPreferPlainTextCodeBlock = (html: string, plainText: string): boolean => {
@@ -43,12 +71,20 @@ export const shouldPreferPlainTextCodeBlock = (html: string, plainText: string):
 }
 
 const MARKDOWN_BLOCK_PATTERN = /(^|\n)\s{0,3}(?:#{1,6}\s|>\s?|[-+*]\s|\d+[.)]\s|```|~~~|\|[^\n]+\|)/
+const MARKDOWN_ASTERISK_EMPHASIS_PATTERN =
+  /(?:\*{3}(?=\S)[^\n]*?\S\*{3}|\*{2}(?=\S)[^\n]*?\S\*{2}|(^|[^*])\*(?=\S)[^*\n]*?\S\*(?!\*))/m
 const EDITOR_WRAPPER_TAGS = new Set(['html', 'head', 'meta', 'style', 'body', 'div', 'span', 'br'])
 
 /** Prefer authoritative Markdown text when HTML contains syntax-highlighting wrappers only. */
 export const shouldPreferPlainTextClipboard = (html: string, plainText: string): boolean => {
   if (shouldPreferPlainTextCodeBlock(html, plainText)) return true
-  if (!html.trim() || !MARKDOWN_BLOCK_PATTERN.test(plainText.replace(/\r\n/g, '\n'))) return false
+  const normalizedPlainText = plainText.replace(/\r\n/g, '\n')
+  if (
+    !html.trim() ||
+    (!MARKDOWN_BLOCK_PATTERN.test(normalizedPlainText) && !MARKDOWN_ASTERISK_EMPHASIS_PATTERN.test(normalizedPlainText))
+  ) {
+    return false
+  }
 
   if (typeof DOMParser !== 'undefined') {
     const document = new DOMParser().parseFromString(html, 'text/html')

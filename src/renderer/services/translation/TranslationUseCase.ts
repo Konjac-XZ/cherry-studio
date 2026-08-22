@@ -166,8 +166,9 @@ export const prepareTranslation = async (
   const compatible = await findCompatibleHistoryBeforeDetection(command, ports, signal)
   if (compatible) return { status: 'cache_hit', ...compatible }
 
+  const requestText = command.requestText ?? command.sourceText
   const sourceLanguage =
-    command.sourceLanguage === 'auto' ? await ports.detectLanguage(command.sourceText, signal) : command.sourceLanguage
+    command.sourceLanguage === 'auto' ? await ports.detectLanguage(requestText, signal) : command.sourceLanguage
   throwIfAborted(signal)
 
   const target = ports.determineTargetLanguage(

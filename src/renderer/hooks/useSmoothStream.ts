@@ -121,6 +121,7 @@ export const useSmoothStream = ({
   /** Sub-1-grapheme-per-frame playout budget carried between frames so slow
    *  streams aren't forced up to MIN_STEP/frame. */
   const creditRef = useRef<number>(0)
+  const pendingCompletionRef = useRef<{ resolve: () => void; target: string } | null>(null)
   const [internalStreamDone, setInternalStreamDone] = useState<boolean>(false)
   const streamDone = externalStreamDone ?? internalStreamDone
 
@@ -166,6 +167,8 @@ export const useSmoothStream = ({
 
   const reset = useCallback(
     (newText = '') => {
+      pendingCompletionRef.current?.resolve()
+      pendingCompletionRef.current = null
       if (animationFrameRef.current !== null) {
         cancelAnimationFrame(animationFrameRef.current)
         animationFrameRef.current = null
@@ -222,6 +225,24 @@ export const useSmoothStream = ({
     [addChunk, externalStreamDone]
   )
 
+  const settleCompletion = useCallback(() => {
+    const pending = pendingCompletionRef.current
+    if (pending && chunkQueueRef.current.length === 0 && displayedTextRef.current === pending.target) {
+      pendingCompletionRef.current = null
+      pending.resolve()
+    }
+  }, [])
+
+  const complete = useCallback(
+    (accumulated: string) =>
+      new Promise<void>((resolve) => {
+        pendingCompletionRef.current?.resolve()
+        pendingCompletionRef.current = { resolve, target: accumulated }
+        update(accumulated, true)
+      }),
+    [update]
+  )
+
   const renderLoop = useCallback(() => {
     const queue = chunkQueueRef.current
 
@@ -230,6 +251,7 @@ export const useSmoothStream = ({
       if (streamDone) {
         onUpdateRef.current(displayedTextRef.current)
         animationFrameRef.current = null
+        settleCompletion()
         return
       }
       // Stamp stream-start while idling pre-first-token, so the first
@@ -257,6 +279,7 @@ export const useSmoothStream = ({
         animationFrameRef.current = requestAnimationFrame(renderLoop)
       } else {
         animationFrameRef.current = null
+        settleCompletion()
       }
       return
     }
@@ -327,8 +350,9 @@ export const useSmoothStream = ({
       animationFrameRef.current = requestAnimationFrame(renderLoop)
     } else {
       animationFrameRef.current = null
+      settleCompletion()
     }
-  }, [streamDone, minDelay])
+  }, [streamDone, minDelay, settleCompletion])
 
   // The loop stops itself (animationFrameRef → null) when there is nothing
   // to do. `ensureLoop` revives it; `addChunk`/`reset` call it so a queued
@@ -355,5 +379,13 @@ export const useSmoothStream = ({
     }
   }, [ensureLoop])
 
-  return { addChunk, reset, update }
+  useEffect(
+    () => () => {
+      pendingCompletionRef.current?.resolve()
+      pendingCompletionRef.current = null
+    },
+    []
+  )
+
+  return { addChunk, complete, reset, update }
 }

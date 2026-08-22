@@ -72,6 +72,7 @@ describe('translate bidirectional helpers', () => {
 
     it.each([
       ['targets Chinese when English is not the native language', 'en-us', bidirectionalPair, 'zh-cn', 'zh-cn'],
+      ['targets Chinese when Japanese is outside the pair', 'ja-jp', bidirectionalPair, 'zh-cn', 'zh-cn'],
       ['translates Simplified Chinese away from the native language', 'zh-cn', bidirectionalPair, 'zh-cn', 'en-us'],
       [
         'treats Traditional Chinese as the Simplified Chinese native language',
@@ -91,6 +92,13 @@ describe('translate bidirectional helpers', () => {
       expect(determineTargetLanguage(source, 'ja-jp', true, [...pair], nativeLanguage)).toEqual({
         success: true,
         language: expectedTarget
+      })
+    })
+
+    it('keeps rejecting outside-pair languages when the native language is not in the pair', () => {
+      expect(determineTargetLanguage('ja-jp', 'en-us', true, bidirectionalPair, 'ko-kr')).toEqual({
+        success: false,
+        errorType: 'not_in_pair'
       })
     })
   })

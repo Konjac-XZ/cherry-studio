@@ -32,6 +32,12 @@ describe('JsonStructureView', () => {
     expect(container.querySelector('[data-json-path="$/emptyArray"]')).toHaveTextContent('[]')
   })
 
+  it('uses the configured application code font', () => {
+    render(<JsonStructureView blankLineBetweenRows={false} copySeparator="colon-space" value={{ key: 'value' }} />)
+
+    expect(screen.getByTestId('json-structure-view')).toHaveClass('font-[var(--code-font-family)]')
+  })
+
   it('keeps HTML-like strings as safe React text', () => {
     const { container } = render(
       <JsonStructureView

@@ -1,3 +1,4 @@
+import { determineTargetLanguage } from '@renderer/utils/translate'
 import { parsePersistedLangCode, type TranslateLangCode } from '@shared/data/preference/preferenceTypes'
 import type { UniqueModelId } from '@shared/data/types/model'
 import type { TranslateHistory } from '@shared/data/types/translate'
@@ -102,7 +103,26 @@ describe('TranslationUseCase', () => {
         cacheKey: `translate:${modelId}:en-us:zh-cn:hello normalized`
       }
     })
-    expect(adapter.detectLanguage).toHaveBeenCalledWith('hello', undefined)
+    expect(adapter.detectLanguage).toHaveBeenCalledWith('hello normalized', undefined)
+  })
+
+  it('prepares outside-pair detected text for translation to the configured native language', async () => {
+    const adapter = ports({
+      detectLanguage: vi.fn(async () => 'ja-jp'),
+      determineTargetLanguage
+    })
+
+    const result = await prepareTranslation({ ...command, sourceText: '日本語の文章' }, adapter)
+
+    expect(result).toMatchObject({
+      status: 'ready',
+      value: {
+        sourceLanguage: 'ja-jp',
+        targetLanguage: 'zh-cn',
+        cacheKey: `translate:${modelId}:ja-jp:zh-cn:日本語の文章`
+      }
+    })
+    expect(adapter.plan).toHaveBeenCalledWith('zh-cn', 'translate')
   })
 
   it('keeps same-language and outside-pair decisions distinct', async () => {

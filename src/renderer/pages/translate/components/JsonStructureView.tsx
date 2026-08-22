@@ -112,7 +112,7 @@ const JsonStructureView: FC<JsonStructureViewProps> = ({ blankLineBetweenRows, c
 
   return (
     <div
-      className="w-full min-w-0 max-w-full font-mono leading-relaxed"
+      className="w-full min-w-0 max-w-full font-[var(--code-font-family)] leading-relaxed"
       data-testid="json-structure-view"
       onCopy={handleCopy}>
       <JsonStructureRow depth={0} path="$" value={value} />

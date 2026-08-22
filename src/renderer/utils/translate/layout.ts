@@ -23,26 +23,3 @@ export const clampTranslatePanelSize = (value: number, vertical: boolean, axisSi
   const { minimum, maximum } = getTranslatePanelBounds(vertical, axisSize, viewportWidth)
   return Math.min(maximum, Math.max(minimum, value))
 }
-
-type ScrollLengths = { input: number; output: number }
-
-export const findEqualizedTranslatePanelSize = (maximum: number, measure: (candidate: number) => ScrollLengths) => {
-  let bestSize = MIN_TRANSLATE_PANEL_PERCENT
-  let bestDifference = Number.POSITIVE_INFINITY
-  let hasScrollableContent = false
-
-  for (let candidate = MIN_TRANSLATE_PANEL_PERCENT; candidate <= Math.floor(maximum); candidate += 1) {
-    const lengths = measure(candidate)
-    const input = Math.max(0, lengths.input)
-    const output = Math.max(0, lengths.output)
-    hasScrollableContent ||= input > 0 || output > 0
-
-    const difference = Math.abs(input - output)
-    if (difference < bestDifference) {
-      bestDifference = difference
-      bestSize = candidate
-    }
-  }
-
-  return hasScrollableContent ? bestSize : Math.min(maximum, 50)
-}

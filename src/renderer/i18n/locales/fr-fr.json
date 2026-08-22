@@ -7486,6 +7486,7 @@
       },
       "follow_global_models": "Use global model",
       "font_size": "Font size",
+      "format_markdown_on_paste": "Formater le Markdown lors du collage",
       "global_translate_model": "Global translation model",
       "group_display": "Display",
       "group_json_view": "JSON view",

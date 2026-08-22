@@ -287,6 +287,7 @@ describe('TranslateSettings', () => {
   const setAutoDetectionMethod = vi.fn().mockResolvedValue(undefined)
   const setEnableMarkdown = vi.fn().mockResolvedValue(undefined)
   const setAutoCopy = vi.fn().mockResolvedValue(undefined)
+  const setFormatMarkdownOnPaste = vi.fn().mockResolvedValue(undefined)
   const setScrollSync = vi.fn().mockResolvedValue(undefined)
   const setBidirectionalEnabled = vi.fn().mockResolvedValue(undefined)
   const setModelPrompt = vi.fn().mockResolvedValue(undefined)
@@ -304,6 +305,7 @@ describe('TranslateSettings', () => {
     setAutoDetectionMethod.mockReset()
     setEnableMarkdown.mockReset()
     setAutoCopy.mockReset()
+    setFormatMarkdownOnPaste.mockReset()
     setScrollSync.mockReset()
     setBidirectionalEnabled.mockReset()
     setModelPrompt.mockReset()
@@ -318,6 +320,7 @@ describe('TranslateSettings', () => {
       ['feature.translate.auto_detection_method', setAutoDetectionMethod],
       ['feature.translate.page.enable_markdown', setEnableMarkdown],
       ['feature.translate.page.auto_copy', setAutoCopy],
+      ['feature.translate.page.format_markdown_on_paste', setFormatMarkdownOnPaste],
       ['feature.translate.page.scroll_sync', setScrollSync],
       ['feature.translate.page.bidirectional_enabled', setBidirectionalEnabled],
       ['feature.translate.model_prompt', setModelPrompt],
@@ -348,6 +351,16 @@ describe('TranslateSettings', () => {
     fireEvent.click(screen.getByText('translate.detect.method.llm.label'))
 
     await waitFor(() => expect(setAutoDetectionMethod).toHaveBeenCalledWith('llm'))
+  })
+
+  it('persists the Markdown formatter toggle from Miscellaneous settings', async () => {
+    render(<TranslateSettings visible onClose={vi.fn()} />)
+
+    const item = screen.getByText('translate.settings.format_markdown_on_paste').parentElement
+    if (!item) throw new Error('Markdown formatter setting item not found')
+    fireEvent.click(within(item).getByRole('button'))
+
+    await waitFor(() => expect(setFormatMarkdownOnPaste).toHaveBeenCalledWith(true))
   })
 
   it('renders settings in a modal dialog and closes through the dialog lifecycle', () => {

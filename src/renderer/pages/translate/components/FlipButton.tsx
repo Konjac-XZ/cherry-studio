@@ -1,5 +1,4 @@
 import { Button } from '@cherrystudio/ui'
-import { cn } from '@renderer/utils/style'
 import { RefreshCw } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
@@ -19,7 +18,7 @@ const FlipButton = ({ couldFlip, onFlip }: Props) => {
       onClick={onFlip}
       aria-label={t('translate.flip.label')}
       title={t('translate.flip.label')}
-      className={cn('size-8', couldFlip && 'border-amber-500 text-amber-600')}>
+      className="size-8">
       <RefreshCw size={16} />
     </Button>
   )

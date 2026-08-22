@@ -52,6 +52,7 @@ describe('useTranslateLanguageControls', () => {
   it('flips a wrong bidirectional detection by replacing the active run with explicit direction', async () => {
     const params = createParams({
       busy: true,
+      detectedLanguage: 'zh-cn',
       isBidirectional: true,
       sourceLanguage: 'auto',
       targetLanguage: 'zh-cn'
@@ -60,13 +61,13 @@ describe('useTranslateLanguageControls', () => {
 
     await act(async () => result.current.handleFlip())
 
-    expect(params.setDetectedLanguage).toHaveBeenCalledWith('zh-cn')
-    expect(params.persistTargetLanguage).toHaveBeenCalledWith('en-us')
+    expect(params.setDetectedLanguage).toHaveBeenCalledWith('en-us')
+    expect(params.persistTargetLanguage).toHaveBeenCalledWith('zh-cn')
     expect(params.runTranslation).toHaveBeenCalledWith(true, 'source text', undefined, {
       isBidirectional: false,
       replaceActive: true,
-      sourceLanguage: 'zh-cn',
-      targetLanguage: 'en-us'
+      sourceLanguage: 'en-us',
+      targetLanguage: 'zh-cn'
     })
     expect(toast.success).toHaveBeenCalledWith('translate.flip.success')
   })
@@ -85,13 +86,24 @@ describe('useTranslateLanguageControls', () => {
     expect(params.runTranslation).toHaveBeenCalledOnce()
   })
 
-  it('chooses deterministic pair directions even when the saved target is stale', () => {
-    expect(determineFlippedBidirectionalLanguages('ja-jp' as TranslateLangCode, pair)).toEqual({
+  it('uses the detected language to choose the opposite direction', () => {
+    expect(determineFlippedBidirectionalLanguages('zh-cn', 'zh-cn', pair)).toEqual({
       sourceLanguage: 'en-us',
       targetLanguage: 'zh-cn'
     })
-    expect(determineFlippedBidirectionalLanguages('zh-tw' as TranslateLangCode, pair)).toEqual({
-      sourceLanguage: 'zh-tw',
+    expect(determineFlippedBidirectionalLanguages('en-us', 'zh-cn', pair)).toEqual({
+      sourceLanguage: 'zh-cn',
+      targetLanguage: 'en-us'
+    })
+    expect(determineFlippedBidirectionalLanguages('zh-tw', 'en-us', pair)).toEqual({
+      sourceLanguage: 'en-us',
+      targetLanguage: 'zh-cn'
+    })
+  })
+
+  it('preserves the saved-target fallback when detection is outside the pair', () => {
+    expect(determineFlippedBidirectionalLanguages('ja-jp', 'zh-cn', pair)).toEqual({
+      sourceLanguage: 'zh-cn',
       targetLanguage: 'en-us'
     })
   })

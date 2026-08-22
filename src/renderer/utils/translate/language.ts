@@ -72,15 +72,20 @@ export const determineTargetLanguage = (
   nativeLanguage?: TranslateLangCode | null
 ): { success: true; language: TranslateLangCode } | { success: false; errorType: 'same_language' | 'not_in_pair' } => {
   if (isBidirectional) {
+    if (nativeLanguage && isLanguageInPair(nativeLanguage, bidirectionalPair)) {
+      return {
+        success: true,
+        language: isEquivalentBidirectionalLanguage(sourceLanguage, nativeLanguage)
+          ? getTargetLanguageForBidirectional(sourceLanguage, bidirectionalPair)
+          : nativeLanguage
+      }
+    }
     if (!isLanguageInPair(sourceLanguage, bidirectionalPair)) {
       return { success: false, errorType: 'not_in_pair' }
     }
     return {
       success: true,
-      language:
-        nativeLanguage && !isEquivalentBidirectionalLanguage(sourceLanguage, nativeLanguage)
-          ? nativeLanguage
-          : getTargetLanguageForBidirectional(sourceLanguage, bidirectionalPair)
+      language: getTargetLanguageForBidirectional(sourceLanguage, bidirectionalPair)
     }
   } else {
     if (sourceLanguage === targetLanguage) {

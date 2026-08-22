@@ -7486,6 +7486,7 @@
       },
       "follow_global_models": "跟隨全域模型",
       "font_size": "字體大小",
+      "format_markdown_on_paste": "貼上時格式化 Markdown",
       "global_translate_model": "全域翻譯模型",
       "group_display": "顯示",
       "group_json_view": "JSON 檢視",

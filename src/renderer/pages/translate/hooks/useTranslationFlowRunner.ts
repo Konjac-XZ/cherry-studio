@@ -58,9 +58,10 @@ type UseTranslationFlowRunnerParams = {
   setOutputTargetLanguage: Dispatch<SetStateAction<TranslateLangCode>>
   setReportedOutputTokens: Dispatch<SetStateAction<number | undefined>>
   setRawOutput: Dispatch<SetStateAction<string>>
+  setSourceText: (value: string) => void
   setTranslateOutput: (value: string) => void
   setTimeoutTimer: ReturnType<typeof useTimer>['setTimeoutTimer']
-  smoothComplete: (value: string) => void
+  smoothComplete: (value: string) => Promise<void>
   smoothReset: (value?: string) => void
   sourceLanguage: TranslateLangCode | 'auto'
   sourceText: string
@@ -91,6 +92,7 @@ export const useTranslationFlowRunner = ({
   setOutputTargetLanguage,
   setReportedOutputTokens,
   setRawOutput,
+  setSourceText,
   setTranslateOutput,
   setTimeoutTimer,
   smoothComplete,
@@ -146,6 +148,10 @@ export const useTranslationFlowRunner = ({
       const effectiveSourceLanguage = runOverride.sourceLanguage ?? sourceLanguage
       const effectiveTargetLanguage = runOverride.targetLanguage ?? targetLanguage
       const effectiveBidirectional = runOverride.isBidirectional ?? isBidirectional
+      const requestText = preprocessTranslation(effectiveSourceText)
+      if (sourceTextOverride === undefined && requestText !== effectiveSourceText) {
+        setSourceText(requestText)
+      }
       const flowId = activeFlowRef.current + 1
       activeFlowRef.current = flowId
       activeFlowControllerRef.current?.abort()
@@ -156,7 +162,7 @@ export const useTranslationFlowRunner = ({
       const isCurrent = () => activeFlowRef.current === flowId
 
       try {
-        if (effectiveSourceLanguage !== 'auto') {
+        if (effectiveSourceLanguage !== 'auto' && sourceLanguage !== 'auto') {
           setDetectedLanguage(null)
         }
 
@@ -175,7 +181,7 @@ export const useTranslationFlowRunner = ({
             isBidirectional: effectiveBidirectional,
             mode: effectiveMode,
             nativeLanguage,
-            requestText: preprocessTranslation(effectiveSourceText),
+            requestText,
             sourceLanguage: effectiveSourceLanguage,
             sourceText: effectiveSourceText,
             targetLanguage: effectiveTargetLanguage
@@ -209,13 +215,25 @@ export const useTranslationFlowRunner = ({
         if (!isCurrent()) return
 
         if (prepared.status === 'same_language' || prepared.status === 'not_in_pair') {
-          setDetectedLanguage(effectiveSourceLanguage === 'auto' ? prepared.sourceLanguage : null)
+          setDetectedLanguage(
+            sourceLanguage === 'auto'
+              ? effectiveSourceLanguage === 'auto'
+                ? prepared.sourceLanguage
+                : effectiveSourceLanguage
+              : null
+          )
           toast.warning(
             t(prepared.status === 'same_language' ? 'translate.language.same' : 'translate.language.not_pair')
           )
           return
         }
-        setDetectedLanguage(effectiveSourceLanguage === 'auto' ? prepared.value.sourceLanguage : null)
+        setDetectedLanguage(
+          sourceLanguage === 'auto'
+            ? effectiveSourceLanguage === 'auto'
+              ? prepared.value.sourceLanguage
+              : effectiveSourceLanguage
+            : null
+        )
         if (prepared.status === 'cache_hit') {
           showCached(prepared.history, prepared.value.targetLanguage)
           return
@@ -273,7 +291,8 @@ export const useTranslationFlowRunner = ({
 
         setRawOutput(result.rawText)
         setOutputTargetLanguage(prepared.value.targetLanguage)
-        smoothComplete(result.displayText)
+        await smoothComplete(result.displayText)
+        if (!isCurrent()) return
         toast.success(t('translate.complete'))
 
         if (result.historyError) {
@@ -332,6 +351,7 @@ export const useTranslationFlowRunner = ({
       setOutputTargetLanguage,
       setReportedOutputTokens,
       setRawOutput,
+      setSourceText,
       setTimeoutTimer,
       showCached,
       smoothComplete,

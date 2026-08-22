@@ -318,4 +318,24 @@ describe('useSmoothStream', () => {
 
     expect(lastText(onUpdate)).toBe(text)
   })
+
+  it('resolves completion only after the final text has been displayed', async () => {
+    const onUpdate = vi.fn()
+    const text = 'a'.repeat(300)
+    const { result } = renderHook(() => useSmoothStream({ onUpdate, minDelay: 0 }))
+    let settled = false
+
+    act(() => {
+      void result.current.complete(text).then(() => {
+        settled = true
+      })
+    })
+    act(() => tick(16, 5))
+    await Promise.resolve()
+    expect(settled).toBe(false)
+
+    act(() => tick(16, 60))
+    await vi.waitFor(() => expect(settled).toBe(true))
+    expect(lastText(onUpdate)).toBe(text)
+  })
 })

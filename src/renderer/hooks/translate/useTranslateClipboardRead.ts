@@ -1,27 +1,37 @@
 import { loggerService } from '@logger'
 import { type ClipboardGateway, ipcClipboardGateway } from '@renderer/services/translatePlatform'
-import { htmlToTranslateMarkdown, shouldPreferPlainTextClipboard } from '@renderer/utils/translate'
+import {
+  formatClipboardMarkdown,
+  htmlToTranslateMarkdown,
+  shouldPreferPlainTextClipboard
+} from '@renderer/utils/translate'
 import { useCallback } from 'react'
 
 const logger = loggerService.withContext('TranslateClipboardRead')
 
 export const useTranslateClipboardRead = ({
   htmlConversionEnabled,
+  markdownFormattingEnabled = false,
   clipboardGateway = ipcClipboardGateway
 }: {
   htmlConversionEnabled: boolean
+  markdownFormattingEnabled?: boolean
   clipboardGateway?: ClipboardGateway
 }) => {
   const selectContent = useCallback(
     ({ html, plainText }: { html: string; plainText: string }) => {
+      let selected = plainText
       if (htmlConversionEnabled && html.trim()) {
-        if (shouldPreferPlainTextClipboard(html, plainText)) return plainText
-        const markdown = htmlToTranslateMarkdown(html)
-        if (markdown.trim()) return markdown
+        if (shouldPreferPlainTextClipboard(html, plainText)) {
+          selected = plainText
+        } else {
+          const markdown = htmlToTranslateMarkdown(html)
+          if (markdown.trim()) selected = markdown
+        }
       }
-      return plainText
+      return markdownFormattingEnabled ? formatClipboardMarkdown(selected) : selected
     },
-    [htmlConversionEnabled]
+    [htmlConversionEnabled, markdownFormattingEnabled]
   )
 
   const readClipboardForTranslate = useCallback(async () => {
@@ -33,7 +43,7 @@ export const useTranslateClipboardRead = ({
     }
     try {
       const plainText = await clipboardGateway.readBrowserPlainText()
-      if (plainText.trim()) return plainText
+      if (plainText.trim()) return markdownFormattingEnabled ? formatClipboardMarkdown(plainText) : plainText
     } catch (error) {
       logger.debug('Plain browser clipboard read failed', error as Error)
     }
@@ -43,7 +53,7 @@ export const useTranslateClipboardRead = ({
       logger.debug('Native clipboard read failed', error as Error)
       return ''
     }
-  }, [clipboardGateway, selectContent])
+  }, [clipboardGateway, markdownFormattingEnabled, selectContent])
 
   const readClipboardPlainTextForWatch = useCallback(async () => {
     try {

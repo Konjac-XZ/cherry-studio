@@ -8,10 +8,9 @@ type Props = {
   vertical: boolean
   value: number
   onChange: (percent: number) => void
-  onEqualizeScroll?: () => void
 }
 
-const DraggableDivider = ({ containerRef, vertical, value, onChange, onEqualizeScroll }: Props) => {
+const DraggableDivider = ({ containerRef, vertical, value, onChange }: Props) => {
   const updateFromPointer = useCallback(
     (event: PointerEvent<HTMLDivElement>) => {
       const bounds = containerRef.current?.getBoundingClientRect()
@@ -42,7 +41,7 @@ const DraggableDivider = ({ containerRef, vertical, value, onChange, onEqualizeS
       }}
       onDoubleClick={(event) => {
         event.preventDefault()
-        if (!vertical) onEqualizeScroll?.()
+        onChange(50)
       }}
       onKeyDown={(event) => {
         const delta =

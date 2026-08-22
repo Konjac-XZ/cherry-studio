@@ -435,6 +435,13 @@
       "description": "Translation input and output font size in pixels"
     },
     {
+      "targetKey": "feature.translate.page.format_markdown_on_paste",
+      "type": "boolean",
+      "defaultValue": false,
+      "status": "classified",
+      "description": "Format recognized Markdown clipboard text before pasting"
+    },
+    {
       "targetKey": "feature.translate.page.html_conversion_on_paste",
       "type": "boolean",
       "defaultValue": true,

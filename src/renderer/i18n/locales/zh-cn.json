@@ -7490,6 +7490,7 @@
       },
       "follow_global_models": "跟随全局模型",
       "font_size": "字体大小",
+      "format_markdown_on_paste": "粘贴时格式化 Markdown",
       "global_translate_model": "全局翻译模型",
       "group_display": "显示",
       "group_json_view": "JSON 视图",

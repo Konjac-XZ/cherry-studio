@@ -1,5 +1,6 @@
 export {
   clipboardFingerprint,
+  formatClipboardMarkdown,
   htmlToTranslateMarkdown,
   shouldPreferPlainTextClipboard,
   shouldPreferPlainTextCodeBlock
@@ -21,7 +22,6 @@ export {
 } from './language'
 export {
   clampTranslatePanelSize,
-  findEqualizedTranslatePanelSize,
   getTranslatePanelBounds,
   MIN_TRANSLATE_PANEL_PERCENT
 } from './layout'

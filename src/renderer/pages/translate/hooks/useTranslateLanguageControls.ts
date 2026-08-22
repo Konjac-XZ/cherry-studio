@@ -36,9 +36,18 @@ const isKnown = (language: TranslateLangCode | null): language is TranslateLangC
   language !== null && language !== 'unknown'
 
 export const determineFlippedBidirectionalLanguages = (
+  detectedLanguage: TranslateLangCode,
   currentTarget: TranslateLangCode,
   pair: TranslateBidirectionalPair
 ) => {
+  const detectedIndex = pair.findIndex((language) => isEquivalentBidirectionalLanguage(detectedLanguage, language))
+  if (detectedIndex >= 0) {
+    return {
+      sourceLanguage: pair[1 - detectedIndex],
+      targetLanguage: pair[detectedIndex]
+    }
+  }
+
   const matchedIndex = pair.findIndex((language) => isEquivalentBidirectionalLanguage(currentTarget, language))
   const sourceLanguage = matchedIndex >= 0 ? currentTarget : pair[0]
   const targetLanguage = matchedIndex <= 0 ? pair[1] : pair[0]
@@ -94,12 +103,12 @@ export const useTranslateLanguageControls = ({
   ])
 
   const handleFlip = useCallback(async () => {
-    if (!couldFlip) return
+    if (!couldFlip || !isKnown(detectedLanguage)) return
     if (nativeLanguage && !bidirectionalPair.includes(nativeLanguage)) {
       toast.warning(t('translate.flip.native_language_not_in_pair'))
     }
 
-    const flipped = determineFlippedBidirectionalLanguages(targetLanguage, bidirectionalPair)
+    const flipped = determineFlippedBidirectionalLanguages(detectedLanguage, targetLanguage, bidirectionalPair)
     setDetectedLanguage(flipped.sourceLanguage)
     persistTargetLanguage(flipped.targetLanguage)
     setRawOutput('')
@@ -114,6 +123,7 @@ export const useTranslateLanguageControls = ({
   }, [
     bidirectionalPair,
     couldFlip,
+    detectedLanguage,
     input,
     nativeLanguage,
     persistTargetLanguage,

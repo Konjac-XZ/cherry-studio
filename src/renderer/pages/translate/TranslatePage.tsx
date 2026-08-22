@@ -94,7 +94,6 @@ import type { TranslationFiles } from './translationFiles'
 const PdfTranslationView = lazy(() => import('./pdf/PdfTranslationView'))
 
 const logger = loggerService.withContext('TranslatePage')
-const PRIORITIZED_PROVIDER_IDS = ['cherryai', 'openai', 'anthropic', 'google', 'gemini', 'openrouter']
 
 const useBabelDoc = (enabled: boolean) => {
   const { t } = useTranslation()
@@ -165,6 +164,7 @@ const TranslatePage: FC = () => {
   const [htmlConversionEnabled, setHtmlConversionEnabled] = usePreference(
     'feature.translate.page.html_conversion_on_paste'
   )
+  const [markdownFormattingEnabled] = usePreference('feature.translate.page.format_markdown_on_paste')
   const [bidirectionalPair] = usePreference('feature.translate.page.bidirectional_pair')
   const [nativeLanguage] = usePreference('feature.translate.native_language')
   const [isScrollSyncEnabled] = usePreference('feature.translate.page.scroll_sync')
@@ -191,8 +191,14 @@ const TranslatePage: FC = () => {
   const [translateOutput, setTranslateOutput] = useCache('translate.output')
   const [isDetecting, setIsDetecting] = useCache('translate.detecting')
 
-  const { reset: smoothReset, update: smoothUpdate } = useSmoothStream({ onUpdate: setTranslateOutput })
-  const smoothComplete = useCallback((value: string) => smoothUpdate(value, true), [smoothUpdate])
+  const {
+    complete: smoothComplete,
+    reset: smoothReset,
+    update: smoothUpdate
+  } = useSmoothStream({
+    onUpdate: setTranslateOutput
+  })
+  const onStreamResponse = useCallback((value: string) => smoothUpdate(value, false), [smoothUpdate])
 
   const {
     translate: runTranslate,
@@ -200,7 +206,7 @@ const TranslatePage: FC = () => {
     cancel
   } = useTranslate({
     loggerContext: 'TranslatePage',
-    onResponse: smoothUpdate
+    onResponse: onStreamResponse
   })
 
   const [renderedMarkdown, setRenderedMarkdown] = useState<string>('')
@@ -318,6 +324,7 @@ const TranslatePage: FC = () => {
       // Functional update resolves against the latest stored value, so a prior
       // synchronous setTranslateInput(value) is reflected here without a ref.
       setTranslateInput((prev) => prev + text)
+      setDetectedLanguage(null)
     },
     [setTranslateInput]
   )
@@ -325,6 +332,7 @@ const TranslatePage: FC = () => {
   const handleInputChange = useCallback(
     (value: string) => {
       setTranslateInput(value)
+      setDetectedLanguage(null)
       if (isEmpty(value)) {
         setRawOutput('')
         setTranslateOutput('')
@@ -334,7 +342,8 @@ const TranslatePage: FC = () => {
   )
 
   const { readClipboardForTranslate, readClipboardPlainTextForWatch } = useTranslateClipboardRead({
-    htmlConversionEnabled
+    htmlConversionEnabled,
+    markdownFormattingEnabled
   })
   const { copied, copy, lastWrittenRef } = useTranslateClipboardWrite()
 
@@ -382,6 +391,7 @@ const TranslatePage: FC = () => {
     setOutputTargetLanguage,
     setReportedOutputTokens,
     setRawOutput,
+    setSourceText: setTranslateInput,
     setTranslateOutput,
     setTimeoutTimer,
     smoothComplete,
@@ -604,6 +614,7 @@ const TranslatePage: FC = () => {
 
       void safePersist(setSourceLanguage(history.sourceLanguage ?? 'auto'), 'translate source language')
       void safePersist(setTargetLanguage(historyTarget), 'translate target language')
+      setDetectedLanguage(null)
       setHistoryOpen(false)
     },
     [
@@ -621,29 +632,21 @@ const TranslatePage: FC = () => {
   )
 
   useEffect(() => {
-    if (isTranslating || flowStage === 'polishing' || flowStage === 'translating') return
+    if (isTranslating || flowStage !== 'idle') return
     if (rawOutput !== rawOutputRef.current) return
     if (rawOutput) setTranslateOutput(processTranslation(rawOutput, outputTargetLanguage))
   }, [flowStage, isTranslating, outputTargetLanguage, processTranslation, rawOutput, setTranslateOutput])
 
-  const {
-    cycleLayout,
-    equalizeHorizontalScrollLength,
-    inputScrollHandler,
-    isVerticalLayout,
-    outputScrollHandler,
-    panelSize,
-    setPanelSize
-  } = useTranslateLayout({
-    inputScrollRef,
-    isProgrammaticScroll,
-    isScrollSyncEnabled,
-    layoutOverride: flowSettings.layoutOverride,
-    onLayoutOverrideChange: (layoutOverride) =>
-      void safePersist(updateFlowSettings({ layoutOverride }), 'translate layout override'),
-    outputScrollRef: outputTextRef,
-    paneContainerRef
-  })
+  const { cycleLayout, inputScrollHandler, isVerticalLayout, outputScrollHandler, panelSize, setPanelSize } =
+    useTranslateLayout({
+      inputScrollRef,
+      isProgrammaticScroll,
+      isScrollSyncEnabled,
+      layoutOverride: flowSettings.layoutOverride,
+      onLayoutOverrideChange: (layoutOverride) =>
+        void safePersist(updateFlowSettings({ layoutOverride }), 'translate layout override'),
+      outputScrollRef: outputTextRef
+    })
 
   useEffect(() => {
     let cancelled = false
@@ -712,13 +715,17 @@ const TranslatePage: FC = () => {
     appendText: appendTranslateInput,
     forcePlainTextPasteRef,
     htmlConversionEnabled,
+    markdownFormattingEnabled,
     isOcrRunning,
     isProcessing,
     isTranslating,
     onOcrStarted: setOcrJobId,
     onPdfSelected: handlePdfSelected,
     setIsProcessing,
-    setText: setTranslateInput
+    setText: (value) => {
+      setDetectedLanguage(null)
+      setTranslateInput(value)
+    }
   })
 
   const handlePdfHandleChange = useCallback((handle: PdfTranslationHandle | null) => {
@@ -793,9 +800,10 @@ const TranslatePage: FC = () => {
               <TranslateLanguageBar
                 className="px-0 py-0 lg:px-0"
                 sourceLanguage={sourceLanguage}
-                onSourceChange={(language) =>
+                onSourceChange={(language) => {
+                  setDetectedLanguage(null)
                   void safePersist(setSourceLanguage(language), 'translate source language')
-                }
+                }}
                 targetLanguage={targetLanguage}
                 onTargetChange={(language) =>
                   void safePersist(setTargetLanguage(language), 'translate target language')
@@ -803,6 +811,7 @@ const TranslatePage: FC = () => {
                 detectedLanguage={detectedLanguage}
                 isBidirectional={isPdfMode ? false : isBidirectional}
                 bidirectionalPair={bidirectionalPair}
+                disabled={isFlowBusy || isProcessing || isOcrRunning}
                 couldExchange={couldExchange}
                 onExchange={handleExchange}
               />
@@ -865,7 +874,6 @@ const TranslatePage: FC = () => {
               filter={modelSelectorFilter}
               showTagFilter={false}
               showPinnedModels
-              prioritizedProviderIds={PRIORITIZED_PROVIDER_IDS}
               align="end"
               trigger={
                 <Button
@@ -1032,7 +1040,6 @@ const TranslatePage: FC = () => {
               vertical={isVerticalLayout}
               value={panelSize}
               onChange={setPanelSize}
-              onEqualizeScroll={equalizeHorizontalScrollLength}
             />
 
             <section className="flex min-h-0 min-w-0 flex-col">

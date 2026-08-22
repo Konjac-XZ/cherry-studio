@@ -75,6 +75,9 @@ const TranslateSettings: FC<Props> = ({ visible, onClose }) => {
   const [bidirectionalPair, setBidirectionalPair] = usePreference('feature.translate.page.bidirectional_pair')
   const [enableMarkdown, setEnableMarkdown] = usePreference('feature.translate.page.enable_markdown')
   const [autoCopy, setAutoCopy] = usePreference('feature.translate.page.auto_copy')
+  const [formatMarkdownOnPaste, setFormatMarkdownOnPaste] = usePreference(
+    'feature.translate.page.format_markdown_on_paste'
+  )
   const [autoDetectionMethod, setAutoDetectionMethod] = usePreference('feature.translate.auto_detection_method')
   const [isScrollSyncEnabled, setIsScrollSyncEnabled] = usePreference('feature.translate.page.scroll_sync')
   const [isBidirectional, setIsBidirectional] = usePreference('feature.translate.page.bidirectional_enabled')
@@ -124,6 +127,13 @@ const TranslateSettings: FC<Props> = ({ visible, onClose }) => {
       label: t('translate.settings.autoCopy'),
       value: autoCopy,
       onChange: (next) => void safePersist(setAutoCopy(next), 'translate auto copy preference')
+    },
+    {
+      key: 'formatMarkdownOnPaste',
+      label: t('translate.settings.format_markdown_on_paste'),
+      value: formatMarkdownOnPaste,
+      onChange: (next) =>
+        void safePersist(setFormatMarkdownOnPaste(next), 'translate Markdown formatting on paste preference')
     },
     {
       key: 'scrollSync',
@@ -323,7 +333,7 @@ const TranslateSettings: FC<Props> = ({ visible, onClose }) => {
                   className={cn(settingsCardClassName, 'order-3')}>
                   <div className="flex flex-col gap-4">
                     {toggleItems
-                      .filter((item) => item.key !== 'autoCopy')
+                      .filter((item) => item.key !== 'autoCopy' && item.key !== 'formatMarkdownOnPaste')
                       .map((item) => (
                         <PageSidePanelItem
                           key={item.key}
@@ -357,7 +367,7 @@ const TranslateSettings: FC<Props> = ({ visible, onClose }) => {
                   className={cn(settingsCardClassName, 'order-5')}>
                   <div className="flex flex-col gap-4">
                     {toggleItems
-                      .filter((item) => item.key === 'autoCopy')
+                      .filter((item) => item.key === 'autoCopy' || item.key === 'formatMarkdownOnPaste')
                       .map((item) => (
                         <PageSidePanelItem
                           key={item.key}
@@ -755,7 +765,12 @@ const CustomParameterRow: FC<{
           }}
         />
       )}
-      <IconButton size="xs" tone="destructive" aria-label={t('common.delete')} onClick={onRemove}>
+      <IconButton
+        size="xs"
+        tone="destructive"
+        className="self-center"
+        aria-label={t('common.delete')}
+        onClick={onRemove}>
         <X size={11} />
       </IconButton>
     </div>

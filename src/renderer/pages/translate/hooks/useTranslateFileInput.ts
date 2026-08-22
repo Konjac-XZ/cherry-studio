@@ -6,7 +6,11 @@ import { type FileContentGateway, ipcFileContentGateway } from '@renderer/servic
 import type { FileMetadata } from '@renderer/types/file'
 import { getFileExtension } from '@renderer/utils/file'
 import { getFilesFromDropEvent, getTextFromDropEvent } from '@renderer/utils/input'
-import { htmlToTranslateMarkdown, shouldPreferPlainTextClipboard } from '@renderer/utils/translate'
+import {
+  formatClipboardMarkdown,
+  htmlToTranslateMarkdown,
+  shouldPreferPlainTextClipboard
+} from '@renderer/utils/translate'
 import { documentExts, imageExts, textExts } from '@shared/utils/file'
 import { isEmpty } from 'es-toolkit/compat'
 import type { ClipboardEvent, Dispatch, DragEvent, MutableRefObject, SetStateAction } from 'react'
@@ -21,6 +25,7 @@ type UseTranslateFileInputParams = {
   appendText: (value: string) => void
   forcePlainTextPasteRef: MutableRefObject<boolean>
   htmlConversionEnabled: boolean
+  markdownFormattingEnabled: boolean
   isOcrRunning: boolean
   isProcessing: boolean
   isTranslating: boolean
@@ -35,6 +40,7 @@ export const useTranslateFileInput = ({
   appendText,
   forcePlainTextPasteRef,
   htmlConversionEnabled,
+  markdownFormattingEnabled,
   isOcrRunning,
   isProcessing,
   isTranslating,
@@ -117,10 +123,13 @@ export const useTranslateFileInput = ({
           insertAtSelection(plainText)
           return
         }
-        if (!htmlConversionEnabled) return
+        if (!htmlConversionEnabled && !markdownFormattingEnabled) return
         const html = event.clipboardData.getData('text/html')
-        if (!html.trim()) return
-        const converted = shouldPreferPlainTextClipboard(html, plainText) ? plainText : htmlToTranslateMarkdown(html)
+        let converted = plainText
+        if (htmlConversionEnabled && html.trim()) {
+          converted = shouldPreferPlainTextClipboard(html, plainText) ? plainText : htmlToTranslateMarkdown(html)
+        }
+        if (markdownFormattingEnabled) converted = formatClipboardMarkdown(converted)
         if (!converted.trim()) return
         event.preventDefault()
         insertAtSelection(converted)
@@ -168,6 +177,7 @@ export const useTranslateFileInput = ({
       isOcrRunning,
       isProcessing,
       isTranslating,
+      markdownFormattingEnabled,
       processFile,
       setIsProcessing,
       setText,

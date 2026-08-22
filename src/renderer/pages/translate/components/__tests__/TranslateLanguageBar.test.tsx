@@ -96,6 +96,7 @@ const baseProps = (): BarProps => ({
   detectedLanguage: null,
   isBidirectional: false,
   bidirectionalPair: [english.langCode, chinese.langCode],
+  disabled: false,
   couldExchange: true,
   onExchange: vi.fn()
 })
@@ -183,6 +184,15 @@ describe('TranslateLanguageBar', () => {
     render(<TranslateLanguageBar {...props} />)
     const swapButton = screen.getByRole('button', { name: 'translate.exchange.label' })
     expect(swapButton).toHaveAttribute('disabled')
+  })
+
+  it('disables both language selectors while translation is active', () => {
+    const props = baseProps()
+    props.disabled = true
+    render(<TranslateLanguageBar {...props} />)
+
+    expect(screen.getByRole('button', { name: sourceLanguageButtonName })).toBeDisabled()
+    expect(screen.getByRole('button', { name: targetLanguageButtonName })).toBeDisabled()
   })
 
   it('keeps the source dropdown and exchange control beside the bidirectional pair display', () => {

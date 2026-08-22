@@ -55,6 +55,21 @@ describe('useTranslateClipboardRead', () => {
     await expect(result.current.readClipboardForTranslate()).resolves.toBe(plainText)
   })
 
+  it('formats recognized Markdown when clipboard formatting is enabled', async () => {
+    const clipboardGateway = gateway({
+      readBrowserRich: vi.fn(async () => ({ html: '', plainText: '# Heading\ntext\n\n* item' }))
+    })
+    const { result } = renderHook(() =>
+      useTranslateClipboardRead({
+        htmlConversionEnabled: false,
+        markdownFormattingEnabled: true,
+        clipboardGateway
+      })
+    )
+
+    await expect(result.current.readClipboardForTranslate()).resolves.toBe('# Heading\n\ntext\n\n- item')
+  })
+
   it('falls back through browser plain text to native clipboard', async () => {
     const clipboardGateway = gateway({
       readBrowserRich: vi.fn(async () => {
