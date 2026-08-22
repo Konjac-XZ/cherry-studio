@@ -48,7 +48,8 @@ index 919a33d..054ebf2 100644
 +                });
 +              }
 +            }
-             if (delta.tool_calls != null) {
+-            if (delta.tool_calls != null) {
++            if (delta.tool_calls != null && delta.tool_calls.length > 0) {
                if (isActiveReasoning) {
                  controller.enqueue({
 @@ -976,6 +1002,14 @@ var OpenAICompatibleChatResponseSchema = import_v43.z.looseObject({
@@ -237,7 +238,8 @@ index a619ccf..9ae580a 100644
 +                });
 +              }
 +            }
-             if (delta.tool_calls != null) {
+-            if (delta.tool_calls != null) {
++            if (delta.tool_calls != null && delta.tool_calls.length > 0) {
                if (isActiveReasoning) {
                  controller.enqueue({
 @@ -962,6 +988,14 @@ var OpenAICompatibleChatResponseSchema = z3.looseObject({
