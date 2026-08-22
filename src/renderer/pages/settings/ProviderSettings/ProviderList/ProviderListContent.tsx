@@ -16,6 +16,7 @@ export type ProviderListContentItemState = {
 interface ProviderListContentProps {
   providers: Provider[]
   visibleProviders: Provider[]
+  hiddenBuiltInIds?: readonly string[]
   selectedProviderId?: string
   searchActive: boolean
   expandedGroups: Record<string, boolean>
@@ -92,6 +93,7 @@ function reorderProviderBlocks({
 export default function ProviderListContent({
   providers,
   visibleProviders,
+  hiddenBuiltInIds = [],
   selectedProviderId,
   searchActive,
   expandedGroups,
@@ -203,7 +205,9 @@ export default function ProviderListContent({
           // matches and shouldn't have to click through a chevron to see them.
           const expanded = !state.overlay && (searchActive || (expandedGroups[item.presetProviderId] ?? false))
           const containsSelected = !!selectedProviderId && item.members.some((m) => m.id === selectedProviderId)
-          const canonicalProvider = item.members.find((member) => member.id === item.presetProviderId)
+          const canonicalProvider = providers.find(
+            (provider) => provider.id === item.presetProviderId && !hiddenBuiltInIds.includes(provider.id)
+          )
 
           return (
             <ProviderListGroup

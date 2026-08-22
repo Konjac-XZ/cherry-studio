@@ -131,11 +131,11 @@ export function matchesPreset(provider: Pick<Provider, 'id' | 'presetProviderId'
 }
 
 /**
- * Registry providers are seeded built-ins and cannot be managed as user rows.
+ * Registry providers and migrated canonical presets cannot be managed as user rows.
  * Preset-derived user providers remain user-manageable.
  */
 export function canManageProvider(provider: Provider): boolean {
-  return !isSystemProviderId(provider.id)
+  return provider.id !== provider.presetProviderId && !isSystemProviderId(provider.id)
 }
 
 /**

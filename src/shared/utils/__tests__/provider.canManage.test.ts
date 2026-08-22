@@ -10,6 +10,10 @@ describe('canManageProvider', () => {
     expect(canManageProvider(provider('zai', 'zhipu'))).toBe(false)
   })
 
+  it('rejects migrated canonical presets that are no longer in the registry', () => {
+    expect(canManageProvider(provider('hunyuan', 'hunyuan'))).toBe(false)
+  })
+
   it('allows user-created preset instances', () => {
     expect(canManageProvider(provider('openai-work', 'openai'))).toBe(true)
   })

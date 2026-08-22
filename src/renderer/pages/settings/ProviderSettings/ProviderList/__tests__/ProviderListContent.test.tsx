@@ -159,14 +159,14 @@ describe('ProviderListContent — C1 grouped reorder', () => {
   })
 
   it('routes a grouped hide action to the canonical provider instead of its instances', () => {
-    const canonical = provider('zhipu', 'zhipu')
-    const instance = provider('zhipu-work', 'zhipu')
+    const canonical = provider('zhipu', 'zhipu', false)
+    const instances = [provider('zhipu-work', 'zhipu'), provider('zhipu-personal', 'zhipu')]
     const onHideProvider = vi.fn()
 
     render(
       <ProviderListContent
-        providers={[canonical, instance]}
-        visibleProviders={[canonical, instance]}
+        providers={[canonical, ...instances]}
+        visibleProviders={instances}
         searchActive={false}
         expandedGroups={{}}
         onToggleGroup={() => {}}

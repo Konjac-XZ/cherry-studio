@@ -11,7 +11,6 @@ import {
   matchKeywordsInProvider
 } from '@renderer/pages/settings/ProviderSettings/utils/providerDisplay'
 import { toast } from '@renderer/services/toast'
-import { isSystemProviderId } from '@renderer/types/provider'
 import {
   filterHiddenBuiltInProviders,
   filterRuntimeVisibleProviders,
@@ -292,7 +291,7 @@ export default function ProviderList({ selectedProviderId, filterModeHint, onSel
         onEdit={() => startEdit(provider)}
         onDelete={() => handleDeleteProvider(provider.id)}
         onHide={
-          isSystemProviderId(provider.id) && !isHiddenBuiltInProvider(provider, hiddenBuiltInIds)
+          !canManageProvider(provider) && !isHiddenBuiltInProvider(provider, hiddenBuiltInIds)
             ? () => handleHideProvider(provider)
             : undefined
         }
@@ -343,6 +342,7 @@ export default function ProviderList({ selectedProviderId, filterModeHint, onSel
       <ProviderListContent
         providers={providers}
         visibleProviders={filteredProviders}
+        hiddenBuiltInIds={hiddenBuiltInIds}
         selectedProviderId={selectedProviderId}
         searchActive={Boolean(searchText)}
         expandedGroups={expandedGroups}
