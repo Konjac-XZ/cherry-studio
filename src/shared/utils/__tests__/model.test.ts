@@ -2,6 +2,9 @@ import { CHERRYAI_DEFAULT_MODEL_ID, CHERRYAI_PROVIDER_ID } from '@shared/data/pr
 import { ENDPOINT_TYPE, type Model, MODEL_CAPABILITY } from '@shared/data/types/model'
 import {
   deriveModelGroupName,
+  flattenModelsByLayout,
+  getEffectiveModelGroup,
+  groupModelsByLayout,
   isAudioModel,
   isEmbeddingModel,
   isFunctionCallingModel,
@@ -40,6 +43,33 @@ describe('shared model capability helpers', () => {
       ['  ', undefined]
     ])('derives %s as %s', (modelId, expected) => {
       expect(deriveModelGroupName(modelId)).toBe(expected)
+    })
+  })
+
+  describe('model layout grouping', () => {
+    it('prefers a trimmed explicit group, then derives one, then falls back to the provider', () => {
+      expect(getEffectiveModelGroup({ ...createModel(), group: '  Featured  ' })).toBe('Featured')
+      expect(getEffectiveModelGroup({ ...createModel(), apiModelId: 'deepseek-v4-pro', group: undefined })).toBe(
+        'deepseek'
+      )
+      expect(getEffectiveModelGroup({ ...createModel(), apiModelId: 'hy3', group: undefined })).toBe('openai')
+    })
+
+    it('orders groups by first appearance and preserves member order', () => {
+      const layout: Model[] = [
+        { ...createModel(), id: 'openai::b-1', apiModelId: 'b-1', group: 'B' },
+        { ...createModel(), id: 'openai::a-1', apiModelId: 'a-1', group: 'A' },
+        { ...createModel(), id: 'openai::b-2', apiModelId: 'b-2', group: 'B' },
+        { ...createModel(), id: 'openai::a-2', apiModelId: 'a-2', group: 'A' }
+      ]
+
+      expect(groupModelsByLayout(layout).map(({ groupName }) => groupName)).toEqual(['B', 'A'])
+      expect(flattenModelsByLayout(layout).map(({ id }) => id)).toEqual([
+        'openai::b-1',
+        'openai::b-2',
+        'openai::a-1',
+        'openai::a-2'
+      ])
     })
   })
 

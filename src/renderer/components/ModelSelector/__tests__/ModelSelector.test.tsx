@@ -252,7 +252,7 @@ describe('ModelSelector', () => {
     vi.restoreAllMocks()
   })
 
-  it('shows the provider and model identifier when a model name needs disambiguation', () => {
+  it('does not append provider or model identifiers to duplicate model names', () => {
     const item = makeModelItem('openai::gpt-4-variant-a' as UniqueModelId, {
       model: { ...makeModel('openai::gpt-4-variant-a' as UniqueModelId), name: 'GPT-4' },
       modelIdentifier: 'gpt-4-variant-a',
@@ -281,7 +281,8 @@ describe('ModelSelector', () => {
       />
     )
 
-    expect(screen.getByText(/OpenAI · gpt-4-variant-a/)).toBeInTheDocument()
+    expect(screen.getByText('GPT-4')).toBeInTheDocument()
+    expect(screen.queryByText(/OpenAI · gpt-4-variant-a/)).not.toBeInTheDocument()
   })
 
   it('selects a model and closes the selector in single-select mode', async () => {

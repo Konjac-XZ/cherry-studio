@@ -19,6 +19,7 @@ import {
   type UniqueModelId,
   UniqueModelIdSchema
 } from '../../types/model'
+import { OrderRequestSchema } from './_endpointHelpers'
 
 /** Query parameters for listing models */
 export const ListModelsQuerySchema = z.object({
@@ -148,6 +149,37 @@ export const ReconcileProviderModelsSchema = z.strictObject({
 })
 export type ReconcileProviderModelsDto = z.infer<typeof ReconcileProviderModelsSchema>
 
+const ModelLayoutMoveSchema = z.strictObject({
+  id: UniqueModelIdSchema,
+  anchor: OrderRequestSchema
+})
+
+const ModelLayoutGroupChangeSchema = z.strictObject({
+  id: UniqueModelIdSchema,
+  group: z.string().trim().min(1)
+})
+
+export const UpdateProviderModelLayoutSchema = z
+  .strictObject({
+    moves: z.array(ModelLayoutMoveSchema).max(MODELS_RECONCILE_MAX_ITEMS),
+    groupChanges: z.array(ModelLayoutGroupChangeSchema).max(MODELS_RECONCILE_MAX_ITEMS)
+  })
+  .superRefine((value, ctx) => {
+    for (const [path, ids] of [
+      ['moves', value.moves.map(({ id }) => id)],
+      ['groupChanges', value.groupChanges.map(({ id }) => id)]
+    ] as const) {
+      const seen = new Set<string>()
+      ids.forEach((id, index) => {
+        if (seen.has(id)) {
+          ctx.addIssue({ code: 'custom', path: [path, index, 'id'], message: `duplicate model id: ${id}` })
+        }
+        seen.add(id)
+      })
+    }
+  })
+export type UpdateProviderModelLayoutDto = z.infer<typeof UpdateProviderModelLayoutSchema>
+
 /** Query parameters for resolving raw SDK model IDs against registry presets */
 export const ResolveProviderModelsQuerySchema = z.strictObject({
   /**
@@ -237,6 +269,14 @@ export type ModelSchemas = {
     POST: {
       params: { providerId: string }
       body: ReconcileProviderModelsDto
+      response: Model[]
+    }
+  }
+
+  '/providers/:providerId/models/order:batch': {
+    PATCH: {
+      params: { providerId: string }
+      body: UpdateProviderModelLayoutDto
       response: Model[]
     }
   }

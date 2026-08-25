@@ -1,11 +1,12 @@
 import { Avatar, AvatarFallback, Button, RowFlex, Tooltip } from '@cherrystudio/ui'
 import { useIcon } from '@cherrystudio/ui/icons'
+import { useGroupedSortableDragHandle } from '@renderer/components/VirtualList'
 import type { ModelWithStatus } from '@renderer/pages/settings/ProviderSettings/types/healthCheck'
 import { toast } from '@renderer/services/toast'
 import { getModelLogoRef } from '@renderer/utils/model'
 import type { Model } from '@shared/data/types/model'
 import type { ApiKeyEntry, Provider } from '@shared/data/types/provider'
-import { Bolt, Minus } from 'lucide-react'
+import { Bolt, GripVertical, Minus } from 'lucide-react'
 import React, { memo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -20,6 +21,7 @@ interface ModelListItemProps {
   model: Model
   provider?: Provider
   disabled?: boolean
+  reorderDisabled?: boolean
   isDefaultModel?: boolean
   modelStatus?: ModelWithStatus
   apiKeyEntries?: readonly ApiKeyEntry[]
@@ -34,6 +36,7 @@ const ModelListItem: React.FC<ModelListItemProps> = ({
   model,
   provider,
   disabled,
+  reorderDisabled,
   isDefaultModel,
   modelStatus,
   apiKeyEntries = [],
@@ -43,6 +46,7 @@ const ModelListItem: React.FC<ModelListItemProps> = ({
   onDelete
 }) => {
   const { t } = useTranslation()
+  const dragHandleProps = useGroupedSortableDragHandle()
   const Icon = useIcon(getModelLogoRef(model))
   const deleteTooltip = isDefaultModel
     ? t('settings.models.manage.default_model_cannot_remove')
@@ -67,6 +71,16 @@ const ModelListItem: React.FC<ModelListItemProps> = ({
   return (
     <div ref={ref} className={modelListClasses.row}>
       <RowFlex className={modelListClasses.rowMain}>
+        <button
+          ref={dragHandleProps?.ref}
+          type="button"
+          aria-label={t('richEditor.dragHandle')}
+          disabled={reorderDisabled}
+          className="flex size-6 shrink-0 cursor-grab items-center justify-center rounded-md text-muted-foreground disabled:cursor-default disabled:opacity-30"
+          {...dragHandleProps?.attributes}
+          {...dragHandleProps?.listeners}>
+          <GripVertical aria-hidden className="size-3.5" />
+        </button>
         {(() => {
           return Icon ? (
             <span className={modelListClasses.rowAvatar}>

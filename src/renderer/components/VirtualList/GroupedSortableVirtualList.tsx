@@ -1,10 +1,10 @@
-import { BlurCancelPointerSensor } from '@cherrystudio/ui'
+import { BlurCancelPointerSensor, type SortableDragHandleProps } from '@cherrystudio/ui'
 import type { DragEndEvent, DragOverEvent, DragStartEvent, UniqueIdentifier } from '@dnd-kit/core'
 import { DndContext, DragOverlay, KeyboardSensor, useDroppable, useSensor, useSensors } from '@dnd-kit/core'
 import { SortableContext, type SortingStrategy, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import type React from 'react'
-import { memo, useCallback, useMemo, useRef, useState } from 'react'
+import { createContext, memo, use, useCallback, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import DynamicVirtualList, { type DynamicVirtualListProps } from './DynamicVirtualList'
@@ -182,6 +182,7 @@ export interface GroupedSortableVirtualListProps<TGroup, TItem, THeader = TGroup
   estimateGroupFooterSize?: (footer: TFooter, group: TGroup, groupIndex: number) => number
   disabled?: boolean
   dragActivationDistance?: number
+  dragHandle?: boolean
   dragCapabilities?: GroupedSortableVirtualListDragCapabilities
   canDragGroup?: (group: TGroup, groupIndex: number) => boolean
   canDragItem?: (item: TItem, itemIndex: number, group: TGroup, groupIndex: number, itemIndexInGroup: number) => boolean
@@ -189,6 +190,12 @@ export interface GroupedSortableVirtualListProps<TGroup, TItem, THeader = TGroup
   canDropItem?: (args: CanDropItemArgs<TGroup, TItem>) => boolean
   onDragStart?: (payload: GroupedSortableVirtualListDragStartPayload<TGroup, TItem>) => void
   onDragEnd?: (payload: GroupedSortableVirtualListDragPayload<TGroup, TItem>) => void
+}
+
+const GroupedSortableDragHandleContext = createContext<SortableDragHandleProps | null>(null)
+
+export function useGroupedSortableDragHandle(): SortableDragHandleProps | undefined {
+  return use(GroupedSortableDragHandleContext) ?? undefined
 }
 
 const DEFAULT_GROUP_HEADER_SIZE = 32
@@ -552,6 +559,7 @@ type SortableItemRowProps<TGroup, TItem> = {
   dropIndicatorPosition?: DropIndicatorPosition | null
   freezeTransform?: boolean
   draggableDisabled: boolean
+  dragHandle: boolean
   overDropState: OverDropState | null
   sourcePlaceholder?: boolean
 }
@@ -564,6 +572,7 @@ function SortableItemRow<TGroup, TItem>({
   dropIndicatorPosition,
   freezeTransform = false,
   draggableDisabled,
+  dragHandle,
   overDropState,
   sourcePlaceholder = false
 }: SortableItemRowProps<TGroup, TItem>) {
@@ -578,7 +587,7 @@ function SortableItemRow<TGroup, TItem>({
     activeDragState?.active !== undefined &&
     isItemDragData(activeDragState.active) &&
     activeDragState.active.itemId === data.itemId
-  const { attributes, isDragging, listeners, setNodeRef, transform, transition } = useSortable({
+  const { attributes, isDragging, listeners, setActivatorNodeRef, setNodeRef, transform, transition } = useSortable({
     id: toItemSortableId(data.itemId),
     data,
     disabled: {
@@ -586,6 +595,15 @@ function SortableItemRow<TGroup, TItem>({
       droppable: disabled || (dropTargetRowState.isBlocked && !isActiveItem)
     }
   })
+
+  const content = dragHandle ? (
+    <GroupedSortableDragHandleContext
+      value={{ attributes, listeners, ref: setActivatorNodeRef as (element: HTMLElement | null) => void }}>
+      {children}
+    </GroupedSortableDragHandleContext>
+  ) : (
+    children
+  )
 
   return (
     <div
@@ -598,10 +616,10 @@ function SortableItemRow<TGroup, TItem>({
         transform: dropTargetRowState.isBlocked || freezeTransform ? undefined : CSS.Transform.toString(transform),
         transition: dropTargetRowState.isBlocked || freezeTransform ? undefined : transition
       }}
-      {...attributes}
-      {...listeners}>
+      {...(!dragHandle ? attributes : {})}
+      {...(!dragHandle ? listeners : {})}>
       {dropIndicatorPosition ? <DropIndicator position={dropIndicatorPosition} /> : null}
-      {children}
+      {content}
     </div>
   )
 }
@@ -612,6 +630,7 @@ type GroupHeaderRowProps<TGroup, TItem> = {
   data: GroupDragData<TGroup>
   draggable: boolean
   disabled: boolean
+  dragHandle: boolean
   dropIndicatorPosition?: DropIndicatorPosition | null
   freezeTransform?: boolean
   overDropState: OverDropState | null
@@ -624,6 +643,7 @@ function GroupHeaderRow<TGroup, TItem>({
   data,
   draggable,
   disabled,
+  dragHandle,
   dropIndicatorPosition,
   freezeTransform,
   overDropState,
@@ -635,6 +655,7 @@ function GroupHeaderRow<TGroup, TItem>({
         activeDragState={activeDragState}
         data={data}
         disabled={disabled}
+        dragHandle={dragHandle}
         dropIndicatorPosition={dropIndicatorPosition}
         freezeTransform={freezeTransform}
         overDropState={overDropState}
@@ -662,6 +683,7 @@ function SortableGroupHeaderRow<TGroup, TItem>({
   children,
   data,
   disabled,
+  dragHandle,
   dropIndicatorPosition,
   freezeTransform = false,
   overDropState,
@@ -674,11 +696,20 @@ function SortableGroupHeaderRow<TGroup, TItem>({
     rowId: data.groupId,
     rowType: 'group'
   })
-  const { attributes, isDragging, listeners, setNodeRef, transform, transition } = useSortable({
+  const { attributes, isDragging, listeners, setActivatorNodeRef, setNodeRef, transform, transition } = useSortable({
     id: toGroupSortableId(data.groupId),
     data,
     disabled: disabled || dropTargetRowState.isBlocked
   })
+
+  const content = dragHandle ? (
+    <GroupedSortableDragHandleContext
+      value={{ attributes, listeners, ref: setActivatorNodeRef as (element: HTMLElement | null) => void }}>
+      {children}
+    </GroupedSortableDragHandleContext>
+  ) : (
+    children
+  )
 
   return (
     <div
@@ -691,10 +722,10 @@ function SortableGroupHeaderRow<TGroup, TItem>({
         transform: dropTargetRowState.isBlocked || freezeTransform ? undefined : CSS.Transform.toString(transform),
         transition: dropTargetRowState.isBlocked || freezeTransform ? undefined : transition
       }}
-      {...attributes}
-      {...listeners}>
+      {...(!dragHandle ? attributes : {})}
+      {...(!dragHandle ? listeners : {})}>
       {dropIndicatorPosition ? <DropIndicator position={dropIndicatorPosition} /> : null}
-      {children}
+      {content}
     </div>
   )
 }
@@ -707,7 +738,7 @@ function DroppableGroupHeaderRow<TGroup, TItem>({
   dropIndicatorPosition,
   overDropState,
   sourcePlaceholder = false
-}: Omit<GroupHeaderRowProps<TGroup, TItem>, 'draggable'>) {
+}: Omit<GroupHeaderRowProps<TGroup, TItem>, 'dragHandle' | 'draggable'>) {
   const dropTargetRowState = getDropTargetRowState({
     activeDragState,
     groupId: data.groupId,
@@ -790,6 +821,7 @@ function GroupedSortableVirtualList<TGroup, TItem, THeader = TGroup, TFooter = u
     estimateGroupFooterSize,
     disabled = false,
     dragActivationDistance = 6,
+    dragHandle = false,
     dragCapabilities,
     canDragGroup,
     canDragItem,
@@ -1176,6 +1208,7 @@ function GroupedSortableVirtualList<TGroup, TItem, THeader = TGroup, TFooter = u
             activeDragState={activeDragState}
             data={data}
             disabled={disabled}
+            dragHandle={dragHandle}
             dropIndicatorPosition={getDropIndicatorPosition(row)}
             freezeTransform={isDragProjectionFrozen}
             overDropState={overDropState}
@@ -1223,6 +1256,7 @@ function GroupedSortableVirtualList<TGroup, TItem, THeader = TGroup, TFooter = u
           activeDragState={activeDragState}
           data={data}
           disabled={disabled}
+          dragHandle={dragHandle}
           dropIndicatorPosition={getDropIndicatorPosition(row)}
           draggableDisabled={itemDisabled}
           freezeTransform={isDragProjectionFrozen}
@@ -1238,6 +1272,7 @@ function GroupedSortableVirtualList<TGroup, TItem, THeader = TGroup, TFooter = u
       canDragGroup,
       canDragItem,
       disabled,
+      dragHandle,
       effectiveDragCapabilities.groups,
       effectiveDragCapabilities.items,
       getDropIndicatorPosition,

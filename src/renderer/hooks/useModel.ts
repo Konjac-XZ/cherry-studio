@@ -7,7 +7,8 @@ import type {
   CreateModelDto,
   CreateModelsDto,
   ListModelsQuery,
-  UpdateModelDto
+  UpdateModelDto,
+  UpdateProviderModelLayoutDto
 } from '@shared/data/api/schemas/models'
 import type { Model, UniqueModelId } from '@shared/data/types/model'
 import { createUniqueModelId } from '@shared/data/types/model'
@@ -123,6 +124,12 @@ export function useModelMutations() {
     error: bulkUpdateError
   } = useMutation('PATCH', '/models', { refresh: ['/models'] })
 
+  const {
+    trigger: updateLayoutTrigger,
+    isLoading: isUpdatingLayout,
+    error: updateLayoutError
+  } = useMutation('PATCH', '/providers/:providerId/models/order:batch', { refresh: ['/models'] })
+
   const createModel = useCallback(
     async (dto: CreateModelDto) => {
       try {
@@ -209,6 +216,23 @@ export function useModelMutations() {
     [bulkUpdateTrigger]
   )
 
+  const updateProviderModelLayout = useCallback(
+    async (providerId: string, layout: UpdateProviderModelLayoutDto) => {
+      try {
+        return await updateLayoutTrigger({ params: { providerId }, body: layout })
+      } catch (error) {
+        logger.error('Failed to update provider model layout', {
+          providerId,
+          moveCount: layout.moves.length,
+          groupChangeCount: layout.groupChanges.length,
+          error
+        })
+        throw error
+      }
+    },
+    [updateLayoutTrigger]
+  )
+
   return {
     createModel,
     createModels,
@@ -225,7 +249,10 @@ export function useModelMutations() {
     updateError,
     updateModels,
     isBulkUpdating,
-    bulkUpdateError
+    bulkUpdateError,
+    updateProviderModelLayout,
+    isUpdatingLayout,
+    updateLayoutError
   }
 }
 

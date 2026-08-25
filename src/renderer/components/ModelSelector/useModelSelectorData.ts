@@ -7,6 +7,7 @@ import { getSearchMatchScore } from '@renderer/utils/model'
 import { isProviderSettingsListVisibleProvider } from '@renderer/utils/providerSettings'
 import { isUniqueModelId, type Model, parseUniqueModelId, type UniqueModelId } from '@shared/data/types/model'
 import type { Provider } from '@shared/data/types/provider'
+import { flattenModelsByLayout } from '@shared/utils/model'
 import { isExternalCliProvider } from '@shared/utils/provider'
 import { sortBy } from 'es-toolkit/compat'
 import { useCallback, useMemo } from 'react'
@@ -43,10 +44,6 @@ function getDuplicateModelNames<T extends Pick<Model, 'name'>>(models: T[]): Set
   }
 
   return new Set([...nameCounts.entries()].filter(([, count]) => count > 1).map(([name]) => name))
-}
-
-function sortModels(models: Model[]) {
-  return sortBy(models, ['group', 'name'])
 }
 
 function getModelIdentifier(model: Model) {
@@ -197,19 +194,20 @@ export function useModelSelectorData({
   const searchFilter = useCallback(
     (provider: Provider) => {
       const providerModels = modelsByProvider.get(provider.id) ?? []
+      const layoutModels = flattenModelsByLayout(providerModels)
 
       if (searchText.trim()) {
         const providerDisplayName = getProviderDisplayName(provider)
         return sortBy(
-          providerModels.flatMap((model) => {
+          layoutModels.flatMap((model, layoutIndex) => {
             const searchScore = getModelSearchScore(searchText, model, provider, providerDisplayName)
-            return searchScore === null ? [] : [{ model, searchScore }]
+            return searchScore === null ? [] : [{ layoutIndex, model, searchScore }]
           }),
-          ['searchScore', 'model.group', 'model.name']
+          ['searchScore', 'layoutIndex']
         ).map(({ model }) => model)
       }
 
-      return sortModels(providerModels)
+      return layoutModels
     },
     [modelsByProvider, searchText]
   )

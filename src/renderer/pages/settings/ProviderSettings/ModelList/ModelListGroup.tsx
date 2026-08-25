@@ -1,9 +1,18 @@
-import { Button, Tooltip } from '@cherrystudio/ui'
+import {
+  Button,
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuItemContent,
+  ContextMenuTrigger,
+  Tooltip
+} from '@cherrystudio/ui'
 import { loggerService } from '@logger'
+import { useGroupedSortableDragHandle } from '@renderer/components/VirtualList'
 import { toast } from '@renderer/services/toast'
 import { cn } from '@renderer/utils/style'
 import type { Model, UniqueModelId } from '@shared/data/types/model'
-import { ChevronRight, Minus } from 'lucide-react'
+import { ChevronRight, GripVertical, Minus, Pencil } from 'lucide-react'
 import React, { memo, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -20,10 +29,13 @@ interface ModelListGroupProps {
   defaultOpen: boolean
   open?: boolean
   disabled?: boolean
+  reorderDisabled?: boolean
+  renameDisabled?: boolean
   bulkActionDisabled?: boolean
   pendingModelIds: Set<string>
   defaultModelIds?: Set<UniqueModelId>
   onDeleteModels: (models: Model[]) => Promise<void>
+  onRenameGroup?: (groupName: string) => void
   onToggleOpen?: () => void
 }
 
@@ -33,13 +45,17 @@ const ModelListGroup: React.FC<ModelListGroupProps> = ({
   defaultOpen,
   open = defaultOpen,
   disabled,
+  reorderDisabled,
+  renameDisabled,
   bulkActionDisabled,
   pendingModelIds,
   defaultModelIds = new Set(),
   onDeleteModels,
+  onRenameGroup,
   onToggleOpen
 }) => {
   const { t } = useTranslation()
+  const dragHandleProps = useGroupedSortableDragHandle()
   const groupLabel = getModelGroupLabel(groupName, t)
   const groupModels = useMemo(() => items.map(({ model }) => model), [items])
   const deletableGroupModels = useMemo(
@@ -88,47 +104,69 @@ const ModelListGroup: React.FC<ModelListGroupProps> = ({
   }, [])
 
   return (
-    <div className={cn(modelListClasses.groupCard, open && modelListClasses.groupCardOpen)}>
-      <div
-        className={cn(modelListClasses.groupHeader, open && modelListClasses.groupHeaderOpen, 'cursor-pointer')}
-        role="button"
-        tabIndex={0}
-        aria-expanded={open}
-        onClick={toggleOpen}
-        onKeyDown={handleGroupHeaderKeyDown}>
-        <div className="flex min-w-0 flex-1 items-center gap-1">
-          <div className={modelListClasses.groupToggleButton}>
-            <ChevronRight
-              className={cn(modelListClasses.groupChevron, open && modelListClasses.groupChevronOpen)}
-              aria-hidden
-            />
-            <span className={modelListClasses.groupTitle}>{groupLabel}</span>
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        <div className={cn(modelListClasses.groupCard, open && modelListClasses.groupCardOpen)}>
+          <div
+            className={cn(modelListClasses.groupHeader, open && modelListClasses.groupHeaderOpen, 'cursor-pointer')}
+            role="button"
+            tabIndex={0}
+            aria-expanded={open}
+            onClick={toggleOpen}
+            onKeyDown={handleGroupHeaderKeyDown}>
+            <div className="flex min-w-0 flex-1 items-center gap-1">
+              <button
+                ref={dragHandleProps?.ref}
+                type="button"
+                aria-label={t('richEditor.dragHandle')}
+                disabled={reorderDisabled}
+                className="flex size-6 shrink-0 cursor-grab items-center justify-center rounded-md text-muted-foreground disabled:cursor-default disabled:opacity-30"
+                onClick={(event) => event.stopPropagation()}
+                {...dragHandleProps?.attributes}
+                {...dragHandleProps?.listeners}>
+                <GripVertical aria-hidden className="size-3.5" />
+              </button>
+              <div className={modelListClasses.groupToggleButton}>
+                <ChevronRight
+                  className={cn(modelListClasses.groupChevron, open && modelListClasses.groupChevronOpen)}
+                  aria-hidden
+                />
+                <span className={modelListClasses.groupTitle}>{groupLabel}</span>
+              </div>
+            </div>
+            <div className={modelListClasses.groupHeaderActions}>
+              <Tooltip
+                content={
+                  deletableGroupModels.length === 0
+                    ? t('settings.models.manage.default_model_cannot_remove')
+                    : t('settings.models.manage.remove_whole_group')
+                }
+                placement="top"
+                classNames={{ placeholder: modelListClasses.groupHeaderIconTooltipTrigger }}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={t('settings.models.manage.remove_whole_group')}
+                  disabled={disabled || bulkActionDisabled || hasPendingModel || deletableGroupModels.length === 0}
+                  className={`${modelListClasses.rowActionButton} ${modelListClasses.rowDangerActionButton} opacity-0 transition-opacity focus-visible:opacity-100 group-focus-within/modelGroup:opacity-100 group-hover/modelGroup:opacity-100`}
+                  onKeyDown={handleDeleteGroupKeyDown}
+                  onClick={handleDeleteGroupModels}>
+                  <Minus className="size-3.5" />
+                </Button>
+              </Tooltip>
+            </div>
           </div>
         </div>
-        <div className={modelListClasses.groupHeaderActions}>
-          <Tooltip
-            content={
-              deletableGroupModels.length === 0
-                ? t('settings.models.manage.default_model_cannot_remove')
-                : t('settings.models.manage.remove_whole_group')
-            }
-            placement="top"
-            classNames={{ placeholder: modelListClasses.groupHeaderIconTooltipTrigger }}>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              aria-label={t('settings.models.manage.remove_whole_group')}
-              disabled={disabled || bulkActionDisabled || hasPendingModel || deletableGroupModels.length === 0}
-              className={`${modelListClasses.rowActionButton} ${modelListClasses.rowDangerActionButton} opacity-0 transition-opacity focus-visible:opacity-100 group-focus-within/modelGroup:opacity-100 group-hover/modelGroup:opacity-100`}
-              onKeyDown={handleDeleteGroupKeyDown}
-              onClick={handleDeleteGroupModels}>
-              <Minus className="size-3.5" />
-            </Button>
-          </Tooltip>
-        </div>
-      </div>
-    </div>
+      </ContextMenuTrigger>
+      <ContextMenuContent className="min-w-32">
+        <ContextMenuItem disabled={renameDisabled || !onRenameGroup} onSelect={() => onRenameGroup?.(groupName)}>
+          <ContextMenuItemContent icon={<Pencil size={12} />}>
+            {t('settings.models.manage.rename_group')}
+          </ContextMenuItemContent>
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
   )
 }
 

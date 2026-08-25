@@ -256,6 +256,48 @@ describe('useModelSelectorData', () => {
     })
   })
 
+  it('uses first group appearance and persisted member order inside each provider', () => {
+    wireDeps({
+      providers: [makeProvider('openai')],
+      models: [
+        makeModel('b-1', 'openai', { group: 'B' }),
+        makeModel('a-1', 'openai', { group: 'A' }),
+        makeModel('b-2', 'openai', { group: 'B' }),
+        makeModel('a-2', 'openai', { group: 'A' })
+      ]
+    })
+
+    const { result } = renderHook(() => useModelSelectorData({ searchText: '' }))
+
+    expect(result.current.modelItems.map((item) => item.modelId)).toEqual([
+      'openai::b-1',
+      'openai::b-2',
+      'openai::a-1',
+      'openai::a-2'
+    ])
+  })
+
+  it('preserves model layout order after caller filtering', () => {
+    wireDeps({
+      providers: [makeProvider('openai')],
+      models: [
+        makeModel('b-1', 'openai', { group: 'B', capabilities: [MODEL_CAPABILITY.REASONING] }),
+        makeModel('a-1', 'openai', { group: 'A' }),
+        makeModel('b-2', 'openai', { group: 'B', capabilities: [MODEL_CAPABILITY.REASONING] }),
+        makeModel('a-2', 'openai', { group: 'A', capabilities: [MODEL_CAPABILITY.REASONING] })
+      ]
+    })
+
+    const { result } = renderHook(() =>
+      useModelSelectorData({
+        searchText: '',
+        filter: (model) => model.capabilities.includes(MODEL_CAPABILITY.REASONING)
+      })
+    )
+
+    expect(result.current.modelItems.map((item) => item.modelId)).toEqual(['openai::b-1', 'openai::b-2', 'openai::a-2'])
+  })
+
   it('deduplicates selectable ids while applying the selection cap only to row state', () => {
     wireDeps({
       providers: [makeProvider('openai')],

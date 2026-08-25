@@ -55,14 +55,14 @@ const models = [
 ] as any[]
 
 describe('modelListDerivedState', () => {
-  it('groups filtered models into sorted unified groups', () => {
+  it('groups filtered models by first appearance and explicit group', () => {
     const groups = groupModels(applyModelFilters(models as any, '', 'all'))
 
-    expect(Object.keys(groups)).toEqual(['chat', 'embedding', 'reasoning', 'rerank', 'vision'])
+    expect(Object.keys(groups)).toEqual(['chat', 'vision', 'embedding', 'rerank'])
     expect(countModelsInGroups(groups)).toBe(5)
   })
 
-  it('uses model id group names before model.group', () => {
+  it('uses explicit model groups before derived model id groups', () => {
     const groupedModels = [
       {
         id: 'provider::openai/gpt-4o',
@@ -84,10 +84,10 @@ describe('modelListDerivedState', () => {
       }
     ]
 
-    expect(Object.keys(groupModels(groupedModels as any))).toEqual(['deepseek', 'openai'])
+    expect(Object.keys(groupModels(groupedModels as any))).toEqual(['provider-group', 'aihubmix'])
   })
 
-  it('repairs legacy provider-id groups while preserving explicit user groups', () => {
+  it('treats provider-id groups as explicit after storage normalization', () => {
     const groupedModels = [
       {
         id: 'opencode::deepseek-v4-pro',
@@ -111,9 +111,8 @@ describe('modelListDerivedState', () => {
 
     const groups = groupModels(groupedModels as any, false, { preferModelGroup: true })
 
-    expect(groups.deepseek.map((model) => model.id)).toEqual(['opencode::deepseek-v4-pro'])
+    expect(groups.opencode.map((model) => model.id)).toEqual(['opencode::deepseek-v4-pro'])
     expect(groups.Featured.map((model) => model.id)).toEqual(['opencode::gpt-5.6-sol'])
-    expect(groups.opencode).toBeUndefined()
   })
 
   it('applies search text and capability filters together', () => {
@@ -196,8 +195,8 @@ describe('modelListDerivedState', () => {
     ])
 
     expect(Object.keys(groupModels(applyModelFilters(searchModels as any, 'dsv', 'all'), true))).toEqual([
-      'deepseek',
-      'funaudio'
+      'Pro',
+      'FunAudioLLM'
     ])
   })
 

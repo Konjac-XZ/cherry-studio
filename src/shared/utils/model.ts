@@ -427,6 +427,45 @@ export function deriveModelGroupName(modelId: string): string | undefined {
   return familyName && familyName !== normalizedId ? familyName : undefined
 }
 
+export type ModelLayoutGroup<TModel> = {
+  groupName: string
+  models: TModel[]
+}
+
+export function getEffectiveModelGroup(model: Pick<Model, 'apiModelId' | 'group' | 'id' | 'providerId'>): string {
+  const explicitGroup = model.group?.trim()
+  if (explicitGroup) {
+    return explicitGroup
+  }
+
+  const modelId = model.apiModelId ?? parseUniqueModelId(model.id).modelId
+  return deriveModelGroupName(modelId) ?? model.providerId
+}
+
+export function groupModelsByLayout<TModel extends Pick<Model, 'apiModelId' | 'group' | 'id' | 'providerId'>>(
+  models: readonly TModel[]
+): ModelLayoutGroup<TModel>[] {
+  const groups = new Map<string, TModel[]>()
+
+  for (const model of models) {
+    const groupName = getEffectiveModelGroup(model)
+    const groupModels = groups.get(groupName)
+    if (groupModels) {
+      groupModels.push(model)
+    } else {
+      groups.set(groupName, [model])
+    }
+  }
+
+  return [...groups].map(([groupName, groupModels]) => ({ groupName, models: groupModels }))
+}
+
+export function flattenModelsByLayout<TModel extends Pick<Model, 'apiModelId' | 'group' | 'id' | 'providerId'>>(
+  models: readonly TModel[]
+): TModel[] {
+  return groupModelsByLayout(models).flatMap(({ models: groupModels }) => groupModels)
+}
+
 export const groupQwenModels = <T extends Pick<Model, 'id'> & Partial<Pick<Model, 'group'>>>(
   models: T[]
 ): Record<string, T[]> => {

@@ -26,10 +26,15 @@ import {
   type ResolvedReasoningProfile,
   type ResolvedServiceTierControl
 } from '@data/services/ProviderRegistryService'
-import { insertManyWithOrderKey } from '@data/services/utils/orderKey'
+import { applyMoves, insertManyWithOrderKey } from '@data/services/utils/orderKey'
 import { loggerService } from '@logger'
 import { DataApiErrorFactory } from '@shared/data/api/errors'
-import type { CreateModelDto, ListModelsQuery, UpdateModelDto } from '@shared/data/api/schemas/models'
+import type {
+  CreateModelDto,
+  ListModelsQuery,
+  UpdateModelDto,
+  UpdateProviderModelLayoutDto
+} from '@shared/data/api/schemas/models'
 import {
   CHERRYAI_DEFAULT_UNIQUE_MODEL_ID,
   CHERRYAI_PROVIDER_ID,
@@ -44,7 +49,13 @@ import type {
   RuntimeParameterSupport,
   RuntimeReasoning
 } from '@shared/data/types/model'
-import { createUniqueModelId, MODEL_CAPABILITY, ReasoningConfigSchema } from '@shared/data/types/model'
+import {
+  createUniqueModelId,
+  isUniqueModelId,
+  MODEL_CAPABILITY,
+  parseUniqueModelId,
+  ReasoningConfigSchema
+} from '@shared/data/types/model'
 import { and, asc, eq, inArray, type SQL } from 'drizzle-orm'
 import { isEqual } from 'es-toolkit/compat'
 
@@ -1005,6 +1016,99 @@ class ModelService {
     logger.info('Bulk updated models', {
       count: rows.length,
       providers: [...new Set(items.map((item) => item.providerId))]
+    })
+
+    return this.enrichRowsFromRegistry(rows)
+  }
+
+  updateLayout(providerId: string, dto: UpdateProviderModelLayoutDto): Model[] {
+    const assertProviderModelId = (uniqueModelId: string) => {
+      if (!isUniqueModelId(uniqueModelId)) {
+        throw DataApiErrorFactory.validation({ id: [`invalid model id: ${uniqueModelId}`] })
+      }
+      const parsed = parseUniqueModelId(uniqueModelId)
+      if (parsed.providerId !== providerId) {
+        throw DataApiErrorFactory.validation({
+          providerId: [`model '${uniqueModelId}' does not belong to provider '${providerId}'`]
+        })
+      }
+    }
+
+    for (const move of dto.moves) {
+      assertProviderModelId(move.id)
+      if ('before' in move.anchor) assertProviderModelId(move.anchor.before)
+      if ('after' in move.anchor) assertProviderModelId(move.anchor.after)
+    }
+    for (const change of dto.groupChanges) {
+      assertProviderModelId(change.id)
+    }
+
+    if (dto.moves.length === 0 && dto.groupChanges.length === 0) {
+      return this.list({ providerId })
+    }
+
+    const rows = application.get('DbService').withWriteTx((tx) => {
+      const currentRows = tx
+        .select()
+        .from(userModelTable)
+        .where(eq(userModelTable.providerId, providerId))
+        .orderBy(asc(userModelTable.orderKey))
+        .all()
+      const modelIds = new Set(currentRows.map(({ id }) => id))
+      const simulatedOrder = currentRows.map(({ id }) => id)
+      const effectiveMoves: typeof dto.moves = []
+
+      for (const move of dto.moves) {
+        if (!modelIds.has(move.id)) throw DataApiErrorFactory.notFound('Model', move.id)
+
+        const anchorId =
+          'before' in move.anchor ? move.anchor.before : 'after' in move.anchor ? move.anchor.after : null
+        if (anchorId && !modelIds.has(anchorId)) throw DataApiErrorFactory.notFound('Model', anchorId)
+        if (anchorId === move.id) {
+          throw DataApiErrorFactory.validation({ anchor: ['a model cannot be anchored to itself'] })
+        }
+
+        const previousOrder = [...simulatedOrder]
+        simulatedOrder.splice(simulatedOrder.indexOf(move.id), 1)
+        let insertIndex: number
+        if ('position' in move.anchor) {
+          insertIndex = move.anchor.position === 'first' ? 0 : simulatedOrder.length
+        } else {
+          const anchorIndex = simulatedOrder.indexOf(anchorId!)
+          insertIndex = anchorIndex + ('after' in move.anchor ? 1 : 0)
+        }
+        simulatedOrder.splice(insertIndex, 0, move.id)
+
+        if (!previousOrder.every((id, index) => simulatedOrder[index] === id)) {
+          effectiveMoves.push(move)
+        }
+      }
+
+      for (const change of dto.groupChanges) {
+        const existing = currentRows.find(({ id }) => id === change.id)
+
+        if (!existing) {
+          throw DataApiErrorFactory.notFound('Model', change.id)
+        }
+        if (existing.group === change.group) continue
+
+        tx.update(userModelTable)
+          .set({ group: change.group })
+          .where(and(eq(userModelTable.id, change.id), eq(userModelTable.providerId, providerId)))
+          .run()
+      }
+
+      applyMoves(tx, userModelTable, effectiveMoves, {
+        pkColumn: userModelTable.id,
+        scope: eq(userModelTable.providerId, providerId)
+      })
+
+      return tx
+        .select()
+        .from(userModelTable)
+        .where(eq(userModelTable.providerId, providerId))
+        .orderBy(asc(userModelTable.orderKey))
+        .all()
     })
 
     return this.enrichRowsFromRegistry(rows)

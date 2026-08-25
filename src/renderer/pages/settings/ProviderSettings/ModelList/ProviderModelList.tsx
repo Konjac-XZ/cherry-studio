@@ -72,11 +72,16 @@ const ProviderModelList: React.FC<ProviderModelListProps> = ({ providerId, disab
           hasVisibleModels={modelList.sections.hasVisibleModels}
           enabledSections={modelList.sections.enabledSections}
           disabled={modelList.sections.disabled}
+          reorderDisabled={modelList.sections.reorderDisabled}
           pendingModelIds={modelList.sections.pendingModelIds}
           defaultModelIds={modelList.sections.defaultModelIds}
           onEditModel={modelList.sections.onEditModel}
           onDeleteModel={modelList.sections.onDeleteModel}
           onDeleteModels={modelList.sections.onDeleteModels}
+          groupNames={modelList.sections.groupNames}
+          renameDisabled={modelList.sections.renameDisabled}
+          onRenameGroup={modelList.sections.onRenameGroup}
+          onUpdateLayout={modelList.sections.onUpdateLayout}
           bulkActionDisabled={toolbarDisabled}
           expansionCommand={groupExpansionCommand}
         />

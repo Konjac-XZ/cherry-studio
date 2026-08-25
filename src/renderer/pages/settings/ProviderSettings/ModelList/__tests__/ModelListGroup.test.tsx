@@ -238,6 +238,54 @@ describe('ModelListGroup', () => {
     expect(screen.queryByRole('switch')).not.toBeInTheDocument()
   })
 
+  it('opens rename from the header context menu without toggling the group', () => {
+    const onRenameGroup = vi.fn()
+    const onToggleOpen = vi.fn()
+    render(
+      <ModelListGroup
+        groupName="chat"
+        items={models.map((model: any) => ({ model }))}
+        defaultOpen
+        disabled={false}
+        pendingModelIds={new Set()}
+        onDeleteModels={vi.fn()}
+        onRenameGroup={onRenameGroup}
+        onToggleOpen={onToggleOpen}
+      />
+    )
+
+    fireEvent.contextMenu(screen.getByRole('button', { name: 'chat' }))
+    fireEvent.click(screen.getByText('settings.models.manage.rename_group'))
+
+    expect(onRenameGroup).toHaveBeenCalledWith('chat')
+    expect(onToggleOpen).not.toHaveBeenCalled()
+  })
+
+  it('disables group rename while layout mutations are blocked', () => {
+    const onRenameGroup = vi.fn()
+    render(
+      <ModelListGroup
+        groupName="chat"
+        items={models.map((model: any) => ({ model }))}
+        defaultOpen
+        disabled={false}
+        renameDisabled
+        pendingModelIds={new Set()}
+        onDeleteModels={vi.fn()}
+        onRenameGroup={onRenameGroup}
+      />
+    )
+
+    fireEvent.contextMenu(screen.getByRole('button', { name: 'chat' }))
+    const renameItem = screen
+      .getByText('settings.models.manage.rename_group')
+      .closest('[data-slot="context-menu-item"]')
+
+    expect(renameItem).toHaveAttribute('data-disabled')
+    fireEvent.click(screen.getByText('settings.models.manage.rename_group'))
+    expect(onRenameGroup).not.toHaveBeenCalled()
+  })
+
   it('reflects controlled open state', () => {
     const { rerender } = render(
       <ModelListGroup

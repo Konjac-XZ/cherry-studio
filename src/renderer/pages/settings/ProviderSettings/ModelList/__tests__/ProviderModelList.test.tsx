@@ -1,4 +1,5 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { toast } from '@renderer/services/toast'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import ProviderModelList from '../ProviderModelList'
@@ -31,6 +32,13 @@ vi.mock('@renderer/components/VirtualList', () => ({
         <div key={getItemKey?.(index) ?? index}>{children(item, index)}</div>
       ))}
     </div>
+  ),
+  GroupedSortableVirtualList: ({ groups, renderGroupHeader }: any) => (
+    <div>
+      {groups.map(({ group, header }: any, index: number) => (
+        <div key={index}>{renderGroupHeader(header, group, index)}</div>
+      ))}
+    </div>
   )
 }))
 
@@ -47,11 +55,21 @@ vi.mock('../modelListHealthContext', () => ({
   })
 }))
 
-const { modelListGroupMock, modelListStateMock, searchTextMock } = vi.hoisted(() => ({
-  modelListGroupMock: vi.fn(({ groupName }: { groupName: string }) => <div>{groupName}</div>),
-  modelListStateMock: { hasNoModels: false, hasVisibleModels: true },
-  searchTextMock: { value: '' }
-}))
+const { groupNamesMock, modelListGroupMock, modelListStateMock, onRenameGroupMock, searchTextMock } = vi.hoisted(
+  () => ({
+    groupNamesMock: { value: new Set(['OpenAI']) },
+    modelListGroupMock: vi.fn(
+      ({ groupName, onRenameGroup }: { groupName: string; onRenameGroup?: (groupName: string) => void }) => (
+        <button type="button" onClick={() => onRenameGroup?.(groupName)}>
+          {groupName}
+        </button>
+      )
+    ),
+    modelListStateMock: { hasNoModels: false, hasVisibleModels: true },
+    onRenameGroupMock: vi.fn(),
+    searchTextMock: { value: '' }
+  })
+)
 
 vi.mock('../ModelListGroup', () => ({
   default: modelListGroupMock
@@ -73,11 +91,16 @@ vi.mock('../useProviderModelList', () => ({
       displayEnabledModelCount: 1,
       enabledSections: [{ groupName: 'OpenAI', items: [] }],
       disabled: false,
+      reorderDisabled: false,
       pendingModelIds: new Set<string>(),
       defaultModelIds: new Set<string>(),
+      groupNames: groupNamesMock.value,
+      renameDisabled: false,
       onEditModel: vi.fn(),
       onDeleteModel: vi.fn(),
-      onDeleteModels: vi.fn()
+      onDeleteModels: vi.fn(),
+      onRenameGroup: onRenameGroupMock,
+      onUpdateLayout: vi.fn()
     },
     editDrawer: {
       open: false,
@@ -92,6 +115,8 @@ describe('ProviderModelList', () => {
     vi.clearAllMocks()
     modelListStateMock.hasNoModels = false
     modelListStateMock.hasVisibleModels = true
+    groupNamesMock.value = new Set(['OpenAI'])
+    onRenameGroupMock.mockResolvedValue(undefined)
     searchTextMock.value = ''
   })
 
@@ -148,5 +173,56 @@ describe('ProviderModelList', () => {
       }),
       undefined
     )
+  })
+
+  it('renames a group to an unused name from the header action', async () => {
+    render(<ProviderModelList providerId="openai" disabled={false} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'OpenAI' }))
+    const dialog = screen.getByRole('dialog', { name: 'settings.models.manage.rename_group_title' })
+    const input = within(dialog).getByLabelText('common.name')
+    fireEvent.change(input, { target: { value: '  Renamed  ' } })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'settings.models.manage.rename_group' }))
+
+    await waitFor(() => expect(onRenameGroupMock).toHaveBeenCalledWith('OpenAI', 'Renamed'))
+    expect(screen.queryByRole('dialog', { name: 'settings.models.manage.merge_group_title' })).not.toBeInTheDocument()
+  })
+
+  it('requires confirmation before merging into an existing group', async () => {
+    groupNamesMock.value = new Set(['OpenAI', 'Existing'])
+    render(<ProviderModelList providerId="openai" disabled={false} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'OpenAI' }))
+    const renameDialog = screen.getByRole('dialog', { name: 'settings.models.manage.rename_group_title' })
+    fireEvent.change(within(renameDialog).getByLabelText('common.name'), { target: { value: 'Existing' } })
+    fireEvent.click(within(renameDialog).getByRole('button', { name: 'settings.models.manage.rename_group' }))
+
+    const mergeDialog = await screen.findByRole('dialog', { name: 'settings.models.manage.merge_group_title' })
+    expect(onRenameGroupMock).not.toHaveBeenCalled()
+    fireEvent.click(within(mergeDialog).getByRole('button', { name: 'common.cancel' }))
+    expect(onRenameGroupMock).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'OpenAI' }))
+    const secondRenameDialog = screen.getByRole('dialog', { name: 'settings.models.manage.rename_group_title' })
+    fireEvent.change(within(secondRenameDialog).getByLabelText('common.name'), { target: { value: 'Existing' } })
+    fireEvent.click(within(secondRenameDialog).getByRole('button', { name: 'settings.models.manage.rename_group' }))
+    const secondMergeDialog = await screen.findByRole('dialog', { name: 'settings.models.manage.merge_group_title' })
+    fireEvent.click(
+      within(secondMergeDialog).getByRole('button', { name: 'settings.models.manage.merge_group_confirm' })
+    )
+
+    await waitFor(() => expect(onRenameGroupMock).toHaveBeenCalledWith('OpenAI', 'Existing'))
+  })
+
+  it('shows rename-specific feedback when persistence fails', async () => {
+    onRenameGroupMock.mockRejectedValueOnce(new Error('rename failed'))
+    render(<ProviderModelList providerId="openai" disabled={false} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'OpenAI' }))
+    const dialog = screen.getByRole('dialog', { name: 'settings.models.manage.rename_group_title' })
+    fireEvent.change(within(dialog).getByLabelText('common.name'), { target: { value: 'Renamed' } })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'settings.models.manage.rename_group' }))
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('settings.models.manage.group_rename_failed'))
   })
 })

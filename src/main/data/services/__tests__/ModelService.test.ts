@@ -20,7 +20,7 @@ import {
 } from '@shared/data/presets/cherryai'
 import { createUniqueModelId, MODEL_CAPABILITY } from '@shared/data/types/model'
 import { setupTestDatabase } from '@test-helpers/db'
-import { and, eq, or } from 'drizzle-orm'
+import { and, asc, eq, or, sql } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { mockMainLoggerService } from '../../../../../tests/__mocks__/MainLoggerService'
@@ -167,6 +167,163 @@ describe('UPDATE_MODEL_FIELD_MAP completeness', () => {
     for (const key of mappedDtoKeys) {
       expect(dtoKeys, `FIELD_MAP has stale key: "${String(key)}" not in UpdateModelDto`).toContain(key)
     }
+  })
+})
+
+describe('ModelService.updateLayout', () => {
+  const dbh = setupTestDatabase()
+
+  async function seedLayout() {
+    const [aKey, bKey, cKey] = generateOrderKeySequence(3)
+    await dbh.db
+      .insert(userProviderTable)
+      .values([providerRow('openai', 'OpenAI'), providerRow('anthropic', 'Anthropic')])
+    await dbh.db
+      .insert(userModelTable)
+      .values([
+        modelRow('openai', 'a', { group: 'A', orderKey: aKey }),
+        modelRow('openai', 'b', { group: 'A', orderKey: bKey }),
+        modelRow('openai', 'c', { group: 'B', orderKey: cKey }),
+        modelRow('anthropic', 'claude', { group: 'Claude' })
+      ])
+  }
+
+  async function readLayout() {
+    return dbh.db
+      .select({ id: userModelTable.id, group: userModelTable.group })
+      .from(userModelTable)
+      .where(eq(userModelTable.providerId, 'openai'))
+      .orderBy(asc(userModelTable.orderKey))
+  }
+
+  it('saves group and ordering changes atomically and returns authoritative order', async () => {
+    await seedLayout()
+
+    const result = modelService.updateLayout('openai', {
+      groupChanges: [{ id: 'openai::b', group: 'B' }],
+      moves: [{ id: 'openai::b', anchor: { after: 'openai::c' } }]
+    })
+
+    expect(result.map(({ id, group }) => ({ id, group }))).toEqual([
+      { id: 'openai::a', group: 'A' },
+      { id: 'openai::c', group: 'B' },
+      { id: 'openai::b', group: 'B' }
+    ])
+    expect(await readLayout()).toEqual([
+      { id: 'openai::a', group: 'A' },
+      { id: 'openai::c', group: 'B' },
+      { id: 'openai::b', group: 'B' }
+    ])
+  })
+
+  it('rejects models and anchors outside the provider scope', async () => {
+    await seedLayout()
+
+    expect(() =>
+      modelService.updateLayout('openai', {
+        groupChanges: [],
+        moves: [{ id: 'openai::a', anchor: { after: 'anthropic::claude' } }]
+      })
+    ).toThrowError(expect.objectContaining({ code: ErrorCode.VALIDATION_ERROR }))
+  })
+
+  it('does not write for an equivalent order and unchanged group', async () => {
+    await seedLayout()
+    dbh.db.run(
+      sql.raw(`
+        CREATE TRIGGER fail_redundant_model_layout_update
+        BEFORE UPDATE ON user_model
+        BEGIN
+          SELECT RAISE(ABORT, 'redundant layout write');
+        END;
+      `)
+    )
+
+    try {
+      expect(() =>
+        modelService.updateLayout('openai', {
+          groupChanges: [{ id: 'openai::a', group: 'A' }],
+          moves: [{ id: 'openai::a', anchor: { before: 'openai::b' } }]
+        })
+      ).not.toThrow()
+    } finally {
+      dbh.db.run(sql.raw('DROP TRIGGER IF EXISTS fail_redundant_model_layout_update'))
+    }
+
+    expect(await readLayout()).toEqual([
+      { id: 'openai::a', group: 'A' },
+      { id: 'openai::b', group: 'A' },
+      { id: 'openai::c', group: 'B' }
+    ])
+  })
+
+  it('renames a whole group without changing model order', async () => {
+    await seedLayout()
+
+    const result = modelService.updateLayout('openai', {
+      groupChanges: [
+        { id: 'openai::a', group: 'Renamed' },
+        { id: 'openai::b', group: 'Renamed' }
+      ],
+      moves: []
+    })
+
+    expect(result.map(({ id, group }) => ({ id, group }))).toEqual([
+      { id: 'openai::a', group: 'Renamed' },
+      { id: 'openai::b', group: 'Renamed' },
+      { id: 'openai::c', group: 'B' }
+    ])
+  })
+
+  it('rolls back earlier group members when a later rename update fails', async () => {
+    await seedLayout()
+    dbh.db.run(
+      sql.raw(`
+        CREATE TRIGGER fail_second_group_rename
+        BEFORE UPDATE ON user_model
+        WHEN OLD.id = 'openai::b'
+        BEGIN
+          SELECT RAISE(ABORT, 'group rename failed');
+        END;
+      `)
+    )
+
+    try {
+      expect(() =>
+        modelService.updateLayout('openai', {
+          groupChanges: [
+            { id: 'openai::a', group: 'Renamed' },
+            { id: 'openai::b', group: 'Renamed' }
+          ],
+          moves: []
+        })
+      ).toThrow('group rename failed')
+    } finally {
+      dbh.db.run(sql.raw('DROP TRIGGER IF EXISTS fail_second_group_rename'))
+    }
+
+    expect(await readLayout()).toEqual([
+      { id: 'openai::a', group: 'A' },
+      { id: 'openai::b', group: 'A' },
+      { id: 'openai::c', group: 'B' }
+    ])
+  })
+
+  it('rolls back a group update when a later move fails', async () => {
+    await seedLayout()
+
+    expect(() =>
+      modelService.updateLayout('openai', {
+        groupChanges: [{ id: 'openai::a', group: 'Changed' }],
+        moves: [{ id: 'openai::missing', anchor: { position: 'last' } }]
+      })
+    ).toThrowError(expect.objectContaining({ code: ErrorCode.NOT_FOUND }))
+
+    expect(await readLayout()).toEqual([
+      { id: 'openai::a', group: 'A' },
+      { id: 'openai::b', group: 'A' },
+      { id: 'openai::c', group: 'B' }
+    ])
   })
 })
 

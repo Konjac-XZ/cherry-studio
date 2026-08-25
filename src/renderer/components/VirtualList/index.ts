@@ -10,7 +10,8 @@ export {
   type GroupedSortableVirtualListDragStartPayload,
   type GroupedSortableVirtualListGroupDragPayload,
   type GroupedSortableVirtualListItemDragPayload,
-  type GroupedSortableVirtualListProps
+  type GroupedSortableVirtualListProps,
+  useGroupedSortableDragHandle
 } from './GroupedSortableVirtualList'
 export {
   buildGroupedVirtualRows,

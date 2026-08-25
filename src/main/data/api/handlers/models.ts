@@ -19,7 +19,8 @@ import {
   type ModelSchemas,
   ReconcileProviderModelsSchema,
   ResolveProviderModelsQuerySchema,
-  UpdateModelSchema
+  UpdateModelSchema,
+  UpdateProviderModelLayoutSchema
 } from '@shared/data/api/schemas/models'
 import type { HandlersFor } from '@shared/data/api/types'
 import { SuccessStatus } from '@shared/data/api/types'
@@ -168,6 +169,13 @@ export const modelHandlers: HandlersFor<ModelSchemas> = {
       // Override the default POST → 201: the response is the resulting
       // collection state for the provider, not a newly-created single resource.
       return { data: models, status: SuccessStatus.OK }
+    }
+  },
+
+  '/providers/:providerId/models/order:batch': {
+    PATCH: async ({ params, body }) => {
+      const parsed = UpdateProviderModelLayoutSchema.parse(body)
+      return modelService.updateLayout(params.providerId, parsed)
     }
   },
 

@@ -1,10 +1,13 @@
 import { usePreference } from '@data/hooks/usePreference'
+import { computeMinimalMoves } from '@renderer/data/utils/reorder'
 import { useModelMutations, useModels } from '@renderer/hooks/useModel'
 import type { Model, UniqueModelId } from '@shared/data/types/model'
 import { parseUniqueModelId } from '@shared/data/types/model'
+import { groupModelsByLayout } from '@shared/utils/model'
 import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react'
 
 import { PROVIDER_SETTINGS_MODEL_SWR_OPTIONS } from '../hooks/providerSetting/constants'
+import { applyModelGroupRename } from './modelLayout'
 import {
   calculateModelListDerivedState,
   countModelsInGroups,
@@ -41,11 +44,16 @@ export interface ProviderModelListSectionsSurface {
   displayEnabledModelCount: number
   enabledSections: ModelListGroupSection[]
   disabled: boolean
+  reorderDisabled: boolean
   pendingModelIds: Set<string>
   defaultModelIds: Set<UniqueModelId>
   onEditModel: (model: Model) => void
   onDeleteModel: (model: Model) => Promise<void>
   onDeleteModels: (models: Model[]) => Promise<void>
+  groupNames: Set<string>
+  renameDisabled: boolean
+  onRenameGroup: (sourceGroup: string, targetGroup: string) => Promise<void>
+  onUpdateLayout: (models: Model[], groupChanges: Array<{ id: UniqueModelId; group: string }>) => Promise<void>
 }
 
 interface UseProviderModelListArgs {
@@ -87,7 +95,7 @@ export function useProviderModelList({ providerId, disabled = false }: UseProvid
     { providerId },
     { swrOptions: PROVIDER_SETTINGS_MODEL_SWR_OPTIONS }
   )
-  const { deleteModel, deleteModels } = useModelMutations()
+  const { deleteModel, deleteModels, isUpdatingLayout, updateProviderModelLayout } = useModelMutations()
   const [defaultModelId] = usePreference('chat.default_model_id')
   const [quickAssistantModelId] = usePreference('feature.quick_assistant.model_id')
   const [translateModelId] = usePreference('feature.translate.model_id')
@@ -97,6 +105,7 @@ export function useProviderModelList({ providerId, disabled = false }: UseProvid
   const [editingModel, setEditingModel] = useState<Model | null>(null)
   const [optimisticDeletedByModelId, setOptimisticDeletedByModelId] = useState<Record<string, true>>({})
   const [pendingModelIdMap, setPendingModelIdMap] = useState<Record<string, true>>({})
+  const [optimisticLayoutModels, setOptimisticLayoutModels] = useState<Model[] | null>(null)
   const defaultModelIds = useMemo(
     () =>
       new Set(
@@ -107,9 +116,10 @@ export function useProviderModelList({ providerId, disabled = false }: UseProvid
     [defaultModelId, quickAssistantModelId, translateModelId]
   )
 
+  const layoutModels = useMemo(() => optimisticLayoutModels ?? [...models], [models, optimisticLayoutModels])
   const optimisticModels = useMemo(
-    () => models.filter((model) => !optimisticDeletedByModelId[model.id]),
-    [models, optimisticDeletedByModelId]
+    () => layoutModels.filter((model) => !optimisticDeletedByModelId[model.id]),
+    [layoutModels, optimisticDeletedByModelId]
   )
 
   const derivedState = useMemo(
@@ -128,17 +138,17 @@ export function useProviderModelList({ providerId, disabled = false }: UseProvid
 
     setPendingModelIdMap((current) => withPrunedModelIds(current, validModelIds))
     setOptimisticDeletedByModelId((current) => withPrunedModelIds(current, validModelIds))
+    setOptimisticLayoutModels(null)
   }, [models])
 
   const displayState = useMemo<DisplayedSectionState>(() => {
-    const preserveGroupOrder = Boolean(searchText.trim())
-    const groups = groupModels(derivedState.filteredModels, preserveGroupOrder, { preferModelGroup: true })
+    const groups = groupModels(derivedState.filteredModels)
 
     return {
       groups,
       displayEnabledModelCount: countModelsInGroups(groups)
     }
-  }, [derivedState.filteredModels, searchText])
+  }, [derivedState.filteredModels])
 
   const openEditModelDrawer = useCallback(
     (model: Model) => {
@@ -240,8 +250,43 @@ export function useProviderModelList({ providerId, disabled = false }: UseProvid
     [defaultModelIds, deleteModels, disabled]
   )
 
+  const onUpdateLayout = useCallback(
+    async (nextModels: Model[], groupChanges: Array<{ id: UniqueModelId; group: string }>) => {
+      if (disabled || isUpdatingLayout) return
+      const moves = computeMinimalMoves(layoutModels, nextModels).map((move) => ({
+        ...move,
+        id: move.id as UniqueModelId
+      }))
+      if (moves.length === 0 && groupChanges.length === 0) return
+
+      setOptimisticLayoutModels(nextModels)
+      try {
+        const updatedModels = await updateProviderModelLayout(providerId, { moves, groupChanges })
+        setOptimisticLayoutModels(updatedModels)
+      } catch (error) {
+        setOptimisticLayoutModels(null)
+        throw error
+      }
+    },
+    [disabled, isUpdatingLayout, layoutModels, providerId, updateProviderModelLayout]
+  )
+
+  const onRenameGroup = useCallback(
+    async (sourceGroup: string, targetGroup: string) => {
+      const result = applyModelGroupRename(layoutModels, sourceGroup, targetGroup)
+      if (!result) return
+
+      await onUpdateLayout(result.models, result.groupChanges)
+    },
+    [layoutModels, onUpdateLayout]
+  )
+
   const enabledSections = useMemo(() => toGroupSections(displayState.groups), [displayState.groups])
   const pendingModelIds = useMemo(() => new Set(Object.keys(pendingModelIdMap)), [pendingModelIdMap])
+  const groupNames = useMemo(
+    () => new Set(groupModelsByLayout(layoutModels).map(({ groupName }) => groupName)),
+    [layoutModels]
+  )
 
   const header: ProviderModelListHeaderSurface = {
     modelCount: derivedState.modelCount,
@@ -260,12 +305,22 @@ export function useProviderModelList({ providerId, disabled = false }: UseProvid
     hasVisibleModels: derivedState.hasVisibleModels,
     displayEnabledModelCount: displayState.displayEnabledModelCount,
     enabledSections,
-    disabled,
+    disabled: disabled || isUpdatingLayout,
+    reorderDisabled:
+      disabled ||
+      isUpdatingLayout ||
+      pendingModelIds.size > 0 ||
+      Boolean(searchText.trim()) ||
+      selectedTypeFilter !== 'all',
     pendingModelIds,
     defaultModelIds,
     onEditModel: openEditModelDrawer,
     onDeleteModel,
-    onDeleteModels
+    onDeleteModels,
+    groupNames,
+    renameDisabled: disabled || isUpdatingLayout || pendingModelIds.size > 0,
+    onRenameGroup,
+    onUpdateLayout
   }
 
   return {

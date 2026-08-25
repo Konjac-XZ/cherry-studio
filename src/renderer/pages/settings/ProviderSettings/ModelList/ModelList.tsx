@@ -1,5 +1,5 @@
 import { ButtonGroup } from '@cherrystudio/ui'
-import React, { memo } from 'react'
+import React, { memo, useState } from 'react'
 
 import { modelListClasses } from '../primitives/ProviderSettingsPrimitives'
 import { useModelListHealthRun } from './modelListHealthContext'
@@ -21,7 +21,8 @@ function ModelListContent({
   modelPullGuideVersion?: number
 }) {
   const { isModelChecking } = useModelListHealthRun()
-  const disabled = isModelChecking
+  const [isModelSyncing, setIsModelSyncing] = useState(false)
+  const disabled = isModelChecking || isModelSyncing
 
   return (
     <>
@@ -34,6 +35,7 @@ function ModelListContent({
               providerId={providerId}
               disabled={toolbarDisabled}
               guideVersion={modelPullGuideVersion}
+              onBusyChange={setIsModelSyncing}
             />
             {providerId === 'ovms' ? (
               <ProviderModelDownload providerId={providerId} disabled={toolbarDisabled} />

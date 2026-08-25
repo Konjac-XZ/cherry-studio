@@ -45,7 +45,7 @@ const ROW_TAG_SIZE = 9
 const FILTER_TAG_SIZE = 10
 const FILTER_TAG_FADE_WIDTH_PX = 24
 const MODEL_SELECTOR_CONTENT_HEIGHT = 720
-const MODEL_SELECTOR_WIDTH = 400
+const MODEL_SELECTOR_WIDTH = 600
 const DEFAULT_PRIORITIZED_PROVIDER_IDS: readonly string[] = []
 const MODEL_SELECTOR_NAVIGATION_KEYS = new Set(['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Enter'])
 const estimateModelSelectorItemSize = () => ITEM_HEIGHT
@@ -176,12 +176,6 @@ function ModelRow({
 }) {
   const icon = useIcon(getModelLogoRef(item.model, item.provider.id))
   const rowTags = useMemo(() => getModelDisplayTags(item.model, undefined, item.provider), [item.model, item.provider])
-  const providerName = getProviderDisplayName(item.provider)
-  const disambiguationLabel = item.showIdentifier
-    ? `${providerName} · ${item.modelIdentifier}`
-    : item.isPinned
-      ? providerName
-      : undefined
 
   const leading = icon ? (
     <icon.Avatar size={24} className="border border-border" />
@@ -246,11 +240,6 @@ function ModelRow({
         <span className="min-w-0 max-w-full shrink-0 truncate" title={item.model.name}>
           {item.model.name}
         </span>
-        {disambiguationLabel && (
-          <span className="min-w-0 flex-[1_999_0%] truncate text-muted-foreground text-xs" title={disambiguationLabel}>
-            | {disambiguationLabel}
-          </span>
-        )}
       </ModelSelectorRow>
     </ModelSelectorDetailCard>
   )

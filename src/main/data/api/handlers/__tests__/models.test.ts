@@ -5,7 +5,8 @@ import {
   CreateModelsSchema,
   DeleteModelsQuerySchema,
   MODELS_BATCH_MAX_ITEMS,
-  MODELS_DELETE_MAX_IDS
+  MODELS_DELETE_MAX_IDS,
+  UpdateProviderModelLayoutSchema
 } from '@shared/data/api/schemas/models'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -19,6 +20,7 @@ const {
   bulkDeleteMock,
   createMock,
   bulkUpdateMock,
+  updateLayoutMock,
   lookupModelMock,
   resolveModelsMock,
   getImageGenerationSupportMock
@@ -30,6 +32,7 @@ const {
   bulkDeleteMock: vi.fn(),
   createMock: vi.fn(),
   bulkUpdateMock: vi.fn(),
+  updateLayoutMock: vi.fn(),
   lookupModelMock: vi.fn(),
   resolveModelsMock: vi.fn(),
   getImageGenerationSupportMock: vi.fn()
@@ -43,7 +46,8 @@ vi.mock('@data/services/ModelService', () => ({
     delete: deleteMock,
     bulkDelete: bulkDeleteMock,
     create: createMock,
-    bulkUpdate: bulkUpdateMock
+    bulkUpdate: bulkUpdateMock,
+    updateLayout: updateLayoutMock
   }
 }))
 
@@ -64,6 +68,31 @@ beforeEach(() => {
 })
 
 describe('Model handler validation', () => {
+  it('validates provider model layout batches', () => {
+    expect(() => UpdateProviderModelLayoutSchema.parse({ moves: [], groupChanges: [] })).not.toThrow()
+    expect(() =>
+      UpdateProviderModelLayoutSchema.parse({
+        moves: [{ id: 'openai::gpt-4o', anchor: { position: 'first' } }],
+        groupChanges: [{ id: 'openai::gpt-4o', group: ' Featured ' }]
+      })
+    ).not.toThrow()
+    expect(() =>
+      UpdateProviderModelLayoutSchema.parse({
+        moves: [
+          { id: 'openai::gpt-4o', anchor: { position: 'first' } },
+          { id: 'openai::gpt-4o', anchor: { position: 'last' } }
+        ],
+        groupChanges: []
+      })
+    ).toThrow()
+    expect(() =>
+      UpdateProviderModelLayoutSchema.parse({
+        moves: [],
+        groupChanges: [{ id: 'openai::gpt-4o', group: '   ' }]
+      })
+    ).toThrow()
+  })
+
   it('accepts create payload arrays up to the configured limit', () => {
     const items = Array.from({ length: MODELS_BATCH_MAX_ITEMS }, (_, index) => ({
       providerId: 'openai',
@@ -352,6 +381,25 @@ describe('/models', () => {
     ).rejects.toThrow('Must be a valid UniqueModelId')
 
     expect(bulkDeleteMock).not.toHaveBeenCalled()
+  })
+})
+
+describe('/providers/:providerId/models/order:batch', () => {
+  it('delegates the atomic layout update and returns the authoritative model list', async () => {
+    const body = {
+      moves: [{ id: 'openai::gpt-4o', anchor: { position: 'first' as const } }],
+      groupChanges: [{ id: 'openai::gpt-4o', group: 'Featured' }]
+    }
+    const updated = [{ id: 'openai::gpt-4o', group: 'Featured' }]
+    updateLayoutMock.mockReturnValueOnce(updated)
+
+    const result = await modelHandlers['/providers/:providerId/models/order:batch'].PATCH({
+      params: { providerId: 'openai' },
+      body
+    } as never)
+
+    expect(updateLayoutMock).toHaveBeenCalledWith('openai', body)
+    expect(result).toEqual(updated)
   })
 })
 

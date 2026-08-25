@@ -1,8 +1,8 @@
 import type { ModelWithStatus } from '@renderer/pages/settings/ProviderSettings/types/healthCheck'
 import type { Model } from '@shared/data/types/model'
-import { ENDPOINT_TYPE, parseUniqueModelId } from '@shared/data/types/model'
+import { ENDPOINT_TYPE } from '@shared/data/types/model'
 import {
-  deriveModelGroupName,
+  groupModelsByLayout,
   isEmbeddingModel,
   isGenerateAudioModel,
   isGenerateImageModel,
@@ -11,15 +11,10 @@ import {
   isRerankModel,
   isSpeechToTextModel
 } from '@shared/utils/model'
-import { sortBy, toPairs } from 'es-toolkit/compat'
 
-import { normalizeModelGroupName } from './grouping'
 import { filterProviderSettingModelsByKeywords, getDuplicateProviderSettingModelNames } from './utils'
 
 export type ModelGroups = Record<string, Model[]>
-interface GroupModelsOptions {
-  preferModelGroup?: boolean
-}
 
 // The manage/pull drawer filters by model TYPE (primary purpose), not by the
 // overlapping capability flags. Order mirrors the drawer's tab row.
@@ -58,39 +53,8 @@ type CalculateModelListDerivedStateInput = {
   modelStatuses: ModelWithStatus[]
 }
 
-function getModelIdGroupName(model: Model): string | undefined {
-  const modelId = model.apiModelId ?? parseUniqueModelId(model.id).modelId
-  return deriveModelGroupName(modelId)
-}
-
-export const groupModels = (
-  models: Model[],
-  preserveGroupOrder = false,
-  options: GroupModelsOptions = {}
-): ModelGroups => {
-  const grouped = models.reduce<ModelGroups>((acc, model) => {
-    const inferredGroup = getModelIdGroupName(model)
-    const hasLegacyProviderGroup = inferredGroup !== undefined && model.group?.trim() === model.providerId
-    const shouldPreferStoredGroup = options.preferModelGroup && !hasLegacyProviderGroup
-    const preferredGroup = shouldPreferStoredGroup ? model.group : inferredGroup
-    const fallbackGroup = shouldPreferStoredGroup ? inferredGroup : model.group
-    const groupName = normalizeModelGroupName(preferredGroup, fallbackGroup ?? model.providerId)
-    if (!acc[groupName]) {
-      acc[groupName] = []
-    }
-    acc[groupName].push(model)
-    return acc
-  }, {})
-
-  if (preserveGroupOrder) {
-    return grouped
-  }
-
-  return sortBy(toPairs(grouped), [0]).reduce((acc, [key, value]) => {
-    acc[key] = value
-    return acc
-  }, {} as ModelGroups)
-}
+export const groupModels = (models: Model[], _preserveGroupOrder?: boolean, _options?: unknown): ModelGroups =>
+  Object.fromEntries(groupModelsByLayout(models).map(({ groupName, models: groupModels }) => [groupName, groupModels]))
 
 // Text-to-speech is the only audio-output sub-kind we can single out from
 // generic audio generation today (the `AUDIO_GENERATION` capability backs

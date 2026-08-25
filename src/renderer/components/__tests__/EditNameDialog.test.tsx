@@ -48,6 +48,24 @@ describe('EditNameDialog', () => {
     await waitFor(() => expect(input).toHaveFocus())
   })
 
+  it('selects the initial name on focus when requested', async () => {
+    render(
+      <EditNameDialog
+        open
+        selectOnFocus
+        title="Edit name"
+        initialName="Alpha"
+        onSubmit={onSubmit}
+        onOpenChange={onOpenChange}
+      />
+    )
+
+    const input = within(screen.getByRole('dialog')).getByLabelText('Name') as HTMLInputElement
+    await waitFor(() => expect(input).toHaveFocus())
+    expect(input.selectionStart).toBe(0)
+    expect(input.selectionEnd).toBe(5)
+  })
+
   it('does not submit an empty name', () => {
     renderDialog()
 

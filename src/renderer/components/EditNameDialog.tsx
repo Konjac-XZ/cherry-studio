@@ -20,6 +20,7 @@ interface EditNameDialogProps {
   onSubmit: (name: string) => void | Promise<void>
   open: boolean
   placeholder?: string
+  selectOnFocus?: boolean
   submitLabel?: string
   title: string
 }
@@ -31,6 +32,7 @@ const EditNameDialog = ({
   onSubmit,
   open,
   placeholder,
+  selectOnFocus,
   submitLabel,
   title
 }: EditNameDialogProps) => {
@@ -113,6 +115,9 @@ const EditNameDialog = ({
               className="h-8 rounded-lg px-2.5 leading-4 placeholder:text-muted-foreground"
               placeholder={placeholder}
               value={name}
+              onFocus={(event) => {
+                if (selectOnFocus) event.currentTarget.select()
+              }}
               onChange={(event) => {
                 setName(event.target.value)
                 setHasAttemptedSubmit(false)

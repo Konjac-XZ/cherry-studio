@@ -12,12 +12,14 @@ interface ProviderModelPullReconcileProps {
   providerId: string
   disabled: boolean
   guideVersion?: number
+  onBusyChange?: (busy: boolean) => void
 }
 
 const ProviderModelPullReconcile: React.FC<ProviderModelPullReconcileProps> = ({
   providerId,
   disabled,
-  guideVersion = 0
+  guideVersion = 0,
+  onBusyChange
 }) => {
   const { t } = useTranslation()
   const pullReconcile = useProviderModelPullReconcile(providerId)
@@ -53,6 +55,12 @@ const ProviderModelPullReconcile: React.FC<ProviderModelPullReconcileProps> = ({
       showPullGuideBriefly()
     }
   }, [guideVersion, showPullGuideBriefly])
+
+  useEffect(() => {
+    onBusyChange?.(pullReconcile.isBusy)
+  }, [onBusyChange, pullReconcile.isBusy])
+
+  useEffect(() => () => onBusyChange?.(false), [onBusyChange])
 
   return (
     <>

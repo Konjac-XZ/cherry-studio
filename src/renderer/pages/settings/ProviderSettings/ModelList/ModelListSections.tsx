@@ -1,6 +1,12 @@
-import { EmptyState } from '@cherrystudio/ui'
+import { ConfirmDialog, EmptyState } from '@cherrystudio/ui'
+import { loggerService } from '@logger'
+import EditNameDialog from '@renderer/components/EditNameDialog'
 import LoadingIcon from '@renderer/components/icons/LoadingIcon'
-import { DynamicVirtualList } from '@renderer/components/VirtualList'
+import {
+  GroupedSortableVirtualList,
+  type GroupedSortableVirtualListDragPayload
+} from '@renderer/components/VirtualList'
+import { toast } from '@renderer/services/toast'
 import { cn } from '@renderer/utils/style'
 import type { Model, UniqueModelId } from '@shared/data/types/model'
 import type { Provider } from '@shared/data/types/provider'
@@ -9,14 +15,16 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { modelListClasses } from '../primitives/ProviderSettingsPrimitives'
+import { getModelOperationErrorMessage } from './errorMessage'
+import { applyModelListLayoutDrag } from './modelLayout'
 import ModelListGroup from './ModelListGroup'
 import { useModelListHealthResults, useModelListHealthRun } from './modelListHealthContext'
 import ModelListItem from './ModelListItem'
-import type { ModelListGroupSection } from './useProviderModelList'
+import type { ModelListGroupItem, ModelListGroupSection } from './useProviderModelList'
 
+const logger = loggerService.withContext('ModelListSections')
 const MODEL_LIST_GROUP_ROW_ESTIMATE = 38
 const MODEL_LIST_MODEL_ROW_ESTIMATE = 44
-// A stable row keeps group spacing from moving between measured rows when a group collapses.
 const MODEL_LIST_GROUP_SEPARATOR_HEIGHT = 10
 
 interface ModelListSectionsProps {
@@ -26,34 +34,19 @@ interface ModelListSectionsProps {
   hasVisibleModels: boolean
   enabledSections: ModelListGroupSection[]
   disabled: boolean
+  reorderDisabled: boolean
   pendingModelIds: Set<string>
   defaultModelIds: Set<UniqueModelId>
   onEditModel: (model: Model) => void
   onDeleteModel: (model: Model) => Promise<void>
   onDeleteModels: (models: Model[]) => Promise<void>
+  groupNames: Set<string>
+  renameDisabled: boolean
+  onRenameGroup: (sourceGroup: string, targetGroup: string) => Promise<void>
+  onUpdateLayout: (models: Model[], groupChanges: Array<{ id: UniqueModelId; group: string }>) => Promise<void>
   bulkActionDisabled?: boolean
   expansionCommand?: { expanded: boolean; version: number }
 }
-
-type ModelListVirtualRow =
-  | {
-      type: 'group'
-      key: string
-      groupName: string
-      items: ModelListGroupSection['items']
-      defaultOpen: boolean
-      open: boolean
-    }
-  | {
-      type: 'model'
-      key: string
-      model: Model
-      isLastInGroup: boolean
-    }
-  | {
-      type: 'separator'
-      key: string
-    }
 
 const ModelListSections: React.FC<ModelListSectionsProps> = ({
   provider,
@@ -62,11 +55,16 @@ const ModelListSections: React.FC<ModelListSectionsProps> = ({
   hasVisibleModels,
   enabledSections,
   disabled,
+  reorderDisabled,
   pendingModelIds,
   defaultModelIds,
   onEditModel,
   onDeleteModel,
   onDeleteModels,
+  groupNames,
+  renameDisabled,
+  onRenameGroup,
+  onUpdateLayout,
   bulkActionDisabled,
   expansionCommand
 }) => {
@@ -74,12 +72,12 @@ const ModelListSections: React.FC<ModelListSectionsProps> = ({
   const { modelStatusMap } = useModelListHealthResults()
   const { apiKeyEntries, savingKeyId, toggleApiKey } = useModelListHealthRun()
   const [groupOpenOverrides, setGroupOpenOverrides] = useState<Record<string, boolean>>({})
+  const [renameTarget, setRenameTarget] = useState<string | null>(null)
+  const [mergeCandidate, setMergeCandidate] = useState<{ sourceGroup: string; targetGroup: string } | null>(null)
+  const [isSubmittingGroupRename, setIsSubmittingGroupRename] = useState(false)
 
   useEffect(() => {
-    if (!expansionCommand) {
-      return
-    }
-
+    if (!expansionCommand) return
     setGroupOpenOverrides(
       Object.fromEntries(enabledSections.map(({ groupName }) => [groupName, expansionCommand.expanded]))
     )
@@ -92,41 +90,74 @@ const ModelListSections: React.FC<ModelListSectionsProps> = ({
     }))
   }, [])
 
-  const virtualRows = useMemo<ModelListVirtualRow[]>(() => {
-    return enabledSections.flatMap(({ groupName, items }, index) => {
-      const defaultOpen = index <= 5
-      const open = groupOpenOverrides[groupName] ?? defaultOpen
-      const groupRow: ModelListVirtualRow = {
-        type: 'group',
-        key: `group:${groupName}`,
-        groupName,
-        items,
-        defaultOpen,
-        open
-      }
-      const separatorRow: ModelListVirtualRow = {
-        type: 'separator',
-        key: `separator:${groupName}`
-      }
+  const groups = useMemo(
+    () =>
+      enabledSections.map((section, index) => {
+        const defaultOpen = index <= 5
+        const open = groupOpenOverrides[section.groupName] ?? defaultOpen
+        return {
+          group: section,
+          header: { defaultOpen, open, section },
+          items: open ? section.items : [],
+          footer: section.groupName
+        }
+      }),
+    [enabledSections, groupOpenOverrides]
+  )
 
-      if (!open) {
-        return [groupRow, separatorRow]
-      }
+  const handleDragEnd = useCallback(
+    (payload: GroupedSortableVirtualListDragPayload<ModelListGroupSection, ModelListGroupItem>) => {
+      const result = applyModelListLayoutDrag(enabledSections, payload)
+      if (!result) return
 
-      return [
-        groupRow,
-        ...items.map(
-          ({ model }, modelIndex): ModelListVirtualRow => ({
-            type: 'model',
-            key: `model:${model.id}`,
-            model,
-            isLastInGroup: modelIndex === items.length - 1
+      void onUpdateLayout(result.models, result.groupChanges).catch((error) => {
+        logger.error('Failed to update provider model layout', { error })
+        toast.error(
+          getModelOperationErrorMessage(error, {
+            fallback: t('settings.models.manage.layout_save_failed'),
+            modelInUseByKnowledgeBase: t('settings.models.manage.model_in_use_by_knowledge_base'),
+            modelInUseAsDefault: t('settings.models.manage.sync_apply_default_in_use')
           })
-        ),
-        separatorRow
-      ]
-    })
-  }, [enabledSections, groupOpenOverrides])
+        )
+      })
+    },
+    [enabledSections, onUpdateLayout, t]
+  )
+
+  const persistGroupRename = useCallback(
+    async (sourceGroup: string, targetGroup: string) => {
+      setIsSubmittingGroupRename(true)
+      try {
+        await onRenameGroup(sourceGroup, targetGroup)
+      } catch (error) {
+        logger.error('Failed to rename provider model group', { sourceGroup, targetGroup, error })
+        toast.error(t('settings.models.manage.group_rename_failed'))
+      } finally {
+        setIsSubmittingGroupRename(false)
+      }
+    },
+    [onRenameGroup, t]
+  )
+
+  const handleRenameSubmit = useCallback(
+    async (targetGroup: string) => {
+      if (!renameTarget) return
+
+      if (groupNames.has(targetGroup)) {
+        setMergeCandidate({ sourceGroup: renameTarget, targetGroup })
+        setRenameTarget(null)
+        return
+      }
+
+      await persistGroupRename(renameTarget, targetGroup)
+    },
+    [groupNames, persistGroupRename, renameTarget]
+  )
+
+  const handleMergeConfirm = useCallback(async () => {
+    if (!mergeCandidate) return
+    await persistGroupRename(mergeCandidate.sourceGroup, mergeCandidate.targetGroup)
+  }, [mergeCandidate, persistGroupRename])
 
   if (isLoading) {
     return (
@@ -152,60 +183,92 @@ const ModelListSections: React.FC<ModelListSectionsProps> = ({
   }
 
   return (
-    <DynamicVirtualList
-      list={virtualRows}
-      className={modelListClasses.listScroller}
-      role="list"
-      estimateSize={(index) => {
-        const row = virtualRows[index]
-        if (row?.type === 'group') return MODEL_LIST_GROUP_ROW_ESTIMATE
-        if (row?.type === 'separator') return MODEL_LIST_GROUP_SEPARATOR_HEIGHT
-        return MODEL_LIST_MODEL_ROW_ESTIMATE
-      }}
-      overscan={10}
-      isSticky={(index) => virtualRows[index]?.type === 'group'}
-      getItemKey={(index) => virtualRows[index]?.key ?? index}>
-      {(row) => {
-        if (row.type === 'separator') {
-          return <div aria-hidden style={{ height: MODEL_LIST_GROUP_SEPARATOR_HEIGHT }} />
-        }
-
-        if (row.type === 'group') {
-          return (
-            <ModelListGroup
-              groupName={row.groupName}
-              items={row.items}
-              defaultOpen={row.defaultOpen}
-              open={row.open}
-              disabled={disabled}
-              bulkActionDisabled={bulkActionDisabled}
-              pendingModelIds={pendingModelIds}
-              defaultModelIds={defaultModelIds}
-              onDeleteModels={onDeleteModels}
-              onToggleOpen={() => toggleGroupOpen(row.groupName, row.defaultOpen)}
-            />
-          )
-        }
-
-        return (
+    <>
+      <GroupedSortableVirtualList
+        groups={groups}
+        className={modelListClasses.listScroller}
+        role="list"
+        disabled={reorderDisabled}
+        dragHandle
+        dragCapabilities={{ groups: true, items: true, itemSameGroup: true, itemCrossGroup: true }}
+        getGroupId={(section) => section.groupName}
+        getItemId={({ model }) => model.id}
+        estimateGroupHeaderSize={() => MODEL_LIST_GROUP_ROW_ESTIMATE}
+        estimateItemSize={() => MODEL_LIST_MODEL_ROW_ESTIMATE}
+        estimateGroupFooterSize={() => MODEL_LIST_GROUP_SEPARATOR_HEIGHT}
+        overscan={10}
+        onDragEnd={handleDragEnd}
+        renderGroupHeader={({ defaultOpen, open, section }) => (
+          <ModelListGroup
+            groupName={section.groupName}
+            items={section.items}
+            defaultOpen={defaultOpen}
+            open={open}
+            disabled={disabled}
+            reorderDisabled={reorderDisabled}
+            renameDisabled={renameDisabled || isSubmittingGroupRename}
+            bulkActionDisabled={bulkActionDisabled}
+            pendingModelIds={pendingModelIds}
+            defaultModelIds={defaultModelIds}
+            onDeleteModels={onDeleteModels}
+            onRenameGroup={setRenameTarget}
+            onToggleOpen={() => toggleGroupOpen(section.groupName, defaultOpen)}
+          />
+        )}
+        renderItem={({ model }, _itemIndex, section, _groupIndex, itemIndexInGroup) => (
           <div
-            className={cn(modelListClasses.virtualModelRow, row.isLastInGroup && modelListClasses.virtualModelRowLast)}>
+            className={cn(
+              modelListClasses.virtualModelRow,
+              itemIndexInGroup === section.items.length - 1 && modelListClasses.virtualModelRowLast
+            )}>
             <ModelListItem
               provider={provider}
-              model={row.model}
-              modelStatus={modelStatusMap.get(row.model.id)}
+              model={model}
+              modelStatus={modelStatusMap.get(model.id)}
               apiKeyEntries={apiKeyEntries}
               savingKeyId={savingKeyId}
               onToggleApiKey={toggleApiKey}
               onEdit={onEditModel}
               onDelete={onDeleteModel}
-              disabled={disabled || pendingModelIds.has(row.model.id)}
-              isDefaultModel={defaultModelIds.has(row.model.id)}
+              disabled={disabled || pendingModelIds.has(model.id)}
+              reorderDisabled={reorderDisabled}
+              isDefaultModel={defaultModelIds.has(model.id)}
             />
           </div>
-        )
-      }}
-    </DynamicVirtualList>
+        )}
+        renderGroupFooter={() => <div aria-hidden style={{ height: MODEL_LIST_GROUP_SEPARATOR_HEIGHT }} />}
+      />
+      <EditNameDialog
+        open={renameTarget !== null}
+        title={t('settings.models.manage.rename_group_title')}
+        submitLabel={t('settings.models.manage.rename_group')}
+        initialName={renameTarget ?? ''}
+        selectOnFocus
+        onSubmit={handleRenameSubmit}
+        onOpenChange={(open) => {
+          if (!open) setRenameTarget(null)
+        }}
+      />
+      <ConfirmDialog
+        open={mergeCandidate !== null}
+        title={t('settings.models.manage.merge_group_title')}
+        description={
+          mergeCandidate
+            ? t('settings.models.manage.merge_group_description', {
+                sourceGroup: mergeCandidate.sourceGroup,
+                targetGroup: mergeCandidate.targetGroup
+              })
+            : undefined
+        }
+        confirmText={t('settings.models.manage.merge_group_confirm')}
+        cancelText={t('common.cancel')}
+        confirmLoading={isSubmittingGroupRename}
+        onConfirm={handleMergeConfirm}
+        onOpenChange={(open) => {
+          if (!open) setMergeCandidate(null)
+        }}
+      />
+    </>
   )
 }
 

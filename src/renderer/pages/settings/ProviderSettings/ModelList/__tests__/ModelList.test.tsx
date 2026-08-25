@@ -7,6 +7,7 @@ import { useProviderModelList } from '../useProviderModelList'
 const useModelsMock = vi.fn()
 const deleteModelMock = vi.fn()
 const deleteModelsMock = vi.fn()
+const updateProviderModelLayoutMock = vi.fn()
 
 const models = [
   {
@@ -29,7 +30,9 @@ vi.mock('@renderer/hooks/useModel', () => ({
   useModels: (...args: any[]) => useModelsMock(...args),
   useModelMutations: () => ({
     deleteModel: deleteModelMock,
-    deleteModels: deleteModelsMock
+    deleteModels: deleteModelsMock,
+    updateProviderModelLayout: updateProviderModelLayoutMock,
+    isUpdatingLayout: false
   })
 }))
 
@@ -41,6 +44,7 @@ describe('useProviderModelList', () => {
     useModelsMock.mockReturnValue({ models, isLoading: false })
     deleteModelMock.mockResolvedValue(undefined)
     deleteModelsMock.mockResolvedValue(undefined)
+    updateProviderModelLayoutMock.mockResolvedValue(models)
   })
 
   it('opens local edit drawer state when editing a model', () => {
@@ -146,6 +150,78 @@ describe('useProviderModelList', () => {
     })
 
     expect(result.current.sections.isLoading).toBe(false)
+    expect(result.current.sections.reorderDisabled).toBe(true)
+  })
+
+  it('persists an optimistic layout and calibrates from the service result', async () => {
+    const serviceLayout = [models[1], models[0]]
+    updateProviderModelLayoutMock.mockResolvedValueOnce(serviceLayout)
+    const { result } = renderHook(() => useProviderModelList({ providerId: 'openai' }))
+
+    await act(async () => {
+      await result.current.sections.onUpdateLayout(serviceLayout, [{ id: models[1].id, group: 'reasoning' }])
+    })
+
+    expect(updateProviderModelLayoutMock).toHaveBeenCalledWith(
+      'openai',
+      expect.objectContaining({
+        moves: expect.arrayContaining([expect.objectContaining({ id: expect.any(String) })]),
+        groupChanges: [{ id: models[1].id, group: 'reasoning' }]
+      })
+    )
+    expect(
+      result.current.sections.enabledSections.flatMap((section) => section.items).map((item) => item.model.id)
+    ).toEqual(serviceLayout.map((model) => model.id))
+  })
+
+  it('renames every model in the full group while a type filter hides some members', async () => {
+    const groupedModels = [
+      { ...models[0], group: 'Shared' },
+      { ...models[1], group: 'Shared' },
+      {
+        id: 'openai::other',
+        name: 'Other',
+        group: 'Other',
+        capabilities: ['reasoning'],
+        isEnabled: true,
+        providerId: 'openai'
+      }
+    ] as any
+    const serviceLayout = groupedModels.map((model: any) =>
+      model.group === 'Shared' ? { ...model, group: 'Renamed' } : model
+    )
+    useModelsMock.mockReturnValue({ models: groupedModels, isLoading: false })
+    updateProviderModelLayoutMock.mockResolvedValueOnce(serviceLayout)
+    const { result } = renderHook(() => useProviderModelList({ providerId: 'openai' }))
+
+    act(() => {
+      result.current.header.setSelectedTypeFilter('text')
+    })
+    await act(async () => {
+      await result.current.sections.onRenameGroup('Shared', 'Renamed')
+    })
+
+    expect(updateProviderModelLayoutMock).toHaveBeenCalledWith('openai', {
+      moves: [],
+      groupChanges: [
+        { id: groupedModels[0].id, group: 'Renamed' },
+        { id: groupedModels[1].id, group: 'Renamed' }
+      ]
+    })
+    expect(result.current.sections.groupNames).toEqual(new Set(['Renamed', 'Other']))
+  })
+
+  it('rolls a failed group rename back to the server layout', async () => {
+    const groupedModels = models.map((model: any) => ({ ...model, group: 'Shared' }))
+    useModelsMock.mockReturnValue({ models: groupedModels, isLoading: false })
+    updateProviderModelLayoutMock.mockRejectedValueOnce(new Error('rename failed'))
+    const { result } = renderHook(() => useProviderModelList({ providerId: 'openai' }))
+
+    await act(async () => {
+      await expect(result.current.sections.onRenameGroup('Shared', 'Renamed')).rejects.toThrow('rename failed')
+    })
+
+    expect(result.current.sections.groupNames).toEqual(new Set(['Shared']))
   })
 
   it('deletes a model and removes it from the list immediately', async () => {
@@ -166,6 +242,8 @@ describe('useProviderModelList', () => {
 
     expect(deleteModelMock).toHaveBeenCalledWith('openai', 'model-beta')
     expect(result.current.sections.pendingModelIds.has('openai::model-beta')).toBe(true)
+    expect(result.current.sections.reorderDisabled).toBe(true)
+    expect(result.current.sections.renameDisabled).toBe(true)
     expect(result.current.header.modelCount).toBe(1)
     expect(result.current.sections.displayEnabledModelCount).toBe(1)
     expect(
@@ -178,6 +256,7 @@ describe('useProviderModelList', () => {
     })
 
     expect(result.current.sections.pendingModelIds.has('openai::model-beta')).toBe(false)
+    expect(result.current.sections.renameDisabled).toBe(false)
   })
 
   it('rolls a failed model delete back to the unified model list', async () => {
