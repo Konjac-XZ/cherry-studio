@@ -176,6 +176,18 @@ describe('provider reasoning contracts', () => {
     ).toEqual([{ target: 'extra_body.thinking_budget', value: { source: 'budget' } }])
   })
 
+  it('pins OpenRouter Muse Spark Contributor to its mandatory effort vocabulary', () => {
+    const contract = override('openrouter', 'muse-spark-1-2-contributor').reasoningContracts?.[
+      'openai-chat-completions'
+    ]
+
+    expect(contract?.support).toEqual({
+      controls: [{ kind: 'effort', values: ['minimal', 'low', 'medium', 'high', 'xhigh'], default: 'medium' }],
+      supportedEfforts: ['minimal', 'low', 'medium', 'high', 'xhigh'],
+      defaultEffort: 'medium'
+    })
+  })
+
   it.each(['qwen3-coder', 'qwen3-coder-next'])('does not declare a DashScope reasoning contract for %s', (modelId) => {
     expect(
       provider('dashscope').overrides?.some((entry) => entry.modelId === modelId && entry.reasoningContracts)

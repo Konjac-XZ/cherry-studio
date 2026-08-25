@@ -87,6 +87,52 @@ describe('resolveReasoningInvocation budget constraints', () => {
   })
 })
 
+describe('resolveReasoningInvocation minimize selection', () => {
+  const effortProfile = REASONING_FORMAT_PROFILES.gemini.wire
+
+  it('uses the off wire when the model supports none', () => {
+    const offCapable = makeModel({
+      reasoning: { controls: [{ kind: 'toggle' }], selectableEfforts: ['none', 'auto'] }
+    })
+    const invocation = resolveReasoningInvocation({ selection: 'none', model: offCapable, profile: effortProfile })
+
+    expect(invocation.kind).toBe('off')
+    expect(encodeReasoningInvocation(invocation)).toEqual({
+      thinkingConfig: { includeThoughts: true, thinkingLevel: 'minimal' }
+    })
+  })
+
+  it.each([
+    { selectableEfforts: ['minimal', 'low', 'medium', 'high'], expected: 'minimal' },
+    { selectableEfforts: ['low', 'medium', 'high'], expected: 'low' }
+  ] as const)('uses $expected when none is unavailable in $selectableEfforts', ({ selectableEfforts, expected }) => {
+    const effortModel = makeModel({
+      reasoning: {
+        controls: [{ kind: 'effort', values: [...selectableEfforts] }],
+        selectableEfforts: [...selectableEfforts]
+      }
+    })
+    const invocation = resolveReasoningInvocation({ selection: 'none', model: effortModel, profile: effortProfile })
+
+    expect(invocation).toMatchObject({ kind: 'effort', selection: expected, effort: expected })
+    expect(encodeReasoningInvocation(invocation)).toEqual({
+      thinkingConfig: { includeThoughts: true, thinkingLevel: expected }
+    })
+  })
+
+  it('omits reasoning when the model exposes no deterministic effort', () => {
+    const automaticOnly = makeModel({
+      reasoning: { controls: [{ kind: 'toggle' }], selectableEfforts: ['auto'] }
+    })
+
+    expect(resolveReasoningInvocation({ selection: 'none', model: automaticOnly, profile: effortProfile })).toEqual({
+      kind: 'omit',
+      selection: 'default',
+      emissions: []
+    })
+  })
+})
+
 describe('OpenAI Responses reasoning summary', () => {
   const responsesWire = (providerId: string) =>
     readProviderRegistry(path.join(process.cwd(), 'packages/provider-registry/data/providers.json')).providers.find(

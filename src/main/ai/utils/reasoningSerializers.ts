@@ -53,13 +53,14 @@ function resolveSelection(
 ): CanonicalReasoningSelection | undefined {
   if (!selection || selection === 'default') return 'default'
   const selectable = model.reasoning?.selectableEfforts ?? []
-  if (selection === 'none') {
-    return selectable.includes(selection) ? selection : undefined
-  }
-
   const declared = selectable.filter(
     (effort): effort is Exclude<ReasoningEffort, 'none' | 'auto'> => effort !== 'none' && effort !== 'auto'
   )
+  if (selection === 'none') {
+    if (selectable.includes(selection)) return selection
+    return declared.length > 0 ? nearestThinkingOption(selection, declared) : undefined
+  }
+
   // `selectableEfforts` is the model's UI vocabulary. A cross-dialect request can still carry
   // canonical `auto`; let the wire profile map it when the target has adjustable effort tiers.
   if (selection === 'auto') {

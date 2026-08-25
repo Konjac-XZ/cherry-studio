@@ -1,5 +1,6 @@
 import path from 'node:path'
 
+import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createOpenAI } from '@ai-sdk/openai'
 import type { LanguageModelV3CallOptions } from '@ai-sdk/provider'
 import type { ProviderOptions } from '@ai-sdk/provider-utils'
@@ -68,6 +69,39 @@ const { applyCallOverrides, buildAgentParams, composeStopWhen, resolveToolCallLi
 beforeEach(() => {
   preferenceGetMock.mockReturnValue(null)
 })
+
+const buildMinimizedGemini = async (
+  apiModelId: string,
+  selectableEfforts: Array<'minimal' | 'low' | 'medium' | 'high'>
+) => {
+  resolveProviderAiSdkConfigMock.mockResolvedValue({
+    config: { providerId: 'google', providerSettings: {} },
+    credentialReceipt: { attribution: 'unknown' }
+  })
+  const provider = makeProvider({
+    id: 'my-gemini-gateway',
+    defaultChatEndpoint: ENDPOINT_TYPE.GOOGLE_GENERATE_CONTENT,
+    endpointConfigs: {
+      [ENDPOINT_TYPE.GOOGLE_GENERATE_CONTENT]: { adapterFamily: 'google' }
+    }
+  })
+  const model = makeModel({
+    id: `my-gemini-gateway::${apiModelId}`,
+    providerId: 'my-gemini-gateway',
+    apiModelId,
+    capabilities: [MODEL_CAPABILITY.REASONING],
+    reasoning: {
+      controls: [{ kind: 'effort', values: selectableEfforts }],
+      selectableEfforts
+    }
+  })
+  return buildAgentParams({
+    request: { reasoningEffort: 'none' },
+    signal: undefined,
+    provider,
+    model
+  })
+}
 
 describe('buildAgentParams provider resolution', () => {
   it('passes the conversation id to provider configuration as the session id', async () => {
@@ -181,6 +215,38 @@ describe('buildAgentParams provider resolution', () => {
     })
 
     expect(result.options.providerOptions?.openrouter).toEqual({ service_tier: 'flex', extra: true })
+  })
+
+  it('maps a minimize request to Muse Spark minimal reasoning on OpenRouter', async () => {
+    resolveProviderAiSdkConfigMock.mockResolvedValue({
+      config: { providerId: 'openrouter', providerSettings: {} },
+      credentialReceipt: { attribution: 'unknown' }
+    })
+    const provider = makeProvider({
+      id: 'openrouter',
+      defaultChatEndpoint: ENDPOINT_TYPE.OPENAI_CHAT_COMPLETIONS,
+      endpointConfigs: {
+        [ENDPOINT_TYPE.OPENAI_CHAT_COMPLETIONS]: {
+          adapterFamily: 'openrouter',
+          baseUrl: 'https://openrouter.ai/api/v1/'
+        }
+      }
+    })
+    const model = makeModel({
+      id: 'openrouter::meta/muse-spark-1.2-contributor',
+      providerId: 'openrouter',
+      apiModelId: 'meta/muse-spark-1.2-contributor',
+      capabilities: [MODEL_CAPABILITY.REASONING]
+    })
+
+    const result = await buildAgentParams({
+      request: { reasoningEffort: 'none' },
+      signal: undefined,
+      provider,
+      model
+    })
+
+    expect(result.options.providerOptions?.openrouter).toMatchObject({ reasoning: { effort: 'minimal' } })
   })
 
   it('injects OpenRouter Messages service_tier at the top level after custom request-body parameters', async () => {
@@ -1135,7 +1201,7 @@ describe('buildAgentParams assistant-less reasoning', () => {
     expect(result.options.providerOptions).toEqual({ anthropic: { thinking: { type: 'disabled' } } })
   })
 
-  it("omits reasoning params when the model cannot be turned off ('none' degrades to omit)", async () => {
+  it("uses the lowest effort when the model cannot be turned off ('none' means minimize)", async () => {
     const { provider } = makeOffCapableSetup()
     const model = makeModel({
       id: 'custom-claude::claude-fixed',
@@ -1155,7 +1221,10 @@ describe('buildAgentParams assistant-less reasoning', () => {
       model
     })
 
-    expect(result.options.providerOptions).toBeUndefined()
+    expect(result.options.providerOptions?.anthropic).toEqual({
+      thinking: { type: 'adaptive', display: 'summarized' },
+      effort: 'low'
+    })
   })
 
   it('carries the AiHubMix Gemini provider-options namespace from endpoint resolution into translation', async () => {
@@ -1201,6 +1270,45 @@ describe('buildAgentParams assistant-less reasoning', () => {
       thinkingConfig: { includeThoughts: false, thinkingBudget: 0 }
     })
     expect(Object.keys(result.options.providerOptions ?? {})).toEqual(['google'])
+  })
+
+  it.each([
+    { apiModelId: 'gemini-3-flash', selectableEfforts: ['minimal', 'low', 'medium', 'high'], expected: 'minimal' },
+    { apiModelId: 'gemini-3.5-flash', selectableEfforts: ['minimal', 'low', 'medium', 'high'], expected: 'minimal' },
+    { apiModelId: 'gemini-3.6-flash', selectableEfforts: ['minimal', 'low', 'medium', 'high'], expected: 'minimal' },
+    { apiModelId: 'gemini-3.7-flash', selectableEfforts: ['low', 'medium', 'high'], expected: 'low' }
+  ] as const)(
+    'maps a minimize request for $apiModelId to Gemini thinkingLevel $expected',
+    async ({ apiModelId, selectableEfforts, expected }) => {
+      const result = await buildMinimizedGemini(apiModelId, [...selectableEfforts])
+
+      expect(result.options.providerOptions?.google).toMatchObject({
+        thinkingConfig: { includeThoughts: true, thinkingLevel: expected }
+      })
+    }
+  )
+
+  it('serializes minimized Gemini 3 reasoning into generationConfig.thinkingConfig', async () => {
+    const result = await buildMinimizedGemini('gemini-3-flash', ['minimal', 'low', 'medium', 'high'])
+    let requestBody: Record<string, unknown> | undefined
+    const sdkModel = createGoogleGenerativeAI({
+      apiKey: 'test-key',
+      baseURL: 'https://example.com/v1beta',
+      fetch: async (_input, init) => {
+        requestBody = JSON.parse(String(init?.body)) as Record<string, unknown>
+        throw new Error('request captured')
+      }
+    }).languageModel('gemini-3-flash')
+
+    await expect(
+      sdkModel.doGenerate({
+        prompt: [{ role: 'user', content: [{ type: 'text', text: 'Translate this.' }] }],
+        providerOptions: result.options.providerOptions
+      })
+    ).rejects.toThrow('request captured')
+    expect(requestBody).toMatchObject({
+      generationConfig: { thinkingConfig: { includeThoughts: true, thinkingLevel: 'minimal' } }
+    })
   })
 
   it('leaves assistant-less requests without an explicit selection un-emitted (gateway regression guard)', async () => {

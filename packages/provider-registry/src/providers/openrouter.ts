@@ -1,5 +1,12 @@
 import { CURRENCY } from '../schemas/enums'
+import type { ReasoningSupport } from '../schemas/model'
 import { defineProvider } from './types'
+
+const museSparkContributorSupport: ReasoningSupport = {
+  controls: [{ kind: 'effort', values: ['minimal', 'low', 'medium', 'high', 'xhigh'], default: 'medium' }],
+  supportedEfforts: ['minimal', 'low', 'medium', 'high', 'xhigh'],
+  defaultEffort: 'medium'
+}
 
 export default defineProvider({
   id: 'openrouter',
@@ -68,5 +75,13 @@ export default defineProvider({
       official: 'https://openrouter.ai/'
     }
   },
-  modelsDevProvider: 'openrouter'
+  modelsDevProvider: 'openrouter',
+  overrides: [
+    {
+      modelId: 'muse-spark-1-2-contributor',
+      reasoningContracts: {
+        'openai-chat-completions': { support: museSparkContributorSupport }
+      }
+    }
+  ]
 })
