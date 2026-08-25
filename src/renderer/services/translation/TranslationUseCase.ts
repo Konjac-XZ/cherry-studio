@@ -13,7 +13,6 @@ export type TranslationPreparationCommand = {
   nativeLanguage: TranslateLangCode | null
   sourceLanguage: TranslateLangCode | 'auto'
   sourceText: string
-  requestText?: string
   targetLanguage: TranslateLangCode
 }
 
@@ -37,7 +36,6 @@ export type PreparedTranslation = {
   polishModelId?: UniqueModelId
   sourceLanguage: TranslateLangCode
   sourceText: string
-  requestText?: string
   targetLanguage: TranslateLangCode
   translateModelId: UniqueModelId
 }
@@ -102,17 +100,16 @@ const buildPreparedTranslation = async (
     command.mode === 'polish_then_translate' ? await ports.plan(targetLanguage, 'polish') : undefined
   throwIfAborted(signal)
 
-  const requestText = command.requestText ?? command.sourceText
   const cacheKey = polishModelId
     ? createPolishTranslateHistoryCacheKey({
-        sourceText: requestText,
+        sourceText: command.sourceText,
         sourceLanguage,
         targetLanguage,
         modelId: translateModelId,
         polishModelId
       })
     : createTranslateHistoryCacheKey({
-        sourceText: requestText,
+        sourceText: command.sourceText,
         sourceLanguage,
         targetLanguage,
         modelId: translateModelId
@@ -124,7 +121,6 @@ const buildPreparedTranslation = async (
     polishModelId,
     sourceLanguage,
     sourceText: command.sourceText,
-    requestText,
     targetLanguage,
     translateModelId
   }
@@ -166,9 +162,8 @@ export const prepareTranslation = async (
   const compatible = await findCompatibleHistoryBeforeDetection(command, ports, signal)
   if (compatible) return { status: 'cache_hit', ...compatible }
 
-  const requestText = command.requestText ?? command.sourceText
   const sourceLanguage =
-    command.sourceLanguage === 'auto' ? await ports.detectLanguage(requestText, signal) : command.sourceLanguage
+    command.sourceLanguage === 'auto' ? await ports.detectLanguage(command.sourceText, signal) : command.sourceLanguage
   throwIfAborted(signal)
 
   const target = ports.determineTargetLanguage(
@@ -195,7 +190,7 @@ export const executePreparedTranslation = async (
   ports: TranslationExecutionPorts,
   options: { onProgress?: (progress: TranslationExecutionProgress) => void; signal?: AbortSignal } = {}
 ): Promise<TranslationExecutionResult | undefined> => {
-  let textToTranslate = command.requestText ?? command.sourceText
+  let textToTranslate = command.sourceText
   let polishedText: string | undefined
 
   if (command.mode === 'polish_then_translate') {

@@ -181,7 +181,9 @@ export class TranslateService {
       streamId: req.streamId,
       uniqueModelId,
       operation,
-      messageId: req.messageId ?? null
+      messageId: req.messageId ?? null,
+      reasoningEffort,
+      hasCustomParameters: Object.keys(customParameters).length > 0
     })
     return { streamId: req.streamId }
   }
@@ -263,12 +265,25 @@ export class TranslateService {
         ? 'feature.translate.reasoning.polish_auto_disable'
         : 'feature.translate.reasoning.translate_auto_disable'
     )
+    const hasReasoningOverride = hasTranslateReasoningOverride(parameters)
+    const reasoningEffort = hasReasoningOverride ? 'default' : autoDisableReasoning ? 'none' : 'default'
+
+    logger.debug('resolved translate reasoning effort', {
+      operation,
+      providerId: resolved.model.providerId,
+      modelId: resolved.model.id,
+      apiModelId: resolved.model.apiModelId ?? null,
+      selectableEfforts: resolved.model.reasoning?.selectableEfforts ?? [],
+      autoDisableReasoning,
+      hasReasoningOverride,
+      reasoningEffort
+    })
 
     return {
       uniqueModelId: resolved.uniqueModelId,
       content,
       customParameters: translateCustomParametersToRecord(parameters),
-      reasoningEffort: hasTranslateReasoningOverride(parameters) ? 'default' : autoDisableReasoning ? 'none' : 'default'
+      reasoningEffort
     }
   }
 

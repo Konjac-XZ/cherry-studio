@@ -189,6 +189,13 @@ vi.mock('@renderer/hooks/useModel', () => ({
         name: 'GPT-4.1',
         capabilities: [],
         isHidden: false
+      },
+      {
+        id: 'anthropic::directional',
+        providerId: 'anthropic',
+        name: 'Directional',
+        capabilities: [],
+        isHidden: false
       }
     ]
   })
@@ -473,6 +480,10 @@ describe('TranslatePage', () => {
     MockUseCacheUtils.setCacheValue('translate.detecting', false)
     MockUsePreferenceUtils.setMultiplePreferenceValues({
       'feature.translate.model_id': null,
+      'feature.translate.model.native_to_other_follows_global': true,
+      'feature.translate.model.native_to_other_id': null,
+      'feature.translate.model.other_to_native_follows_global': true,
+      'feature.translate.model.other_to_native_id': null,
       'feature.translate.page.source_language': 'auto',
       'feature.translate.page.target_language': 'zh-cn',
       'feature.translate.model_prompt': '',
@@ -602,6 +613,34 @@ describe('TranslatePage', () => {
 
     expect(modelSelectorMock).toHaveBeenCalledTimes(1)
     expect(screen.getByRole('button', { name: 'translate.button.translate' })).toBeInTheDocument()
+  })
+
+  it('desaturates the global-model shortcut while the current direction uses another model', () => {
+    MockUsePreferenceUtils.setMultiplePreferenceValues({
+      'feature.translate.model_id': 'openai::gpt-4.1',
+      'feature.translate.model.other_to_native_follows_global': false,
+      'feature.translate.model.other_to_native_id': 'anthropic::directional',
+      'feature.translate.native_language': 'zh-cn',
+      'feature.translate.page.target_language': 'zh-cn'
+    })
+
+    render(<TranslatePage />)
+
+    expect(screen.getByRole('button', { name: 'GPT-4.1' })).toHaveClass('saturate-0')
+  })
+
+  it('keeps the global-model shortcut saturated when the direction follows global', () => {
+    MockUsePreferenceUtils.setMultiplePreferenceValues({
+      'feature.translate.model_id': 'openai::gpt-4.1',
+      'feature.translate.model.other_to_native_follows_global': true,
+      'feature.translate.model.other_to_native_id': 'anthropic::directional',
+      'feature.translate.native_language': 'zh-cn',
+      'feature.translate.page.target_language': 'zh-cn'
+    })
+
+    render(<TranslatePage />)
+
+    expect(screen.getByRole('button', { name: 'GPT-4.1' })).not.toHaveClass('saturate-0')
   })
 
   it('uses a black fill and white text for the enabled translate action', async () => {
@@ -1480,7 +1519,7 @@ describe('TranslatePage', () => {
     )
   })
 
-  it('shows the before-translation regex result in the frozen source pane while preserving the original history source', async () => {
+  it('uses the before-translation regex result in the source pane and history', async () => {
     MockUsePreferenceUtils.setMultiplePreferenceValues({
       'feature.translate.model_id': 'openai::gpt-4.1',
       'feature.translate.page.source_language': 'en-us',
@@ -1519,14 +1558,14 @@ describe('TranslatePage', () => {
     await waitFor(() =>
       expect(translateCoreMock.addHistory).toHaveBeenCalledWith(
         expect.objectContaining({
-          sourceText: 'hello',
+          sourceText: 'normalized',
           cacheKey: 'translate:openai::gpt-4.1:en-us:zh-cn:normalized'
         })
       )
     )
   })
 
-  it('applies before-translation regex rules to the global clipboard shortcut while preserving its original source', async () => {
+  it('uses the before-translation regex result throughout the global clipboard shortcut flow', async () => {
     MockUsePreferenceUtils.setMultiplePreferenceValues({
       'feature.translate.model_id': 'openai::gpt-4.1',
       'feature.translate.page.source_language': 'auto',
@@ -1549,11 +1588,11 @@ describe('TranslatePage', () => {
       )
     )
     expect(translateCoreMock.detectLanguage).toHaveBeenCalledWith('normalized')
-    expect(screen.getByLabelText('translate.input.placeholder')).toHaveValue('hello')
+    expect(screen.getByLabelText('translate.input.placeholder')).toHaveValue('normalized')
     await waitFor(() =>
       expect(translateCoreMock.addHistory).toHaveBeenCalledWith(
         expect.objectContaining({
-          sourceText: 'hello',
+          sourceText: 'normalized',
           cacheKey: 'translate:openai::gpt-4.1:en-us:zh-cn:normalized'
         })
       )

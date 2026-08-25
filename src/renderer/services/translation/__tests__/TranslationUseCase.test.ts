@@ -91,15 +91,14 @@ describe('TranslationUseCase', () => {
     })
   })
 
-  it('uses preprocessed request text for execution identity while preserving the original source', async () => {
+  it('uses preprocessed source text consistently across preparation', async () => {
     const adapter = ports()
-    const result = await prepareTranslation({ ...command, requestText: 'hello normalized' }, adapter)
+    const result = await prepareTranslation({ ...command, sourceText: 'hello normalized' }, adapter)
 
     expect(result).toMatchObject({
       status: 'ready',
       value: {
-        sourceText: 'hello',
-        requestText: 'hello normalized',
+        sourceText: 'hello normalized',
         cacheKey: `translate:${modelId}:en-us:zh-cn:hello normalized`
       }
     })
@@ -152,9 +151,8 @@ describe('TranslationUseCase', () => {
         cacheKey: `polish-translate:${modelId}:${polishModelId}:en-us:zh-cn:hello`,
         mode: 'polish_then_translate',
         polishModelId,
-        requestText: 'normalized hello',
         sourceLanguage: 'en-us',
-        sourceText: 'hello',
+        sourceText: 'normalized hello',
         targetLanguage: 'zh-cn',
         translateModelId: modelId
       },

@@ -148,9 +148,9 @@ export const useTranslationFlowRunner = ({
       const effectiveSourceLanguage = runOverride.sourceLanguage ?? sourceLanguage
       const effectiveTargetLanguage = runOverride.targetLanguage ?? targetLanguage
       const effectiveBidirectional = runOverride.isBidirectional ?? isBidirectional
-      const requestText = preprocessTranslation(effectiveSourceText)
-      if (sourceTextOverride === undefined && requestText !== effectiveSourceText) {
-        setSourceText(requestText)
+      const processedSourceText = preprocessTranslation(effectiveSourceText)
+      if (processedSourceText !== effectiveSourceText) {
+        setSourceText(processedSourceText)
       }
       const flowId = activeFlowRef.current + 1
       activeFlowRef.current = flowId
@@ -181,9 +181,8 @@ export const useTranslationFlowRunner = ({
             isBidirectional: effectiveBidirectional,
             mode: effectiveMode,
             nativeLanguage,
-            requestText,
             sourceLanguage: effectiveSourceLanguage,
-            sourceText: effectiveSourceText,
+            sourceText: processedSourceText,
             targetLanguage: effectiveTargetLanguage
           },
           {

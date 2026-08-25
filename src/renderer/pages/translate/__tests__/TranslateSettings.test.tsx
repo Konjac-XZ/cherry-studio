@@ -35,10 +35,17 @@ vi.mock('@renderer/hooks/translate', () => ({
   useTranslateLanguages: () => translateLanguageMutationsMock
 }))
 
-const modelCatalogMock = vi.hoisted(() => ({ models: [] as Array<{ id: string; name: string }> }))
+const modelCatalogMock = vi.hoisted(() => ({
+  models: [] as Array<{ id: string; providerId: string; name: string }>
+}))
+const providerCatalogMock = vi.hoisted(() => ({ providers: [] as Array<{ id: string; name: string }> }))
 
 vi.mock('@renderer/hooks/useModel', () => ({
   useModels: () => ({ models: modelCatalogMock.models })
+}))
+
+vi.mock('@renderer/hooks/useProvider', () => ({
+  useProviders: () => ({ providers: providerCatalogMock.providers })
 }))
 
 vi.mock('@renderer/components/Avatar/ModelAvatar', () => ({
@@ -50,6 +57,7 @@ vi.mock('@renderer/utils/style', () => ({
 }))
 
 vi.mock('@renderer/components/ModelSelector', () => ({
+  getProviderDisplayName: (provider: { name: string }) => provider.name,
   ModelSelector: ({
     trigger,
     fixedTopOption,
@@ -299,6 +307,7 @@ describe('TranslateSettings', () => {
     MockUsePreferenceUtils.resetMocks()
     mockLanguages = []
     modelCatalogMock.models = []
+    providerCatalogMock.providers = []
     translateGlossaryMock.entries = []
 
     setBidirectionalPair.mockReset()
@@ -461,10 +470,14 @@ describe('TranslateSettings', () => {
     })
   })
 
-  it('shows the effective model icon in each configured model selector', () => {
+  it('shows the effective model and provider in each configured model selector', () => {
     modelCatalogMock.models = [
-      { id: 'deepseek::v4', name: 'DeepSeek V4 Flash' },
-      { id: 'qwen::3.5', name: 'Qwen3.5 Flash' }
+      { id: 'deepseek::v4', providerId: 'deepseek', name: 'DeepSeek V4 Flash' },
+      { id: 'qwen::3.5', providerId: 'qwen', name: 'Qwen3.5 Flash' }
+    ]
+    providerCatalogMock.providers = [
+      { id: 'deepseek', name: 'DeepSeek' },
+      { id: 'qwen', name: 'Qwen' }
     ]
     MockUsePreferenceUtils.setMultiplePreferenceValues({
       'feature.translate.model_id': 'deepseek::v4',
@@ -481,6 +494,9 @@ describe('TranslateSettings', () => {
       'DeepSeek V4 Flash',
       'Qwen3.5 Flash'
     ])
+    expect(screen.getAllByText('|')).toHaveLength(2)
+    expect(screen.getByText('DeepSeek')).toHaveAttribute('title', 'DeepSeek')
+    expect(screen.getByText('Qwen')).toHaveAttribute('title', 'Qwen')
   })
 })
 

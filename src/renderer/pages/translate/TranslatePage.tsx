@@ -33,6 +33,7 @@ import {
   applyTranslationPostProcessors,
   determineTargetLanguage,
   getTranslateModifierLabel,
+  isEquivalentBidirectionalLanguage,
   normalizePersistedTranslateFontSize
 } from '@renderer/utils/translate'
 import type { TranslateLangCode } from '@shared/data/preference/preferenceTypes'
@@ -182,6 +183,10 @@ const TranslatePage: FC = () => {
     jsonCopyBlankLine: 'feature.translate.page.json_structure_copy_blank_line',
     fontSize: 'feature.translate.page.font_size',
     layoutOverride: 'feature.translate.page.layout_override',
+    nativeToOtherModelId: 'feature.translate.model.native_to_other_id',
+    nativeToOtherFollowsGlobal: 'feature.translate.model.native_to_other_follows_global',
+    otherToNativeModelId: 'feature.translate.model.other_to_native_id',
+    otherToNativeFollowsGlobal: 'feature.translate.model.other_to_native_follows_global',
     nativeToOtherPrompt: 'feature.translate.prompt.native_to_other',
     otherToNativePrompt: 'feature.translate.prompt.other_to_native',
     polishPrompt: 'feature.translate.prompt.polish'
@@ -303,6 +308,35 @@ const TranslatePage: FC = () => {
 
   const modelsById = useMemo(() => new Map(models.map((model) => [model.id, model])), [models])
   const selectedModel = selectedModelId ? modelsById.get(selectedModelId) : undefined
+  const effectiveToolbarTargetLanguage = useMemo(() => {
+    const effectiveSourceLanguage = sourceLanguage === 'auto' ? detectedLanguage : sourceLanguage
+    if (!isBidirectional || !effectiveSourceLanguage) return targetLanguage
+
+    const result = determineTargetLanguage(
+      effectiveSourceLanguage,
+      targetLanguage,
+      true,
+      bidirectionalPair,
+      nativeLanguage
+    )
+    return result.success ? result.language : targetLanguage
+  }, [bidirectionalPair, detectedLanguage, isBidirectional, nativeLanguage, sourceLanguage, targetLanguage])
+  const towardNative = Boolean(
+    nativeLanguage && isEquivalentBidirectionalLanguage(effectiveToolbarTargetLanguage, nativeLanguage)
+  )
+  const directionalModelId = towardNative ? flowSettings.otherToNativeModelId : flowSettings.nativeToOtherModelId
+  const directionalModelFollowsGlobal = towardNative
+    ? flowSettings.otherToNativeFollowsGlobal
+    : flowSettings.nativeToOtherFollowsGlobal
+  const effectiveDirectionalModelId =
+    !directionalModelFollowsGlobal &&
+    directionalModelId &&
+    isUniqueModelId(directionalModelId) &&
+    modelsById.has(directionalModelId)
+      ? directionalModelId
+      : selectedModelId
+  const isUsingNonGlobalTranslationModel =
+    !isPdfMode && Boolean(selectedModelId && effectiveDirectionalModelId !== selectedModelId)
   const isSelectedPdfModelRoutable = !!selectedModel && isGatewayRoutableModel(selectedModel)
   const selectedModelIcon = useIcon(selectedModel ? getModelLogoRef(selectedModel) : undefined)
 
@@ -882,7 +916,10 @@ const TranslatePage: FC = () => {
                   size="icon"
                   aria-label={selectedModel?.name ?? t('translate.settings.model_placeholder')}
                   title={selectedModel?.name ?? t('translate.settings.model_placeholder')}
-                  className="size-8 rounded-full p-0 shadow-none hover:bg-accent">
+                  className={cn(
+                    'size-8 rounded-full p-0 shadow-none hover:bg-accent',
+                    isUsingNonGlobalTranslationModel && 'saturate-0'
+                  )}>
                   {selectedModel ? (
                     selectedModelIcon ? (
                       <span className="flex size-6 shrink-0 items-center justify-center overflow-hidden rounded-full">

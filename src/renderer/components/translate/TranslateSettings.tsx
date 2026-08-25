@@ -27,9 +27,10 @@ import {
 import { usePreference } from '@data/hooks/usePreference'
 import { loggerService } from '@logger'
 import ModelAvatar from '@renderer/components/Avatar/ModelAvatar'
-import { ModelSelector } from '@renderer/components/ModelSelector'
+import { getProviderDisplayName, ModelSelector } from '@renderer/components/ModelSelector'
 import { useLanguages, useTranslateGlossary, useTranslateLanguages } from '@renderer/hooks/translate'
 import { useModels } from '@renderer/hooks/useModel'
+import { useProviders } from '@renderer/hooks/useProvider'
 import { toast } from '@renderer/services/toast'
 import { cn } from '@renderer/utils/style'
 import {
@@ -410,7 +411,12 @@ const TranslateModelSettings: FC<{
   )
   const [polishModelId, setPolishModelId] = usePreference('feature.translate.model.polish_id')
   const { models } = useModels()
+  const { providers } = useProviders({ enabled: true })
   const modelsById = useMemo(() => new Map(models.map((model) => [model.id, model])), [models])
+  const providerNamesById = useMemo(
+    () => new Map(providers.map((provider) => [provider.id, getProviderDisplayName(provider)])),
+    [providers]
+  )
 
   const fields: Array<{
     key: string
@@ -457,6 +463,7 @@ const TranslateModelSettings: FC<{
               ? modelsById.get(globalModelId as UniqueModelId)
               : undefined
             : selectedModel
+          const providerName = displayModel ? providerNamesById.get(displayModel.providerId) : undefined
           return (
             <PageSidePanelItem
               key={field.key}
@@ -498,11 +505,19 @@ const TranslateModelSettings: FC<{
                   <Button type="button" variant="outline" size="sm" className="w-full justify-between gap-2">
                     <span className="flex min-w-0 flex-1 items-center gap-2">
                       {displayModel ? <ModelAvatar model={displayModel} size={20} className="shrink-0" /> : null}
-                      <span className="truncate">
+                      <span className="min-w-0 truncate text-left">
                         {field.followsGlobal?.value
                           ? t('translate.settings.follow_global_models')
                           : (selectedModel?.name ?? field.value ?? t('translate.settings.model_placeholder'))}
                       </span>
+                      {providerName && !field.followsGlobal?.value && (
+                        <span className="flex min-w-0 max-w-[32%] items-center gap-1.5 text-muted-foreground text-xs">
+                          <span aria-hidden="true">|</span>
+                          <span className="min-w-0 truncate" title={providerName}>
+                            {providerName}
+                          </span>
+                        </span>
+                      )}
                     </span>
                     <ChevronDown size={14} className="shrink-0 text-muted-foreground" />
                   </Button>
