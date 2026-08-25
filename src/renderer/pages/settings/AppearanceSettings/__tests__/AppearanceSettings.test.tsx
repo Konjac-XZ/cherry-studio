@@ -31,7 +31,26 @@ vi.mock('@renderer/hooks/translate', () => ({
 
 const mocks = vi.hoisted(() => ({ request: vi.fn() }))
 const themeMocks = vi.hoisted(() => ({ setTheme: vi.fn() }))
+const userThemeMocks = vi.hoisted(() => ({ setUserTheme: vi.fn() }))
 vi.mock('@renderer/ipc', () => ({ ipcApi: { request: mocks.request } }))
+
+vi.mock('../components/FontCombobox', async () => {
+  const React = await import('react')
+
+  return {
+    default: ({ ariaLabel, defaultLabel, fonts, onChange, value }: any) =>
+      React.createElement(
+        'select',
+        {
+          'aria-label': ariaLabel,
+          value,
+          onChange: (event: React.ChangeEvent<HTMLSelectElement>) => onChange(event.target.value)
+        },
+        React.createElement('option', { value: '' }, defaultLabel),
+        fonts.map((font: string) => React.createElement('option', { key: font, value: font }, font))
+      )
+  }
+})
 
 vi.mock('@cherrystudio/ui', async () => {
   const React = await import('react')
@@ -182,7 +201,7 @@ vi.mock('@renderer/hooks/useCodeStyle', () => ({
 
 vi.mock('@renderer/hooks/useUserTheme', () => ({
   default: () => ({
-    setUserTheme: vi.fn(),
+    setUserTheme: userThemeMocks.setUserTheme,
     userTheme: { colorPrimary: '#1677ff', userCodeFontFamily: '', userFontFamily: '' }
   })
 }))
@@ -312,6 +331,7 @@ describe('AppearanceSettings selectors', () => {
     i18nMock.resolvedLanguage = 'zh-CN'
     mocks.request.mockReset()
     themeMocks.setTheme.mockReset()
+    userThemeMocks.setUserTheme.mockReset()
     mocks.request.mockImplementation((route: string) => {
       if (route === 'system.get_fonts') return Promise.resolve([])
       if (route === 'app.adjust_zoom') return Promise.resolve(1)
@@ -356,6 +376,34 @@ describe('AppearanceSettings selectors', () => {
 
     expect(screen.queryByText('settings.messages.layout.conversation')).not.toBeInTheDocument()
     expect(screen.queryByText('settings.messages.layout.work')).not.toBeInTheDocument()
+  })
+
+  it('loads the font list once and saves global and code font selections independently', async () => {
+    mocks.request.mockImplementation((route: string) => {
+      if (route === 'system.get_fonts') return Promise.resolve(['Arial', 'JetBrains Mono'])
+      if (route === 'app.adjust_zoom') return Promise.resolve(1)
+      return Promise.resolve(undefined)
+    })
+
+    render(<AppearanceSettings />)
+
+    const globalFont = await screen.findByRole('combobox', { name: 'settings.display.font.global' })
+    const codeFont = await screen.findByRole('combobox', { name: 'settings.display.font.code' })
+
+    await waitFor(() => {
+      expect(screen.getAllByRole('option', { name: 'Arial' })).toHaveLength(2)
+    })
+    expect(mocks.request.mock.calls.filter(([route]) => route === 'system.get_fonts')).toHaveLength(1)
+
+    fireEvent.change(globalFont, { target: { value: 'Arial' } })
+    expect(userThemeMocks.setUserTheme).toHaveBeenLastCalledWith(
+      expect.objectContaining({ userFontFamily: 'Arial', userCodeFontFamily: '' })
+    )
+
+    fireEvent.change(codeFont, { target: { value: 'JetBrains Mono' } })
+    expect(userThemeMocks.setUserTheme).toHaveBeenLastCalledWith(
+      expect.objectContaining({ userFontFamily: '', userCodeFontFamily: 'JetBrains Mono' })
+    )
   })
 
   it('shows every theme as a visual choice and switches from the preview', async () => {

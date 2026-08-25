@@ -34,6 +34,7 @@ vi.mock('@application', () => ({ application: { get: appGetMock } }))
 vi.mock('@main/utils/system', () => ({ getDeviceType: getDeviceTypeMock }))
 vi.mock('@main/services/RegionService', () => ({ regionService: { getCountry: getCountryMock } }))
 vi.mock('@main/utils/externalUrlSafety', () => ({ isSafeExternalUrl: isSafeMock }))
+vi.mock('@main/services/SystemFontService', () => ({ systemFontService: { getFonts: getFontsMock } }))
 vi.mock('@main/core/platform', () => ({
   get isMac() {
     return platform.isMac
@@ -44,7 +45,6 @@ vi.mock('electron', () => ({
   systemPreferences: { isTrustedAccessibilityClient: isTrustedMock },
   shell: { openPath: openPathMock, openExternal: openExternalMock }
 }))
-vi.mock('font-list', () => ({ default: { getFonts: getFontsMock } }))
 // The TCC gate is its own module, not the screenshot barrel: answering a permission
 // query must not drag the overlay service into every app launch.
 vi.mock('@main/utils/screenCapturePermission', () => ({
@@ -88,9 +88,10 @@ describe('systemHandlers', () => {
     expect(await systemHandlers['system.get_ip_country'](undefined, ctx('w1'))).toBe('US')
   })
 
-  it('get_fonts strips wrapping quotes and drops empties', async () => {
-    getFontsMock.mockResolvedValue(['"Arial"', 'Menlo', ''])
+  it('get_fonts delegates to the system font service', async () => {
+    getFontsMock.mockResolvedValue(['Arial', 'Menlo'])
     expect(await systemHandlers['system.get_fonts'](undefined, ctx('w1'))).toEqual(['Arial', 'Menlo'])
+    expect(getFontsMock).toHaveBeenCalledOnce()
   })
 
   it('get_fonts returns [] and never throws when font-list fails', async () => {

@@ -1,8 +1,6 @@
 import {
   Button,
   CodeEditor,
-  Combobox,
-  type ComboboxOption,
   EditableNumber,
   Flex,
   InfoTooltip,
@@ -51,6 +49,7 @@ import type { FC } from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import FontCombobox from './components/FontCombobox'
 import ThemeColorPicker from './components/ThemeColorPicker'
 
 const DEFAULT_COLOR_PRIMARY = '#00b96b'
@@ -283,47 +282,6 @@ const AppearanceSettings: FC = () => {
     [setUserTheme, userTheme]
   )
 
-  const fontOptions = useMemo<ComboboxOption[]>(
-    () => [
-      {
-        label: t('settings.display.font.default'),
-        value: ''
-      },
-      ...fontList.map((font) => ({ label: font, value: font }))
-    ],
-    [fontList, t]
-  )
-
-  const renderFontOption = useCallback((option: ComboboxOption) => {
-    const fontFamily = option.value || defaultFontPreviewFamily
-
-    return (
-      <Tooltip title={option.label} placement="left" delay={500} fullWidthTrigger>
-        <div className="w-full min-w-0 truncate" style={{ fontFamily }}>
-          {option.label}
-        </div>
-      </Tooltip>
-    )
-  }, [])
-
-  const handleFontComboboxChange = useCallback((value: string | string[], onChange: (font: string) => void) => {
-    onChange(Array.isArray(value) ? '' : value)
-  }, [])
-
-  const handleUserFontComboboxChange = useCallback(
-    (value: string | string[]) => {
-      handleFontComboboxChange(value, handleUserFontChange)
-    },
-    [handleFontComboboxChange, handleUserFontChange]
-  )
-
-  const handleUserCodeFontComboboxChange = useCallback(
-    (value: string | string[]) => {
-      handleFontComboboxChange(value, handleUserCodeFontChange)
-    },
-    [handleFontComboboxChange, handleUserCodeFontChange]
-  )
-
   return (
     <SettingsContentColumn theme={theme} innerClassName="[&>*+*]:mt-8">
       <SettingGroup theme={theme}>
@@ -476,17 +434,16 @@ const AppearanceSettings: FC = () => {
               </Button>
             )}
             <div className="min-w-0 flex-1">
-              <Combobox
+              <FontCombobox
+                ariaLabel={t('settings.display.font.global')}
                 placeholder={t('settings.display.font.select')}
                 emptyText={t('common.no_results')}
-                options={fontOptions}
+                defaultLabel={t('settings.display.font.default')}
+                defaultFontFamily={defaultFontPreviewFamily}
+                fonts={fontList}
                 value={userTheme.userFontFamily || ''}
-                onChange={handleUserFontComboboxChange}
-                renderOption={renderFontOption}
-                searchPlacement="trigger"
+                onChange={handleUserFontChange}
                 className={fontComboboxClassName}
-                triggerStyle={{ fontFamily: userTheme.userFontFamily || defaultFontPreviewFamily }}
-                popoverClassName="max-h-[320px] w-(--radix-popover-trigger-width) overflow-y-auto"
               />
             </div>
           </SelectorRow>
@@ -501,17 +458,16 @@ const AppearanceSettings: FC = () => {
               </Button>
             )}
             <div className="min-w-0 flex-1">
-              <Combobox
+              <FontCombobox
+                ariaLabel={t('settings.display.font.code')}
                 placeholder={t('settings.display.font.select')}
                 emptyText={t('common.no_results')}
-                options={fontOptions}
+                defaultLabel={t('settings.display.font.default')}
+                defaultFontFamily={defaultFontPreviewFamily}
+                fonts={fontList}
                 value={userTheme.userCodeFontFamily || ''}
-                onChange={handleUserCodeFontComboboxChange}
-                renderOption={renderFontOption}
-                searchPlacement="trigger"
+                onChange={handleUserCodeFontChange}
                 className={fontComboboxClassName}
-                triggerStyle={{ fontFamily: userTheme.userCodeFontFamily || defaultFontPreviewFamily }}
-                popoverClassName="max-h-[320px] w-(--radix-popover-trigger-width) overflow-y-auto"
               />
             </div>
           </SelectorRow>

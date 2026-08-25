@@ -2,6 +2,7 @@ import { application } from '@application'
 import { loggerService } from '@logger'
 import { isMac } from '@main/core/platform'
 import { regionService } from '@main/services/RegionService'
+import { systemFontService } from '@main/services/SystemFontService'
 import { isSafeExternalUrl } from '@main/utils/externalUrlSafety'
 import {
   getScreenCapturePermissionStatus,
@@ -44,9 +45,7 @@ export const systemHandlers: IpcHandlersFor<typeof systemRequestSchemas> = {
   },
   'system.get_fonts': async () => {
     try {
-      const { default: fontList } = await import('font-list')
-      const fonts = await fontList.getFonts()
-      return fonts.map((font: string) => font.replace(/^"(.*)"$/, '$1')).filter((font: string) => font.length > 0)
+      return await systemFontService.getFonts()
     } catch (error) {
       logger.error('Failed to get system fonts:', error as Error)
       return []
