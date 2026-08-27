@@ -31,6 +31,7 @@ type TranslationHistoryPort = Pick<ReturnType<typeof useTranslateHistory>, 'add'
 export type TranslationRunOverride = {
   isBidirectional?: boolean
   replaceActive?: boolean
+  sourcePreprocessed?: boolean
   sourceLanguage?: TranslateLangCode | 'auto'
   targetLanguage?: TranslateLangCode
 }
@@ -148,7 +149,9 @@ export const useTranslationFlowRunner = ({
       const effectiveSourceLanguage = runOverride.sourceLanguage ?? sourceLanguage
       const effectiveTargetLanguage = runOverride.targetLanguage ?? targetLanguage
       const effectiveBidirectional = runOverride.isBidirectional ?? isBidirectional
-      const processedSourceText = preprocessTranslation(effectiveSourceText)
+      const processedSourceText = runOverride.sourcePreprocessed
+        ? effectiveSourceText
+        : preprocessTranslation(effectiveSourceText)
       if (processedSourceText !== effectiveSourceText) {
         setSourceText(processedSourceText)
       }

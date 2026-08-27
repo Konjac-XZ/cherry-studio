@@ -26,6 +26,9 @@ type UseTranslateFileInputParams = {
   forcePlainTextPasteRef: MutableRefObject<boolean>
   htmlConversionEnabled: boolean
   markdownFormattingEnabled: boolean
+  isTextPreprocessed: (text: string) => boolean
+  onTextPreprocessed: (text: string) => void
+  preprocessText: (text: string) => string
   isOcrRunning: boolean
   isProcessing: boolean
   isTranslating: boolean
@@ -41,6 +44,9 @@ export const useTranslateFileInput = ({
   forcePlainTextPasteRef,
   htmlConversionEnabled,
   markdownFormattingEnabled,
+  isTextPreprocessed,
+  onTextPreprocessed,
+  preprocessText,
   isOcrRunning,
   isProcessing,
   isTranslating,
@@ -113,9 +119,19 @@ export const useTranslateFileInput = ({
 
       if (!hasFiles) {
         const plainText = event.clipboardData.getData('text/plain') || event.clipboardData.getData('text')
-        const insertAtSelection = (value: string) => {
+        const insertAtSelection = (value: string, shouldPreprocess = false) => {
           const { selectionStart, selectionEnd } = event.currentTarget
-          setText((current) => current.slice(0, selectionStart) + value + current.slice(selectionEnd))
+          setText((current) => {
+            const inserted = current.slice(0, selectionStart) + value + current.slice(selectionEnd)
+            if (!shouldPreprocess) return inserted
+
+            const preprocessed = isTextPreprocessed(current)
+              ? current.slice(0, selectionStart) + preprocessText(value) + current.slice(selectionEnd)
+              : preprocessText(inserted)
+            const prepared = markdownFormattingEnabled ? formatClipboardMarkdown(preprocessed) : preprocessed
+            onTextPreprocessed(prepared)
+            return prepared
+          })
         }
         if (forcePlainTextPaste) {
           if (!plainText) return
@@ -129,10 +145,9 @@ export const useTranslateFileInput = ({
         if (htmlConversionEnabled && html.trim()) {
           converted = shouldPreferPlainTextClipboard(html, plainText) ? plainText : htmlToTranslateMarkdown(html)
         }
-        if (markdownFormattingEnabled) converted = formatClipboardMarkdown(converted)
         if (!converted.trim()) return
         event.preventDefault()
-        insertAtSelection(converted)
+        insertAtSelection(converted, true)
         return
       }
 
@@ -174,10 +189,13 @@ export const useTranslateFileInput = ({
       forcePlainTextPasteRef,
       getSingleFile,
       htmlConversionEnabled,
+      isTextPreprocessed,
       isOcrRunning,
       isProcessing,
       isTranslating,
       markdownFormattingEnabled,
+      onTextPreprocessed,
+      preprocessText,
       processFile,
       setIsProcessing,
       setText,

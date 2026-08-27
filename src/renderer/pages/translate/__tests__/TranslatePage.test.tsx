@@ -1344,6 +1344,49 @@ describe('TranslatePage', () => {
     expect(view.getByLabelText('translate.input.placeholder')).toHaveValue('# Heading\n\ntext\n\n- item')
   })
 
+  it('applies before-translation regex rules once before formatting pasted Markdown', async () => {
+    MockUsePreferenceUtils.setMultiplePreferenceValues({
+      'feature.translate.model_id': 'openai::gpt-4.1',
+      'feature.translate.page.source_language': 'en-us',
+      'feature.translate.page.target_language': 'zh-cn',
+      'feature.translate.page.format_markdown_on_paste': true,
+      'feature.translate.post_processing.regex_rules': [
+        { id: 'before-1', pattern: 'text', replacement: 'text text', flags: 'g', enabled: true, stage: 'before' },
+        {
+          id: 'before-2',
+          pattern: '\\* item',
+          replacement: '* normalized',
+          flags: 'gm',
+          enabled: true,
+          stage: 'before'
+        }
+      ]
+    })
+    const view = render(<TranslatePage />)
+    const textarea = view.getByLabelText('translate.input.placeholder')
+
+    fireEvent.paste(textarea, {
+      clipboardData: {
+        getData: (type: string) => (type === 'text/plain' ? '# Heading\ntext\n\n* item' : ''),
+        files: []
+      }
+    })
+
+    view.rerender(<TranslatePage />)
+    expect(view.getByLabelText('translate.input.placeholder')).toHaveValue('# Heading\n\ntext text\n\n- normalized')
+
+    fireEvent.click(screen.getByRole('button', { name: 'translate.button.translate' }))
+    await waitFor(() =>
+      expect(translateCoreMock.translateText).toHaveBeenCalledWith(
+        '# Heading\n\ntext text\n\n- normalized',
+        'zh-cn',
+        expect.any(Function),
+        expect.any(AbortSignal),
+        expect.objectContaining({ operation: 'translate' })
+      )
+    )
+  })
+
   it('uses plain text for the one paste following Ctrl/Cmd+Shift+V', () => {
     MockUsePreferenceUtils.setPreferenceValue('feature.translate.page.format_markdown_on_paste', true)
     const view = render(<TranslatePage />)
@@ -1565,35 +1608,51 @@ describe('TranslatePage', () => {
     )
   })
 
-  it('uses the before-translation regex result throughout the global clipboard shortcut flow', async () => {
+  it('preprocesses once before Markdown formatting throughout the global clipboard shortcut flow', async () => {
     MockUsePreferenceUtils.setMultiplePreferenceValues({
       'feature.translate.model_id': 'openai::gpt-4.1',
       'feature.translate.page.source_language': 'auto',
       'feature.translate.page.target_language': 'zh-cn',
+      'feature.translate.page.format_markdown_on_paste': true,
       'feature.translate.post_processing.regex_rules': [
-        { id: 'before-1', pattern: 'hello', replacement: 'normalized', flags: 'g', enabled: true, stage: 'before' }
+        { id: 'before-1', pattern: 'text', replacement: 'text text', flags: 'g', enabled: true, stage: 'before' },
+        {
+          id: 'before-2',
+          pattern: '\\* item',
+          replacement: '* normalized',
+          flags: 'gm',
+          enabled: true,
+          stage: 'before'
+        }
       ]
     })
     routeMocks.search = { paste: 1, _: 'global-shortcut-regex' }
+    ipcRequestMock.mockImplementation((channel: string) => {
+      if (channel === 'binary.get_tool_snapshots') return Promise.resolve(binaryMock.snapshots)
+      if (channel === 'translate.clipboard.read') {
+        return Promise.resolve({ html: '', text: '# Heading\ntext\n\n* item' })
+      }
+      return Promise.resolve(undefined)
+    })
 
     render(<TranslatePage />)
 
     await waitFor(() =>
       expect(translateCoreMock.translateText).toHaveBeenCalledWith(
-        'normalized',
+        '# Heading\n\ntext text\n\n- normalized',
         'zh-cn',
         expect.any(Function),
         expect.any(AbortSignal),
         expect.objectContaining({ operation: 'translate', sourceLangCode: 'en-us' })
       )
     )
-    expect(translateCoreMock.detectLanguage).toHaveBeenCalledWith('normalized')
-    expect(screen.getByLabelText('translate.input.placeholder')).toHaveValue('normalized')
+    expect(translateCoreMock.detectLanguage).toHaveBeenCalledWith('# Heading\n\ntext text\n\n- normalized')
+    expect(screen.getByLabelText('translate.input.placeholder')).toHaveValue('# Heading\n\ntext text\n\n- normalized')
     await waitFor(() =>
       expect(translateCoreMock.addHistory).toHaveBeenCalledWith(
         expect.objectContaining({
-          sourceText: 'normalized',
-          cacheKey: 'translate:openai::gpt-4.1:en-us:zh-cn:normalized'
+          sourceText: '# Heading\n\ntext text\n\n- normalized',
+          cacheKey: 'translate:openai::gpt-4.1:en-us:zh-cn:# Heading text text - normalized'
         })
       )
     )

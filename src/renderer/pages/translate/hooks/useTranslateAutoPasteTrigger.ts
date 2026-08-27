@@ -138,7 +138,7 @@ export const useTranslateAutoPasteTrigger = ({
           // the one-shot route command between the two operations.
           await Promise.all([
             setLatestSourceLanguageToAuto(),
-            latestRef.current.trigger(undefined, text, { sourceLanguage: 'auto' })
+            latestRef.current.trigger(undefined, text, { sourceLanguage: 'auto', sourcePreprocessed: true })
           ])
           logger.info('Translate Clipboard translation dispatch completed', { nonce: nonce || null })
         } else {

@@ -12,10 +12,12 @@ const logger = loggerService.withContext('TranslateClipboardRead')
 export const useTranslateClipboardRead = ({
   htmlConversionEnabled,
   markdownFormattingEnabled = false,
+  preprocessText = (text) => text,
   clipboardGateway = ipcClipboardGateway
 }: {
   htmlConversionEnabled: boolean
   markdownFormattingEnabled?: boolean
+  preprocessText?: (text: string) => string
   clipboardGateway?: ClipboardGateway
 }) => {
   const selectContent = useCallback(
@@ -29,9 +31,10 @@ export const useTranslateClipboardRead = ({
           if (markdown.trim()) selected = markdown
         }
       }
-      return markdownFormattingEnabled ? formatClipboardMarkdown(selected) : selected
+      const preprocessed = preprocessText(selected)
+      return markdownFormattingEnabled ? formatClipboardMarkdown(preprocessed) : preprocessed
     },
-    [htmlConversionEnabled, markdownFormattingEnabled]
+    [htmlConversionEnabled, markdownFormattingEnabled, preprocessText]
   )
 
   const readClipboardForTranslate = useCallback(async () => {
@@ -43,7 +46,10 @@ export const useTranslateClipboardRead = ({
     }
     try {
       const plainText = await clipboardGateway.readBrowserPlainText()
-      if (plainText.trim()) return markdownFormattingEnabled ? formatClipboardMarkdown(plainText) : plainText
+      if (plainText.trim()) {
+        const preprocessed = preprocessText(plainText)
+        return markdownFormattingEnabled ? formatClipboardMarkdown(preprocessed) : preprocessed
+      }
     } catch (error) {
       logger.debug('Plain browser clipboard read failed', error as Error)
     }
@@ -53,7 +59,7 @@ export const useTranslateClipboardRead = ({
       logger.debug('Native clipboard read failed', error as Error)
       return ''
     }
-  }, [clipboardGateway, markdownFormattingEnabled, selectContent])
+  }, [clipboardGateway, markdownFormattingEnabled, preprocessText, selectContent])
 
   const readClipboardPlainTextForWatch = useCallback(async () => {
     try {

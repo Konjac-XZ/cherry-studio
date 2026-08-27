@@ -50,7 +50,10 @@ describe('useTranslateAutoPasteTrigger', () => {
     expect(props.readClipboardForTranslate).toHaveBeenCalledTimes(1)
     expect(props.setSourceLanguageToAuto).toHaveBeenCalledTimes(1)
     expect(props.prepareInput).toHaveBeenCalledWith('clipboard text')
-    expect(props.trigger).toHaveBeenCalledWith(undefined, 'clipboard text', { sourceLanguage: 'auto' })
+    expect(props.trigger).toHaveBeenCalledWith(undefined, 'clipboard text', {
+      sourceLanguage: 'auto',
+      sourcePreprocessed: true
+    })
     expect(sessionStorage.getItem('translate:paste:nonce:nonce-1')).toBe('1')
     expect(routerMocks.navigate).toHaveBeenCalledWith({ to: '/app/translate', replace: true })
   })
@@ -78,7 +81,10 @@ describe('useTranslateAutoPasteTrigger', () => {
     renderHook(() => useTranslateAutoPasteTrigger(props))
 
     await waitFor(() => expect(props.trigger).toHaveBeenCalledTimes(1))
-    expect(props.trigger).toHaveBeenCalledWith(undefined, 'clipboard text', { sourceLanguage: 'auto' })
+    expect(props.trigger).toHaveBeenCalledWith(undefined, 'clipboard text', {
+      sourceLanguage: 'auto',
+      sourcePreprocessed: true
+    })
     resolveSourceLanguage(undefined)
   })
 

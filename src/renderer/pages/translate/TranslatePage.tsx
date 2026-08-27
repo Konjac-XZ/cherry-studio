@@ -262,6 +262,7 @@ const TranslatePage: FC = () => {
   const prePdfRawOutputRef = useRef<string | null>(null)
   const rawOutputRef = useRef(rawOutput)
   const translateOutputRef = useRef(translateOutput)
+  const preprocessedSourceTextRef = useRef<string | null>(null)
   rawOutputRef.current = rawOutput
   translateOutputRef.current = translateOutput
 
@@ -277,6 +278,14 @@ const TranslatePage: FC = () => {
     (source: string) => applyRegexReplacementRules(source, beforeTranslationRegexRules),
     [beforeTranslationRegexRules]
   )
+  const preprocessTranslationForRun = useCallback(
+    (source: string) => (preprocessedSourceTextRef.current === source ? source : preprocessTranslation(source)),
+    [preprocessTranslation]
+  )
+
+  useEffect(() => {
+    preprocessedSourceTextRef.current = null
+  }, [preprocessTranslation])
 
   const processTranslation = useCallback(
     (raw: string, actualTargetLanguage: TranslateLangCode) =>
@@ -355,6 +364,7 @@ const TranslatePage: FC = () => {
   const appendTranslateInput = useCallback(
     (text: string) => {
       if (isEmpty(text)) return
+      preprocessedSourceTextRef.current = null
       // Functional update resolves against the latest stored value, so a prior
       // synchronous setTranslateInput(value) is reflected here without a ref.
       setTranslateInput((prev) => prev + text)
@@ -365,6 +375,7 @@ const TranslatePage: FC = () => {
 
   const handleInputChange = useCallback(
     (value: string) => {
+      preprocessedSourceTextRef.current = null
       setTranslateInput(value)
       setDetectedLanguage(null)
       if (isEmpty(value)) {
@@ -377,7 +388,8 @@ const TranslatePage: FC = () => {
 
   const { readClipboardForTranslate, readClipboardPlainTextForWatch } = useTranslateClipboardRead({
     htmlConversionEnabled,
-    markdownFormattingEnabled
+    markdownFormattingEnabled,
+    preprocessText: preprocessTranslation
   })
   const { copied, copy, lastWrittenRef } = useTranslateClipboardWrite()
 
@@ -415,7 +427,7 @@ const TranslatePage: FC = () => {
     isTranslating,
     mode: flowSettings.polishEnabled ? 'polish_then_translate' : 'translate',
     nativeLanguage,
-    preprocessTranslation,
+    preprocessTranslation: preprocessTranslationForRun,
     processTranslation,
     runTranslate,
     selectedModelAvailable: selectedModelId !== undefined,
@@ -621,7 +633,7 @@ const TranslatePage: FC = () => {
       setRawOutput('')
       setTranslateOutput('')
       setDetectedLanguage(null)
-      await onPrimaryTranslate(undefined, text)
+      await onPrimaryTranslate(undefined, text, { sourcePreprocessed: true })
     }
   })
 
@@ -750,6 +762,11 @@ const TranslatePage: FC = () => {
     forcePlainTextPasteRef,
     htmlConversionEnabled,
     markdownFormattingEnabled,
+    isTextPreprocessed: (text) => preprocessedSourceTextRef.current === text,
+    onTextPreprocessed: (text) => {
+      preprocessedSourceTextRef.current = text
+    },
+    preprocessText: preprocessTranslation,
     isOcrRunning,
     isProcessing,
     isTranslating,

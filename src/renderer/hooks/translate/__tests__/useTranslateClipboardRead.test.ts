@@ -70,6 +70,24 @@ describe('useTranslateClipboardRead', () => {
     await expect(result.current.readClipboardForTranslate()).resolves.toBe('# Heading\n\ntext\n\n- item')
   })
 
+  it('preprocesses clipboard text before formatting Markdown', async () => {
+    const clipboardGateway = gateway({
+      readBrowserRich: vi.fn(async () => ({ html: '', plainText: '# Heading\ntext\n\n* item' }))
+    })
+    const preprocessText = vi.fn((text: string) => text.replace('* item', '* normalized'))
+    const { result } = renderHook(() =>
+      useTranslateClipboardRead({
+        htmlConversionEnabled: false,
+        markdownFormattingEnabled: true,
+        preprocessText,
+        clipboardGateway
+      })
+    )
+
+    await expect(result.current.readClipboardForTranslate()).resolves.toBe('# Heading\n\ntext\n\n- normalized')
+    expect(preprocessText).toHaveBeenCalledWith('# Heading\ntext\n\n* item')
+  })
+
   it('falls back through browser plain text to native clipboard', async () => {
     const clipboardGateway = gateway({
       readBrowserRich: vi.fn(async () => {
