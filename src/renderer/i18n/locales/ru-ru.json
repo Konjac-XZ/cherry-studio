@@ -7538,6 +7538,12 @@
       "regex_rules": {
         "after_translation": "После перевода",
         "before_translation": "До перевода",
+        "preview_diff": "Различия",
+        "preview_result_placeholder": "Результат применения регулярных выражений появится здесь",
+        "preview_rule": "Правило {{index}}",
+        "preview_source": "Тестовый текст",
+        "preview_source_placeholder": "Введите или вставьте тестовый текст",
+        "preview_step": "Шаг выполнения",
         "title": "Regex replacements"
       },
       "scroll_sync": "Настройки синхронизации прокрутки",

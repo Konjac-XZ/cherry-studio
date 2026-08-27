@@ -183,6 +183,8 @@
     "@codemirror/lang-json": "6.0.2",
     "@codemirror/language": "6.12.2",
     "@codemirror/lint": "6.9.5",
+    "@codemirror/merge": "^6.12.2",
+    "@codemirror/state": "6.5.4",
     "@codemirror/view": "6.39.16",
     "@dagrejs/dagre": "^3.0.0",
     "@deepseek-ai/dsh-compaction-basic": "0.1.0-rc.7",

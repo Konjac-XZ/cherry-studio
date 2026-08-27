@@ -7538,6 +7538,12 @@
       "regex_rules": {
         "after_translation": "După traducere",
         "before_translation": "Înainte de traducere",
+        "preview_diff": "Diferențe",
+        "preview_result_placeholder": "Rezultatul expresiilor regulate va apărea aici",
+        "preview_rule": "Regula {{index}}",
+        "preview_source": "Text de test",
+        "preview_source_placeholder": "Introduceți sau lipiți textul de test",
+        "preview_step": "Pas de execuție",
         "title": "Regex replacements"
       },
       "scroll_sync": "Setări sincronizare derulare",

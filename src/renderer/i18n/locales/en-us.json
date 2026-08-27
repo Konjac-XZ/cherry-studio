@@ -7538,6 +7538,12 @@
       "regex_rules": {
         "after_translation": "After translation",
         "before_translation": "Before translation",
+        "preview_diff": "Diff",
+        "preview_result_placeholder": "The regex result will appear here",
+        "preview_rule": "Rule {{index}}",
+        "preview_source": "Test text",
+        "preview_source_placeholder": "Enter or paste test text",
+        "preview_step": "Execution step",
         "title": "Regex replacements"
       },
       "scroll_sync": "Scroll Sync Settings",

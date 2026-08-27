@@ -7538,6 +7538,12 @@
       "regex_rules": {
         "after_translation": "Sau khi dịch",
         "before_translation": "Trước khi dịch",
+        "preview_diff": "Khác biệt",
+        "preview_result_placeholder": "Kết quả xử lý biểu thức chính quy sẽ xuất hiện ở đây",
+        "preview_rule": "Quy tắc {{index}}",
+        "preview_source": "Văn bản thử nghiệm",
+        "preview_source_placeholder": "Nhập hoặc dán văn bản thử nghiệm",
+        "preview_step": "Bước thực hiện",
         "title": "Regex replacements"
       },
       "scroll_sync": "Cài đặt cuộn đồng bộ",

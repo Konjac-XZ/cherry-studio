@@ -7542,6 +7542,12 @@
       "regex_rules": {
         "after_translation": "翻译后",
         "before_translation": "翻译前",
+        "preview_diff": "差异",
+        "preview_result_placeholder": "正则处理结果将显示在这里",
+        "preview_rule": "规则 {{index}}",
+        "preview_source": "测试文本",
+        "preview_source_placeholder": "输入或粘贴测试文本",
+        "preview_step": "执行步骤",
         "title": "正则替换"
       },
       "scroll_sync": "滚动同步设置",

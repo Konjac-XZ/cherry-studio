@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   applyRegexReplacementRules,
+  applyRegexReplacementRulesThrough,
   applyTranslationPostProcessors,
   DEFAULT_TRANSLATION_POST_PROCESSOR_FEATURES,
   type RegexReplacementRule,
@@ -80,6 +81,15 @@ describe('translation post-processor pipeline', () => {
         rule('(\\d{4})-(\\d{2})-(\\d{2})', '$3/$2/$1')
       ])
     ).toBe('baz 15/01/2024')
+  })
+
+  it('applies regex rules only through the selected list position', () => {
+    const rules = [rule('foo', 'bar'), { ...rule('bar', 'ignored'), enabled: false }, rule('bar', 'baz')]
+
+    expect(applyRegexReplacementRulesThrough('foo', rules, 0)).toBe('foo')
+    expect(applyRegexReplacementRulesThrough('foo', rules, 1)).toBe('bar')
+    expect(applyRegexReplacementRulesThrough('foo', rules, 2)).toBe('bar')
+    expect(applyRegexReplacementRulesThrough('foo', rules, 3)).toBe('baz')
   })
 
   it('skips disabled, empty, invalid-pattern, and invalid-flag regex rules independently', () => {

@@ -28,6 +28,7 @@ export {
 export { getTranslateModifierLabel } from './platform'
 export {
   applyRegexReplacementRules,
+  applyRegexReplacementRulesThrough,
   applyTranslationPostProcessors,
   DEFAULT_TRANSLATION_POST_PROCESSOR_FEATURES,
   normalizeEnMarkdownStraightQuotes,

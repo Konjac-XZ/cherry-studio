@@ -7538,6 +7538,12 @@
       "regex_rules": {
         "after_translation": "翻譯後",
         "before_translation": "翻譯前",
+        "preview_diff": "差異",
+        "preview_result_placeholder": "正規表示式處理結果將顯示在這裡",
+        "preview_rule": "規則 {{index}}",
+        "preview_source": "測試文字",
+        "preview_source_placeholder": "輸入或貼上測試文字",
+        "preview_step": "執行步驟",
         "title": "正規表示式取代"
       },
       "scroll_sync": "同步捲動設定",

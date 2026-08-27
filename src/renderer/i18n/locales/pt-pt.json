@@ -7538,6 +7538,12 @@
       "regex_rules": {
         "after_translation": "Depois da tradução",
         "before_translation": "Antes da tradução",
+        "preview_diff": "Diferenças",
+        "preview_result_placeholder": "O resultado das expressões regulares aparecerá aqui",
+        "preview_rule": "Regra {{index}}",
+        "preview_source": "Texto de teste",
+        "preview_source_placeholder": "Introduza ou cole o texto de teste",
+        "preview_step": "Passo de execução",
         "title": "Regex replacements"
       },
       "scroll_sync": "Configuração de Sincronização de Rolagem",

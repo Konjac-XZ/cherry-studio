@@ -18,6 +18,8 @@ const translateGlossaryMock = vi.hoisted(() => ({
   update: vi.fn(),
   remove: vi.fn()
 }))
+const mergeViewTestState = vi.hoisted(() => ({ configs: [] as any[] }))
+const codeStyleMock = vi.hoisted(() => ({ activeCmTheme: [] as any[] }))
 
 let mockLanguages: TranslateLanguage[] = []
 
@@ -50,6 +52,70 @@ vi.mock('@renderer/hooks/useProvider', () => ({
 
 vi.mock('@renderer/components/Avatar/ModelAvatar', () => ({
   default: ({ model }: { model: { name: string } }) => <span data-testid="model-avatar">{model.name}</span>
+}))
+
+vi.mock('@codemirror/view', () => ({
+  EditorView: {
+    contentAttributes: { of: (value: unknown) => ({ kind: 'contentAttributes', value }) },
+    editable: { of: (value: unknown) => ({ kind: 'editable', value }) },
+    lineWrapping: { kind: 'lineWrapping' },
+    theme: (value: unknown) => ({ kind: 'theme', value }),
+    updateListener: { of: (value: unknown) => ({ kind: 'updateListener', value }) }
+  },
+  placeholder: (value: unknown) => ({ kind: 'placeholder', value })
+}))
+
+vi.mock('@codemirror/state', () => ({
+  EditorState: { readOnly: { of: (value: unknown) => ({ kind: 'readOnly', value }) } }
+}))
+
+vi.mock('@codemirror/merge', () => ({
+  MergeView: class MockMergeView {
+    a: any
+    b: any
+    dom: HTMLDivElement
+
+    constructor(config: any) {
+      mergeViewTestState.configs.push(config)
+      this.dom = document.createElement('div')
+      this.dom.className = 'cm-mergeView'
+      config.parent?.appendChild(this.dom)
+      this.a = this.createEditor(config.a, false)
+      this.b = this.createEditor(config.b, true)
+    }
+
+    createEditor(config: any, readOnly: boolean) {
+      const extensions = (config.extensions ?? []).flat()
+      const attributes = extensions.find((extension: any) => extension?.kind === 'contentAttributes')?.value ?? {}
+      const placeholder = extensions.find((extension: any) => extension?.kind === 'placeholder')?.value
+      const updateListener = extensions.find((extension: any) => extension?.kind === 'updateListener')?.value
+      const textarea = document.createElement('textarea')
+      textarea.value = config.doc ?? ''
+      textarea.readOnly = readOnly
+      if (placeholder) textarea.placeholder = placeholder
+      for (const [name, value] of Object.entries(attributes)) textarea.setAttribute(name, String(value))
+      this.dom.appendChild(textarea)
+
+      const editor = {
+        state: { doc: { toString: () => textarea.value } },
+        dispatch: ({ changes }: { changes: { insert: string } }) => {
+          textarea.value = changes.insert
+        }
+      }
+      textarea.addEventListener('input', () => {
+        updateListener?.({ docChanged: true, state: editor.state })
+      })
+      return editor
+    }
+
+    destroy() {
+      this.dom.remove()
+    }
+  }
+}))
+
+vi.mock('@renderer/hooks/useCodeStyle', () => ({
+  useCodeStyle: () => codeStyleMock
 }))
 
 vi.mock('@renderer/utils/style', () => ({
@@ -221,6 +287,14 @@ vi.mock('@cherrystudio/ui', () => ({
   Switch: ({ checked, onCheckedChange }: { checked: boolean; onCheckedChange: (value: boolean) => void }) => (
     <button type="button" aria-pressed={checked} onClick={() => onCheckedChange(!checked)} />
   ),
+  Textarea: {
+    Input: ({
+      onValueChange,
+      ...props
+    }: React.ComponentProps<'textarea'> & { onValueChange?: (value: string) => void }) => (
+      <textarea {...props} onChange={(event) => onValueChange?.(event.target.value)} />
+    )
+  },
   Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>
 }))
 
@@ -309,6 +383,7 @@ describe('TranslateSettings', () => {
     modelCatalogMock.models = []
     providerCatalogMock.providers = []
     translateGlossaryMock.entries = []
+    mergeViewTestState.configs = []
 
     setBidirectionalPair.mockReset()
     setAutoDetectionMethod.mockReset()
@@ -455,6 +530,71 @@ describe('TranslateSettings', () => {
         expect.objectContaining({ stage: 'before', pattern: '', flags: 'g', replacement: '' })
       ])
     )
+  })
+
+  it('previews each regex stage against temporary input through a selected rule step', async () => {
+    MockUsePreferenceUtils.setPreferenceValue('feature.translate.post_processing.regex_rules', [
+      { id: 'before-1', pattern: 'foo', replacement: 'bar', flags: 'g', enabled: true, stage: 'before' },
+      { id: 'before-2', pattern: 'bar', replacement: 'baz', flags: 'g', enabled: true, stage: 'before' },
+      { id: 'after-1', pattern: 'hello', replacement: 'world', flags: 'g', enabled: true, stage: 'after' }
+    ])
+    render(<TranslateSettings visible onClose={vi.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: 'settings.moresetting.label' }))
+
+    const beforeGroup = screen.getByRole('group', { name: 'translate.settings.regex_rules.before_translation' })
+    const afterGroup = screen.getByRole('group', { name: 'translate.settings.regex_rules.after_translation' })
+    expect(within(beforeGroup).getByRole('button', { name: 'common.preview' })).toBeInTheDocument()
+    expect(within(afterGroup).getByRole('button', { name: 'common.preview' })).toBeInTheDocument()
+
+    fireEvent.click(within(beforeGroup).getByRole('button', { name: 'common.preview' }))
+
+    expect(
+      screen.getByRole('heading', {
+        name: 'common.preview · translate.settings.regex_rules.before_translation'
+      })
+    ).toBeInTheDocument()
+    expect(screen.getByTestId('dialog-content')).toHaveClass('sm:max-w-[1280px]')
+    expect(screen.getByTestId('dialog-content')).not.toHaveClass('sm:max-w-[960px]')
+    const source = screen.getByRole('textbox', { name: 'translate.settings.regex_rules.preview_source' })
+    const result = screen.getByRole('textbox', { name: 'translate.settings.regex_rules.preview_diff' })
+    const diff = screen.getByRole('region', { name: 'translate.settings.regex_rules.preview_diff' })
+    // These classes are the overflow contract: long pasted text and long rule lists stay inside the preview shell.
+    expect(screen.getByTestId('regex-preview-layout')).toHaveClass('h-[min(620px,calc(100vh-8rem))]', 'min-h-0')
+    expect(screen.getByTestId('regex-preview-steps')).toHaveClass('min-h-0', 'overflow-y-auto')
+    expect(source).not.toHaveAttribute('readonly')
+    expect(result).toHaveAttribute('readonly')
+    expect(source).toHaveAttribute('placeholder', 'translate.settings.regex_rules.preview_source_placeholder')
+    expect(result).toHaveAttribute('placeholder', 'translate.settings.regex_rules.preview_result_placeholder')
+    expect(diff).toHaveClass('min-h-0', 'overflow-hidden')
+    expect(diff.firstElementChild).toHaveClass('divide-x', 'border-b', 'bg-background-subtle')
+    expect(mergeViewTestState.configs[0]).toEqual(
+      expect.objectContaining({
+        orientation: 'a-b',
+        a: expect.objectContaining({
+          extensions: expect.arrayContaining([expect.objectContaining({ kind: 'lineWrapping' })])
+        }),
+        b: expect.objectContaining({
+          extensions: expect.arrayContaining([
+            expect.objectContaining({ kind: 'editable', value: false }),
+            expect.objectContaining({ kind: 'lineWrapping' }),
+            expect.objectContaining({ kind: 'readOnly', value: true })
+          ])
+        })
+      })
+    )
+    const sourceUpdateListener = mergeViewTestState.configs[0].a.extensions
+      .flat()
+      .find((extension: any) => extension?.kind === 'updateListener')?.value
+    act(() => sourceUpdateListener({ docChanged: true, state: { doc: { toString: () => 'foo' } } }))
+    await waitFor(() => expect(result).toHaveValue('baz'))
+
+    const firstRuleButton = screen.getAllByText('translate.settings.regex_rules.preview_rule')[0].closest('button')
+    if (!firstRuleButton) throw new Error('First regex preview step was not rendered as a button')
+    fireEvent.click(firstRuleButton)
+    await waitFor(() => expect(result).toHaveValue('bar'))
+
+    fireEvent.click(screen.getByRole('button', { name: 'common.back' }))
+    expect(screen.getByRole('heading', { name: 'settings.moresetting.label' })).toBeInTheDocument()
   })
 
   it('selects follow-global or a direction model from the same model menu', async () => {

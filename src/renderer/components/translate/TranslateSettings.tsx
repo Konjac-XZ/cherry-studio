@@ -24,16 +24,21 @@ import {
   Switch,
   Tooltip
 } from '@cherrystudio/ui'
+import { MergeView } from '@codemirror/merge'
+import { EditorState } from '@codemirror/state'
+import { EditorView, placeholder } from '@codemirror/view'
 import { usePreference } from '@data/hooks/usePreference'
 import { loggerService } from '@logger'
 import ModelAvatar from '@renderer/components/Avatar/ModelAvatar'
 import { getProviderDisplayName, ModelSelector } from '@renderer/components/ModelSelector'
 import { useLanguages, useTranslateGlossary, useTranslateLanguages } from '@renderer/hooks/translate'
+import { useCodeStyle } from '@renderer/hooks/useCodeStyle'
 import { useModels } from '@renderer/hooks/useModel'
 import { useProviders } from '@renderer/hooks/useProvider'
 import { toast } from '@renderer/services/toast'
 import { cn } from '@renderer/utils/style'
 import {
+  applyRegexReplacementRulesThrough,
   normalizeEditedTranslateFontSize,
   normalizePersistedTranslateFontSize,
   UNKNOWN_LANG_CODE
@@ -60,6 +65,8 @@ import { useTranslation } from 'react-i18next'
 import IconButton from './IconButton'
 import LanguagePicker from './LanguagePicker'
 
+type RegexStage = NonNullable<TranslateRegexReplacementRule['stage']>
+
 type Props = {
   visible: boolean
   onClose: () => void
@@ -72,7 +79,7 @@ const settingsCardClassName = 'min-w-0 rounded-lg border border-border-subtle bg
 
 const TranslateSettings: FC<Props> = ({ visible, onClose }) => {
   const { t } = useTranslation()
-  const [showAdvanced, setShowAdvanced] = useState(false)
+  const [view, setView] = useState<'advanced' | 'main' | RegexStage>('main')
   const [bidirectionalPair, setBidirectionalPair] = usePreference('feature.translate.page.bidirectional_pair')
   const [enableMarkdown, setEnableMarkdown] = usePreference('feature.translate.page.enable_markdown')
   const [autoCopy, setAutoCopy] = usePreference('feature.translate.page.auto_copy')
@@ -90,8 +97,15 @@ const TranslateSettings: FC<Props> = ({ visible, onClose }) => {
   const [zhTextSpacing, setZhTextSpacing] = usePreference('feature.translate.post_processing.zh_text_spacing')
 
   useEffect(() => {
-    if (!visible) setShowAdvanced(false)
+    if (!visible) setView('main')
   }, [visible])
+
+  const showAdvanced = view === 'advanced'
+  const previewStage = view === 'before' || view === 'after' ? view : null
+  const previewStageLabel =
+    previewStage === 'before'
+      ? t('translate.settings.regex_rules.before_translation')
+      : t('translate.settings.regex_rules.after_translation')
 
   const safePersist = useCallback(
     async (persistPromise: Promise<unknown>, actionName: string) => {
@@ -174,28 +188,33 @@ const TranslateSettings: FC<Props> = ({ visible, onClose }) => {
         motion="fade-scale"
         showCloseButton={false}
         aria-describedby={undefined}
-        className="flex max-h-[calc(100vh-3rem)] w-[calc(100%-2rem)] flex-col gap-0 overflow-visible p-0 sm:w-[calc(100%-3rem)] sm:max-w-[960px]">
+        className={cn(
+          'flex max-h-[calc(100vh-3rem)] w-[calc(100%-2rem)] flex-col gap-0 overflow-visible p-0 sm:w-[calc(100%-3rem)]',
+          previewStage ? 'sm:max-w-[1280px]' : 'sm:max-w-[960px]'
+        )}>
         <DialogHeader
           data-testid="translate-settings-header"
           className="h-14 shrink-0 flex-row items-center gap-0 border-border-subtle border-b px-4 py-0 sm:px-5">
-          {showAdvanced ? (
+          {view !== 'main' ? (
             <>
               <IconButton
                 size="sm"
                 className="-ml-1 mr-2"
                 aria-label={t('common.back')}
-                onClick={() => setShowAdvanced(false)}>
+                onClick={() => setView(previewStage ? 'advanced' : 'main')}>
                 <ArrowLeft size={14} />
               </IconButton>
-              <DialogTitle>{t('settings.moresetting.label')}</DialogTitle>
+              <DialogTitle>
+                {previewStage ? `${t('common.preview')} · ${previewStageLabel}` : t('settings.moresetting.label')}
+              </DialogTitle>
             </>
           ) : (
             <DialogTitle>{t('translate.settings.title')}</DialogTitle>
           )}
 
           <div data-testid="translate-settings-header-actions" className="ml-auto flex items-center gap-2">
-            {!showAdvanced && (
-              <IconButton size="sm" aria-label={t('settings.moresetting.label')} onClick={() => setShowAdvanced(true)}>
+            {view === 'main' && (
+              <IconButton size="sm" aria-label={t('settings.moresetting.label')} onClick={() => setView('advanced')}>
                 <Settings2 size={14} />
               </IconButton>
             )}
@@ -207,7 +226,7 @@ const TranslateSettings: FC<Props> = ({ visible, onClose }) => {
           </div>
         </DialogHeader>
 
-        {!showAdvanced ? (
+        {view === 'main' ? (
           <div
             data-testid="translate-settings-card-container"
             className="@container/translate-settings min-h-0 flex-1 overflow-y-auto px-4 py-4">
@@ -381,15 +400,18 @@ const TranslateSettings: FC<Props> = ({ visible, onClose }) => {
               </div>
             </div>
           </div>
-        ) : (
+        ) : showAdvanced ? (
           <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6">
             <TranslateSettingsCoreContent
               cardClassName={settingsCardClassName}
               includeJsonSettings
+              onPreviewRegexRules={setView}
               safePersist={safePersist}
             />
           </div>
-        )}
+        ) : previewStage ? (
+          <RegexRulesPreview stage={previewStage} />
+        ) : null}
       </DialogContent>
     </Dialog>
   )
@@ -792,10 +814,11 @@ const CustomParameterRow: FC<{
   )
 }
 
-const RegexRulesSettings: FC<{ safePersist?: PersistPreference; className?: string }> = ({
-  safePersist = defaultPersist,
-  className
-}) => {
+const RegexRulesSettings: FC<{
+  safePersist?: PersistPreference
+  className?: string
+  onPreview?: (stage: RegexStage) => void
+}> = ({ safePersist = defaultPersist, className, onPreview }) => {
   const { t } = useTranslation()
   const [rules, setRules] = usePreference('feature.translate.post_processing.regex_rules')
 
@@ -827,6 +850,7 @@ const RegexRulesSettings: FC<{ safePersist?: PersistPreference; className?: stri
           title={t('translate.settings.regex_rules.before_translation')}
           rules={rules.filter((rule) => rule.stage === 'before')}
           onAdd={() => void addRule('before')}
+          onPreview={onPreview ? () => onPreview('before') : undefined}
           onUpdate={(id, changes) => void updateRule(id, changes)}
           onRemove={(id) => void removeRule(id)}
         />
@@ -835,6 +859,7 @@ const RegexRulesSettings: FC<{ safePersist?: PersistPreference; className?: stri
           title={t('translate.settings.regex_rules.after_translation')}
           rules={rules.filter((rule) => rule.stage !== 'before')}
           onAdd={() => void addRule('after')}
+          onPreview={onPreview ? () => onPreview('after') : undefined}
           onUpdate={(id, changes) => void updateRule(id, changes)}
           onRemove={(id) => void removeRule(id)}
         />
@@ -847,19 +872,27 @@ const RegexRuleGroup: FC<{
   title: string
   rules: TranslateRegexReplacementRule[]
   onAdd: () => void
+  onPreview?: () => void
   onUpdate: (id: string, changes: Partial<TranslateRegexReplacementRule>) => void
   onRemove: (id: string) => void
-}> = ({ title, rules, onAdd, onUpdate, onRemove }) => {
+}> = ({ title, rules, onAdd, onPreview, onUpdate, onRemove }) => {
   const { t } = useTranslation()
 
   return (
     <div role="group" aria-label={title} className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-3">
         <span className="font-medium text-sm">{title}</span>
-        <Button type="button" variant="outline" size="sm" onClick={onAdd}>
-          <Plus size={13} />
-          {t('common.add')}
-        </Button>
+        <div className="flex items-center gap-2">
+          {onPreview && (
+            <Button type="button" variant="outline" size="sm" onClick={onPreview}>
+              {t('common.preview')}
+            </Button>
+          )}
+          <Button type="button" variant="outline" size="sm" onClick={onAdd}>
+            <Plus size={13} />
+            {t('common.add')}
+          </Button>
+        </div>
       </div>
       {rules.map((rule) => (
         <div key={rule.id} className="grid grid-cols-[auto_minmax(0,1fr)_5rem_minmax(0,1fr)_2rem] items-center gap-2">
@@ -888,17 +921,231 @@ const RegexRuleGroup: FC<{
   )
 }
 
+const RegexRulesPreview: FC<{ stage: RegexStage }> = ({ stage }) => {
+  const { t } = useTranslation()
+  const [rules] = usePreference('feature.translate.post_processing.regex_rules')
+  const stageRules = useMemo(
+    () => rules.filter((rule) => (stage === 'before' ? rule.stage === 'before' : rule.stage !== 'before')),
+    [rules, stage]
+  )
+  const [source, setSource] = useState('')
+  const [ruleCount, setRuleCount] = useState(stageRules.length)
+
+  useEffect(() => {
+    setRuleCount((current) => Math.min(current, stageRules.length))
+  }, [stageRules.length])
+
+  const result = useMemo(
+    () => applyRegexReplacementRulesThrough(source, stageRules, ruleCount),
+    [ruleCount, source, stageRules]
+  )
+
+  return (
+    <div
+      data-testid="regex-preview-layout"
+      className="grid h-[min(620px,calc(100vh-8rem))] min-h-0 flex-1 grid-cols-[13rem_minmax(0,1fr)] gap-4 px-4 py-5 sm:px-6">
+      <div className="flex min-h-0 min-w-0 flex-col gap-2">
+        <span className="font-medium text-sm">{t('translate.settings.regex_rules.preview_step')}</span>
+        <div
+          data-testid="regex-preview-steps"
+          className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-border-subtle bg-background-subtle p-1.5">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            aria-pressed={ruleCount === 0}
+            className={cn(
+              'mb-1 h-auto w-full justify-start px-2.5 py-2 text-left',
+              ruleCount === 0 && 'bg-muted text-foreground'
+            )}
+            onClick={() => setRuleCount(0)}>
+            <span className="mr-2 text-foreground-tertiary text-xs tabular-nums">0</span>
+            <span className="truncate">{t('translate.settings.regex_rules.preview_source')}</span>
+          </Button>
+          {stageRules.map((rule, index) => {
+            const step = index + 1
+            const selected = ruleCount === step
+
+            return (
+              <Button
+                key={rule.id}
+                type="button"
+                variant="ghost"
+                size="sm"
+                aria-pressed={selected}
+                className={cn(
+                  'mb-1 h-auto w-full items-start justify-start px-2.5 py-2 text-left last:mb-0',
+                  selected && 'bg-muted text-foreground',
+                  rule.enabled === false && 'text-foreground-disabled'
+                )}
+                onClick={() => setRuleCount(step)}>
+                <span className="mr-2 pt-0.5 text-foreground-tertiary text-xs tabular-nums">{step}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-xs">
+                    {t('translate.settings.regex_rules.preview_rule', { index: step })}
+                  </span>
+                  <span className="mt-0.5 block truncate font-mono text-xs" title={rule.pattern || undefined}>
+                    {rule.pattern || '—'}
+                  </span>
+                </span>
+              </Button>
+            )
+          })}
+        </div>
+      </div>
+
+      <RegexMergeDiff
+        source={source}
+        result={result}
+        sourceLabel={t('translate.settings.regex_rules.preview_source')}
+        sourcePlaceholder={t('translate.settings.regex_rules.preview_source_placeholder')}
+        resultLabel={t('translate.settings.regex_rules.preview_diff')}
+        resultPlaceholder={t('translate.settings.regex_rules.preview_result_placeholder')}
+        onSourceChange={setSource}
+      />
+    </div>
+  )
+}
+
+const RegexMergeDiff: FC<{
+  source: string
+  result: string
+  sourceLabel: string
+  sourcePlaceholder: string
+  resultLabel: string
+  resultPlaceholder: string
+  onSourceChange: (value: string) => void
+}> = ({ source, result, sourceLabel, sourcePlaceholder, resultLabel, resultPlaceholder, onSourceChange }) => {
+  const { activeCmTheme } = useCodeStyle()
+  const mergeTheme = useMemo(
+    () =>
+      typeof activeCmTheme === 'string' ? EditorView.theme({}, { dark: activeCmTheme === 'dark' }) : activeCmTheme,
+    [activeCmTheme]
+  )
+  const containerRef = useRef<HTMLDivElement>(null)
+  const mergeViewRef = useRef<MergeView | null>(null)
+  const onSourceChangeRef = useRef(onSourceChange)
+  const initialDocumentsRef = useRef({ result, source })
+  onSourceChangeRef.current = onSourceChange
+
+  useEffect(() => {
+    const parent = containerRef.current
+    if (!parent) return
+
+    const mergeView = new MergeView({
+      a: {
+        doc: initialDocumentsRef.current.source,
+        extensions: [
+          mergeTheme,
+          EditorView.lineWrapping,
+          placeholder(sourcePlaceholder),
+          regexPreviewEditorTheme,
+          EditorView.contentAttributes.of({ 'aria-label': sourceLabel }),
+          EditorView.updateListener.of((update) => {
+            if (update.docChanged) onSourceChangeRef.current(update.state.doc.toString())
+          })
+        ]
+      },
+      b: {
+        doc: initialDocumentsRef.current.result,
+        extensions: [
+          mergeTheme,
+          EditorState.readOnly.of(true),
+          EditorView.editable.of(false),
+          EditorView.lineWrapping,
+          placeholder(resultPlaceholder),
+          regexPreviewEditorTheme,
+          EditorView.contentAttributes.of({ 'aria-label': resultLabel })
+        ]
+      },
+      gutter: true,
+      highlightChanges: true,
+      orientation: 'a-b',
+      parent
+    })
+    mergeViewRef.current = mergeView
+
+    return () => {
+      mergeView.destroy()
+      mergeViewRef.current = null
+    }
+  }, [mergeTheme, resultLabel, resultPlaceholder, sourceLabel, sourcePlaceholder])
+
+  useEffect(() => {
+    const mergeView = mergeViewRef.current
+    if (!mergeView) return
+
+    const updateDocument = (view: EditorView, value: string) => {
+      const current = view.state.doc.toString()
+      if (current === value) return
+      view.dispatch({ changes: { from: 0, to: current.length, insert: value } })
+    }
+
+    updateDocument(mergeView.a, source)
+    updateDocument(mergeView.b, result)
+  }, [result, source])
+
+  return (
+    <div
+      role="region"
+      aria-label={resultLabel}
+      data-testid="regex-preview-diff"
+      className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border border-border-subtle bg-background shadow-xs">
+      <div className="grid shrink-0 grid-cols-2 divide-x divide-border-subtle border-border-subtle border-b bg-background-subtle font-medium text-sm">
+        <span className="px-4 py-2.5">{sourceLabel}</span>
+        <span className="px-4 py-2.5">{resultLabel}</span>
+      </div>
+      <div
+        ref={containerRef}
+        className="min-h-0 flex-1 overflow-hidden [&_.cm-editor]:h-full [&_.cm-mergeViewEditor+_.cm-mergeViewEditor]:border-border-subtle [&_.cm-mergeViewEditor+_.cm-mergeViewEditor]:border-l [&_.cm-mergeViewEditor]:min-w-0 [&_.cm-mergeViewEditors]:min-h-full [&_.cm-mergeView]:h-full [&_.cm-mergeView]:overflow-auto"
+      />
+    </div>
+  )
+}
+
+const regexPreviewEditorTheme = EditorView.theme({
+  '&': {
+    height: '100%',
+    backgroundColor: 'transparent'
+  },
+  '.cm-scroller': {
+    minHeight: '100%',
+    lineHeight: '1.6'
+  },
+  '.cm-content': {
+    minHeight: '100%',
+    padding: 'calc(var(--spacing) * 3) calc(var(--spacing) * 4)',
+    caretColor: 'var(--foreground)'
+  },
+  '.cm-activeLine, .cm-activeLineGutter': {
+    backgroundColor: 'transparent'
+  },
+  '.cm-placeholder': {
+    color: 'var(--foreground-tertiary)'
+  },
+  '&.cm-focused': {
+    outline: 'none'
+  }
+})
+
 const TranslateSettingsCoreContent: FC<{
   cardClassName?: string
   includeCustomLanguages?: boolean
   includeJsonSettings?: boolean
+  onPreviewRegexRules?: (stage: RegexStage) => void
   safePersist?: PersistPreference
-}> = ({ cardClassName, includeCustomLanguages = false, includeJsonSettings = false, safePersist }) => {
+}> = ({
+  cardClassName,
+  includeCustomLanguages = false,
+  includeJsonSettings = false,
+  onPreviewRegexRules,
+  safePersist
+}) => {
   return (
     <div className="flex flex-col gap-5">
       <TranslatePromptField className={cardClassName} />
       <GlossarySettings className={cardClassName} />
-      <RegexRulesSettings safePersist={safePersist} className={cardClassName} />
+      <RegexRulesSettings safePersist={safePersist} className={cardClassName} onPreview={onPreviewRegexRules} />
       {includeJsonSettings && <JsonViewSettings safePersist={safePersist} className={cardClassName} />}
       <TranslateRequestSettings className={cardClassName} />
       {includeCustomLanguages && <CustomLanguageList className={cardClassName} />}

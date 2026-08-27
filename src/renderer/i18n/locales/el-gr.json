@@ -7538,6 +7538,12 @@
       "regex_rules": {
         "after_translation": "Μετά τη μετάφραση",
         "before_translation": "Πριν από τη μετάφραση",
+        "preview_diff": "Διαφορές",
+        "preview_result_placeholder": "Το αποτέλεσμα των κανονικών εκφράσεων θα εμφανιστεί εδώ",
+        "preview_rule": "Κανόνας {{index}}",
+        "preview_source": "Κείμενο δοκιμής",
+        "preview_source_placeholder": "Εισαγάγετε ή επικολλήστε κείμενο δοκιμής",
+        "preview_step": "Βήμα εκτέλεσης",
         "title": "Regex replacements"
       },
       "scroll_sync": "Ρύθμιση συγχρονισμού κύλισης",

@@ -148,14 +148,25 @@ const translationPostProcessors: TranslationPostProcessor[] = [
 ]
 
 export function applyRegexReplacementRules(text: string, rules: RegexReplacementRule[]): string {
-  return rules.filter(isRuleEnabled).reduce((current, rule) => {
-    try {
-      const regex = new RegExp(rule.pattern, rule.flags)
-      return current.replace(regex, rule.replacement)
-    } catch {
-      return current
-    }
-  }, text)
+  return applyRegexReplacementRulesThrough(text, rules, rules.length)
+}
+
+export function applyRegexReplacementRulesThrough(
+  text: string,
+  rules: RegexReplacementRule[],
+  ruleCount: number
+): string {
+  return rules
+    .slice(0, Math.max(0, ruleCount))
+    .filter(isRuleEnabled)
+    .reduce((current, rule) => {
+      try {
+        const regex = new RegExp(rule.pattern, rule.flags)
+        return current.replace(regex, rule.replacement)
+      } catch {
+        return current
+      }
+    }, text)
 }
 
 function isRuleEnabled(rule: RegexReplacementRule): boolean {
