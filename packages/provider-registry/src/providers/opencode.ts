@@ -44,7 +44,7 @@ const chatEffortModels: Array<{
   pricing?: ProviderModelOverride['pricing']
 }> = [
   { modelId: 'deepseek-v4-flash', values: ['high', 'max'] },
-  { modelId: 'deepseek-v4-flash-vision-exp', values: ['none', 'low', 'high', 'max'] },
+  { modelId: 'deepseek-v4-flash-vision-exp', values: ['high', 'max'] },
   { modelId: 'deepseek-v4-pro', values: ['high', 'max'] },
   { modelId: 'glm-5-2', values: ['high', 'max'] },
   { modelId: 'glm-5-3', values: ['low', 'high', 'max'], defaultEffort: 'max' },
@@ -59,7 +59,6 @@ const chatEffortModels: Array<{
     }
   },
   { modelId: 'hy3', values: ['none', 'low', 'high'] },
-  { modelId: 'hy4-preview', values: ['none', 'high'] },
   { modelId: 'kimi-k3', values: ['max'] },
   // Stealth model, no creator entry: models.dev routes it through `@ai-sdk/openai-compatible`
   // and prints an effort ladder, so pin chat/completions rather than let it fall back unpinned.
@@ -73,8 +72,7 @@ const qwenBudgetModels = [
   { max: 81_920, modelId: 'qwen3-6-plus' },
   { max: 262_144, modelId: 'qwen3-7-max' },
   { max: 262_144, modelId: 'qwen3-7-plus' },
-  { max: 262_144, modelId: 'qwen3-8-max' },
-  { max: 38_912, modelId: 'qwen3-8-flash' }
+  { max: 262_144, modelId: 'qwen3-8-max' }
 ]
 
 const endpointOverrides: Partial<ProviderModelOverride>[] = [

@@ -53,13 +53,13 @@ const override = (modelId: string, support: ReasoningSupport): Partial<ProviderM
   reasoningContracts: reasoningContracts(support)
 })
 
-const toggleModels: Array<{ modelId: string; name?: string }> = [
-  { modelId: 'glm-5-1' },
-  { modelId: 'kimi-k2-6' },
-  { modelId: 'kimi-k2-6-fast', name: 'Kimi K2.6 Fast' },
-  { modelId: 'kimi-k2-6-turbo', name: 'Kimi K2.6 Turbo' },
-  { modelId: 'kimi-k2-7-code' },
-  { modelId: 'kimi-k2-7-code-fast', name: 'Kimi K2.7 Code Fast' }
+const toggleModels = [
+  'glm-5-1',
+  'kimi-k2-6',
+  'kimi-k2-6-fast',
+  'kimi-k2-6-turbo',
+  'kimi-k2-7-code',
+  'kimi-k2-7-code-fast'
 ]
 
 const effortModels: Array<{ modelId: string; values: ReasoningEffort[] }> = [
@@ -108,7 +108,7 @@ export default defineProvider({
   },
   modelsDevProvider: 'fireworks-ai',
   overrides: [
-    ...toggleModels.map(({ modelId, name }) => ({ ...override(modelId, toggleSupport), ...(name ? { name } : {}) })),
+    ...toggleModels.map((modelId) => override(modelId, toggleSupport)),
     { ...override('glm-5-1-fast', toggleSupport), name: 'GLM 5.1 Fast' },
     ...effortModels.map(({ modelId, values }) => override(modelId, effortSupport(values))),
     ...adjustableModels.map(({ modelId, values }) => override(modelId, adjustableSupport(values)))

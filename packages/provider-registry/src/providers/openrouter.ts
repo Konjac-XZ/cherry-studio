@@ -1,12 +1,5 @@
 import { CURRENCY } from '../schemas/enums'
-import type { ReasoningSupport } from '../schemas/model'
 import { defineProvider } from './types'
-
-const museSparkContributorSupport: ReasoningSupport = {
-  controls: [{ kind: 'effort', values: ['minimal', 'low', 'medium', 'high', 'xhigh'], default: 'medium' }],
-  supportedEfforts: ['minimal', 'low', 'medium', 'high', 'xhigh'],
-  defaultEffort: 'medium'
-}
 
 export default defineProvider({
   id: 'openrouter',
@@ -77,12 +70,6 @@ export default defineProvider({
   },
   modelsDevProvider: 'openrouter',
   overrides: [
-    {
-      modelId: 'muse-spark-1-2-contributor',
-      reasoningContracts: {
-        'openai-chat-completions': { support: museSparkContributorSupport }
-      }
-    },
     // OpenRouter owns this moving router alias; DeepSeek does not publish it as
     // a model. Actual usage cost is authoritative, so omit a static alias price.
     { modelId: 'deepseek-v4-flash-latest', name: 'DeepSeek V4 Flash Latest', pricing: undefined }

@@ -106,7 +106,6 @@ export const REASONING_FAMILY_RULES: readonly ReasoningFamilyRule[] = [
   { pattern: 'baichuan-m3$', budget: { min: 0, max: 30000 }, template: true },
   { pattern: '^baichuan-m[23]$' },
   // bailing
-  { pattern: '^ling-3-0-flash-fin$', toggle: true },
   { pattern: 'ring-(?:1t|mini|flash)' },
   { pattern: '^inkling' },
   // bytedance
@@ -220,7 +219,6 @@ export const REASONING_FAMILY_RULES: readonly ReasoningFamilyRule[] = [
   { pattern: 'hunyuan-t1' },
   { pattern: 'hunyuan-a13b' },
   { pattern: '^hy3' },
-  { pattern: '^hy4-preview$', effort: ['none', 'high'] },
   // upstage
   { pattern: '^solar-pro-?[2-9]' },
   // vercel
