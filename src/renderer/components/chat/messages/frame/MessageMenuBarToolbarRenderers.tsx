@@ -305,6 +305,7 @@ export function renderTranslateToolbarAction({
   action,
   actionContext,
   executeAction,
+  menuActions,
   softHoverBg,
   translationItems,
   onMenuOpenChange
@@ -324,6 +325,13 @@ export function renderTranslateToolbarAction({
           {action.icon}
         </MessageActionButton>
       </Tooltip>
+    )
+  }
+
+  const nativeTranslateAction = menuActions.find((menuAction) => menuAction.id === 'translate-native')
+  if (nativeTranslateAction) {
+    return (
+      <ActionButtonWithConfirm action={nativeTranslateAction} executeAction={executeAction} softHoverBg={softHoverBg} />
     )
   }
 

@@ -1,6 +1,7 @@
 import { defaultMessageMenuConfig, type MessageListActions } from '@renderer/components/chat/messages/types'
 import { COMPOSER_CLIPBOARD_FRAGMENT_MIME } from '@renderer/utils/message/composerClipboard'
 import { fireEvent, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import type { ComponentProps, MouseEvent, ReactElement, ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { describe, expect, it, vi } from 'vitest'
@@ -553,6 +554,59 @@ describe('messageMenuBarActions', () => {
 
     expect(onSelect).toHaveBeenCalled()
     expect(tooltipOpenValues).not.toContain(undefined)
+  })
+
+  it('translates directly to the native language before exposing the language menu', async () => {
+    const user = userEvent.setup()
+    const translateMessage = vi.fn()
+    const nativeLanguage = { langCode: 'zh-cn', label: 'Chinese' } as any
+    const context = createActionContext({
+      actions: { translateMessage } as MessageListActions,
+      nativeTranslationLanguage: nativeLanguage,
+      getTranslationLanguageLabel: () => 'Chinese',
+      translateLanguages: [nativeLanguage]
+    })
+    const action = resolveMessageMenuBarToolbarActions(context).find((item) => item.id === 'translate')
+    const translationItems = [{ key: nativeLanguage.langCode, label: nativeLanguage.label, onSelect: vi.fn() }]
+
+    expect(action).toBeTruthy()
+
+    const { rerender } = render(
+      renderTranslateToolbarAction({
+        action: action!,
+        actionContext: context,
+        executeAction: async (resolvedAction) => {
+          await executeMessageMenuBarAction(resolvedAction.id, context)
+        },
+        menuActions: resolveMessageMenuBarMenuActions(context),
+        softHoverBg: false,
+        translationItems
+      })
+    )
+
+    await user.click(screen.getByRole('button', { name: 'chat.message.translate_native' }))
+
+    expect(translateMessage).toHaveBeenCalledWith('message-1', nativeLanguage, 'hello')
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+
+    const translatedContext = { ...context, hasTranslationBlocks: true }
+    rerender(
+      renderTranslateToolbarAction({
+        action: action!,
+        actionContext: translatedContext,
+        executeAction: async (resolvedAction) => {
+          await executeMessageMenuBarAction(resolvedAction.id, translatedContext)
+        },
+        menuActions: resolveMessageMenuBarMenuActions(translatedContext),
+        softHoverBg: false,
+        translationItems
+      })
+    )
+
+    await user.click(screen.getByRole('button', { name: 'chat.translate' }))
+
+    expect(screen.getByRole('menu')).toBeInTheDocument()
+    expect(translateMessage).toHaveBeenCalledOnce()
   })
 
   it('keeps translate available and requests languages when its menu first opens', () => {
