@@ -298,7 +298,7 @@ vi.mock('@cherrystudio/ui', () => ({
   Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>
 }))
 
-import TranslateSettings, { TranslateSettingsPanelContent } from '../TranslateSettings'
+import TranslateSettings, { TranslateSettingsPanelContent } from '@renderer/components/translate/TranslateSettings'
 
 const getPromptTextarea = () => screen.getByRole('textbox', { name: 'translate.settings.prompt.native_to_other' })
 const getAddLanguageButton = () => screen.getByRole('button', { name: 'common.add common.language' })

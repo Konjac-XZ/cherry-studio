@@ -10,6 +10,7 @@ import { useRightPanelActions, useRightPanelState } from '@renderer/components/c
 // once main converges with feat. The `Selector` dir is byte-identical to feat.
 import { ModelSelector } from '@renderer/components/ModelSelector'
 import { Navbar } from '@renderer/components/Navbar'
+import TranslateSettings from '@renderer/components/translate/TranslateSettings'
 import {
   detectLanguageOrUnknown,
   useDetectLang,
@@ -70,7 +71,6 @@ import DraggableDivider from '../components/DraggableDivider'
 import FlipButton from '../components/FlipButton'
 import OcrJobWatcher from '../components/OcrJobWatcher'
 import PolishTranslateToggleButton from '../components/PolishTranslateToggleButton'
-import TranslateHistoryList from '../components/TranslateHistory'
 import { TRANSLATE_TRACE_PANE_ID, TranslateRightPane } from '../components/TranslateRightPane'
 import TranslateToolbarToggleButton from '../components/TranslateToolbarToggleButton'
 import { useTranslateAutoPasteTrigger } from '../hooks/useTranslateAutoPasteTrigger'
@@ -89,8 +89,8 @@ import type {
   PdfTranslationOutput,
   PdfTranslationStatus
 } from '../pdf/PdfTranslationView'
-import TranslateSettings from '../TranslateSettings'
 import type { TranslationFiles } from '../translationFiles'
+import TranslateHistoryList from './components/TranslateHistory'
 import TranslateInputPane from './components/TranslateInputPane'
 import TranslateLanguageBar from './components/TranslateLanguageBar'
 import TranslateOutputPane from './components/TranslateOutputPane'

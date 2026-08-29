@@ -299,7 +299,7 @@ vi.mock('../components/IconButton', () => ({
   }
 }))
 
-vi.mock('../components/TranslateHistory', () => ({
+vi.mock('../custom/components/TranslateHistory', () => ({
   default: ({
     isOpen,
     onHistoryItemClick
@@ -426,7 +426,7 @@ vi.mock('../custom/components/TranslateOutputPane', () => ({
   }
 }))
 
-vi.mock('../TranslateSettings', () => ({
+vi.mock('@renderer/components/translate/TranslateSettings', () => ({
   default: ({ visible }: { visible: boolean }) => (visible ? <div data-testid="translate-settings-open" /> : null)
 }))
 

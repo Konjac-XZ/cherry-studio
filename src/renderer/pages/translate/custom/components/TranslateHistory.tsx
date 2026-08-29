@@ -1,10 +1,13 @@
-import { ConfirmDialog, EmptyState, PageSidePanel } from '@cherrystudio/ui'
+// Downstream-owned Translate history UI implementation.
+import { Button, ConfirmDialog, EmptyState, Input, PageSidePanel } from '@cherrystudio/ui'
 import { loggerService } from '@logger'
+import IconButton from '@renderer/components/translate/IconButton'
 import { DynamicVirtualList } from '@renderer/components/VirtualList'
 import { useLanguages, useTranslateHistories, useTranslateHistory } from '@renderer/hooks/translate'
 import { ipcApi } from '@renderer/ipc'
 import { toast } from '@renderer/services/toast'
 import { cn } from '@renderer/utils/style'
+import { formatDate } from '@renderer/utils/time'
 import type { TranslateLangCode } from '@shared/data/preference/preferenceTypes'
 import type { FileEntryId } from '@shared/data/types/file'
 import type { TranslateHistory, TranslateLanguage } from '@shared/data/types/translate'
@@ -18,6 +21,7 @@ import {
   FileText,
   FolderOpen,
   Repeat,
+  Search,
   Star,
   Trash2
 } from 'lucide-react'
@@ -30,8 +34,7 @@ import {
   loadTranslationFiles,
   saveTranslationFileAs,
   type TranslationFiles
-} from '../translationFiles'
-import IconButton from './IconButton'
+} from '../../translationFiles'
 
 const logger = loggerService.withContext('TranslateHistory')
 
@@ -49,7 +52,8 @@ type Props = {
   onClose: () => void
 }
 
-const ITEM_HEIGHT = 104
+const ITEM_HEIGHT = 160
+const TRANSLATE_HISTORY_RENDER_LIMIT = 200
 const UNKNOWN_LANGUAGE = { value: 'Unknown', langCode: 'unknown' as TranslateLangCode, emoji: '🏳️' }
 type DisplayLanguage = TranslateLanguage | typeof UNKNOWN_LANGUAGE
 
@@ -63,20 +67,39 @@ const formatCreatedAt = (value: unknown, locale: string): string => {
     d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate()
   const time = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit', hour12: false }).format(d)
   if (isSameDay) return time
-  const date = new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' }).format(d)
+  const date = formatDate(d)
   return `${date} ${time}`
 }
 
 const TranslateHistoryList: FC<Props> = ({ isOpen, onHistoryItemClick, onClose }) => {
   const { t, i18n } = useTranslation()
   const [showStared, setShowStared] = useState(false)
+  const [search, setSearch] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [confirmClearOpen, setConfirmClearOpen] = useState(false)
+  const { getLanguage, getLabel, languages } = useLanguageLabels()
+  const normalizedSearch = search.trim().toLocaleLowerCase(i18n.language)
+  const matchingLanguageCodes = useMemo(
+    () =>
+      normalizedSearch
+        ? languages
+            .filter((language) =>
+              `${getLabel(language)} ${language.value} ${language.langCode}`
+                .toLocaleLowerCase(i18n.language)
+                .includes(normalizedSearch)
+            )
+            .map((language) => language.langCode)
+        : undefined,
+    [getLabel, i18n.language, languages, normalizedSearch]
+  )
   const { items, total, hasMore, isLoadingMore, loadMore, status } = useTranslateHistories({
-    star: showStared || undefined
+    search: search.trim() || undefined,
+    star: showStared || undefined,
+    languageCodes: matchingLanguageCodes,
+    pageSize: 100,
+    maxItems: TRANSLATE_HISTORY_RENDER_LIMIT
   })
-  const { getLanguage, getLabel } = useLanguageLabels()
-  const { clear: clearHistory, update: updateHistory } = useTranslateHistory()
+  const { clear: clearHistory, remove: removeHistory, update: updateHistory } = useTranslateHistory()
   const pendingLoadMoreRef = useRef(false)
 
   const history: DisplayedTranslateHistoryItem[] = useMemo(
@@ -172,13 +195,22 @@ const TranslateHistoryList: FC<Props> = ({ isOpen, onHistoryItemClick, onClose }
 
   const renderHistoryRow = useCallback(
     (item: DisplayedTranslateHistoryItem) => (
-      <HistoryRow item={item} onSelect={setSelectedId} onUpdate={updateHistory} />
+      <HistoryRow item={item} onSelect={setSelectedId} onUpdate={updateHistory} onRemove={removeHistory} />
     ),
-    [updateHistory]
+    [removeHistory, updateHistory]
   )
   const showHistoryActions = showStared || history.length > 0
   const header = (
     <div className="flex min-w-0 flex-1 items-center gap-2">
+      {selectedItem && (
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={() => setSelectedId(null)}
+          aria-label={t('translate.history.back')}>
+          <ChevronRight className="rotate-180" />
+        </Button>
+      )}
       <span className="truncate font-semibold text-base text-foreground">{`${t('translate.history.title')} (${total})`}</span>
       <span className="flex-1" />
       {!selectedItem && showHistoryActions && (
@@ -210,16 +242,33 @@ const TranslateHistoryList: FC<Props> = ({ isOpen, onHistoryItemClick, onClose }
     <>
       <PageSidePanel
         open={isOpen}
+        side="left"
+        contentClassName="top-0 bottom-0 left-0 w-[378px] rounded-none shadow-xl"
         onClose={handleClose}
         header={header}
         headerClassName="pb-0"
         closeLabel={t('translate.close')}
-        bodyClassName="flex min-h-0 flex-col">
-        <div className="flex min-h-0 flex-1 flex-col gap-3">
+        bodyClassName="flex min-h-0 flex-col p-0">
+        <div className="flex min-h-0 flex-1 flex-col">
+          {!selectedItem && (
+            <div className="relative h-12 shrink-0 border-border-subtle border-b px-3">
+              <Search
+                size={18}
+                aria-hidden="true"
+                className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-5 text-muted-foreground"
+              />
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder={t('translate.history.search_placeholder')}
+                spellCheck={false}
+                className="h-full rounded-none border-0 bg-transparent pr-3 pl-10 shadow-none focus-visible:ring-0"
+              />
+            </div>
+          )}
           {selectedItem ? (
             <HistoryDetail
               item={selectedItem}
-              onBack={() => setSelectedId(null)}
               onCopy={copyText}
               onReuse={handleReuse}
               onDeleted={() => setSelectedId(null)}
@@ -263,7 +312,8 @@ const TranslateHistoryList: FC<Props> = ({ isOpen, onHistoryItemClick, onClose }
 }
 
 const useLanguageLabels = () => {
-  const { getLanguage: getDataApiLanguage, getLabel: getDataApiLabel } = useLanguages()
+  const { languages: loadedLanguages, getLanguage: getDataApiLanguage, getLabel: getDataApiLabel } = useLanguages()
+  const languages = loadedLanguages ?? []
 
   const getLanguage = useCallback(
     (langCode: TranslateLangCode | null) =>
@@ -279,15 +329,17 @@ const useLanguageLabels = () => {
     [getDataApiLabel]
   )
 
-  return { getLanguage, getLabel }
+  return { getLanguage, getLabel, languages }
 }
 
 const HistoryRow: FC<{
   item: DisplayedTranslateHistoryItem
   onSelect: (id: string) => void
   onUpdate: (id: string, data: { star: boolean }) => Promise<unknown>
-}> = ({ item, onSelect, onUpdate }) => {
+  onRemove: (id: string) => Promise<unknown>
+}> = ({ item, onSelect, onUpdate, onRemove }) => {
   const { t } = useTranslation()
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
 
   const handleStar = async () => {
     try {
@@ -298,63 +350,85 @@ const HistoryRow: FC<{
   }
 
   return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={() => onSelect(item.id)}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          onSelect(item.id)
-        }
-      }}
-      className="group relative flex w-full cursor-pointer flex-col gap-1.5 rounded-md p-2.5 text-left transition-colors hover:bg-accent focus-visible:bg-accent focus-visible:outline-none">
-      <IconButton
-        size="sm"
-        tone="star"
-        active={!!item.star}
-        onClick={(e) => {
-          e.stopPropagation()
-          void handleStar()
+    <>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => onSelect(item.id)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            onSelect(item.id)
+          }
         }}
-        aria-label={t('translate.history.star')}
-        aria-pressed={!!item.star}
-        className={cn(
-          'absolute top-2 right-2',
-          !item.star && 'opacity-0 group-focus-within:opacity-100 group-hover:opacity-100'
-        )}>
-        <Star size={10} className={cn(item.star && 'fill-amber-500')} />
-      </IconButton>
-      <div className="flex items-center gap-1.5 pr-5">
-        {item.kind === 'file' && (
-          <FileText
-            size={12}
-            className="shrink-0 text-foreground-tertiary"
-            aria-label={t('translate.history.file.badge')}
-          />
-        )}
-        <span className="rounded bg-muted px-1 py-px text-muted-foreground text-sm">
-          {item._sourceEmoji} {item._sourceLabel}
-        </span>
-        <ArrowRight size={8} className="text-foreground-tertiary" />
-        <span className="rounded bg-primary/10 px-1 py-px text-primary text-sm">
-          {item._targetEmoji} {item._targetLabel}
-        </span>
-        <span className="ml-auto text-foreground-tertiary text-sm">{item._createdAtLabel}</span>
+        className="group relative flex h-[160px] w-full cursor-pointer flex-col gap-1 border-border-subtle border-t border-dashed px-6 py-2.5 text-left transition-colors last:border-b hover:bg-accent focus-visible:bg-accent focus-visible:outline-none">
+        <div
+          className={cn(
+            'absolute top-2.5 right-6 flex items-center gap-1',
+            !item.star && 'opacity-0 group-focus-within:opacity-100 group-hover:opacity-100'
+          )}>
+          <IconButton
+            size="sm"
+            tone="star"
+            active={!!item.star}
+            onClick={(e) => {
+              e.stopPropagation()
+              void handleStar()
+            }}
+            aria-label={t('translate.history.star')}
+            aria-pressed={!!item.star}>
+            <Star size={10} className={cn(item.star && 'fill-amber-500')} />
+          </IconButton>
+          <IconButton
+            size="sm"
+            tone="destructive"
+            onClick={(event) => {
+              event.stopPropagation()
+              setConfirmDeleteOpen(true)
+            }}
+            aria-label={t('translate.history.delete')}>
+            <Trash2 size={10} />
+          </IconButton>
+        </div>
+        <div className="flex h-[30px] items-center gap-1.5 pr-7">
+          {item.kind === 'file' && (
+            <FileText
+              size={12}
+              className="shrink-0 text-foreground-tertiary"
+              aria-label={t('translate.history.file.badge')}
+            />
+          )}
+          <span className="text-muted-foreground text-xs">{item._sourceLabel}</span>
+          <ArrowRight size={8} className="text-foreground-tertiary" />
+          <span className="text-muted-foreground text-xs">{item._targetLabel}</span>
+        </div>
+        <div className="min-h-0 flex-1">
+          <p className="line-clamp-2 text-[13px] text-foreground">{item.sourceText}</p>
+          <p className="line-clamp-2 text-[13px] text-muted-foreground">{item.targetText}</p>
+        </div>
+        <span className="text-foreground-tertiary text-xs">{item._createdAtLabel}</span>
       </div>
-      <p className="line-clamp-1 text-muted-foreground text-sm">{item.sourceText}</p>
-      <p className="line-clamp-1 text-foreground text-sm">{item.targetText}</p>
-    </div>
+      <ConfirmDialog
+        open={confirmDeleteOpen}
+        onOpenChange={setConfirmDeleteOpen}
+        title={t('translate.history.delete')}
+        confirmText={t('common.delete')}
+        cancelText={t('common.cancel')}
+        destructive
+        onConfirm={async () => {
+          await onRemove(item.id)
+        }}
+      />
+    </>
   )
 }
 
 const HistoryDetail: FC<{
   item: DisplayedTranslateHistoryItem
-  onBack: () => void
   onCopy: (value: string) => Promise<void>
   onReuse: (item: DisplayedTranslateHistoryItem, files?: TranslationFiles) => void
   onDeleted: () => void
-}> = ({ item, onBack, onCopy, onReuse, onDeleted }) => {
+}> = ({ item, onCopy, onReuse, onDeleted }) => {
   const { t } = useTranslation()
   const { update: updateHistory, remove: deleteHistory } = useTranslateHistory()
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
@@ -377,14 +451,7 @@ const HistoryDetail: FC<{
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-      <button
-        type="button"
-        onClick={onBack}
-        className="mb-3 flex items-center gap-1 rounded-md text-muted-foreground text-sm transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:underline focus-visible:outline-none">
-        <ChevronRight size={11} className="rotate-180" />
-        <span>{t('translate.history.back')}</span>
-      </button>
+    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 pt-3 pb-6">
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <span className="rounded-sm bg-muted px-1.5 py-0.5 text-muted-foreground text-sm">
@@ -440,20 +507,14 @@ const HistoryDetail: FC<{
               </p>
             </div>
             <div className="flex items-center gap-2 pt-1">
-              <button
-                type="button"
-                onClick={() => onReuse(item)}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-md bg-accent py-1.5 text-muted-foreground text-sm transition-colors hover:bg-accent hover:text-foreground focus-visible:text-foreground focus-visible:outline-none">
+              <Button variant="secondary" onClick={() => onReuse(item)} className="flex-1 shadow-none">
                 <Repeat size={11} />
                 <span>{t('translate.history.reuse')}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => void onCopy(item.targetText)}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-md bg-primary py-1.5 text-primary-foreground text-sm transition-colors hover:opacity-90 focus-visible:opacity-90 focus-visible:outline-none">
+              </Button>
+              <Button onClick={() => void onCopy(item.targetText)} className="flex-1 shadow-none">
                 <Copy size={11} />
                 <span>{t('translate.history.copy_target')}</span>
-              </button>
+              </Button>
             </div>
           </>
         )}

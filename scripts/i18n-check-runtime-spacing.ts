@@ -17,6 +17,8 @@ type ChineseCatalogs = { 'zh-cn': Record<string, string>; 'zh-tw': Record<string
 const ROOT = path.resolve(__dirname, '..')
 const RENDERER_DIR = path.join(ROOT, 'src/renderer')
 const CENTRAL_FORMATTER_FILES = new Set(['src/renderer/utils/number.ts', 'src/renderer/utils/time.ts'])
+// This byte-for-byte upstream mirror is not routed in the fork; the downstream custom history is checked instead.
+const IGNORED_SOURCE_FILES = new Set(['src/renderer/pages/translate/components/TranslateHistory.tsx'])
 const IGNORED_DIRECTORIES = new Set(['__tests__', 'i18n', 'node_modules'])
 const HAN_AT_START = /^\p{Script=Han}/u
 const HAN_AT_END = /\p{Script=Han}$/u
@@ -240,6 +242,8 @@ export const checkRuntimeChineseSpacing = (): RuntimeSpacingFinding[] => {
   const findings: RuntimeSpacingFinding[] = []
 
   for (const file of listSourceFiles(RENDERER_DIR)) {
+    const relativePath = path.relative(ROOT, file).replace(/\\/g, '/')
+    if (IGNORED_SOURCE_FILES.has(relativePath)) continue
     const sourceFile = project.addSourceFileAtPath(file)
     findings.push(...analyzeRuntimeSpacing(sourceFile, catalogs))
     project.removeSourceFile(sourceFile)

@@ -5,8 +5,8 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import type React from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import TranslateHistory from '../../custom/components/TranslateHistory'
 import type * as TranslationFilesModule from '../../translationFiles'
-import TranslateHistory from '../TranslateHistory'
 import { chinese, english } from './testUtils'
 
 const translateHistoryMock = vi.hoisted(() => ({
