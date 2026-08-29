@@ -1,5 +1,5 @@
 import { loggerService } from '@logger'
-import type { useTranslateHistory, UseTranslateResult } from '@renderer/hooks/translate'
+import type { useTranslateHistory } from '@renderer/hooks/translate'
 import type { useTimer } from '@renderer/hooks/useTimer'
 import { toast } from '@renderer/services/toast'
 import { executePreparedTranslation, prepareTranslation, type TranslationMode } from '@renderer/services/translation'
@@ -11,6 +11,8 @@ import type { TranslateHistory } from '@shared/data/types/translate'
 import type { TFunction } from 'i18next'
 import type { Dispatch, SetStateAction } from 'react'
 import { useCallback, useRef } from 'react'
+
+import type { UseWorkspaceTranslateResult } from '../custom/hooks/useWorkspaceTranslate'
 
 const logger = loggerService.withContext('TranslatePage/TranslationFlowRunner')
 
@@ -36,7 +38,7 @@ export type TranslationRunOverride = {
 type UseTranslationFlowRunnerParams = {
   autoCopy: boolean
   bidirectionalPair: [TranslateLangCode, TranslateLangCode]
-  cancel: UseTranslateResult['cancel']
+  cancel: UseWorkspaceTranslateResult['cancel']
   copy: (text: string) => Promise<void>
   detectLanguage: (text: string, signal?: AbortSignal) => Promise<TranslateLangCode>
   flowStage: TranslateFlowStage
@@ -48,7 +50,7 @@ type UseTranslationFlowRunnerParams = {
   nativeLanguage: TranslateLangCode | null
   preprocessTranslation: (text: string) => string
   processTranslation: (raw: string, targetLanguage: TranslateLangCode) => string
-  runTranslate: UseTranslateResult['translate']
+  runTranslate: UseWorkspaceTranslateResult['translate']
   selectedModelAvailable: boolean
   setDetectedLanguage: Dispatch<SetStateAction<TranslateLangCode | null>>
   setFlowStage: Dispatch<SetStateAction<TranslateFlowStage>>

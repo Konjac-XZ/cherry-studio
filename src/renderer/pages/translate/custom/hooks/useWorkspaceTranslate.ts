@@ -1,5 +1,5 @@
 /**
- * `useTranslate` — single owner of the translate-call boilerplate.
+ * `useWorkspaceTranslate` — single owner of the translate-call boilerplate.
  *
  * Replaces the repeated `isTranslating` flag + try/catch + isAbortError
  * suppression + toast/log wiring that every translate consumer used to
@@ -13,8 +13,8 @@
  *     `if (result)` to gate success-side effects.
  *   - Non-abort errors are always logged via `loggerService`; the toast and
  *     the rethrow are opt-out via `options`.
- *   - Unmounting the host component aborts any in-flight translation so
- *     stale completions don't run state setters on a dead tree.
+ *   - Unmounting aborts component-owned calls. Calls delegated to a stable
+ *     task owner survive Activity cleanup and are cancelled explicitly.
  *
  * Callers that need rich rendering can use `onResponse` to mirror the streamed
  * accumulated text into their own view state.
@@ -22,11 +22,12 @@
 
 import { loggerService } from '@logger'
 import { toast } from '@renderer/services/toast'
+import type { TranslationTaskOwner } from '@renderer/services/translation'
 import { formatErrorMessageWithPrefix, isAbortError } from '@renderer/utils/error'
-import { translateText } from '@renderer/utils/translate'
+import { translateText, type TranslateTextOptions } from '@renderer/utils/translate'
 import type { TranslateLangCode } from '@shared/data/preference/preferenceTypes'
 import type { TranslateLanguage } from '@shared/data/types/translate'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { useTranslation } from 'react-i18next'
 import { v4 as uuid } from 'uuid'
 
@@ -45,7 +46,7 @@ function localizeTranslateError(error: unknown, t: (key: string) => string): unk
   return localizedError
 }
 
-export interface UseTranslateOptions {
+export interface UseWorkspaceTranslateOptions {
   /** Default: true. Set false to suppress the default error toast. */
   showErrorToast?: boolean
   /** Default: 'translate.error.failed'. i18n key used as the toast prefix. */
@@ -57,25 +58,39 @@ export interface UseTranslateOptions {
   rethrowError?: boolean
   /** Optional progressive callback — passed through to {@link translateText}. */
   onResponse?: (text: string, isComplete: boolean) => void
-  /** Logger context name. Default: 'useTranslate'. */
+  /** Logger context name. Default: 'useWorkspaceTranslate'. */
   loggerContext?: string
+  /** Stable owner for runs that must survive the host component's Activity lifecycle. */
+  taskOwner?: TranslationTaskOwner | null
 }
 
-export interface UseTranslateResult {
+export interface UseWorkspaceTranslateResult {
   /**
    * Run a translation. Resolves with the trimmed text on success and
    * `undefined` on user-initiated abort or on a swallowed error
    * (when `rethrowError` is false).
    */
-  translate: (text: string, targetLanguage: TranslateLangCode | TranslateLanguage) => Promise<string | undefined>
+  translate: (
+    text: string,
+    targetLanguage: TranslateLangCode | TranslateLanguage,
+    runOptions?: TranslateTextOptions,
+    signal?: AbortSignal
+  ) => Promise<string | undefined>
   isTranslating: boolean
   /** Abort the in-flight translation. No-op when nothing is running. */
   cancel: () => void
 }
 
-export function useTranslate(options?: UseTranslateOptions): UseTranslateResult {
+export function useWorkspaceTranslate(options?: UseWorkspaceTranslateOptions): UseWorkspaceTranslateResult {
   const { t } = useTranslation()
-  const [isTranslating, setIsTranslating] = useState(false)
+  const taskOwner = options?.taskOwner ?? null
+  const [localIsTranslating, setLocalIsTranslating] = useState(false)
+  const ownerIsTranslating = useSyncExternalStore(
+    taskOwner?.subscribe ?? NO_SUBSCRIPTION,
+    taskOwner?.isBusy ?? NEVER_BUSY,
+    taskOwner?.isBusy ?? NEVER_BUSY
+  )
+  const isTranslating = taskOwner ? ownerIsTranslating : localIsTranslating
 
   const optionsRef = useRef(options)
   useEffect(() => {
@@ -92,6 +107,12 @@ export function useTranslate(options?: UseTranslateOptions): UseTranslateResult 
   const activeControllerRef = useRef<AbortController | null>(null)
 
   const cancel = useCallback(() => {
+    if (taskOwner) {
+      taskOwner.abortTasks()
+      activeAbortKeyRef.current = null
+      activeControllerRef.current = null
+      return
+    }
     if (!activeAbortKeyRef.current) return
     // Clear the ref first so the in-flight translate's continuation sees
     // "you've been cancelled" and discards its result even if the abort
@@ -99,11 +120,11 @@ export function useTranslate(options?: UseTranslateOptions): UseTranslateResult 
     activeAbortKeyRef.current = null
     activeControllerRef.current?.abort()
     activeControllerRef.current = null
-    setIsTranslating(false)
-  }, [])
+    setLocalIsTranslating(false)
+  }, [taskOwner])
 
-  const translate = useCallback<UseTranslateResult['translate']>(
-    async (text, targetLanguage) => {
+  const translate = useCallback<UseWorkspaceTranslateResult['translate']>(
+    async (text, targetLanguage, runOptions, externalSignal) => {
       // A new call supersedes any in-flight one — keeps semantics simple
       // (one translation per hook instance) and matches the existing stop-button
       // behaviour in TranslatePage.
@@ -112,8 +133,24 @@ export function useTranslate(options?: UseTranslateOptions): UseTranslateResult 
       activeControllerRef.current = controller
       activeAbortKeyRef.current = uuid()
       const abortKey = activeAbortKeyRef.current
+      const finishTask = taskOwner?.addTask(controller)
 
-      setIsTranslating(true)
+      if (!taskOwner) setLocalIsTranslating(true)
+
+      const onExternalAbort = () => {
+        controller.abort(externalSignal?.reason)
+        if (activeAbortKeyRef.current === abortKey) {
+          activeAbortKeyRef.current = null
+          activeControllerRef.current = null
+          if (!taskOwner) setLocalIsTranslating(false)
+        }
+      }
+      if (externalSignal?.aborted) {
+        onExternalAbort()
+        finishTask?.()
+        return undefined
+      }
+      externalSignal?.addEventListener('abort', onExternalAbort, { once: true })
 
       // Gate the progressive callback so a late `onResponse` from a
       // cancelled / superseded run doesn't write into consumer state.
@@ -124,18 +161,42 @@ export function useTranslate(options?: UseTranslateOptions): UseTranslateResult 
             onResponse(chunkText, isComplete)
           }
         : undefined
+      const guardedRunOptions = runOptions
+        ? {
+            ...runOptions,
+            ...(runOptions.onOutputTokens && {
+              onOutputTokens: (outputTokens: number) => {
+                if (activeAbortKeyRef.current !== abortKey) return
+                runOptions.onOutputTokens?.(outputTokens)
+              }
+            }),
+            ...(runOptions.onTraceReady && {
+              onTraceReady: (traceId: string) => {
+                if (activeAbortKeyRef.current !== abortKey) return
+                runOptions.onTraceReady?.(traceId)
+              }
+            })
+          }
+        : undefined
 
       const wasSuperseded = () => activeAbortKeyRef.current !== abortKey
       const finishIfActive = () => {
+        finishTask?.()
         if (activeAbortKeyRef.current === abortKey) {
           activeAbortKeyRef.current = null
           activeControllerRef.current = null
-          setIsTranslating(false)
+          if (!taskOwner) setLocalIsTranslating(false)
         }
       }
 
       try {
-        const result = await translateText(text, targetLanguage, guardedOnResponse, controller.signal)
+        const result = await translateText(
+          text,
+          targetLanguage,
+          guardedOnResponse,
+          controller.signal,
+          guardedRunOptions
+        )
         if (wasSuperseded()) {
           // Cancelled or superseded mid-flight — discard the result so the
           // caller's `if (result)` success branch stays gated.
@@ -150,28 +211,35 @@ export function useTranslate(options?: UseTranslateOptions): UseTranslateResult 
         const opts = optionsRef.current
         const showErrorToast = opts?.showErrorToast ?? true
         const errorPrefixI18nKey = opts?.errorPrefixI18nKey ?? 'translate.error.failed'
-        loggerService.withContext(opts?.loggerContext ?? 'useTranslate').error('Translation failed', error as Error)
+        loggerService
+          .withContext(opts?.loggerContext ?? 'useWorkspaceTranslate')
+          .error('Translation failed', error as Error)
         if (showErrorToast) {
           toast.error(formatErrorMessageWithPrefix(localizeTranslateError(error, t), t(errorPrefixI18nKey)))
         }
         if (opts?.rethrowError) throw error
         return undefined
       } finally {
+        externalSignal?.removeEventListener('abort', onExternalAbort)
         finishIfActive()
       }
     },
-    [t]
+    [t, taskOwner]
   )
 
-  // On unmount: abort the active controller (propagates to main via streamAbort
-  // inside translateText) and clear the marker so any late settle is discarded.
+  // Component-owned calls abort on unmount. A stable task owner retains the
+  // controller across Activity cleanup and exposes explicit cancellation.
   useEffect(() => {
+    if (taskOwner) return
     return () => {
       activeAbortKeyRef.current = null
       activeControllerRef.current?.abort()
       activeControllerRef.current = null
     }
-  }, [])
+  }, [taskOwner])
 
   return { translate, isTranslating, cancel }
 }
+
+const NEVER_BUSY = () => false
+const NO_SUBSCRIPTION = () => () => {}

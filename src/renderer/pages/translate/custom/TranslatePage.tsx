@@ -14,7 +14,6 @@ import TranslateSettings from '@renderer/components/translate/TranslateSettings'
 import {
   detectLanguageOrUnknown,
   useDetectLang,
-  useTranslate,
   useTranslateClipboardRead,
   useTranslateClipboardWatch,
   useTranslateClipboardWrite,
@@ -94,6 +93,7 @@ import TranslateHistoryList from './components/TranslateHistory'
 import TranslateInputPane from './components/TranslateInputPane'
 import TranslateLanguageBar from './components/TranslateLanguageBar'
 import TranslateOutputPane from './components/TranslateOutputPane'
+import { useWorkspaceTranslate } from './hooks/useWorkspaceTranslate'
 
 const PdfTranslationView = lazy(() => import('../pdf/PdfTranslationView'))
 
@@ -214,7 +214,7 @@ const TranslatePageContent: FC = () => {
     translate: runTranslate,
     isTranslating,
     cancel
-  } = useTranslate({
+  } = useWorkspaceTranslate({
     loggerContext: 'TranslatePage',
     onResponse: (value, isComplete) => {
       const snapshot = translationWorkspaceService.getSnapshot()

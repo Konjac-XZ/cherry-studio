@@ -14,7 +14,8 @@ const translateTextMock =
       text: string,
       lang: unknown,
       onResponse?: (text: string, done: boolean) => void,
-      signal?: AbortSignal
+      signal?: AbortSignal,
+      options?: { onOutputTokens?: (outputTokens: number) => void }
     ) => Promise<string>
   >()
 vi.mock('@renderer/utils/translate/translateText', () => ({
@@ -32,7 +33,7 @@ vi.mock('@renderer/utils/error', () => ({
 
 import { toast } from '@renderer/services/toast'
 
-import { useTranslate } from '../useTranslate'
+import { useWorkspaceTranslate } from '../useWorkspaceTranslate'
 
 const TARGET = {
   langCode: parseTranslateLangCode('en-us'),
@@ -70,12 +71,12 @@ function pendingTranslateText() {
   return { resolve, reject }
 }
 
-describe('useTranslate', () => {
+describe('useWorkspaceTranslate', () => {
   describe('happy path', () => {
     it('returns the resolved text and toggles isTranslating around the call', async () => {
       translateTextMock.mockResolvedValueOnce('Hello world')
 
-      const { result } = renderHook(() => useTranslate())
+      const { result } = renderHook(() => useWorkspaceTranslate())
 
       expect(result.current.isTranslating).toBe(false)
 
@@ -99,7 +100,7 @@ describe('useTranslate', () => {
       })
 
       const onResponse = vi.fn()
-      const { result } = renderHook(() => useTranslate({ onResponse }))
+      const { result } = renderHook(() => useWorkspaceTranslate({ onResponse }))
 
       await act(async () => {
         await result.current.translate('源', TARGET)
@@ -115,7 +116,7 @@ describe('useTranslate', () => {
     it('passes an unaborted AbortSignal to translateText for each call', async () => {
       translateTextMock.mockResolvedValueOnce('ok')
 
-      const { result } = renderHook(() => useTranslate())
+      const { result } = renderHook(() => useWorkspaceTranslate())
 
       await act(async () => {
         await result.current.translate('源', TARGET)
@@ -130,7 +131,7 @@ describe('useTranslate', () => {
     it('aborts the signal that was handed to translateText when cancel() fires', () => {
       pendingTranslateText()
 
-      const { result } = renderHook(() => useTranslate())
+      const { result } = renderHook(() => useWorkspaceTranslate())
 
       act(() => {
         void result.current.translate('源', TARGET)
@@ -146,11 +147,34 @@ describe('useTranslate', () => {
       expect(handedSignal.aborted).toBe(true)
     })
 
+    it('links an external flow signal to the actual translate stream and discards a late result', async () => {
+      const pending = pendingTranslateText()
+      const flowController = new AbortController()
+      const { result } = renderHook(() => useWorkspaceTranslate())
+
+      let translatePromise!: Promise<string | undefined>
+      act(() => {
+        translatePromise = result.current.translate('源', TARGET, undefined, flowController.signal)
+      })
+      const handedSignal = translateTextMock.mock.calls[0][3] as AbortSignal
+
+      act(() => flowController.abort())
+      expect(handedSignal.aborted).toBe(true)
+      expect(result.current.isTranslating).toBe(false)
+
+      let translated: string | undefined
+      await act(async () => {
+        pending.resolve('late result')
+        translated = await translatePromise
+      })
+      expect(translated).toBeUndefined()
+    })
+
     it('aborts the previous signal when a new translate() supersedes', () => {
       pendingTranslateText()
       translateTextMock.mockResolvedValueOnce('second')
 
-      const { result } = renderHook(() => useTranslate())
+      const { result } = renderHook(() => useWorkspaceTranslate())
 
       act(() => {
         void result.current.translate('one', TARGET)
@@ -170,7 +194,7 @@ describe('useTranslate', () => {
     it('aborts the active signal on unmount', () => {
       pendingTranslateText()
 
-      const { result, unmount } = renderHook(() => useTranslate())
+      const { result, unmount } = renderHook(() => useWorkspaceTranslate())
 
       act(() => {
         void result.current.translate('源', TARGET)
@@ -188,7 +212,7 @@ describe('useTranslate', () => {
     it('resolves the in-flight translate to undefined and resets isTranslating immediately', async () => {
       const { resolve } = pendingTranslateText()
 
-      const { result } = renderHook(() => useTranslate())
+      const { result } = renderHook(() => useWorkspaceTranslate())
 
       let translatePromise!: Promise<string | undefined>
       act(() => {
@@ -227,7 +251,7 @@ describe('useTranslate', () => {
       })
 
       const onResponse = vi.fn()
-      const { result } = renderHook(() => useTranslate({ onResponse }))
+      const { result } = renderHook(() => useWorkspaceTranslate({ onResponse }))
 
       act(() => {
         void result.current.translate('源', TARGET)
@@ -244,8 +268,31 @@ describe('useTranslate', () => {
       expect(onResponse).not.toHaveBeenCalled()
     })
 
+    it('suppresses late output usage after cancel()', async () => {
+      let onOutputTokensFromService: ((outputTokens: number) => void) | undefined
+      translateTextMock.mockImplementationOnce(async (_text, _lang, _onResponse, _signal, options) => {
+        onOutputTokensFromService = options?.onOutputTokens
+        return new Promise<string>(() => {
+          /* never resolves — test controls timing */
+        })
+      })
+
+      const onOutputTokens = vi.fn()
+      const { result } = renderHook(() => useWorkspaceTranslate())
+
+      act(() => {
+        void result.current.translate('源', TARGET, { onOutputTokens })
+      })
+      act(() => {
+        result.current.cancel()
+        onOutputTokensFromService?.(9)
+      })
+
+      expect(onOutputTokens).not.toHaveBeenCalled()
+    })
+
     it('is a no-op when nothing is in flight', () => {
-      const { result } = renderHook(() => useTranslate())
+      const { result } = renderHook(() => useWorkspaceTranslate())
       act(() => {
         result.current.cancel()
       })
@@ -260,7 +307,7 @@ describe('useTranslate', () => {
       isAbortErrorMock.mockImplementation((err) => err === abortError)
       translateTextMock.mockRejectedValueOnce(abortError)
 
-      const { result } = renderHook(() => useTranslate())
+      const { result } = renderHook(() => useWorkspaceTranslate())
 
       let translated: string | undefined
       await act(async () => {
@@ -279,7 +326,7 @@ describe('useTranslate', () => {
       const error = new Error('upstream boom')
       translateTextMock.mockRejectedValueOnce(error)
 
-      const { result } = renderHook(() => useTranslate())
+      const { result } = renderHook(() => useWorkspaceTranslate())
 
       let translated: string | undefined
       await act(async () => {
@@ -297,7 +344,7 @@ describe('useTranslate', () => {
     it('honours showErrorToast: false — still logs, skips toast', async () => {
       translateTextMock.mockRejectedValueOnce(new Error('upstream boom'))
 
-      const { result } = renderHook(() => useTranslate({ showErrorToast: false }))
+      const { result } = renderHook(() => useWorkspaceTranslate({ showErrorToast: false }))
 
       await act(async () => {
         await result.current.translate('源', TARGET)
@@ -311,7 +358,7 @@ describe('useTranslate', () => {
       const error = new Error('upstream boom')
       translateTextMock.mockRejectedValueOnce(error)
 
-      const { result } = renderHook(() => useTranslate({ rethrowError: true }))
+      const { result } = renderHook(() => useWorkspaceTranslate({ rethrowError: true }))
 
       let caught: unknown
       await act(async () => {
@@ -327,7 +374,7 @@ describe('useTranslate', () => {
     it('honours custom errorPrefixI18nKey', async () => {
       translateTextMock.mockRejectedValueOnce(new Error('boom'))
 
-      const { result } = renderHook(() => useTranslate({ errorPrefixI18nKey: 'custom.prefix.key' }))
+      const { result } = renderHook(() => useWorkspaceTranslate({ errorPrefixI18nKey: 'custom.prefix.key' }))
 
       await act(async () => {
         await result.current.translate('源', TARGET)
@@ -342,7 +389,7 @@ describe('useTranslate', () => {
       const first = pendingTranslateText()
       translateTextMock.mockResolvedValueOnce('second result')
 
-      const { result } = renderHook(() => useTranslate())
+      const { result } = renderHook(() => useWorkspaceTranslate())
 
       let firstPromise!: Promise<string | undefined>
       act(() => {
@@ -371,7 +418,7 @@ describe('useTranslate', () => {
     it('discards a late translateText resolution after unmount', async () => {
       const { resolve } = pendingTranslateText()
 
-      const { result, unmount } = renderHook(() => useTranslate())
+      const { result, unmount } = renderHook(() => useWorkspaceTranslate())
 
       let translatePromise!: Promise<string | undefined>
       act(() => {
@@ -404,7 +451,7 @@ describe('useTranslate', () => {
       })
 
       const onResponse = vi.fn()
-      const { result, unmount } = renderHook(() => useTranslate({ onResponse }))
+      const { result, unmount } = renderHook(() => useWorkspaceTranslate({ onResponse }))
 
       act(() => {
         void result.current.translate('源', TARGET)

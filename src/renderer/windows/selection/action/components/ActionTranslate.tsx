@@ -226,7 +226,7 @@ const ActionTranslate: FC<Props> = ({ action, scrollToBottom }) => {
     setIsPreparing(true)
 
     try {
-      await runTranslate(selectedText, translateLang, undefined, signal)
+      await runTranslate(selectedText, translateLang)
     } catch (err) {
       if (signal.aborted || flowControllerRef.current !== controller) return
       setContent('')

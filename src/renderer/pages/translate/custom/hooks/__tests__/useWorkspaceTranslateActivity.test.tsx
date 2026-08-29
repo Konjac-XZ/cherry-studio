@@ -17,11 +17,11 @@ vi.mock('@renderer/utils/error', () => ({
   isAbortError: (error: unknown) => error instanceof Error && error.name === 'AbortError'
 }))
 
-import { useTranslate } from '../useTranslate'
+import { useWorkspaceTranslate } from '../useWorkspaceTranslate'
 
 function WorkspaceTranslateHarness() {
   const [result, setResult] = useState('')
-  const { isTranslating, translate } = useTranslate({ taskOwner: translationWorkspaceService })
+  const { isTranslating, translate } = useWorkspaceTranslate({ taskOwner: translationWorkspaceService })
 
   return (
     <>
@@ -51,7 +51,7 @@ afterEach(() => {
   vi.clearAllMocks()
 })
 
-describe('useTranslate with a workspace owner inside Activity', () => {
+describe('useWorkspaceTranslate with a workspace owner inside Activity', () => {
   it('continues while hidden and exposes the terminal result when visible again', async () => {
     let resolveTranslation!: (value: string) => void
     mocks.translateText.mockImplementation(
