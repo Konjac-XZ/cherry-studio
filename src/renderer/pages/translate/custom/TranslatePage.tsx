@@ -16,14 +16,14 @@ import {
   useDetectLang,
   useTranslateClipboardRead,
   useTranslateClipboardWatch,
-  useTranslateClipboardWrite,
-  useTranslateHistory
+  useTranslateClipboardWrite
 } from '@renderer/hooks/translate'
 import { useCodeStyle } from '@renderer/hooks/useCodeStyle'
 import { useModels } from '@renderer/hooks/useModel'
 import { useSmoothStream } from '@renderer/hooks/useSmoothStream'
 import { useTimer } from '@renderer/hooks/useTimer'
 import { ipcApi, useIpcOn } from '@renderer/ipc'
+import { useWorkspaceTranslateHistory } from '@renderer/pages/translate/custom/hooks/useWorkspaceTranslateHistory'
 import { toast } from '@renderer/services/toast'
 import { translationWorkspaceService } from '@renderer/services/translation'
 import type { FileMetadata } from '@renderer/types/file'
@@ -161,7 +161,7 @@ const TranslatePageContent: FC = () => {
   const [translateModelId, setTranslateModelId] = usePreference('feature.translate.model_id')
   const { models, isLoading: modelsLoading } = useModels({ enabled: true })
   const detectLanguage = useDetectLang()
-  const translateHistory = useTranslateHistory()
+  const translateHistory = useWorkspaceTranslateHistory()
   const { shikiMarkdownIt } = useCodeStyle()
   const { setTimeoutTimer } = useTimer()
   const [sourceLanguage, setSourceLanguage] = usePreference('feature.translate.page.source_language')

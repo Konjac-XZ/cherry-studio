@@ -1,33 +1,38 @@
+import { dataApiService } from '@data/DataApiService'
 import { useMutation } from '@data/hooks/useDataApi'
 import { loggerService } from '@logger'
 import type { CreateTranslateHistoryDto, UpdateTranslateHistoryDto } from '@shared/data/api/schemas/translate'
 import { toPersistedLangCodeOrNull, type TranslateLangCode } from '@shared/data/preference/preferenceTypes'
+import type { UniqueModelId } from '@shared/data/types/model'
 import { useCallback } from 'react'
 
-import { type MutationFeedbackOptions, useMutationFeedback } from './useMutationFeedback'
+import { useWorkspaceMutationFeedback, type WorkspaceMutationFeedbackOptions } from './useWorkspaceMutationFeedback'
 
-const logger = loggerService.withContext('translate/useTranslateHistory')
+const logger = loggerService.withContext('translate/useWorkspaceTranslateHistory')
 
-export type AddTranslateHistoryInput = {
+export type AddWorkspaceTranslateHistoryInput = {
   sourceText: string
   targetText: string
   sourceLanguage: TranslateLangCode | null
   targetLanguage: TranslateLangCode | null
+  modelId?: UniqueModelId | null
+  cacheKey?: string
 }
 
-export type UpdateTranslateHistoryInput = {
+export type UpdateWorkspaceTranslateHistoryInput = {
   sourceText?: string
   targetText?: string
   sourceLanguage?: TranslateLangCode | null
   targetLanguage?: TranslateLangCode | null
+  modelId?: UniqueModelId | null
   star?: boolean
 }
 
-export const useTranslateHistory = (options?: {
-  add?: MutationFeedbackOptions
-  update?: MutationFeedbackOptions
-  remove?: MutationFeedbackOptions
-  clear?: MutationFeedbackOptions
+export const useWorkspaceTranslateHistory = (options?: {
+  add?: WorkspaceMutationFeedbackOptions
+  update?: WorkspaceMutationFeedbackOptions
+  remove?: WorkspaceMutationFeedbackOptions
+  clear?: WorkspaceMutationFeedbackOptions
 }) => {
   const { trigger: addTrigger } = useMutation('POST', '/translate/histories', {
     refresh: ['/translate/histories']
@@ -42,14 +47,16 @@ export const useTranslateHistory = (options?: {
     refresh: ['/translate/histories']
   })
 
-  const addMutation = useMutationFeedback(
+  const addMutation = useWorkspaceMutationFeedback(
     useCallback(
-      (data: AddTranslateHistoryInput) => {
+      (data: AddWorkspaceTranslateHistoryInput) => {
         const body: CreateTranslateHistoryDto = {
           sourceText: data.sourceText,
           targetText: data.targetText,
           sourceLanguage: toPersistedLangCodeOrNull(data.sourceLanguage),
-          targetLanguage: toPersistedLangCodeOrNull(data.targetLanguage)
+          targetLanguage: toPersistedLangCodeOrNull(data.targetLanguage),
+          modelId: data.modelId,
+          cacheKey: data.cacheKey
         }
         return addTrigger({ body })
       },
@@ -65,9 +72,9 @@ export const useTranslateHistory = (options?: {
     }
   )
 
-  const updateMutation = useMutationFeedback(
+  const updateMutation = useWorkspaceMutationFeedback(
     useCallback(
-      (id: string, data: UpdateTranslateHistoryInput) => {
+      (id: string, data: UpdateWorkspaceTranslateHistoryInput) => {
         const body: UpdateTranslateHistoryDto = {}
         if (data.sourceText !== undefined) body.sourceText = data.sourceText
         if (data.targetText !== undefined) body.targetText = data.targetText
@@ -77,6 +84,7 @@ export const useTranslateHistory = (options?: {
         if ('targetLanguage' in data) {
           body.targetLanguage = toPersistedLangCodeOrNull(data.targetLanguage)
         }
+        if ('modelId' in data) body.modelId = data.modelId
         if (data.star !== undefined) body.star = data.star
         return updateTrigger({ params: { id }, body })
       },
@@ -92,7 +100,7 @@ export const useTranslateHistory = (options?: {
     }
   )
 
-  const removeMutation = useMutationFeedback(
+  const removeMutation = useWorkspaceMutationFeedback(
     useCallback((id: string) => removeTrigger({ params: { id } }), [removeTrigger]),
     options?.remove,
     {
@@ -104,7 +112,7 @@ export const useTranslateHistory = (options?: {
     }
   )
 
-  const clearMutation = useMutationFeedback(
+  const clearMutation = useWorkspaceMutationFeedback(
     useCallback(() => clearTrigger(), [clearTrigger]),
     options?.clear,
     {
@@ -120,6 +128,14 @@ export const useTranslateHistory = (options?: {
     add: addMutation,
     update: updateMutation,
     remove: removeMutation,
-    clear: clearMutation
+    clear: clearMutation,
+    findCached: useCallback(async (cacheKey: string) => {
+      const response = await dataApiService.get('/translate/histories', { query: { cacheKey, limit: 1 } })
+      return response.items[0]
+    }, []),
+    findBySourceText: useCallback(async (sourceText: string) => {
+      const response = await dataApiService.get('/translate/histories', { query: { sourceText, limit: 100 } })
+      return response.items
+    }, [])
   }
 }

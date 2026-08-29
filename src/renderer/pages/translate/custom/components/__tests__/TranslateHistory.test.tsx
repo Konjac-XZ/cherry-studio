@@ -62,9 +62,13 @@ vi.mock('@renderer/hooks/translate', () => ({
     languages,
     getLanguage: (langCode: string) => languages.find((language) => language.langCode === langCode),
     getLabel: (language: TranslateLanguage | null) => language?.value
-  }),
-  useTranslateHistories: (options: unknown) => translateHistoryMock.useTranslateHistories(options),
-  useTranslateHistory: () => translateHistoryMock.useTranslateHistory()
+  })
+}))
+vi.mock('@renderer/pages/translate/custom/hooks/useCustomTranslateHistories', () => ({
+  useCustomTranslateHistories: (options: unknown) => translateHistoryMock.useTranslateHistories(options)
+}))
+vi.mock('@renderer/pages/translate/custom/hooks/useWorkspaceTranslateHistory', () => ({
+  useWorkspaceTranslateHistory: () => translateHistoryMock.useTranslateHistory()
 }))
 
 vi.mock('@renderer/utils/style', () => ({

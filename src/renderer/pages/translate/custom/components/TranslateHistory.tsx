@@ -3,8 +3,10 @@ import { Button, ConfirmDialog, EmptyState, Input, PageSidePanel } from '@cherry
 import { loggerService } from '@logger'
 import IconButton from '@renderer/components/translate/IconButton'
 import { DynamicVirtualList } from '@renderer/components/VirtualList'
-import { useLanguages, useTranslateHistories, useTranslateHistory } from '@renderer/hooks/translate'
+import { useLanguages } from '@renderer/hooks/translate'
 import { ipcApi } from '@renderer/ipc'
+import { useCustomTranslateHistories } from '@renderer/pages/translate/custom/hooks/useCustomTranslateHistories'
+import { useWorkspaceTranslateHistory } from '@renderer/pages/translate/custom/hooks/useWorkspaceTranslateHistory'
 import { toast } from '@renderer/services/toast'
 import { cn } from '@renderer/utils/style'
 import { formatDate } from '@renderer/utils/time'
@@ -92,14 +94,14 @@ const TranslateHistoryList: FC<Props> = ({ isOpen, onHistoryItemClick, onClose }
         : undefined,
     [getLabel, i18n.language, languages, normalizedSearch]
   )
-  const { items, total, hasMore, isLoadingMore, loadMore, status } = useTranslateHistories({
+  const { items, total, hasMore, isLoadingMore, loadMore, status } = useCustomTranslateHistories({
     search: search.trim() || undefined,
     star: showStared || undefined,
     languageCodes: matchingLanguageCodes,
     pageSize: 100,
     maxItems: TRANSLATE_HISTORY_RENDER_LIMIT
   })
-  const { clear: clearHistory, remove: removeHistory, update: updateHistory } = useTranslateHistory()
+  const { clear: clearHistory, remove: removeHistory, update: updateHistory } = useWorkspaceTranslateHistory()
   const pendingLoadMoreRef = useRef(false)
 
   const history: DisplayedTranslateHistoryItem[] = useMemo(
@@ -430,7 +432,7 @@ const HistoryDetail: FC<{
   onDeleted: () => void
 }> = ({ item, onCopy, onReuse, onDeleted }) => {
   const { t } = useTranslation()
-  const { update: updateHistory, remove: deleteHistory } = useTranslateHistory()
+  const { update: updateHistory, remove: deleteHistory } = useWorkspaceTranslateHistory()
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
 
   const handleStar = async () => {

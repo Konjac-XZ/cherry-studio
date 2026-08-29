@@ -1,6 +1,6 @@
 import { loggerService } from '@logger'
-import type { useTranslateHistory } from '@renderer/hooks/translate'
 import type { useTimer } from '@renderer/hooks/useTimer'
+import type { useWorkspaceTranslateHistory } from '@renderer/pages/translate/custom/hooks/useWorkspaceTranslateHistory'
 import { toast } from '@renderer/services/toast'
 import { executePreparedTranslation, prepareTranslation, type TranslationMode } from '@renderer/services/translation'
 import { translationWorkspaceService } from '@renderer/services/translation'
@@ -25,7 +25,10 @@ export type TranslateFlowStage =
   | 'translating'
   | 'processing'
 
-type TranslationHistoryPort = Pick<ReturnType<typeof useTranslateHistory>, 'add' | 'findBySourceText' | 'findCached'>
+type TranslationHistoryPort = Pick<
+  ReturnType<typeof useWorkspaceTranslateHistory>,
+  'add' | 'findBySourceText' | 'findCached'
+>
 
 export type TranslationRunOverride = {
   isBidirectional?: boolean

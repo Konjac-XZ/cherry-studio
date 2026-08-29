@@ -167,6 +167,14 @@ vi.mock('@renderer/hooks/translate', async (importOriginal) => ({
   })
 }))
 
+vi.mock('@renderer/pages/translate/custom/hooks/useWorkspaceTranslateHistory', () => ({
+  useWorkspaceTranslateHistory: () => ({
+    add: translateCoreMock.addHistory,
+    findBySourceText: translateCoreMock.findBySourceText,
+    findCached: translateCoreMock.findCached
+  })
+}))
+
 vi.mock('@renderer/hooks/translate/useDetectLang', () => ({
   useDetectLang: () => translateCoreMock.detectLanguage
 }))

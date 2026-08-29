@@ -2,7 +2,7 @@ import { MockUseDataApiUtils, mockUseInfiniteQuery } from '@test-mocks/renderer/
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { useTranslateHistories } from '../useTranslateHistories'
+import { useCustomTranslateHistories } from '../useCustomTranslateHistories'
 
 type HistoryItem = { id: string }
 
@@ -21,7 +21,7 @@ function buildInfiniteState(overrides: Record<string, unknown> = {}) {
   }
 }
 
-describe('useTranslateHistories', () => {
+describe('useCustomTranslateHistories', () => {
   const toast = { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() }
 
   beforeEach(() => {
@@ -45,7 +45,7 @@ describe('useTranslateHistories', () => {
       })
     )
 
-    const { result } = renderHook(() => useTranslateHistories({ pageSize: 2 }))
+    const { result } = renderHook(() => useCustomTranslateHistories({ pageSize: 2 }))
 
     expect(result.current.items.map((i) => i.id)).toEqual(['a', 'b', 'c', 'd'])
     expect(result.current.total).toBe(5)
@@ -57,7 +57,7 @@ describe('useTranslateHistories', () => {
       buildInfiniteState({ pages: [{ items: [{ id: 'a' }, { id: 'b' }], total: 2 }], hasNext: false })
     )
 
-    const { result } = renderHook(() => useTranslateHistories())
+    const { result } = renderHook(() => useCustomTranslateHistories())
 
     expect(result.current.hasMore).toBe(false)
   })
@@ -68,7 +68,7 @@ describe('useTranslateHistories', () => {
       buildInfiniteState({ pages: [{ items: [{ id: 'a' }, { id: 'b' }], total: 10 }], hasNext: true, loadNext })
     )
 
-    const { result } = renderHook(() => useTranslateHistories({ pageSize: 2 }))
+    const { result } = renderHook(() => useCustomTranslateHistories({ pageSize: 2 }))
 
     act(() => {
       result.current.loadMore()
@@ -83,7 +83,7 @@ describe('useTranslateHistories', () => {
       buildInfiniteState({ pages: [{ items: [{ id: 'a' }, { id: 'b' }], total: 2 }], hasNext: false, loadNext })
     )
 
-    const { result } = renderHook(() => useTranslateHistories())
+    const { result } = renderHook(() => useCustomTranslateHistories())
 
     act(() => {
       result.current.loadMore()
@@ -95,20 +95,36 @@ describe('useTranslateHistories', () => {
   it('uses useInfiniteQuery with search, star, and pageSize query options', () => {
     mockUseInfiniteQuery.mockReturnValue(buildInfiniteState())
 
-    renderHook(() => useTranslateHistories({ search: 'hello', star: true, pageSize: 5 }))
+    renderHook(() => useCustomTranslateHistories({ search: 'hello', star: true, pageSize: 5 }))
 
     expect(mockUseInfiniteQuery).toHaveBeenCalledWith('/translate/histories', {
-      query: { search: 'hello', star: true },
+      query: { search: 'hello', star: true, languageCodes: undefined },
       limit: 5,
       swrOptions: { keepPreviousData: false }
     })
+  })
+
+  it('forwards localized language matches and stops exposing rows at the render cap', () => {
+    const items = Array.from({ length: 201 }, (_, index) => ({ id: String(index) }))
+    mockUseInfiniteQuery.mockReturnValue(buildInfiniteState({ pages: [{ items, total: 300 }], hasNext: true }))
+
+    const { result } = renderHook(() =>
+      useCustomTranslateHistories({ search: 'English', languageCodes: ['en-us'], maxItems: 200 })
+    )
+
+    expect(mockUseInfiniteQuery).toHaveBeenCalledWith(
+      '/translate/histories',
+      expect.objectContaining({ query: { search: 'English', star: undefined, languageCodes: ['en-us'] } })
+    )
+    expect(result.current.items).toHaveLength(200)
+    expect(result.current.hasMore).toBe(false)
   })
 
   it('reloads all pages when another window changes history membership', async () => {
     const refresh = vi.fn().mockResolvedValue(undefined)
     const reset = vi.fn()
     mockUseInfiniteQuery.mockReturnValue(buildInfiniteState({ refresh, reset }))
-    renderHook(() => useTranslateHistories())
+    renderHook(() => useCustomTranslateHistories())
     reset.mockClear()
 
     await act(async () => {
@@ -124,7 +140,7 @@ describe('useTranslateHistories', () => {
     const failure = new Error('infinite fetch failed')
     mockUseInfiniteQuery.mockReturnValue(buildInfiniteState({ error: failure }))
 
-    const { result } = renderHook(() => useTranslateHistories())
+    const { result } = renderHook(() => useCustomTranslateHistories())
 
     // `data: undefined` alone is ambiguous (loading vs failed); the `error`
     // field is what callers like TranslateHistoryList read to render a retry
@@ -139,7 +155,7 @@ describe('useTranslateHistories', () => {
     it("returns 'loading' while SWR has neither data nor error", () => {
       mockUseInfiniteQuery.mockReturnValue(buildInfiniteState({ isLoading: true }))
 
-      const { result } = renderHook(() => useTranslateHistories())
+      const { result } = renderHook(() => useCustomTranslateHistories())
 
       expect(result.current.status).toBe('loading')
     })
@@ -147,7 +163,7 @@ describe('useTranslateHistories', () => {
     it("returns 'error' when the request failed without cached data", () => {
       mockUseInfiniteQuery.mockReturnValue(buildInfiniteState({ error: new Error('boom') }))
 
-      const { result } = renderHook(() => useTranslateHistories())
+      const { result } = renderHook(() => useCustomTranslateHistories())
 
       expect(result.current.status).toBe('error')
     })
@@ -155,7 +171,7 @@ describe('useTranslateHistories', () => {
     it("returns 'ready' once data is resolved, even when the list is empty", () => {
       mockUseInfiniteQuery.mockReturnValue(buildInfiniteState({ pages: [{ items: [], total: 0 }] }))
 
-      const { result } = renderHook(() => useTranslateHistories())
+      const { result } = renderHook(() => useCustomTranslateHistories())
 
       expect(result.current.status).toBe('ready')
       expect(result.current.items).toEqual([])
