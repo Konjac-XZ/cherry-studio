@@ -509,6 +509,113 @@ describe('applyMigrations over a populated database', () => {
     expect(String(sqlite.pragma('integrity_check', { simple: true }))).toBe('ok')
   })
 
+  it('repairs schemas skipped after the retired personal 0014 and 0015 migrations', () => {
+    applyMigrations(db, baselineMigrationsFolder(join(tempDir, 'baseline'), '0014_premium_kitty_pryde'))
+    const now = Date.now()
+
+    sqlite
+      .prepare(
+        `INSERT INTO user_provider (provider_id, name, order_key, created_at, updated_at)
+         VALUES ('legacy-provider', 'Legacy Provider', 'a0', ?, ?)`
+      )
+      .run(now, now)
+    sqlite
+      .prepare(
+        `INSERT INTO user_model
+          (id, provider_id, model_id, preset_model_id, \`group\`, order_key, created_at, updated_at)
+         VALUES ('legacy-provider::legacy-model', 'legacy-provider', 'legacy-model', 'legacy-model',
+                 'legacy-provider', 'a0', ?, ?)`
+      )
+      .run(now, now)
+    sqlite
+      .prepare(
+        `INSERT INTO prompt (id, title, content, order_key, created_at, updated_at)
+         VALUES ('legacy-prompt', 'Legacy Prompt', 'Keep me', 'a0', ?, ?)`
+      )
+      .run(now, now)
+    sqlite.exec(`
+      CREATE TABLE translate_glossary (
+        id text PRIMARY KEY NOT NULL,
+        source_phrase text NOT NULL,
+        target_phrase text NOT NULL,
+        target_language text NOT NULL,
+        enabled integer DEFAULT true NOT NULL,
+        created_at integer NOT NULL,
+        updated_at integer NOT NULL,
+        FOREIGN KEY (target_language) REFERENCES translate_language(lang_code) ON DELETE cascade
+      );
+      CREATE INDEX translate_glossary_target_language_idx
+        ON translate_glossary (target_language, created_at);
+      UPDATE user_model SET \`group\` = NULL WHERE trim(\`group\`) = trim(provider_id);
+    `)
+    sqlite
+      .prepare(
+        `INSERT INTO translate_language (lang_code, value, emoji, created_at, updated_at)
+         VALUES ('zh-cn', 'Chinese', 'CN', ?, ?)`
+      )
+      .run(now, now)
+    sqlite
+      .prepare(
+        `INSERT INTO translate_glossary
+          (id, source_phrase, target_phrase, target_language, enabled, created_at, updated_at)
+         VALUES ('legacy-glossary-0014', 'model', '模型', 'zh-cn', 1, ?, ?)`
+      )
+      .run(now, now)
+
+    const insertMigration = sqlite.prepare('INSERT INTO __drizzle_migrations (hash, created_at) VALUES (?, ?)')
+    insertMigration.run('legacy-personal-0014', 1787378635027)
+    insertMigration.run('legacy-personal-0015', 1787479168062)
+
+    expect(() => applyMigrations(db, resolveMigrationsPath())).not.toThrow()
+
+    expect(
+      sqlite
+        .prepare(
+          `SELECT id, provider_id, model_id, \`group\`, input_modalities_explicit
+           FROM user_model WHERE id = 'legacy-provider::legacy-model'`
+        )
+        .get()
+    ).toEqual({
+      id: 'legacy-provider::legacy-model',
+      provider_id: 'legacy-provider',
+      model_id: 'legacy-model',
+      group: null,
+      input_modalities_explicit: 0
+    })
+    expect(sqlite.prepare(`SELECT id, title, content, visibility FROM prompt`).all()).toEqual([
+      { id: 'legacy-prompt', title: 'Legacy Prompt', content: 'Keep me', visibility: 'global' }
+    ])
+    expect(sqlite.prepare(`SELECT id FROM translate_glossary`).all()).toEqual([{ id: 'legacy-glossary-0014' }])
+
+    sqlite
+      .prepare(
+        `INSERT INTO prompt_binding
+          (prompt_id, target_type, target_id, order_key, created_at, updated_at)
+         VALUES ('legacy-prompt', 'assistant', 'assistant-1', 'a0', ?, ?)`
+      )
+      .run(now, now)
+    expect(sqlite.prepare(`SELECT prompt_id, target_type, target_id FROM prompt_binding`).all()).toEqual([
+      { prompt_id: 'legacy-prompt', target_type: 'assistant', target_id: 'assistant-1' }
+    ])
+    expect(() => sqlite.prepare(`UPDATE prompt SET visibility = 'private'`).run()).toThrow(/CHECK|constraint/i)
+    expect(() =>
+      sqlite
+        .prepare(
+          `INSERT INTO prompt_binding
+            (prompt_id, target_type, target_id, order_key, created_at, updated_at)
+           VALUES ('legacy-prompt', 'unknown', 'target-1', 'a1', ?, ?)`
+        )
+        .run(now, now)
+    ).toThrow(/CHECK|constraint/i)
+
+    expect(() => applyMigrations(db, resolveMigrationsPath())).not.toThrow()
+    expect(sqlite.prepare(`SELECT count(*) AS count FROM user_model`).get()).toEqual({ count: 1 })
+    expect(sqlite.prepare(`SELECT count(*) AS count FROM prompt`).get()).toEqual({ count: 1 })
+    expect(sqlite.prepare(`SELECT count(*) AS count FROM prompt_binding`).get()).toEqual({ count: 1 })
+    expect(sqlite.pragma('foreign_key_check')).toEqual([])
+    expect(String(sqlite.pragma('integrity_check', { simple: true }))).toBe('ok')
+  })
+
   it('preserves every file_entry row and its references across the cleanup_policy recreate', () => {
     applyMigrations(db, baselineMigrationsFolder(join(tempDir, 'baseline'), '0004_fresh_roland_deschain'))
     seedBaselineRows()

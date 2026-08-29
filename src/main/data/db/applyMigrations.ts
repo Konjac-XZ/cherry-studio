@@ -42,6 +42,39 @@ export function applyMigrations(db: DbType, migrationsFolder: string): void {
   db.run(sql.raw('CREATE INDEX IF NOT EXISTS `translate_history_cache_key_idx` ON `translate_history` (`cache_key`)'))
   db.run(sql.raw('CREATE INDEX IF NOT EXISTS `translate_history_model_id_idx` ON `translate_history` (`model_id`)'))
 
+  if (hasRetiredPersonalMigrationCollision(db)) {
+    ensureColumn(db, 'user_model', 'input_modalities_explicit', 'integer DEFAULT false NOT NULL')
+    ensureColumn(
+      db,
+      'prompt',
+      'visibility',
+      "text DEFAULT 'global' NOT NULL CHECK (`visibility` IN ('global', 'restricted'))"
+    )
+    db.run(
+      sql.raw(`CREATE TABLE IF NOT EXISTS \`prompt_binding\` (
+        \`prompt_id\` text NOT NULL,
+        \`target_type\` text NOT NULL,
+        \`target_id\` text NOT NULL,
+        \`order_key\` text NOT NULL,
+        \`created_at\` integer NOT NULL,
+        \`updated_at\` integer NOT NULL,
+        PRIMARY KEY(\`prompt_id\`, \`target_type\`, \`target_id\`),
+        FOREIGN KEY (\`prompt_id\`) REFERENCES \`prompt\`(\`id\`) ON UPDATE no action ON DELETE cascade,
+        CONSTRAINT "prompt_binding_target_type_check" CHECK(\`target_type\` IN ('assistant', 'agent'))
+      )`)
+    )
+    db.run(
+      sql.raw(
+        'CREATE INDEX IF NOT EXISTS `prompt_binding_target_idx` ON `prompt_binding` (`target_type`,`target_id`,`prompt_id`)'
+      )
+    )
+    db.run(
+      sql.raw(
+        'CREATE INDEX IF NOT EXISTS `prompt_binding_target_order_key_idx` ON `prompt_binding` (`target_type`,`target_id`,`order_key`)'
+      )
+    )
+  }
+
   // Enforcement was on before the call, so anything reported now is a dangling
   // reference the migration itself introduced. Boot must not be blocked over it —
   // applyMigrations is also the restore and test-harness path, and a hard failure
@@ -68,4 +101,9 @@ function ensureColumn(db: DbType, table: string, column: string, definition: str
   if (!columns.some((candidate) => candidate.name === column)) {
     db.run(sql.raw(`ALTER TABLE \`${table}\` ADD \`${column}\` ${definition}`))
   }
+}
+
+function hasRetiredPersonalMigrationCollision(db: DbType): boolean {
+  const rows = db.all(sql.raw('SELECT 1 FROM `__drizzle_migrations` WHERE `created_at` = 1787479168062 LIMIT 1'))
+  return rows.length > 0
 }
