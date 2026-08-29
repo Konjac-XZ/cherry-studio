@@ -11,16 +11,21 @@ import { useProviderModelList } from './useProviderModelList'
 interface ProviderModelListProps {
   providerId: string
   disabled: boolean
+  onContinueApiSetup?: () => void
   actions?: (state: { disabled: boolean; hasVisibleModels: boolean }) => React.ReactNode
 }
 
-const ProviderModelList: React.FC<ProviderModelListProps> = ({ providerId, disabled, actions }) => {
+const ProviderModelList: React.FC<ProviderModelListProps> = ({ providerId, disabled, onContinueApiSetup, actions }) => {
   const [groupExpansionCommand, setGroupExpansionCommand] = useState({ expanded: true, version: 0 })
   const modelList = useProviderModelList({
     providerId,
     disabled
   })
   const providerMeta = useProviderMeta(providerId)
+  const showContinueApiSetup =
+    providerMeta.isApiKeyFieldVisible &&
+    providerMeta.provider?.authOptional !== true &&
+    providerMeta.provider?.apiKeys.some((entry) => entry.isEnabled) === true
   const toolbarDisabled = disabled
   const toggleGroupsExpanded = useCallback(() => {
     setGroupExpansionCommand((current) => ({
@@ -84,6 +89,7 @@ const ProviderModelList: React.FC<ProviderModelListProps> = ({ providerId, disab
           onUpdateLayout={modelList.sections.onUpdateLayout}
           bulkActionDisabled={toolbarDisabled}
           expansionCommand={groupExpansionCommand}
+          onContinueApiSetup={showContinueApiSetup ? onContinueApiSetup : undefined}
         />
       </div>
       <EditModelDrawer

@@ -33,14 +33,14 @@ const ipcEventHandlers = vi.hoisted(() => new Map<string, (payload: unknown) => 
 const babeldocInstalledSnapshot: BinaryToolSnapshot = {
   name: 'babeldoc-stream',
   availability: { source: 'mise', path: '/shims/babeldoc-stream' },
-  application: { status: 'applied', version: '0.6.4.post3' }
+  application: { status: 'applied', version: '0.6.4.post4' }
 }
 const binaryMock = vi.hoisted(() => ({
   snapshots: {
     'babeldoc-stream': {
       name: 'babeldoc-stream',
       availability: { source: 'mise', path: '/shims/babeldoc-stream' },
-      application: { status: 'applied', version: '0.6.4.post3' }
+      application: { status: 'applied', version: '0.6.4.post4' }
     }
   } as Record<string, BinaryToolSnapshot>
 }))
@@ -843,7 +843,7 @@ describe('TranslatePage', () => {
     await waitFor(() => expect(translateButton).toBeEnabled())
     fireEvent.click(translateButton)
 
-    expect(pdfHandleMock.start).toHaveBeenCalledWith('en-us')
+    expect(pdfHandleMock.start).toHaveBeenCalledWith('zh-cn')
   })
 
   it('discards PDF view state when a different PDF replaces the selected file', async () => {
@@ -1030,7 +1030,7 @@ describe('TranslatePage', () => {
     await waitFor(() =>
       expect(ipcRequestMock).toHaveBeenCalledWith('binary.install_tool', {
         name: 'babeldoc-stream',
-        targetVersion: '0.6.4.post3'
+        targetVersion: '0.6.4.post4'
       })
     )
   })
@@ -1309,7 +1309,8 @@ describe('TranslatePage', () => {
   it('keeps translating enabled for plain-text paste without entering file-processing state', async () => {
     MockUsePreferenceUtils.setMultiplePreferenceValues({
       'feature.translate.model_id': 'openai::gpt-4.1',
-      'feature.translate.page.source_language': 'zh-cn'
+      'feature.translate.page.source_language': 'zh-cn',
+      'feature.translate.page.target_language': 'en-us'
     })
 
     const { rerender } = render(<TranslatePage />)
@@ -1968,7 +1969,8 @@ describe('TranslatePage', () => {
   it('swallows abort errors from translate without showing success-side effects', async () => {
     MockUsePreferenceUtils.setMultiplePreferenceValues({
       'feature.translate.model_id': 'openai::gpt-4.1',
-      'feature.translate.page.source_language': 'zh-cn'
+      'feature.translate.page.source_language': 'zh-cn',
+      'feature.translate.page.target_language': 'en-us'
     })
     const abortError = new Error('aborted')
     translateCoreMock.translateText.mockRejectedValueOnce(abortError)
@@ -1987,7 +1989,8 @@ describe('TranslatePage', () => {
   it('shows failure toast and resets translating state when translate throws non-abort error', async () => {
     MockUsePreferenceUtils.setMultiplePreferenceValues({
       'feature.translate.model_id': 'openai::gpt-4.1',
-      'feature.translate.page.source_language': 'zh-cn'
+      'feature.translate.page.source_language': 'zh-cn',
+      'feature.translate.page.target_language': 'en-us'
     })
     const translateError = new Error('translate failed')
     translateCoreMock.translateText.mockRejectedValueOnce(translateError)
@@ -2006,7 +2009,8 @@ describe('TranslatePage', () => {
   it('triggers translate on Cmd/Ctrl+Enter keyboard shortcut', async () => {
     MockUsePreferenceUtils.setMultiplePreferenceValues({
       'feature.translate.model_id': 'openai::gpt-4.1',
-      'feature.translate.page.source_language': 'zh-cn'
+      'feature.translate.page.source_language': 'zh-cn',
+      'feature.translate.page.target_language': 'en-us'
     })
     translateCoreMock.translateText.mockResolvedValueOnce('keyboard translated')
 
@@ -2022,7 +2026,8 @@ describe('TranslatePage', () => {
   it('ignores duplicate translate trigger while translating is in progress', async () => {
     MockUsePreferenceUtils.setMultiplePreferenceValues({
       'feature.translate.model_id': 'openai::gpt-4.1',
-      'feature.translate.page.source_language': 'zh-cn'
+      'feature.translate.page.source_language': 'zh-cn',
+      'feature.translate.page.target_language': 'en-us'
     })
     let resolveTranslate: (value: string) => void = () => {}
     translateCoreMock.translateText.mockReturnValueOnce(
@@ -2075,7 +2080,8 @@ describe('TranslatePage', () => {
   it('cancels in-flight translation when stop is clicked', async () => {
     MockUsePreferenceUtils.setMultiplePreferenceValues({
       'feature.translate.model_id': 'openai::gpt-4.1',
-      'feature.translate.page.source_language': 'zh-cn'
+      'feature.translate.page.source_language': 'zh-cn',
+      'feature.translate.page.target_language': 'en-us'
     })
     let signal: AbortSignal | undefined
     translateCoreMock.translateText.mockImplementationOnce(
@@ -2102,7 +2108,8 @@ describe('TranslatePage', () => {
   it('ignores dropped and pasted files while translation is running', async () => {
     MockUsePreferenceUtils.setMultiplePreferenceValues({
       'feature.translate.model_id': 'openai::gpt-4.1',
-      'feature.translate.page.source_language': 'zh-cn'
+      'feature.translate.page.source_language': 'zh-cn',
+      'feature.translate.page.target_language': 'en-us'
     })
     let resolveTranslate: (value: string) => void = () => {}
     translateCoreMock.translateText.mockReturnValueOnce(
@@ -2139,6 +2146,7 @@ describe('TranslatePage', () => {
     MockUsePreferenceUtils.setMultiplePreferenceValues({
       'feature.translate.model_id': 'openai::gpt-4.1',
       'feature.translate.page.source_language': 'zh-cn',
+      'feature.translate.page.target_language': 'en-us',
       'feature.translate.page.auto_copy': true
     })
     const abortError = new Error('aborted')
@@ -2182,6 +2190,7 @@ describe('TranslatePage', () => {
     MockUsePreferenceUtils.setMultiplePreferenceValues({
       'feature.translate.model_id': 'openai::gpt-4.1',
       'feature.translate.page.source_language': 'zh-cn',
+      'feature.translate.page.target_language': 'en-us',
       'feature.translate.page.auto_copy': true
     })
 

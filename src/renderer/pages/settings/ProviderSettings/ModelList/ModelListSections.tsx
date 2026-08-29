@@ -46,6 +46,7 @@ interface ModelListSectionsProps {
   onUpdateLayout: (models: Model[], groupChanges: Array<{ id: UniqueModelId; group: string }>) => Promise<void>
   bulkActionDisabled?: boolean
   expansionCommand?: { expanded: boolean; version: number }
+  onContinueApiSetup?: () => void
 }
 
 const ModelListSections: React.FC<ModelListSectionsProps> = ({
@@ -66,7 +67,8 @@ const ModelListSections: React.FC<ModelListSectionsProps> = ({
   onRenameGroup,
   onUpdateLayout,
   bulkActionDisabled,
-  expansionCommand
+  expansionCommand,
+  onContinueApiSetup
 }) => {
   const { t } = useTranslation()
   const { modelStatusMap } = useModelListHealthResults()
@@ -172,7 +174,11 @@ const ModelListSections: React.FC<ModelListSectionsProps> = ({
       <EmptyState
         compact
         title={t('settings.models.empty')}
-        description={t('settings.models.empty_hint')}
+        description={t(
+          onContinueApiSetup ? 'settings.provider.api_setup.models_empty_hint' : 'settings.models.empty_hint'
+        )}
+        actionLabel={onContinueApiSetup ? t('settings.provider.api_setup.continue_models') : undefined}
+        onAction={onContinueApiSetup}
         className="min-h-40"
       />
     )

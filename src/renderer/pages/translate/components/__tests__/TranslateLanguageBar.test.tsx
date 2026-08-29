@@ -129,6 +129,20 @@ describe('TranslateLanguageBar', () => {
     expect(screen.getByText('English')).toBeInTheDocument()
   })
 
+  it('omits the target label when the source control already provides context', () => {
+    render(<TranslateLanguageBar {...baseProps()} />)
+
+    expect(screen.queryByText('translate.translate_to')).not.toBeInTheDocument()
+  })
+
+  it('omits the target label in bidirectional mode', () => {
+    const props = baseProps()
+    props.isBidirectional = true
+    render(<TranslateLanguageBar {...props} />)
+
+    expect(screen.queryByText('translate.translate_to')).not.toBeInTheDocument()
+  })
+
   it('opens source dropdown and calls onSourceChange on select', () => {
     const props = baseProps()
     render(<TranslateLanguageBar {...props} />)

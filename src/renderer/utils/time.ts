@@ -12,6 +12,13 @@ export interface DateFormatter {
   format(value: Date | number): string
 }
 
+export function createDateFormatter(language: string | undefined, options: Intl.DateTimeFormatOptions): DateFormatter {
+  const formatter = new Intl.DateTimeFormat(language, options)
+  return {
+    format: (value) => normalizeChineseSpacing(formatter.format(value), language)
+  }
+}
+
 function toDate(value: DateValue): Date {
   return value instanceof Date ? value : new Date(value)
 }
@@ -38,8 +45,7 @@ export function formatShortMonth(value: DateValue, language: string): string {
   const date = toDate(value)
   if (Number.isNaN(date.getTime())) return ''
 
-  const month = new Intl.DateTimeFormat(language, { month: 'short' }).format(date)
-  return normalizeChineseSpacing(month, language)
+  return createDateFormatter(language, { month: 'short' }).format(date)
 }
 
 export function formatDateTime(

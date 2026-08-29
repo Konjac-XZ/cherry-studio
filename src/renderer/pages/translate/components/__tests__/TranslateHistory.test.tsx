@@ -80,7 +80,10 @@ vi.mock('@cherrystudio/ui', () => ({
   }: React.ComponentProps<'button'> & {
     variant?: 'default' | 'ghost' | 'secondary'
     size?: 'icon-sm'
-  }) => <button type={type} data-variant={variant} {...props} />,
+  }) => {
+    void _size
+    return <button type={type} data-variant={variant} {...props} />
+  },
   ConfirmDialog: (props: {
     onConfirm?: () => void | Promise<void>
     onOpenChange?: (open: boolean) => void

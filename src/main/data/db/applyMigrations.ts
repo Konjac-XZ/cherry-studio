@@ -35,8 +35,8 @@ export function applyMigrations(db: DbType, migrationsFolder: string): void {
     db.run(sql.raw(`PRAGMA foreign_keys = ${enforced ? 'ON' : 'OFF'}`))
   }
 
-  // Personal V2 previews created this schema before it was regenerated as migration 0014.
-  // Keep 0014 idempotent; reconcile SQLite's conditional column additions here.
+  // Personal V2 previews created this schema before it was regenerated after upstream migration 0018.
+  // Keep the appended migration replayable; reconcile SQLite's conditional column additions here.
   ensureColumn(db, 'translate_history', 'model_id', 'text')
   ensureColumn(db, 'translate_history', 'cache_key', 'text')
   db.run(sql.raw('CREATE INDEX IF NOT EXISTS `translate_history_cache_key_idx` ON `translate_history` (`cache_key`)'))

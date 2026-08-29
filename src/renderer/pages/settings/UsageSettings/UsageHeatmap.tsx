@@ -2,7 +2,7 @@ import { Button, NormalTooltip, Skeleton } from '@cherrystudio/ui'
 import { usePersistCache } from '@data/hooks/useCache'
 import { formatCompactNumber } from '@renderer/utils/number'
 import { cn } from '@renderer/utils/style'
-import { getLocaleFirstDayOfWeek } from '@renderer/utils/time'
+import { createDateFormatter, getLocaleFirstDayOfWeek } from '@renderer/utils/time'
 import type { AiUsageRecordTimelineBucket } from '@shared/data/api/schemas/aiUsageRecords'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -187,7 +187,7 @@ export default function UsageHeatmap({ buckets, costCurrency, isLoading, range }
   }, [isLoading, range?.from, range?.to])
 
   const monthLabels = useMemo(() => {
-    const formatter = new Intl.DateTimeFormat(i18n.language, { month: 'short' })
+    const formatter = createDateFormatter(i18n.language, { month: 'short' })
     let previousVisibleIndex = -Infinity
 
     return weeks.map((week, weekIndex) => {
@@ -205,7 +205,7 @@ export default function UsageHeatmap({ buckets, costCurrency, isLoading, range }
   }, [i18n.language, weeks])
 
   const dateFormatter = useMemo(
-    () => new Intl.DateTimeFormat(i18n.language, { year: 'numeric', month: 'short', day: 'numeric' }),
+    () => createDateFormatter(i18n.language, { year: 'numeric', month: 'short', day: 'numeric' }),
     [i18n.language]
   )
 

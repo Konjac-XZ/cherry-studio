@@ -585,7 +585,7 @@ describe('TranslateSettings', () => {
     const sourceUpdateListener = mergeViewTestState.configs[0].a.extensions
       .flat()
       .find((extension: any) => extension?.kind === 'updateListener')?.value
-    act(() => sourceUpdateListener({ docChanged: true, state: { doc: { toString: () => 'foo' } } }))
+    void act(() => sourceUpdateListener({ docChanged: true, state: { doc: { toString: () => 'foo' } } }))
     await waitFor(() => expect(result).toHaveValue('baz'))
 
     const firstRuleButton = screen.getAllByText('translate.settings.regex_rules.preview_rule')[0].closest('button')

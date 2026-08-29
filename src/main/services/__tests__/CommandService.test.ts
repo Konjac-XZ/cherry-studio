@@ -139,7 +139,7 @@ describe('CommandService', () => {
   it('opens settings through the main-window settings helper', () => {
     service.execute('app.settings.open')
 
-    expect(openSettingsInMainWindowMock).toHaveBeenCalledWith('/settings/provider')
+    expect(openSettingsInMainWindowMock).toHaveBeenCalledWith()
   })
 
   it('raises the main window on the reusable home route through the navigation helper', () => {

@@ -21,7 +21,7 @@ describe('useTranslateBusyLabel', () => {
 
     expect(result.current).toBe('translate.processing 0.0s')
 
-    act(() => vi.advanceTimersByTime(300))
+    void act(() => vi.advanceTimersByTime(300))
 
     expect(result.current).toBe('translate.processing 0.3s')
   })
@@ -32,13 +32,13 @@ describe('useTranslateBusyLabel', () => {
       { initialProps: { status: 'detecting' as TranslateBusyStatus | null } }
     )
 
-    act(() => vi.advanceTimersByTime(500))
+    void act(() => vi.advanceTimersByTime(500))
     expect(result.current).toBe('translate.detecting 0.5s')
 
     rerender({ status: 'polishing' })
     expect(result.current).toBe('translate.polishing 0.0s')
 
-    act(() => vi.advanceTimersByTime(200))
+    void act(() => vi.advanceTimersByTime(200))
     expect(result.current).toBe('translate.polishing 0.2s')
 
     rerender({ status: null })

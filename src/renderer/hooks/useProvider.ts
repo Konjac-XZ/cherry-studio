@@ -2,9 +2,7 @@ import { useMutation, useQuery } from '@data/hooks/useDataApi'
 import { useDataChange } from '@data/hooks/useDataChange'
 import { usePreference } from '@data/hooks/usePreference'
 import { loggerService } from '@logger'
-import { getProviderLabelKey } from '@renderer/i18n/label'
-import i18n from '@renderer/i18n/resolver'
-import { isSystemProviderId } from '@renderer/types/provider'
+import { getProviderDisplayName } from '@renderer/utils/naming'
 import { filterRuntimeVisibleProviders } from '@renderer/utils/providerVisibility'
 import type {
   CreateProviderDto,
@@ -22,6 +20,10 @@ import type { SWRConfiguration } from 'swr'
 const EMPTY_PROVIDERS: Provider[] = []
 const EMPTY_HIDDEN_PROVIDER_IDS: string[] = []
 const logger = loggerService.withContext('useProviders')
+
+function getErrorType(error: unknown) {
+  return error instanceof Error ? error.name : typeof error
+}
 
 /**
  * All SWR cache keys that must revalidate after any mutation to a provider:
@@ -58,7 +60,7 @@ export function useProviders(
         }
       : undefined
 
-  const { data, isLoading, refetch } = useQuery('/providers', queryOptions)
+  const { data, isLoading, error, refetch } = useQuery('/providers', queryOptions)
 
   const {
     trigger: createTrigger,
@@ -88,7 +90,9 @@ export function useProviders(
 
   return {
     providers,
+    hasLoaded: data !== undefined,
     isLoading,
+    error,
     createProvider,
     isCreating,
     createError,
@@ -197,7 +201,7 @@ export function useProviderMutations(providerId: string) {
       try {
         await addApiKeyTrigger({ params: { providerId }, body: { key, label } })
       } catch (error) {
-        logger.error('Failed to add API key', { providerId, error })
+        logger.error('Failed to add API key', { providerId, errorType: getErrorType(error) })
         throw error
       }
     },
@@ -221,7 +225,7 @@ export function useProviderMutations(providerId: string) {
       try {
         await replaceApiKeysTrigger({ params: { providerId }, body: { keys: apiKeys } })
       } catch (error) {
-        logger.error('Failed to update API keys', { providerId, error })
+        logger.error('Failed to update API keys', { providerId, errorType: getErrorType(error) })
         throw error
       }
     },
@@ -233,7 +237,7 @@ export function useProviderMutations(providerId: string) {
       try {
         await updateApiKeyTrigger({ params: { providerId, keyId }, body: updates })
       } catch (error) {
-        logger.error('Failed to update API key', { providerId, keyId, error })
+        logger.error('Failed to update API key', { providerId, keyId, errorType: getErrorType(error) })
         throw error
       }
     },
@@ -287,15 +291,7 @@ export function useProviderPreset(providerId: string | null | undefined, fields:
   return query
 }
 
-/**
- * Pure resolver for a provider's display name. System providers get the
- * i18n label; custom providers use their user-set name. Returns empty
- * string when the provider is missing.
- */
-export function getProviderDisplayName(provider: Provider | undefined): string {
-  if (!provider) return ''
-  return isSystemProviderId(provider.id) ? i18n.t(getProviderLabelKey(provider.id)) : provider.name
-}
+export { getProviderDisplayName }
 
 /**
  * Hook variant of {@link getProviderDisplayName} for callers that have a

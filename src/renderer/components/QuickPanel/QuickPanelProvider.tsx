@@ -101,6 +101,24 @@ export const QuickPanelProvider: React.FC<React.PropsWithChildren> = ({ children
     [ensureListItemIds]
   )
 
+  const clearPanelState = useCallback(() => {
+    setList([])
+    setOnClose(undefined)
+    setBeforeAction(undefined)
+    setAfterAction(undefined)
+    setFilterFn(undefined)
+    setSortFn(undefined)
+    setTitle(undefined)
+    setSymbol('')
+    setTriggerInfo(undefined)
+    setQueryAnchor(undefined)
+    setTrackInputQuery(false)
+    setInitialSearchText(undefined)
+    setParentPanel(undefined)
+    setManageListExternally(false)
+    setReadOnly(false)
+  }, [])
+
   const open = useCallback(
     (options: QuickPanelOpenOptions) => {
       if (clearTimer.current) {
@@ -153,24 +171,10 @@ export const QuickPanelProvider: React.FC<React.PropsWithChildren> = ({ children
         clearTimer.current = null
         if (!isMountedRef.current) return
 
-        setList([])
-        setOnClose(undefined)
-        setBeforeAction(undefined)
-        setAfterAction(undefined)
-        setFilterFn(undefined)
-        setSortFn(undefined)
-        setTitle(undefined)
-        setSymbol('')
-        setTriggerInfo(undefined)
-        setQueryAnchor(undefined)
-        setTrackInputQuery(false)
-        setInitialSearchText(undefined)
-        setParentPanel(undefined)
-        setManageListExternally(false)
-        setReadOnly(false)
+        clearPanelState()
       }, 200)
     },
-    [onClose]
+    [clearPanelState, onClose]
   )
 
   useEffect(() => {
@@ -181,9 +185,10 @@ export const QuickPanelProvider: React.FC<React.PropsWithChildren> = ({ children
       if (clearTimer.current) {
         window.clearTimeout(clearTimer.current)
         clearTimer.current = null
+        clearPanelState()
       }
     }
-  }, [])
+  }, [clearPanelState])
 
   const registerKeyDownHandler = useCallback((handler: QuickPanelKeyDownHandler | undefined) => {
     const registeredHandler = handler ? { generation: panelGenerationRef.current, handler } : undefined

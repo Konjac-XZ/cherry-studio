@@ -31,15 +31,21 @@ import ProviderListHeaderFilterMenu from './ProviderListHeaderFilterMenu'
 import ProviderListItemWithContextMenu from './ProviderListItemWithContextMenu'
 import ProviderListSearchField from './ProviderListSearchField'
 import { useProviderDelete } from './useProviderDelete'
-import { type SubmitProviderEditorParams, useProviderEditor } from './useProviderEditor'
+import { type ProviderCreationContext, type SubmitProviderEditorParams, useProviderEditor } from './useProviderEditor'
 
 export interface ProviderListProps {
   selectedProviderId?: string
   filterModeHint?: ProviderFilterMode
   onSelectProvider: (providerId: string) => void
+  onCustomProviderCreated?: (providerId: string, hasApiKey: boolean) => void
 }
 
-export default function ProviderList({ selectedProviderId, filterModeHint, onSelectProvider }: ProviderListProps) {
+export default function ProviderList({
+  selectedProviderId,
+  filterModeHint,
+  onSelectProvider,
+  onCustomProviderCreated
+}: ProviderListProps) {
   const { t } = useTranslation()
   const { providers } = useProviders(undefined, { includeHiddenBuiltIns: true })
   const { updateProviderById } = useProviderActions()
@@ -60,6 +66,16 @@ export default function ProviderList({ selectedProviderId, filterModeHint, onSel
     setExpandedGroups((prev) => ({ ...prev, [presetProviderId]: !prev[presetProviderId] }))
   }, [])
 
+  const handleProviderCreated = useCallback(
+    (providerId: string, context: ProviderCreationContext) => {
+      onSelectProvider(providerId)
+      if (context.kind === 'custom') {
+        onCustomProviderCreated?.(providerId, context.hasApiKey)
+      }
+    },
+    [onCustomProviderCreated, onSelectProvider]
+  )
+
   const {
     isOpen: editorOpen,
     mode: editorMode,
@@ -69,7 +85,7 @@ export default function ProviderList({ selectedProviderId, filterModeHint, onSel
     startEdit,
     cancel: cancelEditor,
     submit: submitEditor
-  } = useProviderEditor({ onProviderCreated: onSelectProvider })
+  } = useProviderEditor({ onProviderCreated: handleProviderCreated })
 
   const { deleteProvider } = useProviderDelete()
 

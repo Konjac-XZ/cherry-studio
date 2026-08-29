@@ -27,6 +27,16 @@ type FakeMiniApp = {
   url: string
 }
 
+type FakeAgent = {
+  id: string
+  name: string
+}
+
+type FakeAssistant = {
+  id: string
+  name: string
+}
+
 const mocks = vi.hoisted(() => ({
   emitResourceListReveal: vi.fn(),
   openTab: vi.fn(),
@@ -48,6 +58,10 @@ const mocks = vi.hoisted(() => ({
   tabs: [] as FakeTab[],
   sidebarFavorites: [{ type: 'app', id: 'assistants' }] as SidebarFavoriteItem[],
   sidebarMiniAppFavorites: [] as SidebarFavoriteItem[],
+  sidebarAgentFavorites: [] as SidebarFavoriteItem[],
+  sidebarAssistantFavorites: [] as SidebarFavoriteItem[],
+  agents: [] as FakeAgent[],
+  assistants: [] as FakeAssistant[],
   allApps: [] as FakeMiniApp[],
   visibleMiniApps: null as FakeMiniApp[] | null,
   pinnedMiniApps: [] as FakeMiniApp[],
@@ -70,9 +84,29 @@ vi.mock('@data/hooks/usePreference', () => ({
   usePreference: (key: string) => {
     if (key === 'app.user.name') return ['JD']
     if (key === 'ui.sidebar.favorites')
-      return [[...mocks.sidebarFavorites, ...mocks.sidebarMiniAppFavorites], mocks.setSidebarFavorites]
+      return [
+        [
+          ...mocks.sidebarFavorites,
+          ...mocks.sidebarMiniAppFavorites,
+          ...mocks.sidebarAgentFavorites,
+          ...mocks.sidebarAssistantFavorites
+        ],
+        mocks.setSidebarFavorites
+      ]
     return [undefined]
   }
+}))
+
+vi.mock('@renderer/hooks/agent/useAgent', () => ({
+  useAgents: () => ({
+    agents: mocks.agents
+  })
+}))
+
+vi.mock('@renderer/hooks/useAssistant', () => ({
+  useAssistantsApi: () => ({
+    assistants: mocks.assistants
+  })
 }))
 
 vi.mock('@renderer/hooks/useAvatar', () => ({
@@ -176,6 +210,7 @@ type MockSidebarEntry = {
   label: string
   isActive: (active: { activeItem: string; activeTabId?: string }) => boolean
   onOpen: () => void
+  onOpenNewTab?: () => void
   contextMenuItems?: Array<{ id: string; label: string; enabled?: boolean; onSelect?: () => void }>
 }
 
@@ -229,6 +264,8 @@ vi.mock('../../Sidebar', async () => {
       const activeState = active ?? { activeItem: '' }
       const items = entries?.filter((entry) => parseEntryKey(entry.key).type === 'app')
       const dockedTabs = entries?.filter((entry) => parseEntryKey(entry.key).type === 'mini_app')
+      const agentItems = entries?.filter((entry) => parseEntryKey(entry.key).type === 'agent')
+      const assistantItems = entries?.filter((entry) => parseEntryKey(entry.key).type === 'assistant')
       return isFloating ? (
         <div
           className={isFloatingClosing ? 'slide-out-to-left-2 animate-out' : 'slide-in-from-left-2 animate-in'}
@@ -256,7 +293,10 @@ vi.mock('../../Sidebar', async () => {
                 <button
                   type="button"
                   data-testid={`sidebar-item-${parseEntryKey(item.key).id}`}
-                  onClick={() => item.onOpen()}>
+                  onClick={() => item.onOpen()}
+                  onAuxClick={(e) => {
+                    if (e.button === 1) item.onOpenNewTab?.()
+                  }}>
                   <span>{item.label}</span>
                 </button>
                 {item.contextMenuItems?.map((menuItem) => (
@@ -279,10 +319,63 @@ vi.mock('../../Sidebar', async () => {
                   type="button"
                   data-active={miniTab.isActive(activeState) ? 'true' : 'false'}
                   data-testid={`sidebar-mini-app-${parseEntryKey(miniTab.key).id}`}
-                  onClick={() => miniTab.onOpen()}>
+                  onClick={() => miniTab.onOpen()}
+                  onAuxClick={(e) => {
+                    if (e.button === 1) miniTab.onOpenNewTab?.()
+                  }}>
                   {miniTab.label}
                 </button>
                 {miniTab.contextMenuItems?.map((menuItem) => (
+                  <button
+                    key={menuItem.id}
+                    type="button"
+                    data-testid={`sidebar-menu-${menuItem.id}`}
+                    disabled={menuItem.enabled === false}
+                    onClick={menuItem.onSelect}>
+                    {menuItem.label}
+                  </button>
+                ))}
+              </div>
+            ))}
+          </div>
+          <div data-testid="sidebar-agent-section">
+            {agentItems?.map((agentItem) => (
+              <div key={agentItem.key} role="group" aria-label={agentItem.label}>
+                <button
+                  type="button"
+                  data-testid={`sidebar-agent-${parseEntryKey(agentItem.key).id}`}
+                  onClick={() => agentItem.onOpen()}
+                  onAuxClick={(e) => {
+                    if (e.button === 1) agentItem.onOpenNewTab?.()
+                  }}>
+                  {agentItem.label}
+                </button>
+                {agentItem.contextMenuItems?.map((menuItem) => (
+                  <button
+                    key={menuItem.id}
+                    type="button"
+                    data-testid={`sidebar-menu-${menuItem.id}`}
+                    disabled={menuItem.enabled === false}
+                    onClick={menuItem.onSelect}>
+                    {menuItem.label}
+                  </button>
+                ))}
+              </div>
+            ))}
+          </div>
+          <div data-testid="sidebar-assistant-section">
+            {assistantItems?.map((assistantItem) => (
+              <div key={assistantItem.key} role="group" aria-label={assistantItem.label}>
+                <button
+                  type="button"
+                  data-testid={`sidebar-assistant-${parseEntryKey(assistantItem.key).id}`}
+                  onClick={() => assistantItem.onOpen()}
+                  onAuxClick={(e) => {
+                    if (e.button === 1) assistantItem.onOpenNewTab?.()
+                  }}>
+                  {assistantItem.label}
+                </button>
+                {assistantItem.contextMenuItems?.map((menuItem) => (
                   <button
                     key={menuItem.id}
                     type="button"
@@ -339,6 +432,10 @@ afterEach(() => {
   vi.clearAllMocks()
   mocks.sidebarFavorites = [appFavorite('assistants')]
   mocks.sidebarMiniAppFavorites = []
+  mocks.sidebarAgentFavorites = []
+  mocks.sidebarAssistantFavorites = []
+  mocks.agents = []
+  mocks.assistants = []
   mocks.setSidebarFavorites.mockReset()
   mocks.setSidebarFavorites.mockResolvedValue(undefined)
   mocks.reorderMiniAppsByStatus.mockReset()

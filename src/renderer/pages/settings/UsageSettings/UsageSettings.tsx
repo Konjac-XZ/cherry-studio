@@ -13,6 +13,7 @@ import { usePersistCache } from '@data/hooks/useCache'
 import { useProviders } from '@renderer/hooks/useProvider'
 import { formatCompactNumber } from '@renderer/utils/number'
 import { cn } from '@renderer/utils/style'
+import { createDateFormatter, type DateFormatter } from '@renderer/utils/time'
 import type {
   AiUsageRecordGroupIdentity,
   AiUsageRecordListSortBy,
@@ -88,7 +89,7 @@ const UsageEntriesSection = memo(function UsageEntriesSection({
   range: BoundedTimeRange
   currency: Currency | undefined
   getProviderInfo: (id: string, snapshotName?: string | null) => { id: string; name: string }
-  dateFormatter: Intl.DateTimeFormat
+  dateFormatter: DateFormatter
   timeFormatter: Intl.DateTimeFormat
 }) {
   const [sortBy, setSortBy] = usePersistCache('settings.usage.entry_sort_by')
@@ -224,11 +225,11 @@ function UsageSettings() {
   )
 
   const dateFormatter = useMemo(
-    () => new Intl.DateTimeFormat(i18n.language, { year: 'numeric', month: 'short', day: 'numeric' }),
+    () => createDateFormatter(i18n.language, { year: 'numeric', month: 'short', day: 'numeric' }),
     [i18n.language]
   )
   const monthFormatter = useMemo(
-    () => new Intl.DateTimeFormat(i18n.language, { year: 'numeric', month: 'short' }),
+    () => createDateFormatter(i18n.language, { year: 'numeric', month: 'short' }),
     [i18n.language]
   )
   const percentFormatter = useMemo(
@@ -252,7 +253,7 @@ function UsageSettings() {
   const formatDelta = useCallback((value: number) => percentFormatter.format(value), [percentFormatter])
   const entryDateFormatter = useMemo(
     () =>
-      new Intl.DateTimeFormat(i18n.language, {
+      createDateFormatter(i18n.language, {
         year: 'numeric',
         month: 'short',
         day: 'numeric'

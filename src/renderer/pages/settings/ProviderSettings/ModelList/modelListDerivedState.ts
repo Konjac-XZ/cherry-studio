@@ -1,7 +1,8 @@
 import type { ModelWithStatus } from '@renderer/pages/settings/ProviderSettings/types/healthCheck'
 import type { Model } from '@shared/data/types/model'
-import { ENDPOINT_TYPE } from '@shared/data/types/model'
+import { ENDPOINT_TYPE, parseUniqueModelId } from '@shared/data/types/model'
 import {
+  deriveModelGroupName,
   groupModelsByLayout,
   isEmbeddingModel,
   isGenerateAudioModel,
@@ -11,7 +12,9 @@ import {
   isRerankModel,
   isSpeechToTextModel
 } from '@shared/utils/model'
+import { sortBy, toPairs } from 'es-toolkit/compat'
 
+import { normalizeModelGroupName } from './grouping'
 import { filterProviderSettingModelsByKeywords, getDuplicateProviderSettingModelNames } from './utils'
 
 export type ModelGroups = Record<string, Model[]>
@@ -46,6 +49,10 @@ export type ModelListDerivedState = {
 
 export const MODEL_COUNT_THRESHOLD = 10
 
+interface GroupModelsOptions {
+  preferModelGroup?: boolean
+}
+
 type CalculateModelListDerivedStateInput = {
   models: Model[]
   searchText: string
@@ -53,8 +60,37 @@ type CalculateModelListDerivedStateInput = {
   modelStatuses: ModelWithStatus[]
 }
 
-export const groupModels = (models: Model[], _preserveGroupOrder?: boolean, _options?: unknown): ModelGroups =>
-  Object.fromEntries(groupModelsByLayout(models).map(({ groupName, models: groupModels }) => [groupName, groupModels]))
+export const groupModels = (
+  models: Model[],
+  preserveGroupOrder = false,
+  options: GroupModelsOptions = {}
+): ModelGroups => {
+  if (!options.preferModelGroup) {
+    return Object.fromEntries(
+      groupModelsByLayout(models).map(({ groupName, models: groupModels }) => [groupName, groupModels])
+    )
+  }
+
+  const grouped = models.reduce<ModelGroups>((acc, model) => {
+    const modelId = model.apiModelId ?? parseUniqueModelId(model.id).modelId
+    const inferredGroup = deriveModelGroupName(modelId)
+    const storedGroup = model.group?.trim()
+    const hasLegacyProviderGroup =
+      inferredGroup !== undefined &&
+      storedGroup !== model.providerId &&
+      storedGroup?.toLowerCase() === model.providerId.toLowerCase()
+    const preferredGroup = hasLegacyProviderGroup ? inferredGroup : model.group
+    const groupName = normalizeModelGroupName(preferredGroup, inferredGroup ?? model.providerId)
+    ;(acc[groupName] ??= []).push(model)
+    return acc
+  }, {})
+
+  if (preserveGroupOrder) return grouped
+  return sortBy(toPairs(grouped), [0]).reduce((acc, [key, value]) => {
+    acc[key] = value
+    return acc
+  }, {} as ModelGroups)
+}
 
 // Text-to-speech is the only audio-output sub-kind we can single out from
 // generic audio generation today (the `AUDIO_GENERATION` capability backs

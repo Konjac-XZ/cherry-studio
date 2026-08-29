@@ -1,6 +1,6 @@
 import { EmptyState, Skeleton } from '@cherrystudio/ui'
 import { formatCompactNumber } from '@renderer/utils/number'
-import { getLocaleFirstDayOfWeek } from '@renderer/utils/time'
+import { type DateFormatter, getLocaleFirstDayOfWeek } from '@renderer/utils/time'
 import type { AiUsageRecordGroupIdentity, AiUsageRecordTimelineBucket } from '@shared/data/api/schemas/aiUsageRecords'
 import type { Currency } from '@shared/data/types/model'
 import { lazy, Suspense, useCallback, useMemo } from 'react'
@@ -30,8 +30,8 @@ interface UsageDistributionChartProps {
   topCount: number
   costCurrency?: Currency
   exploreTimelineLoading: boolean
-  dateFormatter: Intl.DateTimeFormat
-  monthFormatter: Intl.DateTimeFormat
+  dateFormatter: DateFormatter
+  monthFormatter: DateFormatter
   getBucketLabel: (bucket: AiUsageRecordGroupIdentity) => string
 }
 

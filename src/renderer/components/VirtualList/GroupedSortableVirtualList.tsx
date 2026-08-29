@@ -2,7 +2,7 @@ import { BlurCancelPointerSensor, type SortableDragHandleProps } from '@cherryst
 import type { DragEndEvent, DragOverEvent, DragStartEvent, UniqueIdentifier } from '@dnd-kit/core'
 import { DndContext, DragOverlay, KeyboardSensor, useDroppable, useSensor, useSensors } from '@dnd-kit/core'
 import { SortableContext, type SortingStrategy, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
+import { CSS, useCombinedRefs } from '@dnd-kit/utilities'
 import type React from 'react'
 import { createContext, memo, use, useCallback, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -595,6 +595,7 @@ function SortableItemRow<TGroup, TItem>({
       droppable: disabled || (dropTargetRowState.isBlocked && !isActiveItem)
     }
   })
+  const setSortableNodeRef = useCombinedRefs(setNodeRef, setActivatorNodeRef)
 
   const content = dragHandle ? (
     <GroupedSortableDragHandleContext
@@ -607,7 +608,7 @@ function SortableItemRow<TGroup, TItem>({
 
   return (
     <div
-      ref={setNodeRef}
+      ref={setSortableNodeRef}
       data-dragging={isDragging || undefined}
       {...dropTargetRowState.props}
       className={joinClassNames(dropTargetRowState.props.className, dropIndicatorPosition ? 'relative' : undefined)}
@@ -701,6 +702,7 @@ function SortableGroupHeaderRow<TGroup, TItem>({
     data,
     disabled: disabled || dropTargetRowState.isBlocked
   })
+  const setSortableNodeRef = useCombinedRefs(setNodeRef, setActivatorNodeRef)
 
   const content = dragHandle ? (
     <GroupedSortableDragHandleContext
@@ -713,7 +715,7 @@ function SortableGroupHeaderRow<TGroup, TItem>({
 
   return (
     <div
-      ref={setNodeRef}
+      ref={setSortableNodeRef}
       data-dragging={isDragging || undefined}
       {...dropTargetRowState.props}
       className={joinClassNames(dropTargetRowState.props.className, dropIndicatorPosition ? 'relative' : undefined)}

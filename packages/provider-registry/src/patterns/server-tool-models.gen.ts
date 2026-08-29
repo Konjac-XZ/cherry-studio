@@ -50,7 +50,6 @@ export const PROVIDER_SERVER_TOOL_MODEL_IDS: Readonly<Record<string, Partial<Rec
         'gpt-4-1-nano',
         'gpt-4o',
         'gpt-4o-mini',
-        'gpt-4o-mini-search-preview',
         'gpt-5',
         'gpt-5-1',
         'gpt-5-1-codex',
@@ -83,7 +82,6 @@ export const PROVIDER_SERVER_TOOL_MODEL_IDS: Readonly<Record<string, Partial<Rec
         'gpt-5-nano',
         'gpt-5-pro',
         'o3',
-        'o3-deep-research',
         'o3-mini',
         'o3-pro',
         'o4-mini'
@@ -173,7 +171,6 @@ export const PROVIDER_SERVER_TOOL_MODEL_IDS: Readonly<Record<string, Partial<Rec
         'gpt-4-1-nano',
         'gpt-4o',
         'gpt-4o-mini',
-        'gpt-4o-mini-search-preview',
         'gpt-5',
         'gpt-5-1',
         'gpt-5-1-codex',
@@ -206,7 +203,6 @@ export const PROVIDER_SERVER_TOOL_MODEL_IDS: Readonly<Record<string, Partial<Rec
         'gpt-5-nano',
         'gpt-5-pro',
         'o3',
-        'o3-deep-research',
         'o3-mini',
         'o3-pro',
         'o4-mini'
@@ -279,12 +275,13 @@ export const PROVIDER_SERVER_TOOL_MODEL_IDS: Readonly<Record<string, Partial<Rec
         'glm-5-2',
         'glm-5-2-fast',
         'glm-5-3',
+        'glm-5-3-flash',
         'glm-5-maas',
         'glm-5-turbo'
       ]
     },
     deepseek: {
-      'web-search': ['deepseek-v4-flash', 'deepseek-v4-flash-latest', 'deepseek-v4-flash-vision-exp', 'deepseek-v4-pro']
+      'web-search': ['deepseek-v4-flash', 'deepseek-v4-flash-vision-exp', 'deepseek-v4-pro']
     },
     'new-api': {
       'web-search': [
@@ -328,7 +325,6 @@ export const PROVIDER_SERVER_TOOL_MODEL_IDS: Readonly<Record<string, Partial<Rec
         'gpt-4-1-nano',
         'gpt-4o',
         'gpt-4o-mini',
-        'gpt-4o-mini-search-preview',
         'gpt-5',
         'gpt-5-1',
         'gpt-5-1-codex',
@@ -361,7 +357,6 @@ export const PROVIDER_SERVER_TOOL_MODEL_IDS: Readonly<Record<string, Partial<Rec
         'gpt-5-nano',
         'gpt-5-pro',
         'o3',
-        'o3-deep-research',
         'o3-mini',
         'o3-pro',
         'o4-mini'
@@ -467,7 +462,6 @@ export const PROVIDER_SERVER_TOOL_MODEL_IDS: Readonly<Record<string, Partial<Rec
         'gpt-4-1-nano',
         'gpt-4o',
         'gpt-4o-mini',
-        'gpt-4o-mini-search-preview',
         'gpt-5',
         'gpt-5-1',
         'gpt-5-1-codex',
@@ -500,7 +494,6 @@ export const PROVIDER_SERVER_TOOL_MODEL_IDS: Readonly<Record<string, Partial<Rec
         'gpt-5-nano',
         'gpt-5-pro',
         'o3',
-        'o3-deep-research',
         'o3-mini',
         'o3-pro',
         'o4-mini'
@@ -526,7 +519,6 @@ export const PROVIDER_SERVER_TOOL_MODEL_IDS: Readonly<Record<string, Partial<Rec
         'gpt-4-1-nano',
         'gpt-4o',
         'gpt-4o-mini',
-        'gpt-4o-mini-search-preview',
         'gpt-5',
         'gpt-5-1',
         'gpt-5-1-codex',
@@ -559,7 +551,6 @@ export const PROVIDER_SERVER_TOOL_MODEL_IDS: Readonly<Record<string, Partial<Rec
         'gpt-5-nano',
         'gpt-5-pro',
         'o3',
-        'o3-deep-research',
         'o3-mini',
         'o3-pro',
         'o4-mini'
@@ -738,7 +729,6 @@ export const PROVIDER_SERVER_TOOL_MODEL_IDS: Readonly<Record<string, Partial<Rec
         'deepseek-v3-2-exp',
         'deepseek-v3-2-maas',
         'deepseek-v4-flash',
-        'deepseek-v4-flash-latest',
         'deepseek-v4-flash-vision-exp',
         'deepseek-v4-pro',
         'glm-4',
@@ -764,6 +754,7 @@ export const PROVIDER_SERVER_TOOL_MODEL_IDS: Readonly<Record<string, Partial<Rec
         'glm-5-2',
         'glm-5-2-fast',
         'glm-5-3',
+        'glm-5-3-flash',
         'glm-5-maas',
         'glm-5-turbo',
         'kimi-k2',
@@ -921,7 +912,6 @@ export const PROVIDER_SERVER_TOOL_MODEL_IDS: Readonly<Record<string, Partial<Rec
         'deepseek-v3-2-exp',
         'deepseek-v3-2-maas',
         'deepseek-v4-flash',
-        'deepseek-v4-flash-latest',
         'deepseek-v4-flash-vision-exp',
         'deepseek-v4-pro',
         'doubao-seed-1-6',
@@ -979,6 +969,7 @@ export const PROVIDER_SERVER_TOOL_MODEL_IDS: Readonly<Record<string, Partial<Rec
         'glm-5-2',
         'glm-5-2-fast',
         'glm-5-3',
+        'glm-5-3-flash',
         'glm-5-maas',
         'glm-5-turbo',
         'gpt-4-1',
@@ -986,7 +977,6 @@ export const PROVIDER_SERVER_TOOL_MODEL_IDS: Readonly<Record<string, Partial<Rec
         'gpt-4-1-nano',
         'gpt-4o',
         'gpt-4o-mini',
-        'gpt-4o-mini-search-preview',
         'gpt-5',
         'gpt-5-1',
         'gpt-5-1-codex',
@@ -1049,7 +1039,6 @@ export const PROVIDER_SERVER_TOOL_MODEL_IDS: Readonly<Record<string, Partial<Rec
         'kimi-latest',
         'minimax-m2-1',
         'o3',
-        'o3-deep-research',
         'o3-mini',
         'o3-pro',
         'o4-mini',

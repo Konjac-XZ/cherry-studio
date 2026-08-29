@@ -106,6 +106,7 @@ export const REASONING_FAMILY_RULES: readonly ReasoningFamilyRule[] = [
   { pattern: 'baichuan-m3$', budget: { min: 0, max: 30000 }, template: true },
   { pattern: '^baichuan-m[23]$' },
   // bailing
+  { pattern: '^ling-3-0-flash-fin$', toggle: true },
   { pattern: 'ring-(?:1t|mini|flash)' },
   { pattern: '^inkling' },
   // bytedance
@@ -133,7 +134,7 @@ export const REASONING_FAMILY_RULES: readonly ReasoningFamilyRule[] = [
   { pattern: '^command-a-plus' },
   { pattern: '^north-mini-code' },
   // deepseek
-  { pattern: '^deepseek-v(?:[4-9]\\d*|[1-9]\\d{1,})(?:\\.\\d+)?', effort: ['none', 'high', 'max'] },
+  { pattern: '^deepseek-v(?:[4-9]\\d*|[1-9]\\d{1,})(?:\\.\\d+)?', effort: ['none', 'low', 'high', 'max'] },
   { pattern: 'deepseek-(?:chat|v3(?:\\.\\d|-\\d))', toggle: true, template: true },
   { pattern: '(\\w+-)?deepseek-v3(?:\\.\\d|-\\d)(?:(\\.|-)(?!speciale$)\\w+)?$' },
   { pattern: 'deepseek-chat' },
@@ -219,6 +220,7 @@ export const REASONING_FAMILY_RULES: readonly ReasoningFamilyRule[] = [
   { pattern: 'hunyuan-t1' },
   { pattern: 'hunyuan-a13b' },
   { pattern: '^hy3' },
+  { pattern: '^hy4-preview$', effort: ['none', 'high'] },
   // upstage
   { pattern: '^solar-pro-?[2-9]' },
   // vercel
@@ -234,6 +236,7 @@ export const REASONING_FAMILY_RULES: readonly ReasoningFamilyRule[] = [
   { pattern: 'mimo-v2[.-]5(?:-pro)?(?!-)|mimo-v2-(?:flash|pro|omni)', toggle: true },
   { pattern: 'mimo-v2[.-]5-pro-ultraspeed' },
   // zhipu
+  { pattern: 'glm-5[.-]3(?:-|$)', effort: ['low', 'high', 'max'], toggle: false },
   { pattern: 'glm-?5|glm-4[.-][567]', toggle: true },
   { pattern: 'glm-zero-preview' },
   { pattern: 'glm-z1' }

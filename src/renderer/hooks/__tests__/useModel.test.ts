@@ -196,7 +196,7 @@ describe('useModelMutations', () => {
     vi.clearAllMocks()
   })
 
-  it('should set up POST, single DELETE, bulk DELETE, single PATCH, and bulk PATCH mutations', () => {
+  it('should set up model CRUD and provider layout mutations', () => {
     renderHook(() => useModelMutations())
 
     const calls = mockUseMutation.mock.calls
@@ -205,7 +205,10 @@ describe('useModelMutations', () => {
     expect(calls.find((c: any[]) => c[0] === 'DELETE' && c[1] === '/models')).toBeDefined()
     expect(calls.find((c: any[]) => c[0] === 'PATCH' && c[1] === '/models/:uniqueModelId*')).toBeDefined()
     expect(calls.find((c: any[]) => c[0] === 'PATCH' && c[1] === '/models')).toBeDefined()
-    expect(mockUseMutation).toHaveBeenCalledTimes(5)
+    expect(
+      calls.find((c: any[]) => c[0] === 'PATCH' && c[1] === '/providers/:providerId/models/order:batch')
+    ).toBeDefined()
+    expect(mockUseMutation).toHaveBeenCalledTimes(6)
   })
 
   it('should configure all mutations to refresh /models', () => {
