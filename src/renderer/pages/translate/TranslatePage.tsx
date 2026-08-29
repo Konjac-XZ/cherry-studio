@@ -1017,6 +1017,7 @@ const TranslatePageContent: FC = () => {
                 showTagFilter={false}
                 showPinnedModels
                 align="end"
+                selectedItemScrollAlign="center"
                 trigger={
                   <Button
                     type="button"

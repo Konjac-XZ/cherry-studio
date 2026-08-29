@@ -582,7 +582,7 @@ describe('ModelSelector', () => {
     expect(refetchPinnedModels).toHaveBeenCalledOnce()
   })
 
-  it('positions the selected model before paint each time the selector opens', () => {
+  it('retries positioning the selected model after layout with the configured alignment', () => {
     const selectedId = 'openai::gpt-3.5' as UniqueModelId
     mocks.useModelSelectorData.mockReturnValue(
       makeData({
@@ -595,9 +595,18 @@ describe('ModelSelector', () => {
     )
     const { rerender } = render(closed)
 
-    rerender(<ModelSelector open multiple={false} trigger={<button type="button">open</button>} onSelect={vi.fn()} />)
+    rerender(
+      <ModelSelector
+        open
+        multiple={false}
+        selectedItemScrollAlign="center"
+        trigger={<button type="button">open</button>}
+        onSelect={vi.fn()}
+      />
+    )
 
-    expect(mocks.scrollToIndex).toHaveBeenCalledWith(2, { align: 'start' })
+    expect(mocks.scrollToIndex).toHaveBeenCalledWith(2, { align: 'center' })
+    expect(mocks.scrollToIndex).toHaveBeenCalledTimes(2)
 
     mocks.scrollToIndex.mockClear()
     mocks.useModelSelectorData.mockReturnValue(
@@ -607,9 +616,18 @@ describe('ModelSelector', () => {
       })
     )
     rerender(closed)
-    rerender(<ModelSelector open multiple={false} trigger={<button type="button">open</button>} onSelect={vi.fn()} />)
+    rerender(
+      <ModelSelector
+        open
+        multiple={false}
+        selectedItemScrollAlign="center"
+        trigger={<button type="button">open</button>}
+        onSelect={vi.fn()}
+      />
+    )
 
-    expect(mocks.scrollToIndex).toHaveBeenCalledWith(1, { align: 'start' })
+    expect(mocks.scrollToIndex).toHaveBeenCalledWith(1, { align: 'center' })
+    expect(mocks.scrollToIndex).toHaveBeenCalledTimes(2)
   })
 
   it('shows an error toast when pinning fails', async () => {

@@ -339,6 +339,7 @@ export function ModelSelector(props: ModelSelectorProps) {
     prioritizedProviderIds = DEFAULT_PRIORITIZED_PROVIDER_IDS,
     side = 'bottom',
     align = 'start',
+    selectedItemScrollAlign = 'start',
     sideOffset = 4,
     contentClassName,
     portalContainer,
@@ -558,9 +559,12 @@ export function ModelSelector(props: ModelSelectorProps) {
 
       if (focusScrollFrameRef.current !== null) {
         window.cancelAnimationFrame(focusScrollFrameRef.current)
-        focusScrollFrameRef.current = null
       }
       listRef.current?.scrollToIndex(index, { align })
+      focusScrollFrameRef.current = window.requestAnimationFrame(() => {
+        focusScrollFrameRef.current = null
+        listRef.current?.scrollToIndex(index, { align })
+      })
     },
     [setFocusedItemKey]
   )
@@ -781,18 +785,18 @@ export function ModelSelector(props: ModelSelectorProps) {
       return
     }
 
-    const targetKey =
+    const selectedItem =
       deferredSearchText || selectedTagsKey.length > 0
-        ? currentModelItems[0]?.key
-        : (currentModelItems.find((item) => visibleSelectedModelIdSetRef.current.has(item.modelId))?.key ??
-          currentModelItems[0]?.key)
+        ? undefined
+        : currentModelItems.find((item) => visibleSelectedModelIdSetRef.current.has(item.modelId))
+    const targetKey = selectedItem?.key ?? currentModelItems[0]?.key
 
     if (targetKey) {
-      // Position the virtual list before paint so opening does not briefly show
-      // the first rows before jumping to the selected model on the next frame.
-      focusItemBeforePaint(targetKey, 'start')
+      // Try before paint to avoid a visible jump, then retry after the virtual
+      // list has measured its asynchronously loaded rows.
+      focusItemBeforePaint(targetKey, selectedItem ? selectedItemScrollAlign : 'start')
     }
-  }, [deferredSearchText, focusItemBeforePaint, isLoading, open, selectedTagsKey])
+  }, [deferredSearchText, focusItemBeforePaint, isLoading, open, selectedItemScrollAlign, selectedTagsKey])
 
   const rowRenderer = useCallback(
     (item: FlatListItem, detailPortalContainer?: SelectorShellLayout['portalContainer']) => {

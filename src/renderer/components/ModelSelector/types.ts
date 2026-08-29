@@ -28,6 +28,7 @@ interface ModelSelectorCommonProps {
   prioritizedProviderIds?: readonly string[]
   side?: ModelSelectorSide
   align?: ModelSelectorAlign
+  selectedItemScrollAlign?: 'start' | 'center' | 'end'
   sideOffset?: number
   contentClassName?: string
   portalContainer?: HTMLElement | null
