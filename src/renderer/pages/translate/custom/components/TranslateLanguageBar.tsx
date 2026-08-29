@@ -1,3 +1,4 @@
+// Downstream-owned Translate UI implementation.
 import { Button, Combobox, type ComboboxOption, Tooltip } from '@cherrystudio/ui'
 import { useLanguages } from '@renderer/hooks/translate'
 import { cn } from '@renderer/utils/style'
@@ -11,7 +12,6 @@ import { ArrowLeftRight } from 'lucide-react'
 import type { FC } from 'react'
 import { useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import stringWidth from 'string-width'
 
 type Props = {
   className?: string
@@ -21,22 +21,15 @@ type Props = {
   onTargetChange: (language: TranslateLangCode) => void
   detectedLanguage: TranslateLangCode | null
   isBidirectional: boolean
-  showSourceControls: boolean
   bidirectionalPair: TranslateBidirectionalPair
+  disabled: boolean
   couldExchange: boolean
   onExchange: () => void
 }
 
 const AUTO_EMOJI = '🌐'
 const UNKNOWN_EMOJI = '🏳️'
-const LANGUAGE_SELECT_MIN_WIDTH = 150
-const LANGUAGE_SELECT_MAX_WIDTH = 260
-const LANGUAGE_SELECT_CHROME_WIDTH = 72
-
-const getLanguageSelectWidth = (options: ComboboxOption[]) => {
-  const maxLabelWidth = Math.max(0, ...options.map((option) => stringWidth(option.label)))
-  return `clamp(${LANGUAGE_SELECT_MIN_WIDTH}px, calc(${maxLabelWidth}ch + ${LANGUAGE_SELECT_CHROME_WIDTH}px), ${LANGUAGE_SELECT_MAX_WIDTH}px)`
-}
+const LANGUAGE_SELECT_WIDTH = 'clamp(64px, 16vw, 200px)'
 
 const TranslateLanguageBar: FC<Props> = ({
   className,
@@ -46,8 +39,8 @@ const TranslateLanguageBar: FC<Props> = ({
   onTargetChange,
   detectedLanguage,
   isBidirectional,
-  showSourceControls,
   bidirectionalPair,
+  disabled,
   couldExchange,
   onExchange
 }) => {
@@ -144,48 +137,42 @@ const TranslateLanguageBar: FC<Props> = ({
       })),
     [getLabel, languageIcon, selectableLanguages]
   )
-  const sourceSelectWidth = useMemo(() => getLanguageSelectWidth(sourceOptions), [sourceOptions])
-  const targetSelectWidth = useMemo(() => getLanguageSelectWidth(targetOptions), [targetOptions])
-
   return (
-    <div className={cn('flex shrink-0 items-center gap-3 px-4 py-4 lg:px-6', className)}>
-      {!isBidirectional && showSourceControls && (
-        <>
-          <Combobox
-            size="default"
-            options={sourceOptions}
-            value={sourceLanguage}
-            onChange={(value) => handleSourceSelect(Array.isArray(value) ? value[0] : value)}
-            placeholder={t('translate.source_language')}
-            searchable={false}
-            emptyText={t('common.no_results')}
-            width={sourceSelectWidth}
-            popoverClassName="w-(--radix-popover-trigger-width)"
-            renderValue={(value, options) => {
-              const option = options.find((item) => item.value === value)
-              return (
-                <div className="flex min-w-0 flex-1 items-center gap-2 truncate">
-                  <span className="sr-only">{t('translate.source_language')}</span>
-                  {option?.icon}
-                  <span className="truncate">{option?.label ?? sourceDisplay.label}</span>
-                </div>
-              )
-            }}
-          />
+    <div className={cn('flex min-w-0 shrink items-center gap-1.5 px-4 py-4 lg:px-6', className)}>
+      <Combobox
+        size="default"
+        options={sourceOptions}
+        value={sourceLanguage}
+        onChange={(value) => handleSourceSelect(Array.isArray(value) ? value[0] : value)}
+        disabled={disabled}
+        placeholder={t('translate.source_language')}
+        searchable={false}
+        emptyText={t('common.no_results')}
+        width={LANGUAGE_SELECT_WIDTH}
+        popoverClassName="w-(--radix-popover-trigger-width)"
+        renderValue={(value, options) => {
+          const option = options.find((item) => item.value === value)
+          return (
+            <div className="flex min-w-0 flex-1 items-center gap-2 truncate">
+              <span className="sr-only">{t('translate.source_language')}</span>
+              {value !== 'auto' && option?.icon}
+              <span className="truncate">{option?.label ?? sourceDisplay.label}</span>
+            </div>
+          )
+        }}
+      />
 
-          <Tooltip content={t('translate.exchange.label')} placement="bottom">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onExchange}
-              disabled={!couldExchange}
-              aria-label={t('translate.exchange.label')}
-              className="h-8 w-8 shrink-0 rounded-full text-muted-foreground shadow-none transition-all hover:bg-accent hover:text-foreground active:scale-90">
-              <ArrowLeftRight size={14} />
-            </Button>
-          </Tooltip>
-        </>
-      )}
+      <Tooltip content={t('translate.exchange.label')} placement="bottom">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onExchange}
+          disabled={!couldExchange}
+          aria-label={t('translate.exchange.label')}
+          className="h-8 w-8 shrink-0 rounded-full text-muted-foreground shadow-none transition-all hover:bg-accent hover:text-foreground active:scale-90">
+          <ArrowLeftRight size={14} />
+        </Button>
+      </Tooltip>
 
       {isBidirectional ? (
         <Button
@@ -194,47 +181,36 @@ const TranslateLanguageBar: FC<Props> = ({
           type="button"
           disabled
           aria-label={`${bidirectionalSource.label} ⇆ ${bidirectionalTarget.label}`}
-          className="h-8 max-w-70 justify-start gap-2 bg-background-subtle px-3 text-foreground text-sm shadow-none disabled:opacity-100">
+          style={{ width: LANGUAGE_SELECT_WIDTH }}
+          className="h-8 min-w-0 max-w-[200px] justify-center gap-2 overflow-hidden bg-background-subtle px-3 text-foreground text-sm shadow-none disabled:opacity-100">
           <span className="sr-only">{`${bidirectionalSource.label} ⇆ ${bidirectionalTarget.label}`}</span>
-          <span className="flex min-w-0 items-center gap-1.5">
-            <span className="text-sm leading-none">{bidirectionalSource.emoji}</span>
-            <span className="truncate">{bidirectionalSource.label}</span>
-          </span>
+          <span className="min-w-0 truncate">{bidirectionalSource.label}</span>
           <ArrowLeftRight size={14} className="shrink-0 text-foreground-tertiary" />
-          <span className="flex min-w-0 items-center gap-1.5">
-            <span className="text-sm leading-none">{bidirectionalTarget.emoji}</span>
-            <span className="truncate">{bidirectionalTarget.label}</span>
-          </span>
+          <span className="min-w-0 truncate">{bidirectionalTarget.label}</span>
         </Button>
       ) : (
-        <>
-          {!showSourceControls && (
-            <span aria-hidden="true" className="shrink-0 text-muted-foreground text-sm">
-              {t('translate.translate_to')}
-            </span>
-          )}
-          <Combobox
-            size="default"
-            options={targetOptions}
-            value={targetLanguage}
-            onChange={(value) => handleTargetSelect(Array.isArray(value) ? value[0] : value)}
-            placeholder={t('translate.target_language')}
-            searchable={false}
-            emptyText={t('common.no_results')}
-            width={targetSelectWidth}
-            popoverClassName="w-(--radix-popover-trigger-width)"
-            renderValue={(value, options) => {
-              const option = options.find((item) => item.value === value)
-              return (
-                <div className="flex min-w-0 flex-1 items-center gap-2 truncate">
-                  <span className="sr-only">{t('translate.target_language')}</span>
-                  {option?.icon ?? languageIcon(target?.emoji ?? UNKNOWN_EMOJI)}
-                  <span className="truncate">{option?.label ?? targetLabel}</span>
-                </div>
-              )
-            }}
-          />
-        </>
+        <Combobox
+          size="default"
+          options={targetOptions}
+          value={targetLanguage}
+          onChange={(value) => handleTargetSelect(Array.isArray(value) ? value[0] : value)}
+          disabled={disabled}
+          placeholder={t('translate.target_language')}
+          searchable={false}
+          emptyText={t('common.no_results')}
+          width={LANGUAGE_SELECT_WIDTH}
+          popoverClassName="w-(--radix-popover-trigger-width)"
+          renderValue={(value, options) => {
+            const option = options.find((item) => item.value === value)
+            return (
+              <div className="flex min-w-0 flex-1 items-center gap-2 truncate">
+                <span className="sr-only">{t('translate.target_language')}</span>
+                {option?.icon ?? languageIcon(target?.emoji ?? UNKNOWN_EMOJI)}
+                <span className="truncate">{option?.label ?? targetLabel}</span>
+              </div>
+            )
+          }}
+        />
       )}
     </div>
   )

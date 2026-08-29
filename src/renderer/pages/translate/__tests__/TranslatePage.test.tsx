@@ -353,7 +353,7 @@ vi.mock('../components/TranslateHistory', () => ({
     ) : null
 }))
 
-vi.mock('../components/TranslateInputPane', () => ({
+vi.mock('../custom/components/TranslateInputPane', () => ({
   default: ({
     text,
     onTextChange,
@@ -407,14 +407,14 @@ vi.mock('../components/TranslateInputPane', () => ({
   }
 }))
 
-vi.mock('../components/TranslateLanguageBar', () => ({
+vi.mock('../custom/components/TranslateLanguageBar', () => ({
   default: (props: { detectedLanguage: string | null; isBidirectional: boolean; sourceLanguage: string }) => {
     languageBarMock(props)
     return null
   }
 }))
 
-vi.mock('../components/TranslateOutputPane', () => ({
+vi.mock('../custom/components/TranslateOutputPane', () => ({
   default: (props: { translating: boolean; translatedContent: string; tokenCount: number; wordCount: number }) => {
     translateOutputPaneMock(props)
     return (
@@ -479,7 +479,7 @@ vi.mock('../pdf/PdfTranslationView', () => {
   return { default: MockPdfTranslationView }
 })
 
-import TranslatePage from '../TranslatePage'
+import TranslatePage from '../custom/TranslatePage'
 
 describe('TranslatePage', () => {
   beforeEach(() => {

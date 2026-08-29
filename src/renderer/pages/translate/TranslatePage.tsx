@@ -1,42 +1,38 @@
 import { Avatar, AvatarFallback, Button } from '@cherrystudio/ui'
 import { useIcon } from '@cherrystudio/ui/icons'
 import { useCache } from '@data/hooks/useCache'
-import { useMultiplePreferences, usePreference } from '@data/hooks/usePreference'
+import { usePreference } from '@data/hooks/usePreference'
 import { loggerService } from '@logger'
-import { useRightPanelActions, useRightPanelState } from '@renderer/components/chat/panes/Shell'
 // Direct `Selector/model` path: the `Selector` barrel re-exports `ModelSelector`
 // via a nested `export *`, which tsgo fails to resolve on main's program (it
 // resolves fine on feat's full program and via this path). Revert to the barrel
 // once main converges with feat. The `Selector` dir is byte-identical to feat.
 import { ModelSelector } from '@renderer/components/ModelSelector'
 import { Navbar } from '@renderer/components/Navbar'
-import {
-  detectLanguageOrUnknown,
-  useDetectLang,
-  useTranslate,
-  useTranslateClipboardRead,
-  useTranslateClipboardWatch,
-  useTranslateClipboardWrite,
-  useTranslateHistory
-} from '@renderer/hooks/translate'
+import { detectLanguageOrUnknown, useDetectLang, useTranslate, useTranslateHistory } from '@renderer/hooks/translate'
 import { useCodeStyle } from '@renderer/hooks/useCodeStyle'
+import { useDrag } from '@renderer/hooks/useDrag'
+import { useFiles } from '@renderer/hooks/useFiles'
+import { useJob } from '@renderer/hooks/useJob'
 import { useModels } from '@renderer/hooks/useModel'
+import { useNotesSettings } from '@renderer/hooks/useNotesSettings'
 import { useSmoothStream } from '@renderer/hooks/useSmoothStream'
+import { useTemporaryValue } from '@renderer/hooks/useTemporaryValue'
 import { useTimer } from '@renderer/hooks/useTimer'
 import { ipcApi, useIpcOn } from '@renderer/ipc'
+import { exportContentToNotes } from '@renderer/services/ExportService'
 import { toast } from '@renderer/services/toast'
-import { translationWorkspaceService } from '@renderer/services/translation'
-import type { FileMetadata } from '@renderer/types/file'
+import { type FileMetadata, isImageFileMetadata } from '@renderer/types/file'
 import { formatErrorMessageWithPrefix } from '@renderer/utils/error'
+import { getFileExtension, isTextFile } from '@renderer/utils/file'
+import { getFilesFromDropEvent, getTextFromDropEvent } from '@renderer/utils/input'
 import { getModelLogoRef } from '@renderer/utils/model'
 import { cn } from '@renderer/utils/style'
 import {
-  applyRegexReplacementRules,
-  applyTranslationPostProcessors,
+  createInputScrollHandler,
+  createOutputScrollHandler,
   determineTargetLanguage,
-  getTranslateModifierLabel,
-  isEquivalentBidirectionalLanguage,
-  normalizePersistedTranslateFontSize
+  UNKNOWN_LANG_CODE
 } from '@renderer/utils/translate'
 import type { TranslateLangCode } from '@shared/data/preference/preferenceTypes'
 import {
@@ -44,47 +40,25 @@ import {
   BABELDOC_TOOL_NAME,
   getBabelDocInstallationStatus
 } from '@shared/data/presets/binaryTools'
+import { BUILTIN_LANGUAGE } from '@shared/data/presets/translateLanguages'
+import { FileProcessingJobOutputSchema } from '@shared/data/types/fileProcessing'
 import { isUniqueModelId, type Model as SelectorModel, type UniqueModelId } from '@shared/data/types/model'
 import type { TranslateHistory } from '@shared/data/types/translate'
 import { AbsoluteFilePathSchema } from '@shared/types/file'
+import { MB } from '@shared/utils/constants'
+import { createFilePathHandle } from '@shared/utils/file'
+import { documentExts, imageExts, textExts } from '@shared/utils/file'
 import { isGatewayRoutableModel, isNonChatModel } from '@shared/utils/model'
 import { isEmpty } from 'es-toolkit/compat'
-import {
-  CirclePause,
-  ClipboardCheck,
-  CodeXml,
-  Columns2,
-  History,
-  Languages,
-  LoaderCircle,
-  Rows2,
-  SlidersHorizontal,
-  SpellCheck,
-  WandSparkles
-} from 'lucide-react'
-import type { FC, MouseEvent as ReactMouseEvent } from 'react'
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { CirclePause, History, Languages, LoaderCircle, SlidersHorizontal } from 'lucide-react'
+import type { ClipboardEvent, DragEvent, FC } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import DraggableDivider from './components/DraggableDivider'
-import FlipButton from './components/FlipButton'
-import OcrJobWatcher from './components/OcrJobWatcher'
-import PolishTranslateToggleButton from './components/PolishTranslateToggleButton'
 import TranslateHistoryList from './components/TranslateHistory'
 import TranslateInputPane from './components/TranslateInputPane'
 import TranslateLanguageBar from './components/TranslateLanguageBar'
 import TranslateOutputPane from './components/TranslateOutputPane'
-import { TRANSLATE_TRACE_PANE_ID, TranslateRightPane } from './components/TranslateRightPane'
-import TranslateToolbarToggleButton from './components/TranslateToolbarToggleButton'
-import { useTranslateAutoPasteTrigger } from './hooks/useTranslateAutoPasteTrigger'
-import { type TranslateBusyStatus, useTranslateBusyLabel } from './hooks/useTranslateBusyLabel'
-import { useTranslateCounters, useTranslateOutputCounters } from './hooks/useTranslateCounters'
-import { useTranslateFileInput } from './hooks/useTranslateFileInput'
-import { useTranslateInvocationMode } from './hooks/useTranslateInvocationMode'
-import { useTranslateLanguageControls } from './hooks/useTranslateLanguageControls'
-import { useTranslateLayout } from './hooks/useTranslateLayout'
-import { useTranslateToolbarVisibility } from './hooks/useTranslateToolbarVisibility'
-import { type TranslateFlowStage, useTranslationFlowRunner } from './hooks/useTranslationFlowRunner'
 import type {
   BabelDocAvailability,
   PdfTranslationFile,
@@ -94,10 +68,13 @@ import type {
 } from './pdf/PdfTranslationView'
 import TranslateSettings from './TranslateSettings'
 import type { TranslationFiles } from './translationFiles'
+import { usePacedMarkdownOutput } from './usePacedMarkdownOutput'
 
 const PdfTranslationView = lazy(() => import('./pdf/PdfTranslationView'))
 
 const logger = loggerService.withContext('TranslatePage')
+const PRIORITIZED_PROVIDER_IDS = ['cherryai', 'openai', 'anthropic', 'google', 'gemini', 'openrouter']
+const TRANSLATION_RESULT_TITLE_MAX_LENGTH = 80
 
 const useBabelDoc = (enabled: boolean) => {
   const { t } = useTranslation()
@@ -134,9 +111,13 @@ const useBabelDoc = (enabled: boolean) => {
     if (installing) return
     setInstalling(true)
     try {
+      // A fresh install asks for the exact version too, not `@latest`: that
+      // resolves against whichever PyPI mirror answers, and a lagging mirror
+      // hands back a build Cherry's progress parser predates — which the next
+      // availability check flags as outdated, costing a second full download.
       await ipcApi.request('binary.install_tool', {
         name: BABELDOC_TOOL_NAME,
-        ...(availability === 'outdated' ? { targetVersion: BABELDOC_MINIMUM_VERSION } : {})
+        targetVersion: BABELDOC_MINIMUM_VERSION
       })
       setAvailability('available')
     } catch (error) {
@@ -146,7 +127,7 @@ const useBabelDoc = (enabled: boolean) => {
     } finally {
       setInstalling(false)
     }
-  }, [availability, installing, t])
+  }, [installing, t])
 
   const refresh = useCallback(() => setAvailabilityRevision((revision) => revision + 1), [])
 
@@ -154,61 +135,106 @@ const useBabelDoc = (enabled: boolean) => {
 }
 const getModelInitial = (model: SelectorModel) => model.name.trim().charAt(0) || 'M'
 
-const TranslatePageContent: FC = () => {
+const getTitleFromTranslationResult = (translationResult: string) =>
+  translationResult.trim().split(/\r?\n/, 1)[0].slice(0, TRANSLATION_RESULT_TITLE_MAX_LENGTH)
+
+type OcrJob = {
+  jobId: string
+}
+
+/**
+ * Observes a single image OCR job via `useJob` and reports its terminal result.
+ * Mounted only while the translate page tracks an active job.
+ */
+const OcrJobWatcher: FC<{
+  job: OcrJob
+  onCompleted: (text: string) => void
+  onSettled: (jobId: string) => void
+}> = ({ job, onCompleted, onSettled }) => {
   const { t } = useTranslation()
-  const rightPanelActions = useRightPanelActions()
-  const rightPanelState = useRightPanelState()
+  const { data: snapshot, isTerminal, error } = useJob(job.jobId)
+  const handledRef = useRef(false)
+
+  useEffect(() => {
+    if (handledRef.current) return
+
+    const normalizeError = (error: unknown, fallbackMessage: string) => {
+      if (error instanceof Error) return error
+      if (error && typeof error === 'object' && 'message' in error) {
+        const message = (error as { message?: unknown }).message
+        if (typeof message === 'string' && message) return new Error(message)
+      }
+      return new Error(fallbackMessage)
+    }
+
+    const rejectJob = (error: unknown, fallbackMessage: string) => {
+      const normalizedError = normalizeError(error, fallbackMessage)
+      const prefix = t('translate.files.error.ocr')
+      toast.error(formatErrorMessageWithPrefix(normalizedError, prefix))
+    }
+
+    // Job became unobservable (post-GC 404 / DataApi fetch failure): surface it once
+    // and unlock the input pane instead of spinning behind the overlay forever.
+    if (error) {
+      handledRef.current = true
+      logger.error('Failed to observe OCR job.', error, { jobId: job.jobId })
+      rejectJob(error, 'Image OCR job became unobservable')
+      onSettled(job.jobId)
+      return
+    }
+
+    if (!isTerminal || !snapshot) return
+    handledRef.current = true
+
+    if (snapshot.status === 'completed') {
+      const parsedOutput = FileProcessingJobOutputSchema.safeParse(snapshot.output)
+      if (parsedOutput.success && parsedOutput.data.artifact.kind === 'text') {
+        onCompleted(parsedOutput.data.artifact.text)
+        toast.success(t('translate.files.ocr_completed'))
+      } else {
+        const failure = new Error('Image OCR completed without a text artifact')
+        if (!parsedOutput.success) {
+          logger.warn('Image OCR job output failed schema validation.', parsedOutput.error, { jobId: job.jobId })
+        } else {
+          logger.warn('Image OCR job completed without a text artifact.', { jobId: job.jobId })
+        }
+        rejectJob(failure, failure.message)
+      }
+    } else {
+      rejectJob(snapshot.error, 'Image OCR failed')
+    }
+
+    onSettled(job.jobId)
+  }, [isTerminal, snapshot, error, job, onCompleted, onSettled, t])
+
+  return null
+}
+
+const TranslatePage: FC = () => {
+  const { t } = useTranslation()
   const [translateModelId, setTranslateModelId] = usePreference('feature.translate.model_id')
-  const { models, isLoading: modelsLoading } = useModels({ enabled: true })
+  const { models } = useModels({ enabled: true })
   const detectLanguage = useDetectLang()
-  const translateHistory = useTranslateHistory()
+  const { add: addHistory, update: updateHistory } = useTranslateHistory({
+    update: { showErrorToast: false, rethrowError: false }
+  })
+  const { notesPath } = useNotesSettings()
   const { shikiMarkdownIt } = useCodeStyle()
+  const { onSelectFile, selecting, clearFiles } = useFiles({ extensions: [...imageExts, ...textExts, ...documentExts] })
   const { setTimeoutTimer } = useTimer()
   const [sourceLanguage, setSourceLanguage] = usePreference('feature.translate.page.source_language')
   const [targetLanguage, setTargetLanguage] = usePreference('feature.translate.page.target_language')
   const [autoCopy] = usePreference('feature.translate.page.auto_copy')
-  const [htmlConversionEnabled, setHtmlConversionEnabled] = usePreference(
-    'feature.translate.page.html_conversion_on_paste'
-  )
-  const [markdownFormattingEnabled] = usePreference('feature.translate.page.format_markdown_on_paste')
   const [bidirectionalPair] = usePreference('feature.translate.page.bidirectional_pair')
-  const [nativeLanguage] = usePreference('feature.translate.native_language')
   const [isScrollSyncEnabled] = usePreference('feature.translate.page.scroll_sync')
   const [isBidirectional] = usePreference('feature.translate.page.bidirectional_enabled')
   const [enableMarkdown] = usePreference('feature.translate.page.enable_markdown')
-  const [flowSettings, updateFlowSettings] = useMultiplePreferences({
-    polishEnabled: 'feature.translate.polish.enabled',
-    postProcessingEnabled: 'feature.translate.post_processing.enabled',
-    englishStraightQuotes: 'feature.translate.post_processing.english_straight_quotes',
-    zhSmartQuotes: 'feature.translate.post_processing.zh_smart_quotes',
-    zhTextSpacing: 'feature.translate.post_processing.zh_text_spacing',
-    regexRules: 'feature.translate.post_processing.regex_rules',
-    jsonStructureView: 'feature.translate.page.json_structure_view',
-    jsonCopySeparator: 'feature.translate.page.json_structure_copy_separator',
-    jsonCopyBlankLine: 'feature.translate.page.json_structure_copy_blank_line',
-    fontSize: 'feature.translate.page.font_size',
-    layoutOverride: 'feature.translate.page.layout_override',
-    nativeToOtherModelId: 'feature.translate.model.native_to_other_id',
-    nativeToOtherFollowsGlobal: 'feature.translate.model.native_to_other_follows_global',
-    otherToNativeModelId: 'feature.translate.model.other_to_native_id',
-    otherToNativeFollowsGlobal: 'feature.translate.model.other_to_native_follows_global',
-    nativeToOtherPrompt: 'feature.translate.prompt.native_to_other',
-    otherToNativePrompt: 'feature.translate.prompt.other_to_native',
-    polishPrompt: 'feature.translate.prompt.polish'
-  })
 
   const [translateInput, setTranslateInput] = useCache('translate.input')
   const [translateOutput, setTranslateOutput] = useCache('translate.output')
   const [isDetecting, setIsDetecting] = useCache('translate.detecting')
 
-  const {
-    complete: smoothComplete,
-    reset: smoothReset,
-    update: smoothUpdate
-  } = useSmoothStream({
-    onUpdate: setTranslateOutput
-  })
-  const onStreamResponse = useCallback((value: string) => smoothUpdate(value, false), [smoothUpdate])
+  const { reset: smoothReset, update: smoothUpdate } = useSmoothStream({ onUpdate: setTranslateOutput })
 
   const {
     translate: runTranslate,
@@ -216,135 +242,37 @@ const TranslatePageContent: FC = () => {
     cancel
   } = useTranslate({
     loggerContext: 'TranslatePage',
-    onResponse: (value, isComplete) => {
-      const snapshot = translationWorkspaceService.getSnapshot()
-      translationWorkspaceService.update(snapshot.runId, {
-        rawOutput: value,
-        status: isComplete ? 'processing' : 'running'
-      })
-      onStreamResponse(value)
-    },
-    taskOwner: translationWorkspaceService
+    onResponse: smoothUpdate
   })
 
   const [renderedMarkdown, setRenderedMarkdown] = useState<string>('')
-  const [rawOutput, setRawOutput] = useState(translateOutput)
-  const [reportedOutputTokens, setReportedOutputTokens] = useState<number | undefined>()
-  const [outputTargetLanguage, setOutputTargetLanguage] = useState<TranslateLangCode>(targetLanguage)
-  const [flowStage, setFlowStage] = useState<TranslateFlowStage>('idle')
+  const [copied, setCopied] = useTemporaryValue(false, 2000)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [detectedLanguage, setDetectedLanguage] = useState<TranslateLangCode | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
-  const [ocrJobId, setOcrJobId] = useState<string | null>(null)
+  const [ocrJob, setOcrJob] = useState<OcrJob | null>(null)
   const [pdfFile, setPdfFile] = useState<PdfTranslationFile | null>(null)
+  /** Set only when reopening a finished translation from history; `key` remounts the view. */
   const [restoredPdf, setRestoredPdf] = useState<{ output: PdfTranslationOutput; key: string } | null>(null)
   const [pdfStatus, setPdfStatus] = useState<PdfTranslationStatus>({ phase: 'idle', running: false })
   const [pdfHandleReady, setPdfHandleReady] = useState(false)
   const [pdfTextFallbackActive, setPdfTextFallbackActive] = useState(false)
-  const handleSettingsMouseDown = useCallback((event: ReactMouseEvent<HTMLButtonElement>) => {
-    if (event.button === 1) event.preventDefault()
-  }, [])
-  const handleSettingsAuxClick = useCallback(
-    (event: ReactMouseEvent<HTMLButtonElement>) => {
-      if (event.button !== 1) return
-      event.preventDefault()
-      event.stopPropagation()
-      if (rightPanelState.isActive(TRANSLATE_TRACE_PANE_ID)) {
-        rightPanelActions.close()
-        return
-      }
-      if (!rightPanelActions.tryOpen(TRANSLATE_TRACE_PANE_ID, { userInitiated: true })) return
-      setSettingsOpen(false)
-      setHistoryOpen(false)
-    },
-    [rightPanelActions, rightPanelState]
-  )
   const [pdfTextOcrRequired, setPdfTextOcrRequired] = useState(false)
   const [isPdfTextExtracting, setIsPdfTextExtracting] = useState(false)
-  const workspaceSnapshot = useSyncExternalStore(
-    translationWorkspaceService.subscribe,
-    translationWorkspaceService.getSnapshot,
-    translationWorkspaceService.getSnapshot
-  )
-  const isOcrRunning = ocrJobId !== null
+  const isOcrRunning = ocrJob !== null
   const isPdfMode = pdfFile !== null
   const isTranslationRunning = isTranslating || pdfStatus.running
   const babelDoc = useBabelDoc(isPdfMode)
-  const { tokenCount, wordCount } = useTranslateCounters({
-    input: translateInput,
-    nativeLanguage,
-    nativeToOtherPrompt: flowSettings.nativeToOtherPrompt,
-    otherToNativePrompt: flowSettings.otherToNativePrompt,
-    polishEnabled: flowSettings.polishEnabled,
-    polishPrompt: flowSettings.polishPrompt,
-    targetLanguage
-  })
-  const { tokenCount: outputTokenCount, wordCount: outputWordCount } = useTranslateOutputCounters(
-    translateOutput,
-    reportedOutputTokens
-  )
 
   const inputScrollRef = useRef<HTMLDivElement>(null)
   const outputTextRef = useRef<HTMLDivElement>(null)
   const isProgrammaticScroll = useRef(false)
-  const paneContainerRef = useRef<HTMLDivElement>(null)
-  const forcePlainTextPasteRef = useRef(false)
   const pdfHandleRef = useRef<PdfTranslationHandle | null>(null)
   const pdfTextCacheRef = useRef<{ filePath: string; text: string } | null>(null)
   const pdfTextRequestIdRef = useRef(0)
   const pdfTextFallbackStartedRef = useRef(false)
   const prePdfOutputRef = useRef<string | null>(null)
-  const prePdfRawOutputRef = useRef<string | null>(null)
-  const rawOutputRef = useRef(rawOutput)
-  const translateOutputRef = useRef(translateOutput)
-  const preprocessedSourceTextRef = useRef<string | null>(null)
-  rawOutputRef.current = rawOutput
-  translateOutputRef.current = translateOutput
-
-  const beforeTranslationRegexRules = useMemo(
-    () => flowSettings.regexRules.filter((rule) => rule.stage === 'before'),
-    [flowSettings.regexRules]
-  )
-  const afterTranslationRegexRules = useMemo(
-    () => flowSettings.regexRules.filter((rule) => rule.stage !== 'before'),
-    [flowSettings.regexRules]
-  )
-  const preprocessTranslation = useCallback(
-    (source: string) => applyRegexReplacementRules(source, beforeTranslationRegexRules),
-    [beforeTranslationRegexRules]
-  )
-  const preprocessTranslationForRun = useCallback(
-    (source: string) => (preprocessedSourceTextRef.current === source ? source : preprocessTranslation(source)),
-    [preprocessTranslation]
-  )
-
-  useEffect(() => {
-    preprocessedSourceTextRef.current = null
-  }, [preprocessTranslation])
-
-  const processTranslation = useCallback(
-    (raw: string, actualTargetLanguage: TranslateLangCode) =>
-      applyTranslationPostProcessors(raw, {
-        enabled: flowSettings.postProcessingEnabled,
-        markdownEnabled: enableMarkdown,
-        targetLanguage: actualTargetLanguage,
-        features: {
-          enMarkdownStraightQuotes: flowSettings.englishStraightQuotes,
-          zhCnMarkdownSmartQuotes: flowSettings.zhSmartQuotes,
-          zhMarkdownTextSpacing: flowSettings.zhTextSpacing
-        },
-        regexReplacementRules: afterTranslationRegexRules
-      }),
-    [
-      enableMarkdown,
-      flowSettings.englishStraightQuotes,
-      flowSettings.postProcessingEnabled,
-      afterTranslationRegexRules,
-      flowSettings.zhSmartQuotes,
-      flowSettings.zhTextSpacing
-    ]
-  )
 
   const selectedModelId = useMemo(
     () => (translateModelId && isUniqueModelId(translateModelId) ? translateModelId : undefined),
@@ -353,37 +281,26 @@ const TranslatePageContent: FC = () => {
 
   const modelsById = useMemo(() => new Map(models.map((model) => [model.id, model])), [models])
   const selectedModel = selectedModelId ? modelsById.get(selectedModelId) : undefined
-  const effectiveToolbarTargetLanguage = useMemo(() => {
-    const effectiveSourceLanguage = sourceLanguage === 'auto' ? detectedLanguage : sourceLanguage
-    if (!isBidirectional || !effectiveSourceLanguage) return targetLanguage
-
-    const result = determineTargetLanguage(
-      effectiveSourceLanguage,
-      targetLanguage,
-      true,
-      bidirectionalPair,
-      nativeLanguage
-    )
-    return result.success ? result.language : targetLanguage
-  }, [bidirectionalPair, detectedLanguage, isBidirectional, nativeLanguage, sourceLanguage, targetLanguage])
-  const towardNative = Boolean(
-    nativeLanguage && isEquivalentBidirectionalLanguage(effectiveToolbarTargetLanguage, nativeLanguage)
-  )
-  const directionalModelId = towardNative ? flowSettings.otherToNativeModelId : flowSettings.nativeToOtherModelId
-  const directionalModelFollowsGlobal = towardNative
-    ? flowSettings.otherToNativeFollowsGlobal
-    : flowSettings.nativeToOtherFollowsGlobal
-  const effectiveDirectionalModelId =
-    !directionalModelFollowsGlobal &&
-    directionalModelId &&
-    isUniqueModelId(directionalModelId) &&
-    modelsById.has(directionalModelId)
-      ? directionalModelId
-      : selectedModelId
-  const isUsingNonGlobalTranslationModel =
-    !isPdfMode && Boolean(selectedModelId && effectiveDirectionalModelId !== selectedModelId)
   const isSelectedPdfModelRoutable = !!selectedModel && isGatewayRoutableModel(selectedModel)
   const selectedModelIcon = useIcon(selectedModel ? getModelLogoRef(selectedModel) : undefined)
+
+  const resetPdfMode = useCallback(() => {
+    pdfTextRequestIdRef.current += 1
+    pdfHandleRef.current = null
+    pdfTextCacheRef.current = null
+    if (pdfTextFallbackActive && isTranslating) cancel()
+    if (pdfTextFallbackStartedRef.current) setTranslateOutput(prePdfOutputRef.current ?? '')
+    pdfTextFallbackStartedRef.current = false
+    prePdfOutputRef.current = null
+    setPdfHandleReady(false)
+    setPdfStatus({ phase: 'idle', running: false })
+    setPdfTextFallbackActive(false)
+    setPdfTextOcrRequired(false)
+    setIsPdfTextExtracting(false)
+    setIsProcessing(false)
+    setPdfFile(null)
+    setRestoredPdf(null)
+  }, [cancel, isTranslating, pdfTextFallbackActive, setTranslateOutput])
 
   const safePersist = useCallback(
     async (persistPromise: Promise<unknown>, actionName: string) => {
@@ -400,34 +317,40 @@ const TranslatePageContent: FC = () => {
   const appendTranslateInput = useCallback(
     (text: string) => {
       if (isEmpty(text)) return
-      preprocessedSourceTextRef.current = null
       // Functional update resolves against the latest stored value, so a prior
       // synchronous setTranslateInput(value) is reflected here without a ref.
       setTranslateInput((prev) => prev + text)
-      setDetectedLanguage(null)
     },
     [setTranslateInput]
   )
 
   const handleInputChange = useCallback(
     (value: string) => {
-      preprocessedSourceTextRef.current = null
       setTranslateInput(value)
-      setDetectedLanguage(null)
       if (isEmpty(value)) {
-        setRawOutput('')
         setTranslateOutput('')
       }
     },
     [setTranslateInput, setTranslateOutput]
   )
 
-  const { readClipboardForTranslate, readClipboardPlainTextForWatch } = useTranslateClipboardRead({
-    htmlConversionEnabled,
-    markdownFormattingEnabled,
-    preprocessText: preprocessTranslation
-  })
-  const { copied, copy, lastWrittenRef } = useTranslateClipboardWrite()
+  const copy = useCallback(
+    async (value: string) => {
+      await navigator.clipboard.writeText(value)
+      setCopied(true)
+    },
+    [setCopied]
+  )
+
+  const onCopyInput = useCallback(async () => {
+    if (!translateInput) return
+    try {
+      await copy(translateInput)
+    } catch (error) {
+      logger.error('Failed to copy source text:', error as Error)
+      toast.error(t('common.copy_failed'))
+    }
+  }, [copy, t, translateInput])
 
   const onCopyOutput = useCallback(async () => {
     try {
@@ -438,110 +361,147 @@ const TranslatePageContent: FC = () => {
     }
   }, [copy, t, translateOutput])
 
-  const {
-    abortSilently: abortTextTranslationSilently,
-    onAbort: abortTextTranslation,
-    onTranslate: runTextTranslation
-  } = useTranslationFlowRunner({
-    autoCopy,
-    bidirectionalPair,
-    cancel,
-    copy,
-    detectLanguage: (text, signal) =>
-      detectLanguageOrUnknown(
-        text,
-        detectLanguage,
-        (error) => {
-          logger.error('Failed to detect language', error as Error)
-        },
-        signal
-      ),
-    flowStage,
-    history: translateHistory,
-    isBidirectional,
-    isDetecting,
-    isTranslating,
-    mode: flowSettings.polishEnabled ? 'polish_then_translate' : 'translate',
-    nativeLanguage,
-    preprocessTranslation: preprocessTranslationForRun,
-    processTranslation,
-    runTranslate,
-    selectedModelAvailable: selectedModelId !== undefined,
-    setDetectedLanguage,
-    setFlowStage,
-    setIsDetecting,
-    setOutputTargetLanguage,
-    setReportedOutputTokens,
-    setRawOutput,
-    setSourceText: setTranslateInput,
-    setTranslateOutput,
-    setTimeoutTimer,
-    smoothComplete,
-    smoothReset,
-    sourceLanguage,
-    sourceText: translateInput,
-    t,
-    targetLanguage
-  })
+  const onExportOutputToNotes = useCallback(() => {
+    const translationResult = translateOutput.trim()
+    if (!translationResult) return
 
-  const {
-    handlePrimaryClick,
-    trigger: onPrimaryTranslate,
-    triggerPolishOnce
-  } = useTranslateInvocationMode({
-    persistentPolishEnabled: flowSettings.polishEnabled,
-    run: runTextTranslation
-  })
-  const isFlowBusy = flowStage !== 'idle' || isTranslating || isDetecting
-  const busyStatus: TranslateBusyStatus | null =
-    isDetecting || flowStage === 'detecting'
-      ? 'detecting'
-      : flowStage === 'polishing'
-        ? 'polishing'
-        : isFlowBusy || isProcessing
-          ? 'processing'
-          : null
-  const translateBusyLabel = useTranslateBusyLabel(busyStatus)
+    void exportContentToNotes(getTitleFromTranslationResult(translationResult), translationResult, notesPath).catch(
+      (error) => {
+        logger.error('Failed to export output to notes:', error as Error)
+      }
+    )
+  }, [notesPath, translateOutput])
 
-  const resetPdfMode = useCallback(() => {
-    pdfTextRequestIdRef.current += 1
-    pdfHandleRef.current = null
-    pdfTextCacheRef.current = null
-    if (pdfTextFallbackActive || pdfTextFallbackStartedRef.current) abortTextTranslationSilently()
-    if (pdfTextFallbackStartedRef.current) {
-      const restoredRawOutput = prePdfRawOutputRef.current ?? ''
-      rawOutputRef.current = restoredRawOutput
-      setRawOutput(restoredRawOutput)
-      setTranslateOutput(prePdfOutputRef.current ?? '')
-    }
-    pdfTextFallbackStartedRef.current = false
-    prePdfOutputRef.current = null
-    prePdfRawOutputRef.current = null
-    setPdfHandleReady(false)
-    setPdfStatus({ phase: 'idle', running: false })
-    setPdfTextFallbackActive(false)
-    setPdfTextOcrRequired(false)
-    setIsPdfTextExtracting(false)
-    setIsProcessing(false)
-    setReportedOutputTokens(undefined)
-    setPdfFile(null)
-    setRestoredPdf(null)
-    // A completed text-fallback run belongs to the PDF workspace that is being
-    // closed. Clear its terminal snapshot so a later React render cannot
-    // hydrate the discarded PDF output back into the text editor.
-    translationWorkspaceService.clearTerminal()
-  }, [abortTextTranslationSilently, pdfTextFallbackActive, setTranslateOutput])
+  const translate = useCallback(
+    async (
+      rawText: string,
+      actualSourceLanguage: TranslateLangCode | null,
+      actualTargetLanguage: TranslateLangCode
+    ): Promise<TranslateHistory | undefined> => {
+      if (isTranslating) return
 
-  const translatePdfText = useCallback(async () => {
-    if (!pdfFile || !selectedModelId || isProcessing || isFlowBusy) return
+      smoothReset('')
+      const translated = await runTranslate(rawText, actualTargetLanguage)
+      if (!translated) {
+        return
+      }
+      toast.success(t('translate.complete'))
+
+      if (autoCopy) {
+        setTimeoutTimer(
+          'auto-copy',
+          async () => {
+            try {
+              await copy(translated)
+            } catch (error) {
+              logger.error('Failed to auto copy translated text', error as Error)
+              toast.error(t('translate.error.auto_copy_failed'))
+            }
+          },
+          100
+        )
+      }
+
+      return addHistory({
+        sourceText: rawText,
+        targetText: translated,
+        sourceLanguage: actualSourceLanguage,
+        targetLanguage: actualTargetLanguage
+      })
+    },
+    [addHistory, autoCopy, copy, isTranslating, runTranslate, setTimeoutTimer, smoothReset, t]
+  )
+
+  // Off the translation critical path: a failed detection or patch just leaves
+  // the stored source language unset, so every outcome stays silent.
+  //
+  // Backfills for different history ids can overlap on this one template-path
+  // mutation, which shares `isMutating`/`error` across them (see
+  // docs/references/data/data-api-in-renderer.md). Harmless today because
+  // nothing here reads that state — revisit if this call site ever does.
+  const backfillHistorySourceLanguage = useCallback(
+    (historyId: string, rawText: string) => {
+      void detectLanguageOrUnknown(rawText, detectLanguage, () => undefined)
+        .then((language) => {
+          if (language === UNKNOWN_LANG_CODE) return
+          return updateHistory(historyId, { sourceLanguage: language })
+        })
+        .catch(() => undefined)
+    },
+    [detectLanguage, updateHistory]
+  )
+
+  const translateTextContent = useCallback(
+    async (rawText: string, allowBidirectional: boolean, isCurrent?: () => boolean): Promise<void> => {
+      if (!rawText.trim() || !selectedModelId || isDetecting || isTranslating) return
+
+      if (allowBidirectional && !isBidirectional) {
+        setDetectedLanguage(null)
+        const history = await translate(rawText, null, targetLanguage)
+        if (history) backfillHistorySourceLanguage(history.id, rawText)
+        return
+      }
+
+      let actualSourceLanguage = sourceLanguage
+      if ((allowBidirectional && isBidirectional) || sourceLanguage === 'auto') {
+        setIsDetecting(true)
+        try {
+          actualSourceLanguage = await detectLanguageOrUnknown(rawText, detectLanguage, (error) => {
+            logger.error('Failed to detect language', error as Error)
+          })
+          if (isCurrent && !isCurrent()) return
+          setDetectedLanguage(actualSourceLanguage)
+        } finally {
+          setIsDetecting(false)
+        }
+      } else {
+        setDetectedLanguage(null)
+      }
+
+      const shouldUseBidirectionalTarget =
+        allowBidirectional && isBidirectional && actualSourceLanguage !== UNKNOWN_LANG_CODE
+      const targetResult = determineTargetLanguage(
+        actualSourceLanguage,
+        targetLanguage,
+        shouldUseBidirectionalTarget,
+        bidirectionalPair
+      )
+
+      if (!targetResult.success) {
+        toast.warning(
+          targetResult.errorType === 'same_language' ? t('translate.language.same') : t('translate.language.not_pair')
+        )
+        return
+      }
+
+      await translate(rawText, actualSourceLanguage, targetResult.language)
+    },
+    [
+      backfillHistorySourceLanguage,
+      bidirectionalPair,
+      detectLanguage,
+      isBidirectional,
+      isDetecting,
+      isTranslating,
+      selectedModelId,
+      setIsDetecting,
+      sourceLanguage,
+      t,
+      targetLanguage,
+      translate
+    ]
+  )
+
+  const translatePdfText = useCallback(async (): Promise<void> => {
+    if (!pdfFile || !selectedModelId || isProcessing || isTranslating) return
 
     const requestId = ++pdfTextRequestIdRef.current
     pdfTextFallbackStartedRef.current = true
-    if (prePdfOutputRef.current === null) prePdfOutputRef.current = translateOutput
     setPdfTextFallbackActive(true)
     setPdfTextOcrRequired(false)
     setIsPdfTextExtracting(true)
     setIsProcessing(true)
+    smoothReset('')
 
     try {
       const cached = pdfTextCacheRef.current
@@ -555,7 +515,7 @@ const TranslatePageContent: FC = () => {
         return
       }
 
-      await onPrimaryTranslate(undefined, extractedText, { isBidirectional: false })
+      await translateTextContent(extractedText, false, () => pdfTextRequestIdRef.current === requestId)
     } catch (error) {
       if (pdfTextRequestIdRef.current !== requestId) return
       logger.error('Failed to extract PDF text', error as Error)
@@ -567,120 +527,91 @@ const TranslatePageContent: FC = () => {
         setIsProcessing(false)
       }
     }
-  }, [isFlowBusy, isProcessing, onPrimaryTranslate, pdfFile, selectedModelId, t, translateOutput])
+  }, [isProcessing, isTranslating, pdfFile, selectedModelId, smoothReset, t, translateTextContent])
 
   const onTranslate = useCallback(async () => {
-    if (!pdfFile) {
-      await onPrimaryTranslate()
-      return
-    }
-    if (babelDoc.availability === 'checking' || babelDoc.installing || targetLanguage === 'unknown') return
-    if (babelDoc.availability === 'available') {
-      if (!isSelectedPdfModelRoutable || pdfStatus.running) return
-      const targetResult = determineTargetLanguage(sourceLanguage, targetLanguage, false, bidirectionalPair)
-      if (!targetResult.success) {
-        toast.warning(
-          targetResult.errorType === 'same_language' ? t('translate.language.same') : t('translate.language.not_pair')
-        )
+    if (pdfFile) {
+      if (babelDoc.availability === 'checking' || babelDoc.installing || targetLanguage === UNKNOWN_LANG_CODE) return
+      if (babelDoc.availability === 'available') {
+        if (!isSelectedPdfModelRoutable || pdfStatus.running) return
+        // Layout-preserving translation is one-directional; guard against a same-language no-op
+        // (which still spawns BabelDOC and bills a full run) the same way the text path does.
+        // 'auto' source is naturally excepted (never equals a concrete target).
+        const targetResult = determineTargetLanguage(sourceLanguage, targetLanguage, false, bidirectionalPair)
+        if (!targetResult.success) {
+          toast.warning(
+            targetResult.errorType === 'same_language' ? t('translate.language.same') : t('translate.language.not_pair')
+          )
+          return
+        }
+        pdfHandleRef.current?.start(targetLanguage)
         return
       }
-      pdfHandleRef.current?.start(targetLanguage)
+      await translatePdfText()
       return
     }
-    await translatePdfText()
+
+    await translateTextContent(translateInput, true)
   }, [
     babelDoc.availability,
     babelDoc.installing,
     bidirectionalPair,
     isSelectedPdfModelRoutable,
-    onPrimaryTranslate,
     pdfFile,
     pdfStatus.running,
     sourceLanguage,
     t,
     targetLanguage,
-    translatePdfText
+    translateInput,
+    translatePdfText,
+    translateTextContent
   ])
 
   const onAbort = useCallback(() => {
     if (pdfStatus.running) {
       pdfHandleRef.current?.cancel()
-      toast.info(t('translate.info.aborted'))
+    } else if (isTranslating) {
+      cancel()
+    } else {
       return
     }
-    if (pdfTextFallbackActive) {
-      pdfTextRequestIdRef.current += 1
-      setIsPdfTextExtracting(false)
-      setIsProcessing(false)
-    }
-    abortTextTranslation()
-  }, [abortTextTranslation, pdfStatus.running, pdfTextFallbackActive, t])
+    toast.info(t('translate.info.aborted'))
+  }, [cancel, isTranslating, pdfStatus.running, t])
 
-  const prepareShortcutInput = useCallback(
-    (text: string) => {
-      setTranslateInput(text)
-      setRawOutput('')
-      setTranslateOutput('')
-      setDetectedLanguage(null)
-    },
-    [setTranslateInput, setTranslateOutput]
-  )
-
-  useTranslateAutoPasteTrigger({
-    busy: isFlowBusy || isProcessing || isOcrRunning,
-    notReadyReason: modelsLoading ? 'models-loading' : 'model-unavailable',
-    prepareInput: prepareShortcutInput,
-    readClipboardForTranslate,
-    ready: !modelsLoading && selectedModelId !== undefined,
-    trigger: onPrimaryTranslate
-  })
-
-  const { couldExchange, couldFlip, handleExchange, handleFlip } = useTranslateLanguageControls({
-    bidirectionalPair,
-    busy: isFlowBusy || isProcessing || isOcrRunning,
-    detectedLanguage,
-    input: translateInput,
-    isBidirectional,
-    nativeLanguage,
-    output: translateOutput,
-    persistLanguages: (nextSource, nextTarget) => {
-      void safePersist(
-        Promise.all([setSourceLanguage(nextSource), setTargetLanguage(nextTarget)]),
-        'translate exchanged languages'
-      )
-    },
-    persistTargetLanguage: (nextTarget) => {
-      void safePersist(setTargetLanguage(nextTarget), 'translate flipped target language')
-    },
-    runTranslation: runTextTranslation,
-    setDetectedLanguage,
-    setInput: setTranslateInput,
-    setOutput: setTranslateOutput,
-    setOutputTargetLanguage,
-    setRawOutput,
+  const handleExchange = useCallback(() => {
+    if (pdfFile || sourceLanguage === 'auto' || isTranslating || isDetecting) return
+    void safePersist(setSourceLanguage(targetLanguage), 'translate source language')
+    void safePersist(setTargetLanguage(sourceLanguage), 'translate target language')
+    setTranslateInput(translateOutput)
+    setTranslateOutput(translateInput)
+  }, [
+    isDetecting,
+    safePersist,
+    setSourceLanguage,
+    setTargetLanguage,
+    setTranslateInput,
+    setTranslateOutput,
     sourceLanguage,
-    targetLanguage
-  })
-
-  const clipboardWatch = useTranslateClipboardWatch({
-    busy: flowStage !== 'idle' || isDetecting || isTranslating || isProcessing || isOcrRunning,
-    lastWrittenRef,
-    readClipboardForTranslate,
-    readClipboardPlainTextForWatch,
-    onText: async (text) => {
-      setTranslateInput(text)
-      setRawOutput('')
-      setTranslateOutput('')
-      setDetectedLanguage(null)
-      await onPrimaryTranslate(undefined, text, { sourcePreprocessed: true })
-    }
-  })
+    targetLanguage,
+    translateInput,
+    translateOutput,
+    isTranslating,
+    pdfFile
+  ])
 
   const onHistoryItemClick = useCallback(
     (history: TranslateHistory, files?: TranslationFiles) => {
-      const historyTarget = history.targetLanguage ?? targetLanguage
+      const nextTargetLanguage =
+        history.targetLanguage ??
+        (targetLanguage === UNKNOWN_LANG_CODE ? BUILTIN_LANGUAGE.enUS.langCode : targetLanguage)
 
+      // Only reachable from the detail panel's preview action, which `isPdfTranslation`
+      // already gated — a future non-PDF file translation has no viewer to restore into
+      // and never offers the button.
       if (history.kind === 'file') {
+        // A moved-away source still resolves (external entries keep their recorded path,
+        // and the left pane renders its own unavailable state); a null path means the
+        // entry itself is gone, which leaves nothing to show side by side.
         if (!files?.source?.path || !files.target?.path) {
           toast.error(t('translate.history.file.unavailable'))
           return
@@ -691,22 +622,18 @@ const TranslatePageContent: FC = () => {
       } else {
         resetPdfMode()
         setTranslateInput(history.sourceText)
-        setRawOutput(history.targetText)
-        setReportedOutputTokens(undefined)
-        setOutputTargetLanguage(historyTarget)
-        setTranslateOutput(processTranslation(history.targetText, historyTarget))
+        setTranslateOutput(history.targetText)
       }
 
-      void safePersist(setSourceLanguage(history.sourceLanguage ?? 'auto'), 'translate source language')
-      void safePersist(setTargetLanguage(historyTarget), 'translate target language')
-      setDetectedLanguage(null)
+      if (history.kind === 'file' || history.sourceLanguage) {
+        void safePersist(setSourceLanguage(history.sourceLanguage ?? 'auto'), 'translate source language')
+      }
+      void safePersist(setTargetLanguage(nextTargetLanguage), 'translate target language')
       setHistoryOpen(false)
     },
     [
-      processTranslation,
       resetPdfMode,
       safePersist,
-      setReportedOutputTokens,
       setSourceLanguage,
       setTargetLanguage,
       setTranslateInput,
@@ -716,62 +643,49 @@ const TranslatePageContent: FC = () => {
     ]
   )
 
-  useEffect(() => {
-    if (isTranslating || flowStage !== 'idle') return
-    if (rawOutput !== rawOutputRef.current) return
-    if (rawOutput) setTranslateOutput(processTranslation(rawOutput, outputTargetLanguage))
-  }, [flowStage, isTranslating, outputTargetLanguage, processTranslation, rawOutput, setTranslateOutput])
+  const inputScrollHandler = useMemo(
+    () => createInputScrollHandler(inputScrollRef, outputTextRef, isProgrammaticScroll, isScrollSyncEnabled),
+    [isScrollSyncEnabled]
+  )
 
-  const appliedWorkspaceRevisionRef = useRef<number | null>(null)
+  const outputScrollHandler = useMemo(
+    () => createOutputScrollHandler(outputTextRef, inputScrollRef, isProgrammaticScroll, isScrollSyncEnabled),
+    [isScrollSyncEnabled]
+  )
+
+  // Input-side pacing: usePacedMarkdownOutput coalesces stream frames into
+  // one emission per interval; this effect renders the latest emission.
+  const pacedOutput = usePacedMarkdownOutput(translateOutput)
+
   useEffect(() => {
-    if (appliedWorkspaceRevisionRef.current === workspaceSnapshot.revision) return
-    appliedWorkspaceRevisionRef.current = workspaceSnapshot.revision
-    if (workspaceSnapshot.kind !== 'text' || workspaceSnapshot.runId === 0) return
-    if (workspaceSnapshot.detectedLanguage) setDetectedLanguage(workspaceSnapshot.detectedLanguage)
-    if (workspaceSnapshot.targetLanguage && workspaceSnapshot.targetLanguage !== 'unknown') {
-      setOutputTargetLanguage(workspaceSnapshot.targetLanguage)
+    if (!enableMarkdown || !pacedOutput) {
+      setRenderedMarkdown('')
+      return
     }
-    if (workspaceSnapshot.rawOutput) setRawOutput(workspaceSnapshot.rawOutput)
-
-    if (workspaceSnapshot.status === 'success' && workspaceSnapshot.displayOutput) {
-      smoothReset(workspaceSnapshot.displayOutput)
-      setTranslateOutput(workspaceSnapshot.displayOutput)
-      setFlowStage('idle')
-      setIsDetecting(false)
-    } else if (workspaceSnapshot.status === 'cancelled' || workspaceSnapshot.status === 'error') {
-      setFlowStage('idle')
-      setIsDetecting(false)
-    }
-  }, [setIsDetecting, setTranslateOutput, smoothReset, workspaceSnapshot])
-
-  const { cycleLayout, inputScrollHandler, isVerticalLayout, outputScrollHandler, panelSize, setPanelSize } =
-    useTranslateLayout({
-      inputScrollRef,
-      isProgrammaticScroll,
-      isScrollSyncEnabled,
-      layoutOverride: flowSettings.layoutOverride,
-      onLayoutOverrideChange: (layoutOverride) =>
-        void safePersist(updateFlowSettings({ layoutOverride }), 'translate layout override'),
-      outputScrollRef: outputTextRef
-    })
-
-  useEffect(() => {
     let cancelled = false
+    let retryTimer: number | null = null
+    let retried = false
     const render = async () => {
-      if (!enableMarkdown || !translateOutput) {
-        setRenderedMarkdown('')
-        return
-      }
-      const markdown = await shikiMarkdownIt(translateOutput)
-      if (!cancelled) {
-        setRenderedMarkdown(markdown)
+      try {
+        const markdown = await shikiMarkdownIt(pacedOutput)
+        if (!cancelled) setRenderedMarkdown(markdown)
+      } catch (error) {
+        logger.error('Markdown render failed.', error as Error)
+        // One retry so a failed final render doesn't leave stale content behind.
+        if (!retried) {
+          retried = true
+          retryTimer = window.setTimeout(() => {
+            if (!cancelled) void render()
+          }, 500)
+        }
       }
     }
     void render()
     return () => {
       cancelled = true
+      if (retryTimer !== null) window.clearTimeout(retryTimer)
     }
-  }, [enableMarkdown, shikiMarkdownIt, translateOutput])
+  }, [enableMarkdown, shikiMarkdownIt, pacedOutput])
 
   const modelSelectorFilter = useCallback(
     (model: SelectorModel) =>
@@ -786,86 +700,228 @@ const TranslatePageContent: FC = () => {
     [safePersist, setTranslateModelId]
   )
 
-  // V2 File Processing owns OCR execution. Translate only tracks the job id;
-  // dismissing the overlay intentionally fences a late result rather than
-  // pretending that the backend job itself was cancelled.
-  const clearOcrJob = useCallback((jobId: string) => {
-    const snapshot = translationWorkspaceService.getSnapshot()
-    if (snapshot.kind === 'ocr' && snapshot.jobId === jobId && snapshot.status === 'running') {
-      translationWorkspaceService.failOcr(jobId, new Error('OCR job did not produce text'))
-    }
-    setOcrJobId(null)
-  }, [])
-  const handleOcrStarted = useCallback((jobId: string) => {
-    translationWorkspaceService.beginOcr(jobId)
-    setOcrJobId(jobId)
-  }, [])
-  const cancelOcrJob = useCallback(() => {
-    translationWorkspaceService.cancel()
-    setOcrJobId(null)
-  }, [])
-  const handleOcrCompleted = useCallback(
-    (jobId: string, text: string) => {
-      translationWorkspaceService.completeOcr(jobId, text)
-      appendTranslateInput(text)
+  const readFile = useCallback(
+    async (file: FileMetadata) => {
+      const read = async () => {
+        const fileExtension = getFileExtension(file.path)
+        const isDocument = documentExts.includes(fileExtension)
+        let isText = false
+
+        if (!isDocument) {
+          try {
+            isText = await isTextFile(file.path)
+          } catch (error) {
+            logger.error('Failed to check file type.', error as Error)
+            toast.error(formatErrorMessageWithPrefix(error, t('translate.files.error.check_type')))
+            return
+          }
+        }
+
+        if (!isText && !isDocument) {
+          toast.error(t('common.file.not_supported', { type: fileExtension }))
+          logger.error('Unsupported file type.')
+          return
+        }
+
+        const maxSize = isDocument ? 20 * MB : 5 * MB
+        if (file.size > maxSize) {
+          toast.error(t('translate.files.error.too_large') + ` (0 ~ ${maxSize / MB} MB)`)
+          return
+        }
+
+        try {
+          const result = isDocument
+            ? await window.api.file.readExternal(file.path, true)
+            : await window.api.fs.readText(file.path)
+          appendTranslateInput(result)
+        } catch (error) {
+          logger.error('Failed to read file.', error as Error)
+          toast.error(formatErrorMessageWithPrefix(error, t('translate.files.error.unknown')))
+        }
+      }
+
+      const promise = read()
+      toast.loading({ title: t('translate.files.reading'), promise })
     },
-    [appendTranslateInput]
+    [appendTranslateInput, t]
   )
 
-  const handlePdfSelected = useCallback(
-    (file: FileMetadata) => {
-      pdfTextRequestIdRef.current += 1
-      pdfTextCacheRef.current = null
-      pdfTextFallbackStartedRef.current = false
-      prePdfOutputRef.current = translateOutputRef.current
-      prePdfRawOutputRef.current = rawOutput
-      setPdfHandleReady(false)
-      setPdfStatus({ phase: 'idle', running: false })
-      setPdfTextFallbackActive(false)
-      setPdfTextOcrRequired(false)
-      setIsPdfTextExtracting(false)
-      setRestoredPdf(null)
-      setPdfFile({ name: file.name, path: AbsoluteFilePathSchema.parse(file.path) })
+  // Renderer-local only: clears the tracked OCR job so the input pane unlocks.
+  // The backend File Processing job keeps running and its result is discarded
+  // (deliberate — Cancel/settle is a local "dismiss", not a backend cancel).
+  const clearOcrJob = useCallback(() => setOcrJob(null), [])
+
+  const startOcr = useCallback(
+    async (file: FileMetadata) => {
+      let jobId: string
+      try {
+        const snapshot = await ipcApi.request('file_processing.start_job', {
+          feature: 'image_to_text',
+          file: createFilePathHandle(AbsoluteFilePathSchema.parse(file.path))
+        })
+        jobId = snapshot.id
+      } catch (error) {
+        logger.error('Failed to start image OCR.', error as Error)
+        toast.error(formatErrorMessageWithPrefix(error, t('translate.files.error.ocr')))
+        return
+      }
+
+      setOcrJob({ jobId })
     },
-    [rawOutput]
+    [t]
   )
 
-  const {
-    handleDragEnter,
-    handleDragLeave,
-    handleDragOver,
-    handleSelectFile,
-    onDrop,
-    onPaste,
-    preventDrop,
-    selecting
-  } = useTranslateFileInput({
-    appendText: appendTranslateInput,
-    forcePlainTextPasteRef,
-    htmlConversionEnabled,
-    markdownFormattingEnabled,
-    isTextPreprocessed: (text) => preprocessedSourceTextRef.current === text,
-    onTextPreprocessed: (text) => {
-      preprocessedSourceTextRef.current = text
+  const processFile = useCallback(
+    async (file: FileMetadata) => {
+      if (getFileExtension(file.path) === '.pdf') {
+        const maxSize = 20 * MB
+        if (file.size > maxSize) {
+          toast.error(t('translate.files.error.too_large') + ` (0 ~ ${maxSize / MB} MB)`)
+          return
+        }
+        pdfTextRequestIdRef.current += 1
+        pdfTextCacheRef.current = null
+        pdfTextFallbackStartedRef.current = false
+        prePdfOutputRef.current = translateOutput
+        setPdfTextFallbackActive(false)
+        setPdfTextOcrRequired(false)
+        setIsPdfTextExtracting(false)
+        setPdfFile({ name: file.name, path: AbsoluteFilePathSchema.parse(file.path) })
+        return
+      }
+
+      resetPdfMode()
+      if (isImageFileMetadata(file)) {
+        await startOcr(file)
+      } else {
+        await readFile(file)
+      }
     },
-    preprocessText: preprocessTranslation,
-    isOcrRunning,
-    isProcessing,
-    isTranslating,
-    onOcrStarted: handleOcrStarted,
-    onPdfSelected: handlePdfSelected,
-    setIsProcessing,
-    setText: (value) => {
-      setDetectedLanguage(null)
-      setTranslateInput(value)
+    [readFile, resetPdfMode, startOcr, t, translateOutput]
+  )
+
+  const handleSelectFile = useCallback(async () => {
+    if (selecting || isTranslationRunning || isOcrRunning) return
+    setIsProcessing(true)
+    try {
+      const [file] = await onSelectFile({ multipleSelections: false })
+      if (file) {
+        await processFile(file)
+      }
+    } catch (error) {
+      logger.error('Unknown error when selecting file.', error as Error)
+      toast.error(formatErrorMessageWithPrefix(error, t('translate.files.error.unknown')))
+    } finally {
+      clearFiles()
+      setIsProcessing(false)
     }
-  })
+  }, [clearFiles, isOcrRunning, isTranslationRunning, onSelectFile, processFile, selecting, t])
+
+  const getSingleFile = useCallback(
+    (files: FileMetadata[] | FileList): FileMetadata | File | null => {
+      if (files.length === 0) return null
+      if (files.length > 1) {
+        toast.error(t('translate.files.error.multiple'))
+        return null
+      }
+      return files[0]
+    },
+    [t]
+  )
+
+  const { handleDragEnter, handleDragLeave, handleDragOver, handleDrop: preventDrop } = useDrag<HTMLDivElement>()
+
+  const onDrop = useCallback(
+    async (e: DragEvent<HTMLDivElement>) => {
+      if (isProcessing || isOcrRunning || isTranslationRunning) return
+      setIsProcessing(true)
+      try {
+        const data = await getTextFromDropEvent(e).catch((error) => {
+          logger.error('getTextFromDropEvent', error as Error)
+          toast.error(t('translate.files.error.unknown'))
+          return null
+        })
+        if (data) {
+          appendTranslateInput(data)
+        }
+
+        const droppedFiles = await getFilesFromDropEvent(e).catch((error) => {
+          logger.error('handleDrop:', error as Error)
+          toast.error(t('translate.files.error.unknown'))
+          return null
+        })
+
+        if (droppedFiles) {
+          const file = getSingleFile(droppedFiles) as FileMetadata
+          if (file) {
+            await processFile(file)
+          }
+        }
+      } catch (error) {
+        logger.error('Drop processing failed', error as Error)
+        toast.error(formatErrorMessageWithPrefix(error, t('translate.files.error.unknown')))
+      } finally {
+        setIsProcessing(false)
+      }
+    },
+    [appendTranslateInput, getSingleFile, isOcrRunning, isProcessing, isTranslationRunning, processFile, t]
+  )
+
+  const onPaste = useCallback(
+    async (event: ClipboardEvent<HTMLTextAreaElement>) => {
+      if (isProcessing || isOcrRunning || isTranslationRunning) return
+      const hasFiles = !!event.clipboardData.files && event.clipboardData.files.length > 0
+      if (!hasFiles) return
+      setIsProcessing(true)
+      try {
+        const clipboardText = event.clipboardData.getData('text')
+        if (!isEmpty(clipboardText)) {
+          return
+        }
+
+        event.preventDefault()
+        const file = getSingleFile(event.clipboardData.files) as File
+        if (!file) return
+
+        const filePath = window.api.file.getPathForFile(file)
+        let selectedFile: FileMetadata | null
+
+        if (!filePath) {
+          if (!file.type.startsWith('image/')) {
+            toast.info(t('common.file.not_supported', { type: getFileExtension(file.name) }))
+            return
+          }
+          const tempFilePath = await window.api.file.createTempFile(file.name)
+          const arrayBuffer = await file.arrayBuffer()
+          const uint8Array = new Uint8Array(arrayBuffer)
+          await window.api.file.write(tempFilePath, uint8Array)
+          selectedFile = await window.api.file.get(tempFilePath)
+        } else {
+          selectedFile = await window.api.file.get(filePath)
+        }
+
+        if (!selectedFile) {
+          toast.error(t('translate.files.error.unknown'))
+          return
+        }
+        await processFile(selectedFile)
+      } catch (error) {
+        logger.error('onPaste:', error as Error)
+        toast.error(t('chat.input.file_error'))
+      } finally {
+        setIsProcessing(false)
+      }
+    },
+    [getSingleFile, isOcrRunning, isProcessing, isTranslationRunning, processFile, t]
+  )
 
   const handlePdfHandleChange = useCallback((handle: PdfTranslationHandle | null) => {
     pdfHandleRef.current = handle
     setPdfHandleReady(handle !== null)
   }, [])
+
   const handlePdfStatusChange = useCallback((status: PdfTranslationStatus) => setPdfStatus(status), [])
+
   const pdfModelReady =
     babelDoc.availability === 'available'
       ? pdfHandleReady && isSelectedPdfModelRoutable
@@ -873,363 +929,232 @@ const TranslatePageContent: FC = () => {
   const couldTranslate = isPdfMode
     ? pdfModelReady &&
       !babelDoc.installing &&
-      targetLanguage !== 'unknown' &&
+      targetLanguage !== UNKNOWN_LANG_CODE &&
       !pdfStatus.running &&
-      !isFlowBusy &&
+      !isTranslating &&
       !isProcessing
-    : !isEmpty(translateInput) && !!selectedModelId && !isFlowBusy && !isProcessing && !isOcrRunning
-  const { compact: compactToolbar, toolbarRef } = useTranslateToolbarVisibility()
-  const layoutLabel =
-    flowSettings.layoutOverride === 'auto'
-      ? t('translate.settings.layout.auto')
-      : flowSettings.layoutOverride === 'vertical'
-        ? t('translate.settings.layout.vertical')
-        : t('translate.settings.layout.horizontal')
+    : !isEmpty(translateInput) && !!selectedModelId && !isTranslating && !isDetecting && !isProcessing && !isOcrRunning
+  const couldExchange =
+    !isPdfMode &&
+    sourceLanguage !== 'auto' &&
+    sourceLanguage !== targetLanguage &&
+    !isTranslating &&
+    !isDetecting &&
+    !isProcessing &&
+    !isOcrRunning
 
   return (
-    <div className="flex h-full min-w-0 overflow-hidden bg-background">
-      <div
-        data-ui="translate.view"
-        className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-background"
-        onDragEnter={handleDragEnter}
-        onDragLeave={handleDragLeave}
-        onDragOver={handleDragOver}
-        onDrop={preventDrop}>
-        {ocrJobId && (
-          <OcrJobWatcher
-            key={ocrJobId}
-            jobId={ocrJobId}
-            onCompleted={(text) => handleOcrCompleted(ocrJobId, text)}
-            onSettled={clearOcrJob}
-          />
-        )}
-        <Navbar />
+    <div
+      data-ui="translate.view"
+      className="relative flex h-full flex-col overflow-hidden bg-background"
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={preventDrop}>
+      {ocrJob && (
+        <OcrJobWatcher key={ocrJob.jobId} job={ocrJob} onCompleted={appendTranslateInput} onSettled={clearOcrJob} />
+      )}
+      <Navbar />
 
-        <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
-          <div ref={toolbarRef} className="flex shrink-0 items-center justify-between gap-1.5 px-3 pt-3 pb-1">
-            <div className="flex min-w-0 items-center gap-1.5">
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={cycleLayout}
-                aria-label={layoutLabel}
-                title={layoutLabel}
-                className="size-8">
-                {flowSettings.layoutOverride === 'auto' ? (
-                  <SpellCheck size={16} />
-                ) : isVerticalLayout ? (
-                  <Rows2 size={16} />
-                ) : (
-                  <Columns2 size={16} />
-                )}
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className={cn(
-                  'size-8',
-                  historyOpen ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
-                )}
-                onClick={() => {
-                  setHistoryOpen((open) => !open)
-                  setSettingsOpen(false)
-                }}
-                aria-label={t('translate.history.title')}
-                aria-pressed={historyOpen}>
-                <History size={18} />
-              </Button>
-              {!compactToolbar && (
-                <TranslateLanguageBar
-                  className="px-0 py-0 lg:px-0"
-                  sourceLanguage={sourceLanguage}
-                  onSourceChange={(language) => {
-                    setDetectedLanguage(null)
-                    void safePersist(setSourceLanguage(language), 'translate source language')
-                  }}
-                  targetLanguage={targetLanguage}
-                  onTargetChange={(language) =>
-                    void safePersist(setTargetLanguage(language), 'translate target language')
-                  }
-                  detectedLanguage={detectedLanguage}
-                  isBidirectional={isPdfMode ? false : isBidirectional}
-                  bidirectionalPair={bidirectionalPair}
-                  disabled={isFlowBusy || isProcessing || isOcrRunning}
-                  couldExchange={couldExchange}
-                  onExchange={handleExchange}
-                />
-              )}
-              {!compactToolbar && <span aria-hidden="true" className="h-5 w-px shrink-0 bg-border-subtle" />}
-              <div className="flex shrink-0 items-center gap-1.5">
-                {isTranslationRunning || isFlowBusy ? (
-                  <button
-                    type="button"
-                    onClick={onAbort}
-                    className="flex h-8 items-center gap-1.5 rounded-md bg-secondary px-3 text-secondary-foreground text-sm transition-all hover:bg-secondary-hover focus-visible:bg-secondary-hover focus-visible:outline-none">
-                    <CirclePause size={14} className="lucide-custom" />
-                    <span>{t('common.stop')}</span>
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={(event) => void (isPdfMode ? onTranslate() : handlePrimaryClick(event))}
-                    disabled={!couldTranslate}
-                    title={t('translate.tooltip.force_refresh', { modifier: getTranslateModifierLabel() })}
-                    className={cn(
-                      'flex h-8 items-center gap-1.5 rounded-md px-3 text-sm transition-all focus-visible:outline-none',
-                      couldTranslate
-                        ? 'bg-neutral-900 text-white hover:bg-neutral-800 focus-visible:bg-neutral-800'
-                        : 'cursor-not-allowed bg-muted text-foreground-disabled'
-                    )}>
-                    <Languages size={16} className="lucide-custom" />
-                    <span>{t('translate.button.translate')}</span>
-                  </button>
-                )}
-                <FlipButton couldFlip={!isPdfMode && couldFlip} onFlip={() => void handleFlip()} />
-                <span aria-hidden="true" className="h-5 w-px shrink-0 bg-border-subtle" />
-                <PolishTranslateToggleButton
-                  enabled={flowSettings.polishEnabled}
-                  disabled={isPdfMode || isFlowBusy || isProcessing || isOcrRunning}
-                  onToggle={() =>
-                    void safePersist(
-                      updateFlowSettings({ polishEnabled: !flowSettings.polishEnabled }),
-                      'translate polish enabled'
-                    )
-                  }
-                  onTranslateOnce={() => void triggerPolishOnce()}
-                />
-                <TranslateToolbarToggleButton
-                  enabled={clipboardWatch.enabled}
-                  tone="clipboardWatch"
-                  size="icon-sm"
-                  onClick={clipboardWatch.toggle}
-                  aria-label={t('translate.clipboard_watch')}>
-                  <ClipboardCheck size={16} />
-                </TranslateToolbarToggleButton>
-              </div>
-            </div>
-            <div className="flex shrink-0 items-center gap-1.5">
-              <ModelSelector
-                multiple={false}
-                selectionType="id"
-                value={selectedModelId}
-                onSelect={handleModelIdSelect}
-                filter={modelSelectorFilter}
-                showTagFilter={false}
-                showPinnedModels
-                align="end"
-                selectedItemScrollAlign="center"
-                trigger={
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    aria-label={selectedModel?.name ?? t('translate.settings.model_placeholder')}
-                    title={selectedModel?.name ?? t('translate.settings.model_placeholder')}
-                    className={cn(
-                      'size-8 rounded-full p-0 shadow-none hover:bg-accent',
-                      isUsingNonGlobalTranslationModel && 'saturate-0'
-                    )}>
-                    {selectedModel ? (
-                      selectedModelIcon ? (
-                        <span className="flex size-6 shrink-0 items-center justify-center overflow-hidden rounded-full">
-                          <selectedModelIcon.Avatar size={24} />
-                        </span>
-                      ) : (
-                        <Avatar className="size-6 rounded-full">
-                          <AvatarFallback className="text-[11px]">{getModelInitial(selectedModel)}</AvatarFallback>
-                        </Avatar>
-                      )
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
+        <div className="flex shrink-0 items-center gap-3 border-border-subtle border-b p-3">
+          <TranslateLanguageBar
+            className="px-0 py-0 lg:px-0"
+            sourceLanguage={sourceLanguage}
+            onSourceChange={(language) => void safePersist(setSourceLanguage(language), 'translate source language')}
+            targetLanguage={targetLanguage}
+            onTargetChange={(language) => void safePersist(setTargetLanguage(language), 'translate target language')}
+            detectedLanguage={detectedLanguage}
+            isBidirectional={isPdfMode ? false : isBidirectional}
+            showSourceControls={isPdfMode}
+            bidirectionalPair={bidirectionalPair}
+            couldExchange={couldExchange}
+            onExchange={handleExchange}
+          />
+          {isTranslationRunning ? (
+            <button
+              type="button"
+              onClick={onAbort}
+              className="flex h-8 items-center gap-1.5 rounded-md bg-secondary px-3 text-secondary-foreground text-sm transition-all hover:bg-secondary-hover focus-visible:bg-secondary-hover focus-visible:outline-none">
+              <CirclePause size={14} className="lucide-custom" />
+              <span>{t('common.stop')}</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={onTranslate}
+              disabled={!couldTranslate}
+              className={cn(
+                'flex h-8 items-center gap-1.5 rounded-md px-3 text-sm transition-all focus-visible:outline-none',
+                couldTranslate
+                  ? 'bg-emerald-600 text-white hover:opacity-90'
+                  : 'cursor-not-allowed bg-muted text-foreground-disabled'
+              )}>
+              <Languages size={14} className="lucide-custom" />
+              <span>{t('translate.button.translate')}</span>
+            </button>
+          )}
+          <span className="flex-1" />
+          <div className="flex items-center gap-1">
+            <ModelSelector
+              multiple={false}
+              selectionType="id"
+              value={selectedModelId}
+              onSelect={handleModelIdSelect}
+              filter={modelSelectorFilter}
+              showTagFilter={false}
+              showPinnedModels
+              prioritizedProviderIds={PRIORITIZED_PROVIDER_IDS}
+              align="end"
+              trigger={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label={selectedModel?.name ?? t('translate.settings.model_placeholder')}
+                  title={selectedModel?.name ?? t('translate.settings.model_placeholder')}
+                  className="size-8 rounded-full p-0 shadow-none hover:bg-accent">
+                  {selectedModel ? (
+                    selectedModelIcon ? (
+                      <span className="flex size-6 shrink-0 items-center justify-center overflow-hidden rounded-full">
+                        <selectedModelIcon.Avatar size={24} />
+                      </span>
                     ) : (
                       <Avatar className="size-6 rounded-full">
-                        <AvatarFallback className="text-[11px]">M</AvatarFallback>
+                        <AvatarFallback className="text-[11px]">{getModelInitial(selectedModel)}</AvatarFallback>
                       </Avatar>
-                    )}
-                  </Button>
-                }
-              />
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className={cn(
-                  'size-8',
-                  settingsOpen ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
-                )}
-                onMouseDown={handleSettingsMouseDown}
-                onAuxClick={handleSettingsAuxClick}
-                onClick={() =>
-                  setSettingsOpen((open) => {
-                    const next = !open
-                    if (next) setHistoryOpen(false)
-                    return next
-                  })
-                }
-                aria-label={t('translate.settings.title')}
-                aria-pressed={settingsOpen}>
-                <SlidersHorizontal size={18} />
-              </Button>
-              <TranslateToolbarToggleButton
-                enabled={flowSettings.postProcessingEnabled}
-                tone="postProcessing"
-                size="icon-sm"
-                onClick={() =>
-                  void safePersist(
-                    updateFlowSettings({ postProcessingEnabled: !flowSettings.postProcessingEnabled }),
-                    'translate post-processing enabled'
-                  )
-                }
-                aria-label={t('translate.post_processing.enable')}>
-                <WandSparkles size={16} />
-              </TranslateToolbarToggleButton>
-              <TranslateToolbarToggleButton
-                enabled={htmlConversionEnabled}
-                tone="htmlConversion"
-                size="icon-sm"
-                onClick={() =>
-                  void safePersist(setHtmlConversionEnabled(!htmlConversionEnabled), 'HTML conversion on paste')
-                }
-                aria-label={t('translate.html_conversion')}>
-                <CodeXml size={16} />
-              </TranslateToolbarToggleButton>
-            </div>
+                    )
+                  ) : (
+                    <Avatar className="size-6 rounded-full">
+                      <AvatarFallback className="text-[11px]">M</AvatarFallback>
+                    </Avatar>
+                  )}
+                </Button>
+              }
+            />
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className={historyOpen ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'}
+              onClick={() =>
+                setHistoryOpen((open) => {
+                  const next = !open
+                  if (next) setSettingsOpen(false)
+                  return next
+                })
+              }
+              aria-label={t('translate.history.title')}
+              aria-pressed={historyOpen}>
+              <History size={14} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className={settingsOpen ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'}
+              onClick={() =>
+                setSettingsOpen((open) => {
+                  const next = !open
+                  if (next) setHistoryOpen(false)
+                  return next
+                })
+              }
+              aria-label={t('translate.settings.title')}
+              aria-pressed={settingsOpen}>
+              <SlidersHorizontal size={14} />
+            </Button>
           </div>
-
-          {pdfFile ? (
-            <Suspense
-              fallback={
-                <div className="flex min-h-0 flex-1 items-center justify-center" aria-busy="true">
-                  <LoaderCircle size={20} className="animate-spin text-foreground-muted" />
-                </div>
-              }>
-              <PdfTranslationView
-                key={restoredPdf?.key ?? pdfFile.path}
-                file={pdfFile}
-                restoredOutput={restoredPdf?.output}
-                modelId={isSelectedPdfModelRoutable ? selectedModelId : undefined}
-                sourceLangCode={sourceLanguage}
-                babelDocAvailability={babelDoc.availability}
-                babelDocInstalling={babelDoc.installing}
-                textFallback={
-                  pdfTextFallbackActive
-                    ? {
-                        ocrRequired: pdfTextOcrRequired,
-                        content: (
-                          <TranslateOutputPane
-                            ref={outputTextRef}
-                            translatedContent={translateOutput}
-                            renderedMarkdown={renderedMarkdown}
-                            enableMarkdown={enableMarkdown}
-                            enableJsonStructure={flowSettings.jsonStructureView}
-                            jsonStructureCopySeparator={flowSettings.jsonCopySeparator}
-                            jsonStructureCopyBlankLineBetweenRows={flowSettings.jsonCopyBlankLine}
-                            translating={isFlowBusy || isPdfTextExtracting}
-                            fontSize={normalizePersistedTranslateFontSize(flowSettings.fontSize)}
-                            copied={copied}
-                            onCopy={onCopyOutput}
-                            onScroll={outputScrollHandler}
-                            tokenCount={outputTokenCount}
-                            wordCount={outputWordCount}
-                          />
-                        )
-                      }
-                    : undefined
-                }
-                onClose={resetPdfMode}
-                onHandleChange={handlePdfHandleChange}
-                onStatusChange={handlePdfStatusChange}
-                onInstallBabelDoc={() => void babelDoc.install()}
-                onBabelDocUnavailable={babelDoc.refresh}
-              />
-            </Suspense>
-          ) : (
-            <div
-              ref={paneContainerRef}
-              className="grid min-h-0 flex-1 gap-0 overflow-hidden px-3 pt-1.5 pb-3 [--translate-pane-min-width:320px] max-[600px]:[--translate-pane-min-width:250px] max-[800px]:[--translate-pane-min-width:280px]"
-              style={
-                isVerticalLayout
-                  ? {
-                      gridTemplateRows: `minmax(200px, ${panelSize}%) 6px minmax(200px, 1fr)`,
-                      gridTemplateColumns: 'minmax(0, 1fr)'
-                    }
-                  : {
-                      gridTemplateColumns: `minmax(var(--translate-pane-min-width), ${panelSize}%) 6px minmax(var(--translate-pane-min-width), 1fr)`,
-                      gridTemplateRows: 'minmax(0, 1fr)'
-                    }
-              }>
-              <section className="flex min-h-0 min-w-0 flex-col">
-                <TranslateInputPane
-                  ref={inputScrollRef}
-                  text={translateInput}
-                  onTextChange={handleInputChange}
-                  onKeyDown={(event) => {
-                    if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === 'v') {
-                      forcePlainTextPasteRef.current = true
-                      return
-                    }
-                    if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
-                      event.preventDefault()
-                      void onPrimaryTranslate()
-                    }
-                  }}
-                  onScroll={inputScrollHandler}
-                  onPaste={onPaste}
-                  onDrop={onDrop}
-                  onSelectFile={handleSelectFile}
-                  onPasteFromClipboard={readClipboardForTranslate}
-                  onCancelOcr={cancelOcrJob}
-                  disabled={isTranslating || isDetecting || isProcessing || isOcrRunning}
-                  ocrProcessing={isOcrRunning}
-                  selecting={selecting}
-                  busyLabel={translateBusyLabel}
-                  fontSize={normalizePersistedTranslateFontSize(flowSettings.fontSize)}
-                  tokenCount={tokenCount}
-                  wordCount={wordCount}
-                />
-              </section>
-
-              <DraggableDivider
-                containerRef={paneContainerRef}
-                vertical={isVerticalLayout}
-                value={panelSize}
-                onChange={setPanelSize}
-              />
-
-              <section className="flex min-h-0 min-w-0 flex-col">
-                <TranslateOutputPane
-                  ref={outputTextRef}
-                  translatedContent={translateOutput}
-                  renderedMarkdown={renderedMarkdown}
-                  enableMarkdown={enableMarkdown}
-                  enableJsonStructure={flowSettings.jsonStructureView}
-                  jsonStructureCopySeparator={flowSettings.jsonCopySeparator}
-                  jsonStructureCopyBlankLineBetweenRows={flowSettings.jsonCopyBlankLine}
-                  translating={isFlowBusy}
-                  fontSize={normalizePersistedTranslateFontSize(flowSettings.fontSize)}
-                  copied={copied}
-                  onCopy={onCopyOutput}
-                  onScroll={outputScrollHandler}
-                  tokenCount={outputTokenCount}
-                  wordCount={outputWordCount}
-                />
-              </section>
-            </div>
-          )}
-          <TranslateHistoryList
-            isOpen={historyOpen}
-            onClose={() => setHistoryOpen(false)}
-            onHistoryItemClick={onHistoryItemClick}
-          />
-          <TranslateSettings visible={settingsOpen} onClose={() => setSettingsOpen(false)} />
         </div>
+
+        {pdfFile ? (
+          <Suspense
+            fallback={
+              <div className="flex min-h-0 flex-1 items-center justify-center" aria-busy="true">
+                <LoaderCircle size={20} className="animate-spin text-foreground-muted" />
+              </div>
+            }>
+            <PdfTranslationView
+              key={restoredPdf?.key ?? pdfFile.path}
+              file={pdfFile}
+              restoredOutput={restoredPdf?.output}
+              modelId={isSelectedPdfModelRoutable ? selectedModelId : undefined}
+              sourceLangCode={sourceLanguage}
+              babelDocAvailability={babelDoc.availability}
+              babelDocInstalling={babelDoc.installing}
+              textFallback={
+                pdfTextFallbackActive
+                  ? {
+                      ocrRequired: pdfTextOcrRequired,
+                      content: (
+                        <TranslateOutputPane
+                          ref={outputTextRef}
+                          translatedContent={translateOutput}
+                          renderedMarkdown={renderedMarkdown}
+                          enableMarkdown={enableMarkdown}
+                          translating={isTranslating || isDetecting || isPdfTextExtracting}
+                          copied={copied}
+                          onCopy={onCopyOutput}
+                          onExportToNotes={onExportOutputToNotes}
+                          onScroll={outputScrollHandler}
+                        />
+                      )
+                    }
+                  : undefined
+              }
+              onClose={resetPdfMode}
+              onHandleChange={handlePdfHandleChange}
+              onStatusChange={handlePdfStatusChange}
+              onInstallBabelDoc={() => void babelDoc.install()}
+              onBabelDocUnavailable={babelDoc.refresh}
+            />
+          </Suspense>
+        ) : (
+          <div className="grid min-h-0 flex-1 grid-cols-2 grid-rows-1">
+            <section className="flex min-h-0 min-w-0 flex-col">
+              <TranslateInputPane
+                ref={inputScrollRef}
+                text={translateInput}
+                onTextChange={handleInputChange}
+                onKeyDown={(event) => {
+                  if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+                    event.preventDefault()
+                    void onTranslate()
+                  }
+                }}
+                onScroll={inputScrollHandler}
+                onPaste={onPaste}
+                onDrop={onDrop}
+                onSelectFile={handleSelectFile}
+                onCopy={onCopyInput}
+                onCancelOcr={clearOcrJob}
+                disabled={isTranslating || isDetecting || isProcessing || isOcrRunning}
+                ocrProcessing={isOcrRunning}
+                selecting={selecting}
+              />
+            </section>
+            <section className="flex min-h-0 min-w-0 flex-col border-border-subtle border-l">
+              <TranslateOutputPane
+                ref={outputTextRef}
+                translatedContent={translateOutput}
+                renderedMarkdown={renderedMarkdown}
+                enableMarkdown={enableMarkdown}
+                translating={isTranslating || isDetecting}
+                copied={copied}
+                onCopy={onCopyOutput}
+                onExportToNotes={onExportOutputToNotes}
+                onScroll={outputScrollHandler}
+              />
+            </section>
+          </div>
+        )}
+        <TranslateHistoryList
+          isOpen={historyOpen}
+          onClose={() => setHistoryOpen(false)}
+          onHistoryItemClick={onHistoryItemClick}
+        />
+        <TranslateSettings visible={settingsOpen} onClose={() => setSettingsOpen(false)} />
       </div>
-      <TranslateRightPane.Viewport />
     </div>
   )
 }
-
-const TranslatePage: FC = () => (
-  <TranslateRightPane.Scope>
-    <TranslatePageContent />
-  </TranslateRightPane.Scope>
-)
 
 export default TranslatePage

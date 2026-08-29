@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
-import TranslateOutputPane from '../TranslateOutputPane'
+import TranslateOutputPane from '../../custom/components/TranslateOutputPane'
 
 vi.mock('react-i18next', () => ({
   initReactI18next: {

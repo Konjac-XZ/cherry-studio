@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import TranslateLanguageBar from '../TranslateLanguageBar'
+import TranslateLanguageBar from '../../custom/components/TranslateLanguageBar'
 import { chinese, createLanguage, createLanguagesHookResult, english, japanese } from './testUtils'
 
 const mockUseLanguages = vi.fn()
