@@ -19,7 +19,8 @@ const mocks = vi.hoisted(() => ({
   setAppOrder: vi.fn(() => Promise.resolve()),
   appOrder: [] as SidebarAppId[],
   sortableCalls: [] as any[],
-  toastError: vi.fn()
+  toastError: vi.fn(),
+  setActiveTab: vi.fn()
 }))
 
 vi.mock('@cherrystudio/ui', () => ({
@@ -99,6 +100,10 @@ vi.mock('@renderer/hooks/useMiniApps', () => ({
     pinned: mocks.pinnedMiniApps,
     reorderMiniAppsByStatus: mocks.reorderMiniAppsByStatus
   })
+}))
+
+vi.mock('@renderer/hooks/tab', () => ({
+  useTabs: () => ({ setActiveTab: mocks.setActiveTab })
 }))
 
 vi.mock('@renderer/services/toast', () => ({
@@ -280,6 +285,19 @@ describe('LaunchpadPage', () => {
     expect(mocks.navigate).toHaveBeenCalledWith({ to: '/app/knowledge' })
   })
 
+  it('focuses protected Chat and Translate workspaces instead of navigating the launchpad tab into duplicates', async () => {
+    const user = userEvent.setup()
+
+    render(<LaunchpadPage />)
+
+    await user.click(screen.getByRole('button', { name: 'Chat' }))
+    await user.click(screen.getByRole('button', { name: 'Translate' }))
+
+    expect(mocks.setActiveTab).toHaveBeenNthCalledWith(1, 'home')
+    expect(mocks.setActiveTab).toHaveBeenNthCalledWith(2, 'translate')
+    expect(mocks.navigate).not.toHaveBeenCalled()
+  })
+
   it('opens the dedicated DeepSeek Harness CodeMate view from its app shortcut', async () => {
     const user = userEvent.setup()
 
@@ -305,11 +323,12 @@ describe('LaunchpadPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Knowledge' }))
     fireEvent.click(screen.getByRole('button', { name: 'Chat' }))
 
-    expect(mocks.navigate).toHaveBeenCalledTimes(1)
-    expect(mocks.navigate).toHaveBeenCalledWith({ to: '/app/chat' })
+    expect(mocks.navigate).not.toHaveBeenCalled()
+    expect(mocks.setActiveTab).toHaveBeenCalledOnce()
+    expect(mocks.setActiveTab).toHaveBeenCalledWith('home')
   })
 
-  it('opens chat and agent apps fresh in the current tab', async () => {
+  it('focuses Chat home while opening an Agent session in the current tab', async () => {
     const user = userEvent.setup()
 
     render(<LaunchpadPage />)
@@ -317,7 +336,8 @@ describe('LaunchpadPage', () => {
     await user.click(screen.getByRole('button', { name: 'Chat' }))
     await user.click(screen.getByRole('button', { name: 'Agent' }))
 
-    expect(mocks.navigate).toHaveBeenCalledWith({ to: '/app/chat' })
+    expect(mocks.setActiveTab).toHaveBeenCalledWith('home')
+    expect(mocks.navigate).toHaveBeenCalledOnce()
     expect(mocks.navigate).toHaveBeenCalledWith({ to: '/app/agents' })
   })
 

@@ -215,7 +215,7 @@ describe('AppShellTabBar', () => {
 
     await user.click(screen.getByRole('button', { name: 'Launchpad' }))
 
-    expect(openTab).toHaveBeenCalledWith('/app/launchpad', { title: 'Launchpad', forceNew: true })
+    expect(openTab).toHaveBeenCalledWith('/app/launchpad', { title: 'Launchpad' })
   })
 
   it('shows the focused tab as a Back control with a visible detach action', async () => {
@@ -420,9 +420,9 @@ describe('AppShellTabBar', () => {
   it('moves a normal tab to the first slot', async () => {
     const user = userEvent.setup()
     const reorderTabs = vi.fn()
-    const tabs = [createTab('home'), createTab('a'), createTab('b')]
+    const tabs = [createTab('a'), createTab('b'), createTab('c')]
 
-    renderTabBar({ tabs, activeTabId: 'home', reorderTabs })
+    renderTabBar({ tabs, activeTabId: 'a', reorderTabs })
 
     const moveButtons = screen.getAllByTestId('menu-tab.move-to-first')
     expect(moveButtons).toHaveLength(3)
@@ -477,13 +477,14 @@ describe('AppShellTabBar', () => {
     expect(closeTabs).toHaveBeenCalledWith(['b', 'c'], 'a')
   })
 
-  it('lets the home tab expose menu affordances like a normal tab', () => {
+  it('keeps destructive menu affordances off the protected home tab', () => {
     const tabs = [createTab('home'), createTab('a')]
 
     renderTabBar({ tabs, activeTabId: 'home' })
 
-    expect(screen.queryAllByTestId('menu-tab.move-to-first')).toHaveLength(2)
-    expect(screen.queryAllByTestId('menu-tab.close')).toHaveLength(2)
+    expect(screen.queryAllByTestId('menu-tab.move-to-first')).toHaveLength(1)
+    expect(screen.queryAllByTestId('menu-tab.close')).toHaveLength(1)
+    expect(within(screen.getByRole('button', { name: 'Chat' })).queryByRole('button', { name: 'tab.close' })).toBeNull()
   })
 
   it('keeps tab buttons no-drag while leaving tabbar whitespace draggable', () => {
@@ -524,9 +525,9 @@ describe('AppShellTabBar', () => {
   })
 
   it('keeps close and pin menu actions when only a single tab is open', () => {
-    const tabs = [createTab('home')]
+    const tabs = [createTab('a')]
 
-    renderTabBar({ tabs, activeTabId: 'home' })
+    renderTabBar({ tabs, activeTabId: 'a' })
 
     expect(screen.queryByTestId('menu-tab.move-to-first')).toBeNull()
     expect(screen.queryAllByTestId('menu-tab.pin')).toHaveLength(1)
@@ -547,9 +548,9 @@ describe('AppShellTabBar', () => {
   })
 
   it('allows both the last normal tab and pinned tabs to close from the menu', () => {
-    const tabs = [createTab('home'), createTab('p', { isPinned: true })]
+    const tabs = [createTab('a'), createTab('p', { isPinned: true })]
 
-    renderTabBar({ tabs, activeTabId: 'home' })
+    renderTabBar({ tabs, activeTabId: 'a' })
 
     expect(screen.queryAllByTestId('menu-tab.pin')).toHaveLength(2)
     expect(screen.queryAllByTestId('menu-tab.close')).toHaveLength(2)
@@ -557,16 +558,16 @@ describe('AppShellTabBar', () => {
   })
 
   it('closes a pinned tab through its context menu item', () => {
-    const tabs = [createTab('home'), createTab('p', { isPinned: true })]
+    const tabs = [createTab('a'), createTab('p', { isPinned: true })]
 
-    const closeTab = renderTabBar({ tabs, activeTabId: 'home' })
+    const closeTab = renderTabBar({ tabs, activeTabId: 'a' })
 
     // Pinned zone renders before the normal zone, so index 0 is the pinned tab.
     const closeItems = screen.getAllByTestId('menu-tab.close')
     fireEvent.click(closeItems[0])
     expect(closeTab).toHaveBeenCalledWith('p')
     fireEvent.click(closeItems[1])
-    expect(closeTab).toHaveBeenCalledWith('home')
+    expect(closeTab).toHaveBeenCalledWith('a')
   })
 
   it('closes a tab from its close button without selecting it', () => {
@@ -652,9 +653,9 @@ describe('AppShellTabBar', () => {
   })
 
   it('always shows the close button on the active tab', () => {
-    renderTabBar()
+    renderTabBar({ tabs: [createTab('a'), createTab('b')], activeTabId: 'a' })
 
-    const activeTab = screen.getByRole('button', { name: 'Chat' })
+    const activeTab = screen.getByRole('button', { name: 'A' })
     const closeButton = within(activeTab).getByRole('button', { name: 'tab.close' })
 
     expect(closeButton).toHaveClass('opacity-100')
@@ -765,12 +766,12 @@ describe('AppShellTabBar', () => {
     try {
       const setActiveTab = vi.fn()
       const closeTab = vi.fn()
-      const tabs = [createTab('home'), createTab('a')]
+      const tabs = [createTab('a'), createTab('b')]
 
       const { unmount } = render(
         <AppShellTabBar
           tabs={tabs}
-          activeTabId="home"
+          activeTabId="a"
           setActiveTab={setActiveTab}
           closeTab={closeTab}
           closeTabs={vi.fn()}
@@ -781,7 +782,7 @@ describe('AppShellTabBar', () => {
         />
       )
 
-      const closeButton = within(screen.getByRole('button', { name: 'Chat' })).getByRole('button', {
+      const closeButton = within(screen.getByRole('button', { name: 'A' })).getByRole('button', {
         name: 'tab.close'
       })
       fireEvent.click(closeButton, { detail: 1 })
@@ -805,11 +806,11 @@ describe('AppShellTabBar', () => {
 
     try {
       const setActiveTab = vi.fn()
-      const tabs = [createTab('home'), createTab('a')]
+      const tabs = [createTab('a'), createTab('b')]
 
-      const closeTab = renderTabBar({ tabs, activeTabId: 'home', setActiveTab })
+      const closeTab = renderTabBar({ tabs, activeTabId: 'a', setActiveTab })
 
-      const activeTab = screen.getByRole('button', { name: 'Chat' })
+      const activeTab = screen.getByRole('button', { name: 'A' })
       fireEvent.click(within(activeTab).getByRole('button', { name: 'tab.close' }), { detail: 1 })
 
       // The handover rides the same commit as the collapse start (a couple of
@@ -818,13 +819,13 @@ describe('AppShellTabBar', () => {
       act(() => {
         vi.advanceTimersByTime(50)
       })
-      expect(setActiveTab).toHaveBeenCalledWith('a')
+      expect(setActiveTab).toHaveBeenCalledWith('b')
       expect(closeTab).not.toHaveBeenCalled()
 
       act(() => {
         vi.advanceTimersByTime(300)
       })
-      expect(closeTab).toHaveBeenCalledWith('home')
+      expect(closeTab).toHaveBeenCalledWith('a')
     } finally {
       restoreAnimation()
     }
@@ -835,11 +836,11 @@ describe('AppShellTabBar', () => {
 
     try {
       const setActiveTab = vi.fn()
-      const tabs = [createTab('home'), createTab('a')]
+      const tabs = [createTab('a'), createTab('b')]
 
-      const closeTab = renderTabBar({ tabs, activeTabId: 'home', setActiveTab })
+      const closeTab = renderTabBar({ tabs, activeTabId: 'a', setActiveTab })
 
-      const closeButton = within(screen.getByRole('button', { name: 'Chat' })).getByRole('button', {
+      const closeButton = within(screen.getByRole('button', { name: 'A' })).getByRole('button', {
         name: 'tab.close'
       })
       fireEvent.click(closeButton, { detail: 1 })
@@ -850,9 +851,9 @@ describe('AppShellTabBar', () => {
         vi.advanceTimersByTime(300)
       })
       expect(setActiveTab).toHaveBeenCalledTimes(1)
-      expect(setActiveTab).toHaveBeenCalledWith('a')
+      expect(setActiveTab).toHaveBeenCalledWith('b')
       expect(closeTab).toHaveBeenCalledTimes(1)
-      expect(closeTab).toHaveBeenCalledWith('home')
+      expect(closeTab).toHaveBeenCalledWith('a')
     } finally {
       restoreAnimation()
     }
@@ -1153,7 +1154,7 @@ describe('AppShellTabBar', () => {
 
     renderTabBar({ tabs, activeTabId: 'home' })
 
-    expect(screen.queryAllByTestId('menu-tab.close')).toHaveLength(3)
+    expect(screen.queryAllByTestId('menu-tab.close')).toHaveLength(2)
   })
   it('closes a normal tab on double click or middle click', () => {
     const handleDoubleClick = vi.fn()
@@ -1223,7 +1224,7 @@ describe('getTabCapabilities', () => {
   })
 
   it('keeps close, pin, detach, and menu enabled for the last normal tab', () => {
-    expect(getTabCapabilities({ id: 'home', isPinned: false }, ctx({ normalCount: 1, normalIndex: 0 }))).toEqual({
+    expect(getTabCapabilities({ id: 'a', isPinned: false }, ctx({ normalCount: 1, normalIndex: 0 }))).toEqual({
       menu: true,
       reorder: false,
       togglePin: true,
@@ -1234,13 +1235,13 @@ describe('getTabCapabilities', () => {
     })
   })
 
-  it('treats Translate as an ordinary normal tab', () => {
+  it('keeps the global Translate workspace visible while retaining safe batch actions', () => {
     expect(getTabCapabilities({ id: 'translate', isPinned: false }, ctx({ normalCount: 3, normalIndex: 1 }))).toEqual({
       menu: true,
-      reorder: true,
-      togglePin: true,
-      detach: true,
-      close: true,
+      reorder: false,
+      togglePin: false,
+      detach: false,
+      close: false,
       closeOthers: true,
       closeToRight: true
     })
@@ -1270,13 +1271,13 @@ describe('getTabCapabilities', () => {
     })
   })
 
-  it('treats the home tab like any other normal tab when siblings exist', () => {
+  it('protects the fixed home workspace while retaining safe batch actions', () => {
     expect(getTabCapabilities({ id: 'home', isPinned: false }, ctx({ normalCount: 3, normalIndex: 0 }))).toEqual({
       menu: true,
-      reorder: true,
-      togglePin: true,
-      detach: true,
-      close: true,
+      reorder: false,
+      togglePin: false,
+      detach: false,
+      close: false,
       closeOthers: true,
       closeToRight: true
     })

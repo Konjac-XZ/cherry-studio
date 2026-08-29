@@ -23,7 +23,7 @@ vi.mock('@renderer/hooks/useWindowFrame', () => ({
   useWindowFrame: () => ({ mode: tabsMock.windowFrameMode })
 }))
 
-// "Open elsewhere" detaches a window through the typed IpcApi facade.
+// Cross-window navigation goes through the typed global ownership coordinator.
 const ipcMock = vi.hoisted(() => ({ request: vi.fn() }))
 vi.mock('@renderer/ipc', () => ({ ipcApi: { request: ipcMock.request }, useIpcOn: vi.fn() }))
 
@@ -39,21 +39,18 @@ beforeEach(() => {
 })
 
 describe('useConversationNavigation', () => {
-  it('openConversationTab opens a forceNew tab on the conversation url when none exists', () => {
+  it('openConversationTab delegates the conversation identity to the unique tab boundary', () => {
     const ctx = makeCtx([])
     ctx.openTab.mockReturnValue('new-agent-tab')
     tabsMock.ctx = ctx
     const { result } = renderHook(() => useConversationNavigation('agents'))
 
     result.current.openConversationTab('s1', 'Session 1')
-    expect(ctx.openTab).toHaveBeenCalledWith('/app/agents?sessionId=s1', {
-      forceNew: true,
-      title: 'Session 1'
-    })
+    expect(ctx.openTab).toHaveBeenCalledWith('/app/agents?sessionId=s1', { title: 'Session 1' })
     expect(tabsMock.emitResourceListReveal).not.toHaveBeenCalled()
   })
 
-  it('openConversationTab opens a new tab even when one exists', () => {
+  it('openConversationTab cannot request a duplicate when one exists', () => {
     const ctx = makeCtx([{ id: 'tab-x', type: 'route', url: '/app/agents?sessionId=s1' }])
     ctx.openTab.mockReturnValue('new-agent-tab')
     tabsMock.ctx = ctx
@@ -61,25 +58,19 @@ describe('useConversationNavigation', () => {
 
     result.current.openConversationTab('s1', 'Session 1')
     expect(ctx.setActiveTab).not.toHaveBeenCalled()
-    expect(ctx.openTab).toHaveBeenCalledWith('/app/agents?sessionId=s1', {
-      forceNew: true,
-      title: 'Session 1'
-    })
+    expect(ctx.openTab).toHaveBeenCalledWith('/app/agents?sessionId=s1', { title: 'Session 1' })
     expect(tabsMock.emitResourceListReveal).not.toHaveBeenCalled()
   })
 
-  it('openConversationTab can force opening a duplicate tab even when one exists', () => {
+  it('repeated openConversationTab calls use the same page identity', () => {
     const ctx = makeCtx([{ id: 'tab-x', type: 'route', url: '/app/agents?sessionId=s1' }])
     ctx.openTab.mockReturnValue('duplicate-agent-tab')
     tabsMock.ctx = ctx
     const { result } = renderHook(() => useConversationNavigation('agents'))
 
-    result.current.openConversationTab('s1', 'Session 1', { forceNew: true })
+    result.current.openConversationTab('s1', 'Session 1')
     expect(ctx.setActiveTab).not.toHaveBeenCalled()
-    expect(ctx.openTab).toHaveBeenCalledWith('/app/agents?sessionId=s1', {
-      forceNew: true,
-      title: 'Session 1'
-    })
+    expect(ctx.openTab).toHaveBeenCalledWith('/app/agents?sessionId=s1', { title: 'Session 1' })
     expect(tabsMock.emitResourceListReveal).not.toHaveBeenCalled()
   })
 
@@ -89,10 +80,7 @@ describe('useConversationNavigation', () => {
     const { result } = renderHook(() => useConversationNavigation('assistants'))
 
     result.current.openConversationTab('t1', 'Topic 1')
-    expect(ctx.openTab).toHaveBeenCalledWith('/app/chat?topicId=t1', {
-      forceNew: true,
-      title: 'Topic 1'
-    })
+    expect(ctx.openTab).toHaveBeenCalledWith('/app/chat?topicId=t1', { title: 'Topic 1' })
   })
 
   it('no-ops without a tabs provider', () => {
@@ -102,7 +90,7 @@ describe('useConversationNavigation', () => {
     expect(() => result.current.openConversationTab('t1')).not.toThrow()
   })
 
-  it('openConversationWindow detaches a fresh window for the conversation key without touching tabs', () => {
+  it('openConversationWindow uses the global focus-or-open coordinator', () => {
     const ctx = makeCtx([{ id: 'tab-1', type: 'route', url: '/app/chat?topicId=t1' }])
     tabsMock.ctx = ctx
     const { result } = renderHook(() => useConversationNavigation('assistants'))
@@ -111,15 +99,11 @@ describe('useConversationNavigation', () => {
 
     expect(ipcMock.request).toHaveBeenCalledTimes(1)
     const [channel, payload] = ipcMock.request.mock.calls[0] as [string, Record<string, unknown>]
-    expect(channel).toBe('tab.detach')
-    expect(payload).toMatchObject({
-      url: '/app/chat?topicId=t1',
-      title: 'Topic 1',
-      type: 'route'
+    expect(channel).toBe('navigation.focus_or_open_conversation')
+    expect(payload).toEqual({
+      target: { conversationType: 'assistant', conversationId: 't1' },
+      title: 'Topic 1'
     })
-    expect(payload.metadata).toBeUndefined()
-    expect(typeof payload.id).toBe('string')
-    // Opening elsewhere must not focus or duplicate a tab in the current window.
     expect(ctx.openTab).not.toHaveBeenCalled()
     expect(ctx.setActiveTab).not.toHaveBeenCalled()
   })
@@ -133,13 +117,10 @@ describe('useConversationNavigation', () => {
 
     result.current.openConversation('s1', 'Session 1')
 
-    expect(ctx.openTab).toHaveBeenCalledWith('/app/agents?sessionId=s1', {
-      forceNew: true,
-      title: 'Session 1'
-    })
+    expect(ctx.openTab).toHaveBeenCalledWith('/app/agents?sessionId=s1', { title: 'Session 1' })
   })
 
-  it('openConversation routes to a detached window when the host frame is detached', () => {
+  it('openConversation uses global focus-or-open when the host frame is detached', () => {
     tabsMock.ctx = makeCtx([])
     tabsMock.windowFrameMode = 'window'
     const { result } = renderHook(() => useConversationNavigation('agents'))
@@ -147,11 +128,13 @@ describe('useConversationNavigation', () => {
     result.current.openConversation('s1', 'Session 1')
 
     expect(ipcMock.request).toHaveBeenCalledTimes(1)
-    expect(ipcMock.request.mock.calls[0][1]).toMatchObject({
-      url: '/app/agents?sessionId=s1',
-      title: 'Session 1',
-      type: 'route'
-    })
+    expect(ipcMock.request.mock.calls[0]).toEqual([
+      'navigation.focus_or_open_conversation',
+      {
+        target: { conversationType: 'agent', conversationId: 's1' },
+        title: 'Session 1'
+      }
+    ])
   })
 
   it('openConversationTab does not create a hidden tab in a detached window', () => {
@@ -172,6 +155,9 @@ describe('useConversationNavigation', () => {
     result.current.openConversation('s1')
 
     expect(ipcMock.request).toHaveBeenCalledTimes(1)
-    expect(ipcMock.request.mock.calls[0][1]).toMatchObject({ url: '/app/agents?sessionId=s1' })
+    expect(ipcMock.request.mock.calls[0]).toEqual([
+      'navigation.focus_or_open_conversation',
+      { target: { conversationType: 'agent', conversationId: 's1' }, title: '' }
+    ])
   })
 })

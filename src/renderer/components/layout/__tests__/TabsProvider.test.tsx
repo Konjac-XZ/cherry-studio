@@ -146,6 +146,104 @@ function TabIds() {
   return <div data-testid="tab-ids">{tabs.map((tab) => tab.id).join(',')}</div>
 }
 
+function ProtectedTranslateControls() {
+  const { activeTabId, addTab, closeTab, openTab, pinTab, tabs, updateTab } = useTabsContext()
+  const translateTabs = tabs.filter((tab) => tab.type === 'route' && tab.url.startsWith('/app/translate'))
+
+  return (
+    <>
+      <button type="button" onClick={() => openTab('/app/translate?paste=1&nonce=test', { forceNew: true })}>
+        Open Translate command
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          addTab({
+            id: 'duplicate-translate',
+            type: 'route',
+            url: '/app/translate',
+            title: 'Duplicate Translate',
+            lastAccessTime: 0,
+            isDormant: false
+          })
+        }>
+        Bypass Translate open
+      </button>
+      <button type="button" onClick={() => closeTab('translate')}>
+        Close Translate
+      </button>
+      <button type="button" onClick={() => pinTab('translate')}>
+        Pin Translate
+      </button>
+      <button type="button" onClick={() => updateTab('translate', { url: '/app/files' })}>
+        Replace Translate
+      </button>
+      <div data-testid="translate-count">{translateTabs.length}</div>
+      <div data-testid="translate-url">{translateTabs[0]?.url}</div>
+      <div data-testid="translate-pinned">{String(translateTabs[0]?.isPinned ?? false)}</div>
+      <div data-testid="protected-active">{activeTabId}</div>
+    </>
+  )
+}
+
+function ProtectedHomeControls() {
+  const { activeTabId, closeTab, openTab, pinTab, tabs, updateTab } = useTabsContext()
+  const homeTabs = tabs.filter((tab) => tab.id === 'home')
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          openTab('/app/chat', { forceNew: true })
+          openTab('/app/chat', { forceNew: true })
+        }}>
+        Open Chat shortcut twice
+      </button>
+      <button type="button" onClick={() => closeTab('home')}>
+        Close Chat home
+      </button>
+      <button type="button" onClick={() => pinTab('home')}>
+        Pin Chat home
+      </button>
+      <button type="button" onClick={() => updateTab('home', { url: '/app/files' })}>
+        Replace Chat home
+      </button>
+      <button type="button" onClick={() => updateTab('home', { url: '/app/chat?topicId=active' })}>
+        Navigate Chat home
+      </button>
+      <div data-testid="home-count">{homeTabs.length}</div>
+      <div data-testid="home-url">{homeTabs[0]?.url}</div>
+      <div data-testid="home-pinned">{String(homeTabs[0]?.isPinned ?? false)}</div>
+      <div data-testid="home-active">{activeTabId}</div>
+    </>
+  )
+}
+
+function DuplicatePageControls() {
+  const { activeTabId, addTab, tabs, updateTab } = useTabsContext()
+  const knowledgeTabs = tabs.filter((tab) => tab.type === 'route' && tab.url.startsWith('/app/knowledge'))
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          addTab({ id: 'knowledge', type: 'route', url: '/app/knowledge?a=1&b=2', title: 'Knowledge' })
+          addTab({ id: 'notes', type: 'route', url: '/app/notes', title: 'Notes' })
+        }}>
+        Seed distinct pages
+      </button>
+      <button type="button" onClick={() => updateTab('notes', { url: '/app/knowledge?b=2&a=1' })}>
+        Converge Notes route
+      </button>
+      <div data-testid="knowledge-count">{knowledgeTabs.length}</div>
+      <div data-testid="notes-count">{tabs.filter((tab) => tab.id === 'notes').length}</div>
+      <div data-testid="duplicate-active">{activeTabId}</div>
+    </>
+  )
+}
+
 // Surfaces restored-session state: active tab id, each tab's awake/dormant state, and the id list.
 function SessionInspector() {
   const { tabs, activeTabId } = useTabsContext()
@@ -266,7 +364,7 @@ function CloseHomeAfterSecondTabOpens() {
   return <TabSnapshot />
 }
 
-// Opens the same URL as the initial tab with forceNew, the way the tab bar's + button does.
+// Repeats the same URL with the legacy forceNew flag used by older callers.
 function ForceNewSameUrlOpener() {
   const { openTab } = useTabsContext()
   const didOpenRef = useRef(false)
@@ -489,14 +587,14 @@ describe('TabsProvider', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Seed tabs' }))
-    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,b,c,d'))
+    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,translate,b,c,d'))
 
     fireEvent.click(screen.getByRole('button', { name: 'Activate C' }))
     await waitFor(() => expect(screen.getByTestId('active-tab-id')).toHaveTextContent('c'))
 
     fireEvent.click(screen.getByRole('button', { name: 'Close B and C' }))
 
-    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,d'))
+    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,translate,d'))
     // Chrome-style: the surviving right neighbor takes over the active slot.
     expect(screen.getByTestId('active-tab-id')).toHaveTextContent('d')
   })
@@ -509,17 +607,14 @@ describe('TabsProvider', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Seed tabs' }))
-    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,b,c,d'))
+    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,translate,b,c,d'))
 
-    // Active tab (home) sits left of the designated survivor (c) with the
-    // pinned files tab further left — without activateId the nearest-left rule
-    // would land on the pinned tab instead of c.
-    fireEvent.click(screen.getByRole('button', { name: 'Activate Home' }))
-    await waitFor(() => expect(screen.getByTestId('active-tab-id')).toHaveTextContent('home'))
+    fireEvent.click(screen.getByRole('button', { name: 'Activate D' }))
+    await waitFor(() => expect(screen.getByTestId('active-tab-id')).toHaveTextContent('d'))
 
     fireEvent.click(screen.getByRole('button', { name: 'Close others around C' }))
 
-    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,c'))
+    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,translate,c'))
     expect(screen.getByTestId('active-tab-id')).toHaveTextContent('c')
   })
 
@@ -531,20 +626,20 @@ describe('TabsProvider', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Seed tabs' }))
-    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,b,c,d'))
+    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,translate,b,c,d'))
 
     fireEvent.click(screen.getByRole('button', { name: 'Hibernate C' }))
     await waitFor(() => expect(screen.getByTestId('dormant-ids')).toHaveTextContent('c'))
 
-    fireEvent.click(screen.getByRole('button', { name: 'Activate Home' }))
-    await waitFor(() => expect(screen.getByTestId('active-tab-id')).toHaveTextContent('home'))
+    fireEvent.click(screen.getByRole('button', { name: 'Activate D' }))
+    await waitFor(() => expect(screen.getByTestId('active-tab-id')).toHaveTextContent('d'))
 
     fireEvent.click(screen.getByRole('button', { name: 'Close others around C' }))
 
     // The dormant survivor must be woken, not just pointed at — a dormant tab
     // is not rendered, so activating without waking would blank the content.
     await waitFor(() => expect(screen.getByTestId('active-tab-id')).toHaveTextContent('c'))
-    expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,c')
+    expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,translate,c')
     expect(screen.getByTestId('dormant-ids')).toHaveTextContent(/^$/)
   })
 
@@ -574,7 +669,7 @@ describe('TabsProvider', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Seed tabs' }))
-    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,b,c,d'))
+    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,translate,b,c,d'))
 
     fireEvent.click(screen.getByRole('button', { name: 'Activate C' }))
     await waitFor(() => expect(screen.getByTestId('active-tab-id')).toHaveTextContent('c'))
@@ -583,7 +678,7 @@ describe('TabsProvider', () => {
     // Chrome-style fallback selects the right neighbor that slides into place.
     fireEvent.click(screen.getByRole('button', { name: 'Close B and C keeping C' }))
 
-    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,d'))
+    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,translate,d'))
     expect(screen.getByTestId('active-tab-id')).toHaveTextContent('d')
   })
 
@@ -595,13 +690,13 @@ describe('TabsProvider', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Seed tabs' }))
-    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,b,c,d'))
+    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,translate,b,c,d'))
 
     fireEvent.click(screen.getByRole('button', { name: 'Activate D' }))
     await waitFor(() => expect(screen.getByTestId('active-tab-id')).toHaveTextContent('d'))
     fireEvent.click(screen.getByRole('button', { name: 'Close D' }))
 
-    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,b,c'))
+    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,translate,b,c'))
     expect(screen.getByTestId('active-tab-id')).toHaveTextContent('c')
   })
 
@@ -615,10 +710,12 @@ describe('TabsProvider', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Seed tabs' }))
-    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,b,c,d'))
+    await waitFor(() => expect(screen.getByTestId('tab-ids')).toHaveTextContent('files,home,translate,b,c,d'))
 
     fireEvent.click(screen.getByRole('button', { name: 'Activate Home' }))
     await waitFor(() => expect(screen.getByTestId('active-tab-id')).toHaveTextContent('home'))
+    fireEvent.click(screen.getByRole('button', { name: 'Activate D' }))
+    await waitFor(() => expect(screen.getByTestId('active-tab-id')).toHaveTextContent('d'))
 
     fireEvent.click(screen.getByRole('button', { name: 'Close all normals to Files' }))
 
@@ -633,9 +730,10 @@ describe('TabsProvider', () => {
   })
 
   it('opens launchpad when closing the only tab', async () => {
+    const ordinaryTab = { ...HOME_TAB, id: 'ordinary' }
     render(
-      <TabsProvider initialDefaultTab={HOME_TAB} includePinnedTabs={false}>
-        <CloseTabOnMount tabId="home" />
+      <TabsProvider initialDefaultTab={ordinaryTab} includePinnedTabs={false}>
+        <CloseTabOnMount tabId="ordinary" />
       </TabsProvider>
     )
 
@@ -657,7 +755,7 @@ describe('TabsProvider', () => {
     expect(screen.getByTestId('active-tab-id')).toHaveTextContent('agents')
   })
 
-  it('creates a second tab for an already-open URL when forceNew is set', async () => {
+  it('reuses an already-open page even when forceNew is set', async () => {
     render(
       <TabsProvider
         initialDefaultTab={{
@@ -673,14 +771,114 @@ describe('TabsProvider', () => {
       </TabsProvider>
     )
 
-    await waitFor(() => expect(screen.getByTestId('tab-urls')).toHaveTextContent('/app/launchpad,/app/launchpad'))
+    await waitFor(() => expect(screen.getByTestId('tab-urls')).toHaveTextContent('/app/launchpad'))
     const ids = (screen.getByTestId('tab-ids').textContent ?? '').split(',')
-    expect(ids).toHaveLength(2)
-    expect(new Set(ids).size).toBe(2)
+    expect(ids).toEqual(['home'])
+  })
+
+  it('routes commands to the single protected Translate tab and rejects close, pin, and replacement operations', async () => {
+    render(
+      <TabsProvider initialDefaultTab={HOME_TAB}>
+        <ProtectedTranslateControls />
+      </TabsProvider>
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open Translate command' }))
+    await waitFor(() => expect(screen.getByTestId('protected-active')).toHaveTextContent('translate'))
+    expect(screen.getByTestId('translate-count')).toHaveTextContent('1')
+    expect(screen.getByTestId('translate-url')).toHaveTextContent('/app/translate?paste=1&nonce=test')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Bypass Translate open' }))
+    expect(screen.getByTestId('translate-count')).toHaveTextContent('1')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close Translate' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Pin Translate' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Replace Translate' }))
+
+    expect(screen.getByTestId('translate-count')).toHaveTextContent('1')
+    expect(screen.getByTestId('translate-pinned')).toHaveTextContent('false')
+    expect(screen.getByTestId('translate-url')).toHaveTextContent('/app/translate?paste=1&nonce=test')
+  })
+
+  it('routes repeated Chat-home shortcuts to one protected workspace', async () => {
+    render(
+      <TabsProvider initialDefaultTab={HOME_TAB}>
+        <ProtectedHomeControls />
+      </TabsProvider>
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open Chat shortcut twice' }))
+    await waitFor(() => expect(screen.getByTestId('home-active')).toHaveTextContent('home'))
+    expect(screen.getByTestId('home-count')).toHaveTextContent('1')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close Chat home' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Pin Chat home' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Replace Chat home' }))
+    expect(screen.getByTestId('home-count')).toHaveTextContent('1')
+    expect(screen.getByTestId('home-pinned')).toHaveTextContent('false')
+    expect(screen.getByTestId('home-url')).toHaveTextContent('/app/chat')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Navigate Chat home' }))
+    await waitFor(() => expect(screen.getByTestId('home-url')).toHaveTextContent('/app/chat?topicId=active'))
+  })
+
+  it('focuses the existing page when a tab update converges on its canonical URL', async () => {
+    render(
+      <TabsProvider initialDefaultTab={HOME_TAB}>
+        <DuplicatePageControls />
+      </TabsProvider>
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seed distinct pages' }))
+    await waitFor(() => expect(screen.getByTestId('duplicate-active')).toHaveTextContent('notes'))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Converge Notes route' }))
+
+    await waitFor(() => expect(screen.getByTestId('duplicate-active')).toHaveTextContent('knowledge'))
+    expect(screen.getByTestId('knowledge-count')).toHaveTextContent('1')
+    expect(screen.getByTestId('notes-count')).toHaveTextContent('0')
   })
 })
 
 describe('TabsProvider session restore', () => {
+  it('merges duplicate restored pages and retains the active copy', async () => {
+    normalTabsValue = [
+      { id: 'old', type: 'route', url: '/app/knowledge?b=2&a=1', title: 'Old' },
+      { id: 'active-copy', type: 'route', url: '/app/knowledge?a=1&b=2', title: 'Active' }
+    ]
+    activeTabIdValue = 'active-copy'
+
+    render(
+      <TabsProvider initialDefaultTab={null}>
+        <SessionInspector />
+      </TabsProvider>
+    )
+
+    await waitFor(() => expect(screen.getByTestId('active')).toHaveTextContent('active-copy'))
+    expect(screen.getByTestId('session-ids')).not.toHaveTextContent('old')
+    expect(screen.getByTestId('session-ids')).toHaveTextContent('active-copy')
+  })
+
+  it('merges duplicate restored Translate routes into the fixed singleton and preserves active selection', async () => {
+    normalTabsValue = [
+      { id: 'old-a', type: 'route', url: '/app/translate', title: '', lastAccessTime: 1, isDormant: true },
+      { id: 'old-b', type: 'route', url: '/app/translate?paste=1', title: '', lastAccessTime: 2, isDormant: false }
+    ]
+    activeTabIdValue = 'old-b'
+
+    render(
+      <TabsProvider initialDefaultTab={null}>
+        <SessionInspector />
+      </TabsProvider>
+    )
+
+    await waitFor(() => expect(screen.getByTestId('active')).toHaveTextContent('translate'))
+    expect(
+      (screen.getByTestId('session-ids').textContent ?? '').split(',').filter((id) => id === 'translate')
+    ).toHaveLength(1)
+    expect(screen.getByTestId('session-tabs')).toHaveTextContent('translate:awake')
+  })
+
   it('drops transient mini-app tabs whose in-memory descriptor disappears on restart', async () => {
     const codeTab: Tab = {
       id: 'code',
@@ -712,8 +910,8 @@ describe('TabsProvider session restore', () => {
     expect(screen.getByTestId('session-ids')).not.toHaveTextContent(transientMiniAppTab.id)
   })
 
-  it('restores the persisted session and keeps only the active tab awake', async () => {
-    const tabA: Tab = { id: 'a', type: 'route', url: '/app/chat', title: '', lastAccessTime: 1, isDormant: false }
+  it('restores the persisted session and keeps both protected workspaces awake', async () => {
+    const tabA: Tab = { id: 'a', type: 'route', url: '/app/knowledge', title: '', lastAccessTime: 1, isDormant: false }
     const tabB: Tab = { id: 'b', type: 'route', url: '/app/agents', title: '', lastAccessTime: 2, isDormant: false }
     normalTabsValue = [tabA, tabB]
     activeTabIdValue = 'b'
@@ -727,14 +925,26 @@ describe('TabsProvider session restore', () => {
     await waitFor(() => expect(screen.getByTestId('active')).toHaveTextContent('b'))
     const dump = screen.getByTestId('session-tabs').textContent ?? ''
     expect(dump).toContain('a:dormant')
+    expect(dump).toContain('home:awake')
     expect(dump).toContain('b:awake')
-    expect(dump.split(',').filter((tab) => tab.endsWith(':awake'))).toHaveLength(1)
+    expect(dump.split(',').filter((tab) => tab.endsWith(':awake'))).toEqual([
+      'b:awake',
+      'home:awake',
+      'translate:awake'
+    ])
   })
 
   it('keeps the resolved active tab awake when the persisted active id is stale', async () => {
     // Active id points at a tab that no longer exists in either the pinned or normal set. The
     // resolved active tab (first normal tab) must still be awake, or AppShell renders no TabRouter.
-    const tabA: Tab = { id: 'a', type: 'route', url: '/app/chat', title: '', lastAccessTime: 1, isDormant: false }
+    const tabA: Tab = {
+      id: 'a',
+      type: 'route',
+      url: '/app/knowledge',
+      title: '',
+      lastAccessTime: 1,
+      isDormant: false
+    }
     const tabB: Tab = { id: 'b', type: 'route', url: '/app/agents', title: '', lastAccessTime: 2, isDormant: false }
     normalTabsValue = [tabA, tabB]
     activeTabIdValue = 'ghost'
@@ -765,7 +975,7 @@ describe('TabsProvider session restore', () => {
     await waitFor(() => expect(screen.getByTestId('active')).toHaveTextContent('files'))
     const dump = screen.getByTestId('session-tabs').textContent ?? ''
     expect(dump).toContain('files:awake')
-    expect(dump).toContain('home:dormant')
+    expect(dump).toContain('home:awake')
   })
 
   it('does not restore a persisted session in a detached sub-window', async () => {
@@ -797,7 +1007,7 @@ describe('TabsProvider session restore', () => {
     const many: Tab[] = Array.from({ length: overflow }, (_, i) => ({
       id: `n${i}`,
       type: 'route',
-      url: '/app/chat',
+      url: `/app/chat?topicId=${i}`,
       title: '',
       lastAccessTime: i,
       isDormant: false
@@ -818,7 +1028,11 @@ describe('TabsProvider session restore', () => {
     expect(ids).toContain('n1')
     expect(ids).toContain(`n${overflow - 1}`)
     const dump = screen.getByTestId('session-tabs').textContent ?? ''
-    expect(dump.split(',').filter((tab) => tab.endsWith(':awake'))).toEqual(['n0:awake'])
+    expect(dump.split(',').filter((tab) => tab.endsWith(':awake'))).toEqual([
+      'n0:awake',
+      'home:awake',
+      'translate:awake'
+    ])
   })
 
   it('applies the hard fuse across a batch of pinned additions', () => {

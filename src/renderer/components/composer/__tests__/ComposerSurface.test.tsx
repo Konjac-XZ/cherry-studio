@@ -4208,7 +4208,7 @@ describe('ComposerSurface', () => {
     })
   })
 
-  it('delegates text longer than the fixed threshold to the long-text file handler', async () => {
+  it('inlines text longer than the fixed threshold when file conversion is disabled', async () => {
     render(<ComposerSurface {...baseProps} supportedExts={['.txt']} />)
 
     await waitFor(() => expect(mocks.editorOptions).toBeDefined())
@@ -4224,7 +4224,8 @@ describe('ComposerSurface', () => {
 
     expect(handled).toBe(true)
     expect(event.preventDefault).toHaveBeenCalled()
-    expect(mocks.pasteHandler).toHaveBeenCalledWith(event)
+    expect(mocks.insertContent).toHaveBeenCalledWith([{ type: 'text', text: 'a'.repeat(2001) }])
+    expect(mocks.pasteHandler).not.toHaveBeenCalled()
   })
 
   it('keeps long pasted text in the active editor when its ref is stale', async () => {

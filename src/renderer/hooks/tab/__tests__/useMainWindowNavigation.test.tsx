@@ -242,6 +242,23 @@ describe('useMainWindowNavigation', () => {
     expect(mocks.openTab).toHaveBeenCalledWith('/agents')
   })
 
+  it('forwards repeated Chat-home shortcut routes to the singleton-aware tab provider', () => {
+    render(<MainWindowNavigationHarness />)
+
+    for (let index = 0; index < 2; index += 1) {
+      window.dispatchEvent(
+        new CustomEvent(OPEN_MAIN_ROUTE_EVENT, {
+          cancelable: true,
+          detail: { path: '/app/chat' }
+        })
+      )
+    }
+
+    expect(mocks.openTab).toHaveBeenCalledTimes(2)
+    expect(mocks.openTab).toHaveBeenNthCalledWith(1, '/app/chat')
+    expect(mocks.openTab).toHaveBeenNthCalledWith(2, '/app/chat')
+  })
+
   it('removes the main-route event bridge on unmount', () => {
     const { unmount } = render(<MainWindowNavigationHarness />)
     unmount()

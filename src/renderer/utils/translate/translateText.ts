@@ -14,6 +14,9 @@ export interface TranslateTextOptions {
   sourceLangCode?: TranslateLangCode
   modelId?: UniqueModelId
   onOutputTokens?: (outputTokens: number) => void
+  traceTopicId?: string
+  traceId?: string
+  onTraceReady?: (traceId: string) => void
 }
 
 export const resolveTranslatePlan = async (
@@ -101,8 +104,13 @@ export const translateText = async (
     )
 
     unsubscribers.push(
-      ipcApi.on('ai.stream.done', ({ topicId }) => {
+      ipcApi.on('ai.stream.done', ({ topicId, status }) => {
         if (topicId !== streamId) return
+        if (status !== 'success') {
+          cleanup()
+          reject(new DOMException('Translation stream paused', 'AbortError'))
+          return
+        }
         const trimmed = accumulated.trim()
         cleanup()
         if (!trimmed) {
@@ -133,7 +141,12 @@ export const translateText = async (
         targetLangCode,
         ...(options?.operation && { operation: options.operation }),
         ...(options?.sourceLangCode && { sourceLangCode: options.sourceLangCode }),
-        ...(options?.modelId && { modelId: options.modelId })
+        ...(options?.modelId && { modelId: options.modelId }),
+        ...(options?.traceTopicId && { traceTopicId: options.traceTopicId }),
+        ...(options?.traceId && { traceId: options.traceId })
+      })
+      .then(({ traceId }) => {
+        if (traceId) options?.onTraceReady?.(traceId)
       })
       .catch((openError: unknown) => {
         cleanup()

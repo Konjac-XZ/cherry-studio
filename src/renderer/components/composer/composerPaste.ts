@@ -13,8 +13,9 @@ import { createComposerLinkToken } from './linkToken'
 import { createPromptVariableMarkerRule } from './promptVariables'
 import type { ComposerDraftToken } from './tokens'
 
-/** Pasted text longer than this (in characters) is offered as a file attachment instead of inlined. */
+/** Long-text file conversion is intentionally disabled; this cutoff only applies when re-enabled. */
 export const LONG_TEXT_PASTE_THRESHOLD = 1500
+export const LONG_TEXT_PASTE_AS_FILE_ENABLED = false
 export const PASTED_TEXT_FILE_EXTENSION = '.txt'
 
 interface ComposerPlainTextPasteOptions {

@@ -91,6 +91,20 @@ describe('TabLruManager', () => {
         expect(result).not.toContain('home')
       })
 
+      it('keeps the global Translate workspace awake under soft-cap pressure', () => {
+        const now = Date.now()
+        const tabs = [
+          createTab('translate', { url: '/app/translate', lastAccessTime: now - 20000 }),
+          ...Array.from({ length: TAB_LIMITS.softCap + 1 }, (_, i) =>
+            createTab(`tab-${i}`, { lastAccessTime: now + i * 1000 })
+          )
+        ]
+
+        const result = manager.checkAndGetDormantCandidates(tabs, `tab-${TAB_LIMITS.softCap}`)
+
+        expect(result).not.toContain('translate')
+      })
+
       it('should not hibernate pinned tabs below the hard cap', () => {
         const now = Date.now()
         const tabs = [
@@ -148,6 +162,20 @@ describe('TabLruManager', () => {
 
         expect(result).not.toContain('home')
         expect(result).not.toContain(activeTabId)
+      })
+
+      it('keeps the global Translate workspace awake even beyond the hard cap', () => {
+        const now = Date.now()
+        const tabs = [
+          createTab('translate', { url: '/app/translate', lastAccessTime: now - 40000 }),
+          ...Array.from({ length: TAB_LIMITS.hardCap + 2 }, (_, i) =>
+            createTab(`tab-${i}`, { lastAccessTime: now + i * 1000 })
+          )
+        ]
+
+        const result = manager.checkAndGetDormantCandidates(tabs, `tab-${TAB_LIMITS.hardCap + 1}`)
+
+        expect(result).not.toContain('translate')
       })
     })
 

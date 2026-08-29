@@ -135,8 +135,7 @@ describe('SubWindowAppShell', () => {
         title: 'Detached topic',
         icon: '🍒',
         type: 'route',
-        isPinned: true,
-        forceNew: true
+        isPinned: true
       })
     })
     expect(openTab).toHaveBeenCalledOnce()

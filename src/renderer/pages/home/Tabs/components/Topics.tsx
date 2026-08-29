@@ -882,7 +882,7 @@ export function Topics({
   }, [])
   const openTopicInNewTab = useCallback(
     (topic: Topic) => {
-      conversationNav.openConversationTab(topic.id, topic.name, { forceNew: true })
+      conversationNav.openConversationTab(topic.id, topic.name)
     },
     [conversationNav, t]
   )

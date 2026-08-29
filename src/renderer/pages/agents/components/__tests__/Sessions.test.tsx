@@ -2053,7 +2053,6 @@ describe('Sessions', () => {
       }
     })
     expect(tabsContextMocks.openTab).toHaveBeenCalledWith('/app/agents?sessionId=session-b', {
-      forceNew: true,
       title: 'Beta session'
     })
     requestAnimationFrameSpy.mockRestore()

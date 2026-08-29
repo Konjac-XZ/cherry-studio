@@ -5,7 +5,7 @@ import { createContext, use } from 'react'
  * Options for opening a tab
  */
 export interface OpenTabOptions {
-  /** Force open a new tab even if one with the same URL exists */
+  /** @deprecated Page identities are unique; retained for caller compatibility. */
   forceNew?: boolean
   /** Tab title (defaults to URL path) */
   title?: string

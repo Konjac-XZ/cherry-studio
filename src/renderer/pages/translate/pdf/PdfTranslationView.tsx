@@ -3,10 +3,9 @@ import { useInvalidateCache } from '@data/hooks/useDataApi'
 import { loggerService } from '@logger'
 import { LoadingState } from '@renderer/components/chat/primitives'
 import { FilePreview } from '@renderer/components/FilePreview'
-import { ipcApi, useIpcOn } from '@renderer/ipc'
 import { toast } from '@renderer/services/toast'
+import { translationWorkspaceService } from '@renderer/services/translation'
 import { formatErrorMessageWithPrefix } from '@renderer/utils/error'
-import { uuid } from '@renderer/utils/uuid'
 import type { TranslateLangCode, TranslateSourceLanguage } from '@shared/data/preference/preferenceTypes'
 import type { UniqueModelId } from '@shared/data/types/model'
 import { IpcError } from '@shared/ipc/errors/IpcError'
@@ -16,7 +15,7 @@ import type { AbsoluteFilePath } from '@shared/types/file'
 import type { TFunction } from 'i18next'
 import { AlertCircle, Download, Languages, X } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { saveTranslationFileAs } from '../translationFiles'
@@ -121,12 +120,6 @@ const getProgressLabel = (t: TFunction, stage: 'preparing' | PdfTranslationProgr
 const isRunningPhase = (phase: PdfTranslationPhase) =>
   phase === 'preparing' || phase === 'downloading_assets' || phase === 'translating'
 
-const requestCancel = (jobId: string, warningMessage: string) => {
-  void ipcApi.request('translate.pdf.cancel', { jobId }).catch((error) => {
-    logger.warn(warningMessage, error as Error)
-  })
-}
-
 const getResultState = ({
   output,
   phase,
@@ -192,23 +185,22 @@ const PdfTranslationView = ({
   const [output, setOutput] = useState<PdfTranslationOutput | null>(() => restoredOutput ?? null)
   const [error, setError] = useState<Error | null>(null)
   const [progress, setProgress] = useState<PdfTranslationUiProgress | null>(null)
-  const activeJobIdRef = useRef<string | null>(null)
+  const workspaceSnapshot = useSyncExternalStore(
+    translationWorkspaceService.subscribe,
+    translationWorkspaceService.getSnapshot,
+    translationWorkspaceService.getSnapshot
+  )
 
   const cancel = useCallback(() => {
-    const jobId = activeJobIdRef.current
-    if (!jobId) return
-    activeJobIdRef.current = null
+    if (workspaceSnapshot.kind !== 'pdf' || !translationWorkspaceService.isBusy()) return
+    translationWorkspaceService.cancel()
     setPhase('idle')
     setProgress(null)
-    requestCancel(jobId, 'Failed to cancel PDF translation')
-  }, [])
+  }, [workspaceSnapshot.kind])
 
   const start = useCallback(
     (targetLangCode: TranslateLangCode) => {
-      if (!modelId || activeJobIdRef.current) return
-
-      const jobId = uuid()
-      activeJobIdRef.current = jobId
+      if (!modelId || translationWorkspaceService.isBusy()) return
       // Drop the previous result: it outranks the running phase in `getResultState`,
       // so leaving it would pin the pane to the stale PDF for the whole new run. The
       // artifact itself stays — it is a history entry now, not scratch output.
@@ -217,9 +209,8 @@ const PdfTranslationView = ({
       setProgress(null)
       setPhase('preparing')
 
-      void ipcApi
-        .request('translate.pdf.start', {
-          jobId,
+      void translationWorkspaceService
+        .startPdf({
           modelId,
           sourceLangCode,
           sourcePath: file.path,
@@ -233,16 +224,13 @@ const PdfTranslationView = ({
           })
           // Superseded by a newer run (or by a cancel): its result is a legitimate history
           // entry, it just is not what this pane should show.
-          if (activeJobIdRef.current !== jobId) return
-          activeJobIdRef.current = null
+          if (!result) return
           setOutput(result)
           setProgress(null)
           setPhase('success')
           toast.success(t('translate.pdf.success'))
         })
         .catch((cause) => {
-          if (activeJobIdRef.current !== jobId) return
-          activeJobIdRef.current = null
           const normalized = cause instanceof Error ? cause : new Error(String(cause))
           if (
             normalized instanceof IpcError &&
@@ -259,17 +247,28 @@ const PdfTranslationView = ({
     [file.path, invalidate, modelId, onBabelDocUnavailable, sourceLangCode, t]
   )
 
-  useIpcOn('translate.pdf.stage', ({ jobId, stage }) => {
-    if (activeJobIdRef.current === jobId) setPhase(stage)
-  })
-  useIpcOn('translate.pdf.progress', ({ jobId, stage, stageProgress, overallProgress }) => {
-    if (activeJobIdRef.current !== jobId) return
-    setPhase('translating')
-    setProgress((current) => {
-      if (current && overallProgress < current.overallProgress) return current
-      return { stage, stageProgress, overallProgress }
-    })
-  })
+  useEffect(() => {
+    if (workspaceSnapshot.kind !== 'pdf') return
+    if (workspaceSnapshot.pdfOutput) setOutput(workspaceSnapshot.pdfOutput)
+    if (workspaceSnapshot.error) {
+      setError(
+        workspaceSnapshot.error instanceof Error ? workspaceSnapshot.error : new Error(String(workspaceSnapshot.error))
+      )
+    }
+    if (workspaceSnapshot.progressStage && workspaceSnapshot.progress !== undefined) {
+      setProgress({
+        stage: workspaceSnapshot.progressStage,
+        stageProgress: workspaceSnapshot.stageProgress ?? null,
+        overallProgress: workspaceSnapshot.progress
+      })
+    }
+    if (workspaceSnapshot.status === 'success') setPhase('success')
+    else if (workspaceSnapshot.status === 'error') setPhase('error')
+    else if (workspaceSnapshot.status === 'cancelled') setPhase('idle')
+    else if (isRunningPhase(workspaceSnapshot.stage as PdfTranslationPhase)) {
+      setPhase(workspaceSnapshot.stage as PdfTranslationPhase)
+    }
+  }, [workspaceSnapshot])
 
   const latestHandleRef = useRef({ cancel, start })
   latestHandleRef.current = { cancel, start }
@@ -284,17 +283,6 @@ const PdfTranslationView = ({
 
   const running = isRunningPhase(phase)
   useEffect(() => onStatusChange({ phase, running }), [onStatusChange, phase, running])
-
-  useEffect(
-    () => () => {
-      const activeJobId = activeJobIdRef.current
-      activeJobIdRef.current = null
-      if (activeJobId) {
-        requestCancel(activeJobId, 'Failed to cancel PDF translation on unmount')
-      }
-    },
-    []
-  )
 
   const close = useCallback(() => {
     cancel()

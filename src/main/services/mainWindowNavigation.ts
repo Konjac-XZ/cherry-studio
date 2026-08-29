@@ -4,6 +4,7 @@ import type { Tab } from '@shared/data/cache/cacheValueTypes'
 import type { SettingsPath } from '@shared/data/types/settingsPath'
 import { normalizeSettingsPath } from '@shared/data/types/settingsPath'
 import type { MainWindowInitData } from '@shared/types/mainWindow'
+import { getTabPageIdentity } from '@shared/utils/tabIdentity'
 
 /**
  * Route allowlist for externally-triggered main-window navigation (protocol
@@ -158,7 +159,11 @@ export function openTabInMainWindow(tab: Tab): void {
   if (mainWindowId) {
     if (isTabDeliveryReady(mainWindowId)) {
       application.get('IpcApiService').send(mainWindowId, 'tab.attached', tab)
-    } else if (!pendingTabAttachQueue.some((queued) => queued.id === tab.id)) {
+    } else if (
+      !pendingTabAttachQueue.some(
+        (queued) => queued.id === tab.id || getTabPageIdentity(queued) === getTabPageIdentity(tab)
+      )
+    ) {
       // Renderer not ready (fresh boot/reload/crash): queue the tab instead of
       // dropping the event; flush happens when it reports ready.
       pendingTabAttachQueue.push(tab)

@@ -1609,7 +1609,6 @@ describe('Topics', () => {
       }
     })
     expect(tabsContextMocks.openTab).toHaveBeenCalledWith('/app/chat?topicId=topic-c', {
-      forceNew: true,
       title: 'Gamma topic'
     })
     requestAnimationFrameSpy.mockRestore()

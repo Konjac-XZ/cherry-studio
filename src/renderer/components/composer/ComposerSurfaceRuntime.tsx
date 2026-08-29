@@ -39,6 +39,7 @@ import { createComposerInputAdapter, insertComposerTokenAtCursor } from './compo
 import {
   getComposerClipboardPasteOverride,
   getComposerPlainTextPasteOverride,
+  LONG_TEXT_PASTE_AS_FILE_ENABLED,
   LONG_TEXT_PASTE_THRESHOLD,
   PASTED_TEXT_FILE_EXTENSION
 } from './composerPaste'
@@ -318,7 +319,12 @@ const getTrackedTokenSignature = (tokens: readonly ComposerSerializedToken[]) =>
     .join('\n')
 
 function shouldDelegateLongTextPasteToFileHandler(text: string, supportedExts: readonly string[]) {
-  return Boolean(text && text.length > LONG_TEXT_PASTE_THRESHOLD && supportedExts.includes(PASTED_TEXT_FILE_EXTENSION))
+  return Boolean(
+    LONG_TEXT_PASTE_AS_FILE_ENABLED &&
+      text &&
+      text.length > LONG_TEXT_PASTE_THRESHOLD &&
+      supportedExts.includes(PASTED_TEXT_FILE_EXTENSION)
+  )
 }
 
 function insertComposerPastedContent(editor: Editor, content: JSONContent[]) {

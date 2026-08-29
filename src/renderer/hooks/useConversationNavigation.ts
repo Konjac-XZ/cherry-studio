@@ -4,14 +4,13 @@ import { ipcApi } from '@renderer/ipc'
 import type { ConversationAppId } from '@renderer/types/conversation'
 import { getSidebarApp } from '@renderer/utils/sidebar'
 import { useMemo } from 'react'
-import { v4 as uuid } from 'uuid'
 
 export interface ConversationNavigation {
   /**
    * Open a new tab on the conversation's own URL. Detached windows return
    * `undefined` instead of creating a hidden internal tab.
    */
-  openConversationTab: (key: string, title?: string, options?: { forceNew?: boolean }) => string | undefined
+  openConversationTab: (key: string, title?: string) => string | undefined
   /**
    * Open conversation `key` in the current tabs context when available; otherwise
    * open it in a detached window. Detached host windows always open elsewhere.
@@ -32,19 +31,16 @@ function openConversationTabImpl(
 ): string | undefined {
   const app = getSidebarApp(appId)
   if (!tabs || !app?.conversationRoute) return
-  return tabs.openTab(app.conversationRoute.urlForKey(key), { forceNew: true, title })
+  return tabs.openTab(app.conversationRoute.urlForKey(key), { title })
 }
 
 function openConversationWindowImpl(appId: ConversationAppId, key: string, title?: string): void {
-  const app = getSidebarApp(appId)
-  if (!app?.conversationRoute) return
-  // Mirrors TabsContext.detachTab's tab.detach payload, but with a fresh tab id and
-  // without closing any current-window tab — this is "open elsewhere", not "move".
-  void ipcApi.request('tab.detach', {
-    id: uuid(),
-    url: app.conversationRoute.urlForKey(key),
-    title,
-    type: 'route'
+  void ipcApi.request('navigation.focus_or_open_conversation', {
+    target: {
+      conversationType: appId === 'assistants' ? 'assistant' : 'agent',
+      conversationId: key
+    },
+    title: title ?? ''
   })
 }
 

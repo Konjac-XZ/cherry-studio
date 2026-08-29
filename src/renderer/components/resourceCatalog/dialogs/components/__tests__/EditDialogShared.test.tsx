@@ -6,10 +6,11 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { mockLoggerWarn, mockUseKnowledgeBases, mockIpcRequest, mockToastSuccess } = vi.hoisted(() => ({
+const { mockLoggerWarn, mockUseKnowledgeBases, mockIpcRequest, mockOpenRoute, mockToastSuccess } = vi.hoisted(() => ({
   mockLoggerWarn: vi.fn(),
   mockUseKnowledgeBases: vi.fn(),
   mockIpcRequest: vi.fn(),
+  mockOpenRoute: vi.fn(),
   mockToastSuccess: vi.fn()
 }))
 
@@ -71,6 +72,10 @@ vi.mock('@renderer/ipc', () => ({
   ipcApi: { request: mockIpcRequest }
 }))
 
+vi.mock('@renderer/services/mainWindowNavigation', () => ({
+  openRoute: mockOpenRoute
+}))
+
 import { KnowledgeStep } from '../../create/steps/KnowledgeStep'
 import type { ResourceCreateWizardFormValues } from '../../create/types'
 import { PromptVariablesPopover } from '../EditDialogShared'
@@ -85,6 +90,7 @@ describe('EditDialogShared', () => {
   beforeEach(() => {
     mockUseKnowledgeBases.mockReturnValue({ bases: [], isLoading: false })
     mockIpcRequest.mockReset()
+    mockOpenRoute.mockReset()
     mockToastSuccess.mockReset()
     writeText.mockResolvedValue(undefined)
     mockLoggerWarn.mockReset()
@@ -120,7 +126,7 @@ describe('EditDialogShared', () => {
     }
   })
 
-  it('opens the knowledge page in a standalone window without closing the knowledge step', () => {
+  it('focuses or opens the unique knowledge page without closing the knowledge step', () => {
     function Harness() {
       const form = useForm<ResourceCreateWizardFormValues>({
         defaultValues: {
@@ -150,11 +156,9 @@ describe('EditDialogShared', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Add knowledge base' }))
     fireEvent.click(screen.getByRole('button', { name: 'Open Knowledge to create one' }))
 
-    expect(mockIpcRequest).toHaveBeenCalledTimes(1)
-    expect(mockIpcRequest).toHaveBeenCalledWith(
-      'tab.detach',
-      expect.objectContaining({ url: '/app/knowledge', type: 'route' })
-    )
+    expect(mockOpenRoute).toHaveBeenCalledOnce()
+    expect(mockOpenRoute).toHaveBeenCalledWith('/app/knowledge')
+    expect(mockIpcRequest).not.toHaveBeenCalled()
     expect(screen.getByRole('button', { name: 'Open Knowledge to create one' })).toBeInTheDocument()
   })
 

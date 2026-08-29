@@ -10,6 +10,7 @@ import type { Tab } from '@shared/data/cache/cacheValueTypes'
 import type { WindowId } from '@shared/ipc/types'
 import { IpcChannel } from '@shared/IpcChannel'
 import type { SubWindowInitData } from '@shared/types/subWindow'
+import { getTabPageIdentity } from '@shared/utils/tabIdentity'
 import { BrowserWindow, ipcMain, type IpcMainEvent, nativeImage, nativeTheme } from 'electron'
 
 import iconPath from '../../../build/icon.png?asset'
@@ -51,6 +52,7 @@ type SubWindowState = {
 export class SubWindowService extends BaseService {
   /** tabId → windowId map (windowId belongs to WindowManager's namespace, distinct from tabId) */
   private tabIdToWindowId: Map<string, string> = new Map()
+  private pageIdentityToWindowId: Map<string, string> = new Map()
   private windowState: Map<string, SubWindowState> = new Map()
 
   protected async onInit() {
@@ -149,6 +151,16 @@ export class SubWindowService extends BaseService {
   }): string {
     const wm = application.get('WindowManager')
     const { id: tabId, url, title, icon, type, isPinned, x, y } = payload
+    const tabType = type === 'route' || type === 'webview' ? type : 'route'
+    const pageIdentity = getTabPageIdentity({ type: tabType, url })
+    const existingWindowId = this.pageIdentityToWindowId.get(pageIdentity)
+    const existingWindow = existingWindowId ? wm.getWindow(existingWindowId) : undefined
+    if (existingWindow && !existingWindow.isDestroyed()) {
+      existingWindow.show()
+      return existingWindowId!
+    }
+    if (existingWindowId) this.pageIdentityToWindowId.delete(pageIdentity)
+
     const hasPosition = x !== undefined && y !== undefined
     const dark = nativeTheme.shouldUseDarkColors
 
@@ -157,7 +169,7 @@ export class SubWindowService extends BaseService {
       url,
       title,
       ...(icon && { icon }),
-      type: type === 'route' || type === 'webview' ? type : 'route',
+      type: tabType,
       isPinned
     }
 
@@ -180,6 +192,7 @@ export class SubWindowService extends BaseService {
     }
 
     this.tabIdToWindowId.set(tabId, windowId)
+    this.pageIdentityToWindowId.set(pageIdentity, windowId)
 
     // showMode: 'manual' — WM does not auto-show. Callers that supply an initial position
     // will receive Tab_MoveWindow which shows the window after repositioning; otherwise we show
@@ -205,6 +218,9 @@ export class SubWindowService extends BaseService {
     // this callback has already executed.
     win.once('closed', () => {
       this.tabIdToWindowId.delete(tabId)
+      if (this.pageIdentityToWindowId.get(pageIdentity) === windowId) {
+        this.pageIdentityToWindowId.delete(pageIdentity)
+      }
       this.windowState.delete(tabId)
     })
 

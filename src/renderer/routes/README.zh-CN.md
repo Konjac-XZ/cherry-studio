@@ -87,8 +87,8 @@ function MyComponent() {
   // 带标题
   openTab('/chat/123', { title: 'Chat with Alice' })
 
-  // 强制新开 Tab（即使已有相同 URL）
-  openTab('/settings', { forceNew: true })
+  // 再次打开同一页面时聚焦已有 Tab
+  openTab('/settings')
 
   // 打开 Webview Tab
   openTab('https://example.com', {
@@ -146,10 +146,11 @@ function SettingsPage() {
 
 | 选项 | 类型 | 默认值 | 说明 |
 |-----|------|-------|------|
-| `forceNew` | `boolean` | `false` | 强制新开 Tab |
 | `title` | `string` | URL 路径 | Tab 标题 |
 | `type` | `'route' \| 'webview'` | `'route'` | Tab 类型 |
 | `id` | `string` | 自动生成 | 自定义 Tab ID |
+
+页面身份在标签页之间保持唯一；重复打开已有页面时会聚焦现有标签页。
 
 ## 架构说明
 

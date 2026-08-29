@@ -13,8 +13,8 @@
  *     `if (result)` to gate success-side effects.
  *   - Non-abort errors are always logged via `loggerService`; the toast and
  *     the rethrow are opt-out via `options`.
- *   - Unmounting the host component aborts any in-flight translation so
- *     stale completions don't run state setters on a dead tree.
+ *   - Unmounting aborts component-owned calls. Calls delegated to a stable
+ *     task owner survive Activity cleanup and are cancelled explicitly.
  *
  * Callers that need rich rendering can use `onResponse` to mirror the streamed
  * accumulated text into their own view state.
@@ -22,11 +22,12 @@
 
 import { loggerService } from '@logger'
 import { toast } from '@renderer/services/toast'
+import type { TranslationTaskOwner } from '@renderer/services/translation'
 import { formatErrorMessageWithPrefix, isAbortError } from '@renderer/utils/error'
 import { translateText, type TranslateTextOptions } from '@renderer/utils/translate'
 import type { TranslateLangCode } from '@shared/data/preference/preferenceTypes'
 import type { TranslateLanguage } from '@shared/data/types/translate'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { useTranslation } from 'react-i18next'
 import { v4 as uuid } from 'uuid'
 
@@ -59,6 +60,8 @@ export interface UseTranslateOptions {
   onResponse?: (text: string, isComplete: boolean) => void
   /** Logger context name. Default: 'useTranslate'. */
   loggerContext?: string
+  /** Stable owner for runs that must survive the host component's Activity lifecycle. */
+  taskOwner?: TranslationTaskOwner | null
 }
 
 export interface UseTranslateResult {
@@ -80,7 +83,14 @@ export interface UseTranslateResult {
 
 export function useTranslate(options?: UseTranslateOptions): UseTranslateResult {
   const { t } = useTranslation()
-  const [isTranslating, setIsTranslating] = useState(false)
+  const taskOwner = options?.taskOwner ?? null
+  const [localIsTranslating, setLocalIsTranslating] = useState(false)
+  const ownerIsTranslating = useSyncExternalStore(
+    taskOwner?.subscribe ?? NO_SUBSCRIPTION,
+    taskOwner?.isBusy ?? NEVER_BUSY,
+    taskOwner?.isBusy ?? NEVER_BUSY
+  )
+  const isTranslating = taskOwner ? ownerIsTranslating : localIsTranslating
 
   const optionsRef = useRef(options)
   useEffect(() => {
@@ -97,6 +107,12 @@ export function useTranslate(options?: UseTranslateOptions): UseTranslateResult 
   const activeControllerRef = useRef<AbortController | null>(null)
 
   const cancel = useCallback(() => {
+    if (taskOwner) {
+      taskOwner.abortTasks()
+      activeAbortKeyRef.current = null
+      activeControllerRef.current = null
+      return
+    }
     if (!activeAbortKeyRef.current) return
     // Clear the ref first so the in-flight translate's continuation sees
     // "you've been cancelled" and discards its result even if the abort
@@ -104,8 +120,8 @@ export function useTranslate(options?: UseTranslateOptions): UseTranslateResult 
     activeAbortKeyRef.current = null
     activeControllerRef.current?.abort()
     activeControllerRef.current = null
-    setIsTranslating(false)
-  }, [])
+    setLocalIsTranslating(false)
+  }, [taskOwner])
 
   const translate = useCallback<UseTranslateResult['translate']>(
     async (text, targetLanguage, runOptions, externalSignal) => {
@@ -117,19 +133,21 @@ export function useTranslate(options?: UseTranslateOptions): UseTranslateResult 
       activeControllerRef.current = controller
       activeAbortKeyRef.current = uuid()
       const abortKey = activeAbortKeyRef.current
+      const finishTask = taskOwner?.addTask(controller)
 
-      setIsTranslating(true)
+      if (!taskOwner) setLocalIsTranslating(true)
 
       const onExternalAbort = () => {
         controller.abort(externalSignal?.reason)
         if (activeAbortKeyRef.current === abortKey) {
           activeAbortKeyRef.current = null
           activeControllerRef.current = null
-          setIsTranslating(false)
+          if (!taskOwner) setLocalIsTranslating(false)
         }
       }
       if (externalSignal?.aborted) {
         onExternalAbort()
+        finishTask?.()
         return undefined
       }
       externalSignal?.addEventListener('abort', onExternalAbort, { once: true })
@@ -143,22 +161,31 @@ export function useTranslate(options?: UseTranslateOptions): UseTranslateResult 
             onResponse(chunkText, isComplete)
           }
         : undefined
-      const guardedRunOptions = runOptions?.onOutputTokens
+      const guardedRunOptions = runOptions
         ? {
             ...runOptions,
-            onOutputTokens: (outputTokens: number) => {
-              if (activeAbortKeyRef.current !== abortKey) return
-              runOptions.onOutputTokens?.(outputTokens)
-            }
+            ...(runOptions.onOutputTokens && {
+              onOutputTokens: (outputTokens: number) => {
+                if (activeAbortKeyRef.current !== abortKey) return
+                runOptions.onOutputTokens?.(outputTokens)
+              }
+            }),
+            ...(runOptions.onTraceReady && {
+              onTraceReady: (traceId: string) => {
+                if (activeAbortKeyRef.current !== abortKey) return
+                runOptions.onTraceReady?.(traceId)
+              }
+            })
           }
-        : runOptions
+        : undefined
 
       const wasSuperseded = () => activeAbortKeyRef.current !== abortKey
       const finishIfActive = () => {
+        finishTask?.()
         if (activeAbortKeyRef.current === abortKey) {
           activeAbortKeyRef.current = null
           activeControllerRef.current = null
-          setIsTranslating(false)
+          if (!taskOwner) setLocalIsTranslating(false)
         }
       }
 
@@ -195,18 +222,22 @@ export function useTranslate(options?: UseTranslateOptions): UseTranslateResult 
         finishIfActive()
       }
     },
-    [t]
+    [t, taskOwner]
   )
 
-  // On unmount: abort the active controller (propagates to main via streamAbort
-  // inside translateText) and clear the marker so any late settle is discarded.
+  // Component-owned calls abort on unmount. A stable task owner retains the
+  // controller across Activity cleanup and exposes explicit cancellation.
   useEffect(() => {
+    if (taskOwner) return
     return () => {
       activeAbortKeyRef.current = null
       activeControllerRef.current?.abort()
       activeControllerRef.current = null
     }
-  }, [])
+  }, [taskOwner])
 
   return { translate, isTranslating, cancel }
 }
+
+const NEVER_BUSY = () => false
+const NO_SUBSCRIPTION = () => () => {}

@@ -194,7 +194,7 @@ describe('ConversationNavigationService', () => {
     ).toHaveLength(0)
   })
 
-  it('does not query hidden pooled subwindows for tab ownership', async () => {
+  it('queries hidden subwindows because they still own their tabs', async () => {
     mocks.getWindowInfosByType.mockImplementation((type: WindowType) =>
       type === WindowType.Main
         ? [windowInfo('main-1', WindowType.Main)]
@@ -204,21 +204,24 @@ describe('ConversationNavigationService', () => {
     const navigation = service.focusOrOpen(target, 'Refactor project', 'main-1')
     const requestId = ownershipRequestId()
     service.reportOwnership(requestId, 'main-1', false)
+    service.reportOwnership(requestId, 'sub-idle', true)
     await vi.waitFor(() =>
-      expect(mocks.send).toHaveBeenCalledWith('main-1', 'navigation.conversation_focus_or_open_requested', {
+      expect(mocks.send).toHaveBeenCalledWith('sub-idle', 'navigation.conversation_focus_or_open_requested', {
         requestId,
         target,
         title: 'Refactor project'
       })
     )
-    service.reportOwnership(requestId, 'main-1', true)
+    service.reportOwnership(requestId, 'sub-idle', true)
     await navigation
 
-    expect(mocks.send).not.toHaveBeenCalledWith(
+    expect(mocks.send).toHaveBeenCalledWith(
       'sub-idle',
       'navigation.conversation_ownership_requested',
       expect.anything()
     )
+    expect(subWindow.show).toHaveBeenCalledOnce()
+    expect(subWindow.focus).toHaveBeenCalledOnce()
   })
 
   it('retries an incomplete ownership snapshot instead of treating a late owner as absent', async () => {

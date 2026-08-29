@@ -6,6 +6,7 @@ import { CommandContextMenu, type CommandContextMenuExtraItem } from '@renderer/
 import App from '@renderer/components/MiniApp/MiniApp'
 import { ProviderAvatarPrimitive } from '@renderer/components/ProviderAvatar'
 import Scrollbar from '@renderer/components/Scrollbar'
+import { useTabs } from '@renderer/hooks/tab'
 import { useLaunchpadAppOrder } from '@renderer/hooks/useLaunchpadAppOrder'
 import { useMiniApps } from '@renderer/hooks/useMiniApps'
 import { useSidebarFavorites } from '@renderer/hooks/useSidebarFavorites'
@@ -13,6 +14,12 @@ import { getSidebarIconLabelKey } from '@renderer/i18n/label'
 import { toast } from '@renderer/services/toast'
 import type { SidebarAppId } from '@renderer/utils/sidebar'
 import { getSidebarMenuPath, REQUIRED_SIDEBAR_FAVORITES } from '@renderer/utils/sidebar'
+import {
+  CHAT_HOME_TAB_ID,
+  isChatHomeEntryUrl,
+  isTranslateTab,
+  TRANSLATE_TAB_ID
+} from '@renderer/utils/translateTabPolicy'
 import type { MiniApp as MiniAppType } from '@shared/data/types/miniApp'
 import { useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -41,6 +48,7 @@ const APP_ICON_BACKGROUNDS: Record<SidebarAppId, string> = {
 export default function LaunchpadPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const { setActiveTab } = useTabs()
   const [defaultPaintingProvider] = usePreference('feature.paintings.default_provider')
   const { pinned, reorderMiniAppsByStatus } = useMiniApps()
   const { appFavorites, setAppPinned } = useSidebarFavorites()
@@ -85,11 +93,18 @@ export default function LaunchpadPage() {
   const openLaunchpadItem = (favorite: SidebarAppId) => {
     if (shouldSuppressLaunchClick(favorite)) return
 
-    // Launchpad opens each app at its base entry (chat -> new conversation,
-    // agents -> new session). Resuming the last-used instance is the sidebar's
-    // job, not the launcher's.
+    // Protected workspaces are focused below; other apps reuse this launchpad
+    // tab at their base entry (agents -> new session).
     const path = getSidebarMenuPath(favorite, defaultPaintingProvider)
     if (!path) return
+    if (isChatHomeEntryUrl(path)) {
+      setActiveTab(CHAT_HOME_TAB_ID)
+      return
+    }
+    if (isTranslateTab({ type: 'route', url: path })) {
+      setActiveTab(TRANSLATE_TAB_ID)
+      return
+    }
     void navigateToUrl(path)
   }
 

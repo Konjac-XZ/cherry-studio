@@ -178,6 +178,18 @@ describe('SubWindowService', () => {
   })
 
   describe('createWindow - options injection', () => {
+    it('reuses an existing sub-window for the same canonical page identity', () => {
+      const win = createMockWindow()
+      windowManagerMock.getWindow.mockReturnValue(win)
+
+      const first = svc.createWindow({ id: 'tab-a', url: '/app/knowledge?b=2&a=1' })
+      const second = svc.createWindow({ id: 'tab-b', url: '/app/knowledge?a=1&b=2' })
+
+      expect(second).toBe(first)
+      expect(windowManagerMock.open).toHaveBeenCalledOnce()
+      expect(win.show).toHaveBeenCalledTimes(2)
+    })
+
     it('on macOS omits titleBarOverlay (now static in registry) and backgroundColor (preserves vibrancy)', () => {
       platformState.isMac = true
       nativeThemeState.shouldUseDarkColors = true
@@ -275,12 +287,12 @@ describe('SubWindowService', () => {
       windowManagerMock.getWindow.mockReturnValue(win)
 
       platformState.isMac = true
-      svc.createWindow({ id: 'tab-mac', url: 'u' })
+      svc.createWindow({ id: 'tab-mac', url: 'u-mac' })
       expect(lastOpenCall().args.options).not.toHaveProperty('icon')
 
       platformState.isMac = false
       platformState.isWin = true
-      svc.createWindow({ id: 'tab-win', url: 'u' })
+      svc.createWindow({ id: 'tab-win', url: 'u-win' })
       expect(lastOpenCall().args.options).not.toHaveProperty('icon')
     })
 
@@ -288,11 +300,11 @@ describe('SubWindowService', () => {
       const win = createMockWindow()
       windowManagerMock.getWindow.mockReturnValue(win)
 
-      svc.createWindow({ id: 'tab-5', url: 'u', x: 50, y: 60 })
+      svc.createWindow({ id: 'tab-5', url: 'u-positioned', x: 50, y: 60 })
       expect(lastOpenCall().args.options).toMatchObject({ x: 50, y: 60 })
 
       windowManagerMock.open.mockClear()
-      svc.createWindow({ id: 'tab-6', url: 'u' })
+      svc.createWindow({ id: 'tab-6', url: 'u-unpositioned' })
       const opts = lastOpenCall().args.options
       expect(opts).not.toHaveProperty('x')
       expect(opts).not.toHaveProperty('y')

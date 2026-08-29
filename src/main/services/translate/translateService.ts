@@ -15,8 +15,11 @@
  * `src/main/ipc/handlers/translate.ts`.
  */
 
+import { randomBytes } from 'node:crypto'
+
 import { application } from '@application'
 import { loggerService } from '@logger'
+import { startAiChildTurnSpan } from '@main/ai/observability'
 import { modelService } from '@main/data/services/ModelService'
 import { buildCustomizedDictionary, translateGlossaryService } from '@main/data/services/TranslateGlossaryService'
 import { translateLanguageService } from '@main/data/services/TranslateLanguageService'
@@ -33,6 +36,7 @@ import { isNonChatModel, isQwenMTModel } from '@shared/utils/model'
 import {
   PersistenceListener,
   type StreamListener,
+  TraceFlushListener,
   TranslationBackend,
   WebContentsListener
 } from '../../ai/streamManager'
@@ -89,11 +93,16 @@ export interface TranslateOpenRequest {
    * (e.g. selection translate) can preserve it on the message row.
    */
   sourceLangCode?: TranslateLangCode
+  /** Stable trace ownership for one Translate-page run. */
+  traceTopicId?: string
+  /** Existing container trace reused by a later stage in the same run. */
+  traceId?: string
 }
 
 export interface TranslateOpenResult {
   /** Streaming id; renderer filters `ai.stream.*` events by this. */
   streamId: string
+  traceId?: string
 }
 
 export interface TranslatePlanRequest {
@@ -146,6 +155,29 @@ export class TranslateService {
       req.modelId
     )
 
+    const traceTopicId = application.get('PreferenceService').get('app.developer_mode.enabled')
+      ? req.traceTopicId
+      : undefined
+    const traceId = traceTopicId ? (req.traceId ?? randomBytes(16).toString('hex')) : undefined
+    const turnTrace =
+      traceId && traceTopicId
+        ? startAiChildTurnSpan(
+            'ai.turn',
+            {
+              attributes: {
+                'cs.topic_id': traceTopicId,
+                'cs.trigger': 'translate',
+                'cs.model_id': uniqueModelId,
+                'cs.role': 'assistant',
+                'cs.translate.operation': operation,
+                'cs.stream_id': req.streamId
+              }
+            },
+            { topicId: traceTopicId, modelName: parseUniqueModelId(uniqueModelId).modelId },
+            traceId
+          )
+        : undefined
+
     const listeners: StreamListener[] = []
     // Built first so the persistence listener can surface a persist failure through it:
     // TranslationBackend has no markTerminalError, so without this a post-stream persist
@@ -165,17 +197,24 @@ export class TranslateService {
         })
       )
     }
+    if (traceTopicId) listeners.push(new TraceFlushListener(traceTopicId))
     listeners.push(wcListener)
 
     const streamManager = application.get('AiStreamManager')
-    streamManager.streamPrompt({
-      streamId: req.streamId,
-      uniqueModelId,
-      prompt: content,
-      listener: listeners,
-      reasoningEffort,
-      ...(Object.keys(customParameters).length > 0 && { callOverrides: { customParameters } })
-    })
+    try {
+      streamManager.streamPrompt({
+        streamId: req.streamId,
+        ...(traceTopicId && { traceTopicId, rootSpan: turnTrace?.rootSpan }),
+        uniqueModelId,
+        prompt: content,
+        listener: listeners,
+        reasoningEffort,
+        ...(Object.keys(customParameters).length > 0 && { callOverrides: { customParameters } })
+      })
+    } catch (error) {
+      turnTrace?.end('error', error instanceof Error ? error : new Error(String(error)))
+      throw error
+    }
 
     logger.debug('translate stream opened', {
       streamId: req.streamId,
@@ -185,7 +224,7 @@ export class TranslateService {
       reasoningEffort,
       hasCustomParameters: Object.keys(customParameters).length > 0
     })
-    return { streamId: req.streamId }
+    return { streamId: req.streamId, ...(traceId && { traceId }) }
   }
 
   /**

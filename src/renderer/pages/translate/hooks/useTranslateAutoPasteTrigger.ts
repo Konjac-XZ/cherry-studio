@@ -16,7 +16,6 @@ type Params = {
   ready: boolean
   readClipboardForTranslate: () => Promise<string>
   prepareInput: (text: string) => void
-  setSourceLanguageToAuto: () => Promise<unknown>
   trigger: (
     options?: { forceRefresh?: boolean; polish?: boolean },
     sourceTextOverride?: string,
@@ -31,8 +30,8 @@ const isPasteRouteCommand = (value: unknown): boolean => value === 1 || value ==
  * Consumes the one-shot `?paste=1&_=${nonce}` route command.
  *
  * Clipboard selection remains owned by the prepared Translate clipboard policy;
- * this hook only coordinates route dedupe, page readiness, Auto source reset, and
- * one invocation of the already-extracted translation flow.
+ * this hook only coordinates route dedupe, page readiness, and one invocation of
+ * the already-extracted translation flow.
  */
 export const useTranslateAutoPasteTrigger = ({
   busy,
@@ -40,7 +39,6 @@ export const useTranslateAutoPasteTrigger = ({
   prepareInput,
   readClipboardForTranslate,
   ready,
-  setSourceLanguageToAuto,
   trigger
 }: Params): void => {
   const search = useSearch({ strict: false }) as Record<string, unknown>
@@ -51,7 +49,6 @@ export const useTranslateAutoPasteTrigger = ({
     navigate,
     prepareInput,
     readClipboardForTranslate,
-    setSourceLanguageToAuto,
     trigger
   })
   latestRef.current = {
@@ -59,7 +56,6 @@ export const useTranslateAutoPasteTrigger = ({
     navigate,
     prepareInput,
     readClipboardForTranslate,
-    setSourceLanguageToAuto,
     trigger
   }
 
@@ -128,18 +124,11 @@ export const useTranslateAutoPasteTrigger = ({
         })
 
         if (text.trim()) {
-          const { prepareInput: prepareLatestInput, setSourceLanguageToAuto: setLatestSourceLanguageToAuto } =
-            latestRef.current
+          const { prepareInput: prepareLatestInput } = latestRef.current
           prepareLatestInput(text)
           logger.info('Translate Clipboard translation dispatch started', { nonce: nonce || null })
 
-          // The run override already guarantees Auto semantics. Start translation in
-          // the same turn as preference persistence so a tab rerender cannot strand
-          // the one-shot route command between the two operations.
-          await Promise.all([
-            setLatestSourceLanguageToAuto(),
-            latestRef.current.trigger(undefined, text, { sourceLanguage: 'auto', sourcePreprocessed: true })
-          ])
+          await latestRef.current.trigger(undefined, text, { sourcePreprocessed: true })
           logger.info('Translate Clipboard translation dispatch completed', { nonce: nonce || null })
         } else {
           logger.info('Translate Clipboard route command had no translatable clipboard text', {

@@ -1,3 +1,4 @@
+import { translationWorkspaceService } from '@renderer/services/translation'
 import { IpcError } from '@shared/ipc/errors/IpcError'
 import { translateErrorCodes } from '@shared/ipc/errors/translate'
 import type { PdfTranslationProgress } from '@shared/ipc/schemas/translate'
@@ -23,10 +24,16 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }))
 vi.mock('@renderer/ipc', () => ({
-  ipcApi: { request: mocks.ipcRequest },
-  useIpcOn: (event: string, handler: unknown) => {
-    if (event === 'translate.pdf.stage') mocks.stageHandler = handler as typeof mocks.stageHandler
-    if (event === 'translate.pdf.progress') mocks.progressHandler = handler as typeof mocks.progressHandler
+  ipcApi: {
+    on: (event: string, handler: unknown) => {
+      if (event === 'translate.pdf.stage') mocks.stageHandler = handler as typeof mocks.stageHandler
+      if (event === 'translate.pdf.progress') mocks.progressHandler = handler as typeof mocks.progressHandler
+      return () => {
+        if (event === 'translate.pdf.stage') mocks.stageHandler = null
+        if (event === 'translate.pdf.progress') mocks.progressHandler = null
+      }
+    },
+    request: mocks.ipcRequest
   }
 }))
 vi.mock('@renderer/utils/uuid', () => ({ uuid: mocks.uuid }))
@@ -36,6 +43,7 @@ vi.mock('@renderer/components/FilePreview', () => ({
 
 describe('PdfTranslationView', () => {
   beforeEach(() => {
+    translationWorkspaceService.resetForTests()
     vi.clearAllMocks()
     mocks.invalidateCache.mockResolvedValue(undefined)
     mockUseInvalidateCache.mockReturnValue(mocks.invalidateCache)
@@ -293,7 +301,7 @@ describe('PdfTranslationView', () => {
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
   })
 
-  it('cancels an active job on unmount and leaves the output that wins the completion race alone', async () => {
+  it('keeps an active job alive across unmount and exposes the completed output after remount', async () => {
     let resolveStart!: (result: { fileName: string; outputPath: string }) => void
     const startPromise = new Promise<{ fileName: string; outputPath: string }>((resolve) => {
       resolveStart = resolve
@@ -324,16 +332,52 @@ describe('PdfTranslationView', () => {
     await waitFor(() => expect(mocks.ipcRequest).toHaveBeenCalledWith('translate.pdf.start', expect.anything()))
 
     unmount()
-    expect(mocks.ipcRequest).toHaveBeenCalledWith('translate.pdf.cancel', {
-      jobId: 'b289bad7-a813-4cf7-91c0-2a9dc82235b2'
-    })
+    expect(mocks.ipcRequest).not.toHaveBeenCalledWith('translate.pdf.cancel', expect.anything())
 
     resolveStart({ fileName: 'paper.zh-CN.pdf', outputPath: '/tmp/files/entry-1.pdf' })
-    // A run that finishes after unmount already recorded itself in history and handed its
-    // PDF to FileManager, so there is nothing left for the renderer to clean up.
-    await waitFor(() => expect(mocks.ipcRequest).toHaveBeenCalledTimes(2))
-    expect(mocks.ipcRequest.mock.calls.map(([route]) => route)).toEqual(['translate.pdf.start', 'translate.pdf.cancel'])
-    expect(mocks.invalidateCache).toHaveBeenCalledWith('/translate/histories')
+    await waitFor(() => expect(translationWorkspaceService.getSnapshot().status).toBe('success'))
+    expect(translationWorkspaceService.getSnapshot().pdfOutput).toEqual({
+      fileName: 'paper.zh-CN.pdf',
+      outputPath: '/tmp/files/entry-1.pdf'
+    })
+    expect(mocks.ipcRequest.mock.calls.map(([route]) => route)).toEqual(['translate.pdf.start'])
+  })
+
+  it('sends one PDF cancel request only when Stop is invoked explicitly', async () => {
+    mocks.ipcRequest.mockImplementation((route: string) => {
+      if (route === 'translate.pdf.start') return new Promise(() => {})
+      return Promise.resolve(undefined)
+    })
+    let handle: PdfTranslationHandle | null = null
+
+    render(
+      <PdfTranslationView
+        file={{ name: 'paper.pdf', path: PAPER_PATH }}
+        modelId="openai::gpt-4.1"
+        sourceLangCode="en-us"
+        babelDocAvailability="available"
+        babelDocInstalling={false}
+        onClose={vi.fn()}
+        onHandleChange={(next) => {
+          handle = next
+        }}
+        onStatusChange={vi.fn()}
+        onInstallBabelDoc={vi.fn()}
+        onBabelDocUnavailable={vi.fn()}
+      />
+    )
+    await waitFor(() => expect(handle).not.toBeNull())
+    act(() => handle!.start('zh-cn'))
+    await waitFor(() => expect(mocks.ipcRequest).toHaveBeenCalledWith('translate.pdf.start', expect.anything()))
+
+    act(() => handle!.cancel())
+
+    await waitFor(() =>
+      expect(mocks.ipcRequest).toHaveBeenCalledWith('translate.pdf.cancel', {
+        jobId: 'b289bad7-a813-4cf7-91c0-2a9dc82235b2'
+      })
+    )
+    expect(mocks.ipcRequest.mock.calls.filter(([route]) => route === 'translate.pdf.cancel')).toHaveLength(1)
   })
 
   it('mounts straight into the side-by-side result when reopened from history', () => {

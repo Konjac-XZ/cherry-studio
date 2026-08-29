@@ -63,7 +63,6 @@ export function useConversationNavigationOwner({ tabs, openTab, setActiveTab }: 
     pendingNavigationsRef.current.set(key, { requestIds: new Set([requestId]), target })
     try {
       openTab(app.conversationRoute.urlForKey(target.conversationId), {
-        forceNew: true,
         title
       })
     } catch (error) {

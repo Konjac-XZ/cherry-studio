@@ -1,5 +1,6 @@
 import type * as TranslateHooks from '@renderer/hooks/translate'
 import { toast } from '@renderer/services/toast'
+import { translationWorkspaceService } from '@renderer/services/translation'
 import type * as TranslateUtils from '@renderer/utils/translate'
 import type { BinaryToolSnapshot } from '@shared/types/binary'
 import type { AbsoluteFilePath } from '@shared/types/file'
@@ -74,6 +75,12 @@ const routeMocks = vi.hoisted(() => ({
   search: {} as Record<string, unknown>
 }))
 
+const fireMiddleAuxClick = (element: Element) => {
+  const event = new MouseEvent('auxclick', { bubbles: true, button: 1, cancelable: true })
+  fireEvent(element, event)
+  return event
+}
+
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => routeMocks.navigate,
   useSearch: () => routeMocks.search
@@ -125,6 +132,12 @@ vi.mock('@renderer/components/ModelSelector', () => ({
     modelSelectorMock(props)
     return <>{props.trigger}</>
   }
+}))
+
+vi.mock('@renderer/components/chat/trace/TracePane', () => ({
+  TracePane: ({ payload }: { payload: { topicId: string; traceId: string } }) => (
+    <div data-testid="translate-trace-pane" data-topic-id={payload.topicId} data-trace-id={payload.traceId} />
+  )
 }))
 
 vi.mock('@renderer/hooks/useCodeStyle', () => ({
@@ -470,6 +483,7 @@ import TranslatePage from '../TranslatePage'
 
 describe('TranslatePage', () => {
   beforeEach(() => {
+    translationWorkspaceService.resetForTests()
     routeMocks.navigate.mockReset()
     routeMocks.search = {}
     sessionStorage.clear()
@@ -598,6 +612,7 @@ describe('TranslatePage', () => {
 
   afterEach(() => {
     cleanup()
+    translationWorkspaceService.resetForTests()
   })
 
   it('hides the model tag filter on the inline selector', () => {
@@ -1412,6 +1427,18 @@ describe('TranslatePage', () => {
       'feature.translate.page.target_language': 'en-us',
       'feature.translate.polish.enabled': true
     })
+    translateCoreMock.translateText.mockImplementationOnce(
+      async (
+        _text: string,
+        _targetLanguage: string,
+        _onResponse: unknown,
+        _signal: AbortSignal,
+        options: { onTraceReady?: (traceId: string) => void }
+      ) => {
+        options.onTraceReady?.('0123456789abcdef0123456789abcdef')
+        return 'translated text'
+      }
+    )
 
     const { rerender } = render(<TranslatePage />)
     fireEvent.change(screen.getByLabelText('translate.input.placeholder'), { target: { value: 'rough text' } })
@@ -1425,7 +1452,7 @@ describe('TranslatePage', () => {
       'en-us',
       expect.any(Function),
       expect.any(AbortSignal),
-      expect.objectContaining({ operation: 'polish' })
+      expect.objectContaining({ operation: 'polish', traceTopicId: expect.stringMatching(/^translate:/) })
     )
     expect(translateCoreMock.translateText).toHaveBeenNthCalledWith(
       2,
@@ -1433,8 +1460,15 @@ describe('TranslatePage', () => {
       'en-us',
       expect.any(Function),
       expect.any(AbortSignal),
-      expect.objectContaining({ operation: 'translate' })
+      expect.objectContaining({
+        operation: 'translate',
+        traceId: '0123456789abcdef0123456789abcdef',
+        traceTopicId: expect.stringMatching(/^translate:/)
+      })
     )
+    const firstScope = translateCoreMock.translateText.mock.calls[0][4] as { traceTopicId: string }
+    const secondScope = translateCoreMock.translateText.mock.calls[1][4] as { traceTopicId: string }
+    expect(secondScope.traceTopicId).toBe(firstScope.traceTopicId)
   })
 
   it('shows warning and skips translate when source and target language are the same', async () => {
@@ -1522,8 +1556,11 @@ describe('TranslatePage', () => {
 
     await waitFor(() => expect(smoothStreamUpdateMock).toHaveBeenCalledWith('OpenAI translated text', false))
     await waitFor(() => expect(smoothStreamUpdateMock).toHaveBeenLastCalledWith('AI translated text', true))
-    expect(screen.getByTestId('translate-output-content')).toHaveTextContent('OpenAI translated text')
-    expect(screen.getByText('translate.processing')).toBeInTheDocument()
+    // The workspace owns the authoritative terminal result. UI smoothing may
+    // still be pending, but it must not gate business completion or hide the
+    // final post-processed value while the Activity is hidden.
+    expect(screen.getByTestId('translate-output-content')).toHaveTextContent('AI translated text')
+    expect(screen.queryByText('translate.processing')).not.toBeInTheDocument()
 
     await act(async () => {
       resolveCompletion()
@@ -1656,6 +1693,34 @@ describe('TranslatePage', () => {
         })
       )
     )
+  })
+
+  it('preserves a manually selected source language throughout the global clipboard shortcut flow', async () => {
+    MockUsePreferenceUtils.setMultiplePreferenceValues({
+      'feature.translate.model_id': 'openai::gpt-4.1',
+      'feature.translate.page.source_language': 'en-us',
+      'feature.translate.page.target_language': 'zh-cn'
+    })
+    routeMocks.search = { paste: 1, _: 'global-shortcut-manual-source' }
+    ipcRequestMock.mockImplementation((channel: string) => {
+      if (channel === 'binary.get_tool_snapshots') return Promise.resolve(binaryMock.snapshots)
+      if (channel === 'translate.clipboard.read') return Promise.resolve({ html: '', text: 'hello' })
+      return Promise.resolve(undefined)
+    })
+
+    render(<TranslatePage />)
+
+    await waitFor(() =>
+      expect(translateCoreMock.translateText).toHaveBeenCalledWith(
+        'hello',
+        'zh-cn',
+        expect.any(Function),
+        expect.any(AbortSignal),
+        expect.objectContaining({ operation: 'translate', sourceLangCode: 'en-us' })
+      )
+    )
+    expect(translateCoreMock.detectLanguage).not.toHaveBeenCalled()
+    expect(MockUsePreferenceUtils.getPreferenceValue('feature.translate.page.source_language')).toBe('en-us')
   })
 
   it('clears the detecting state before the translation request finishes', async () => {
@@ -1980,10 +2045,11 @@ describe('TranslatePage', () => {
     })
   })
 
-  it('aborts in-flight translation on unmount', async () => {
+  it('keeps in-flight workspace translation alive on unmount', async () => {
     MockUsePreferenceUtils.setMultiplePreferenceValues({
       'feature.translate.model_id': 'openai::gpt-4.1',
-      'feature.translate.page.source_language': 'zh-cn'
+      'feature.translate.page.source_language': 'zh-cn',
+      'feature.translate.page.target_language': 'en-us'
     })
     let signal: AbortSignal | undefined
     translateCoreMock.translateText.mockImplementationOnce(
@@ -2000,7 +2066,10 @@ describe('TranslatePage', () => {
     await waitFor(() => expect(signal).toBeDefined())
     unmount()
 
-    expect(signal?.aborted).toBe(true)
+    expect(signal?.aborted).toBe(false)
+    expect(translationWorkspaceService.getSnapshot()).toEqual(
+      expect.objectContaining({ kind: 'text', status: expect.not.stringMatching(/cancelled|error/) })
+    )
   })
 
   it('cancels in-flight translation when stop is clicked', async () => {
@@ -2252,5 +2321,56 @@ describe('TranslatePage', () => {
     fireEvent.click(historyButton)
     expect(historyButton).toHaveAttribute('aria-pressed', 'false')
     expect(screen.queryByTestId('translate-history-open')).toBeNull()
+  })
+
+  it('opens and closes a ready trace panel with middle click while preserving left-click settings', async () => {
+    MockUsePreferenceUtils.setPreferenceValue('app.developer_mode.enabled', true)
+    const runId = translationWorkspaceService.begin('text')
+    translationWorkspaceService.update(runId, { traceId: '0123456789abcdef0123456789abcdef' })
+    const traceTopicId = translationWorkspaceService.getSnapshot().traceTopicId
+    render(<TranslatePage />)
+    const settingsButton = screen.getByRole('button', { name: 'translate.settings.title' })
+
+    fireEvent.click(settingsButton)
+    expect(screen.getByTestId('translate-settings-open')).toBeInTheDocument()
+
+    const mouseDown = new MouseEvent('mousedown', { bubbles: true, button: 1, cancelable: true })
+    fireEvent(settingsButton, mouseDown)
+    const auxClick = fireMiddleAuxClick(settingsButton)
+    expect(mouseDown.defaultPrevented).toBe(true)
+    expect(auxClick.defaultPrevented).toBe(true)
+    const tracePane = await screen.findByTestId('translate-trace-pane')
+    expect(tracePane).toHaveAttribute('data-topic-id', traceTopicId)
+    expect(tracePane).toHaveAttribute('data-trace-id', '0123456789abcdef0123456789abcdef')
+    expect(screen.queryByTestId('translate-settings-open')).toBeNull()
+
+    let replacementRunId = 0
+    act(() => {
+      replacementRunId = translationWorkspaceService.begin('text')
+    })
+    await waitFor(() => expect(screen.queryByTestId('translate-trace-pane')).toBeNull())
+    act(() => {
+      translationWorkspaceService.update(replacementRunId, { traceId: 'fedcba9876543210fedcba9876543210' })
+    })
+    const replacementPane = await screen.findByTestId('translate-trace-pane')
+    expect(replacementPane).toHaveAttribute('data-trace-id', 'fedcba9876543210fedcba9876543210')
+
+    fireMiddleAuxClick(settingsButton)
+    await waitFor(() => expect(screen.queryByTestId('translate-trace-pane')).toBeNull())
+
+    fireEvent.click(settingsButton)
+    expect(screen.getByTestId('translate-settings-open')).toBeInTheDocument()
+  })
+
+  it('silently ignores middle click until a trace is ready', () => {
+    MockUsePreferenceUtils.setPreferenceValue('app.developer_mode.enabled', true)
+    render(<TranslatePage />)
+    const settingsButton = screen.getByRole('button', { name: 'translate.settings.title' })
+
+    fireEvent.click(settingsButton)
+    fireMiddleAuxClick(settingsButton)
+
+    expect(screen.getByTestId('translate-settings-open')).toBeInTheDocument()
+    expect(screen.queryByTestId('translate-trace-pane')).toBeNull()
   })
 })

@@ -1388,7 +1388,7 @@ const Sessions = ({
   }, [])
   const openSessionInNewTab = useCallback(
     (session: AgentSessionEntity) => {
-      conversationNav.openConversationTab(session.id, session.name || t('common.unnamed'), { forceNew: true })
+      conversationNav.openConversationTab(session.id, session.name || t('common.unnamed'))
     },
     [conversationNav, t]
   )

@@ -20,6 +20,13 @@ import {
   resolveSidebarActiveItem,
   tabBelongsToApp
 } from '@renderer/utils/sidebar'
+import {
+  CHAT_HOME_TAB_ID,
+  isChatHomeEntryUrl,
+  isProtectedAppTab,
+  isTranslateTab,
+  TRANSLATE_TAB_ID
+} from '@renderer/utils/translateTabPolicy'
 import type { Ref } from 'react'
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -157,6 +164,11 @@ export default function Sidebar({ ref }: { ref?: Ref<HTMLDivElement | null> }) {
       const path = getSidebarMenuPath(menuId, defaultPaintingProvider)
       if (!app || !path) return
 
+      if (isChatHomeEntryUrl(path)) {
+        setActiveTab(CHAT_HOME_TAB_ID)
+        return
+      }
+
       // Conversation apps: any owned tab is already "there" — its URL carries its own
       // conversation, and re-entering through the route interceptor would just rebind
       // it. Message-only viewers are not an app entry, so they navigate like any
@@ -170,8 +182,13 @@ export default function Sidebar({ ref }: { ref?: Ref<HTMLDivElement | null> }) {
 
       const title = getDefaultRouteTitle(path)
 
-      if (activeTab?.isPinned) {
-        openTab(path, { forceNew: true, title })
+      if (isTranslateTab({ type: 'route', url: path })) {
+        setActiveTab(TRANSLATE_TAB_ID)
+        return
+      }
+
+      if (activeTab?.isPinned || (activeTab && isProtectedAppTab(activeTab))) {
+        openTab(path, { title })
         return
       }
 
@@ -185,12 +202,12 @@ export default function Sidebar({ ref }: { ref?: Ref<HTMLDivElement | null> }) {
         return
       }
 
-      openTab(path, { forceNew: true, title })
+      openTab(path, { title })
     },
-    [activeTab, defaultPaintingProvider, openTab, updateTab]
+    [activeTab, defaultPaintingProvider, openTab, setActiveTab, updateTab]
   )
   const handleOpenLaunchpad = useCallback(() => {
-    openTab('/app/launchpad', { title: getDefaultRouteTitle('/app/launchpad'), forceNew: true })
+    openTab('/app/launchpad', { title: getDefaultRouteTitle('/app/launchpad') })
   }, [openTab])
   const handleOpenSettingsTab = useCallback(() => {
     openSettingsTab('/settings/general')
@@ -218,8 +235,8 @@ export default function Sidebar({ ref }: { ref?: Ref<HTMLDivElement | null> }) {
       // Uploaded logo → main-resolved `logoSrc`; preset key → `logo`.
       const icon = app.logoSrc ?? app.logo
 
-      if (activeTab?.isPinned) {
-        openTab(path, { forceNew: true, title, icon })
+      if (activeTab?.isPinned || (activeTab && isProtectedAppTab(activeTab))) {
+        openTab(path, { title, icon })
         return
       }
 
@@ -234,7 +251,6 @@ export default function Sidebar({ ref }: { ref?: Ref<HTMLDivElement | null> }) {
       }
 
       openTab(path, {
-        forceNew: true,
         title,
         icon
       })
@@ -248,8 +264,8 @@ export default function Sidebar({ ref }: { ref?: Ref<HTMLDivElement | null> }) {
     (path: string, title: string) => {
       if (activeTab?.url === path) return
 
-      if (activeTab?.isPinned) {
-        openTab(path, { forceNew: true, title })
+      if (activeTab?.isPinned || (activeTab && isProtectedAppTab(activeTab))) {
+        openTab(path, { title })
         return
       }
 
@@ -263,7 +279,7 @@ export default function Sidebar({ ref }: { ref?: Ref<HTMLDivElement | null> }) {
         return
       }
 
-      openTab(path, { forceNew: true, title })
+      openTab(path, { title })
     },
     [activeTab, openTab, updateTab]
   )

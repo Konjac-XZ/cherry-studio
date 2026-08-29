@@ -3,6 +3,7 @@ import { useIcon } from '@cherrystudio/ui/icons'
 import { useCache } from '@data/hooks/useCache'
 import { useMultiplePreferences, usePreference } from '@data/hooks/usePreference'
 import { loggerService } from '@logger'
+import { useRightPanelActions, useRightPanelState } from '@renderer/components/chat/panes/Shell'
 // Direct `Selector/model` path: the `Selector` barrel re-exports `ModelSelector`
 // via a nested `export *`, which tsgo fails to resolve on main's program (it
 // resolves fine on feat's full program and via this path). Revert to the barrel
@@ -24,6 +25,7 @@ import { useSmoothStream } from '@renderer/hooks/useSmoothStream'
 import { useTimer } from '@renderer/hooks/useTimer'
 import { ipcApi, useIpcOn } from '@renderer/ipc'
 import { toast } from '@renderer/services/toast'
+import { translationWorkspaceService } from '@renderer/services/translation'
 import type { FileMetadata } from '@renderer/types/file'
 import { formatErrorMessageWithPrefix } from '@renderer/utils/error'
 import { getModelLogoRef } from '@renderer/utils/model'
@@ -60,8 +62,8 @@ import {
   SpellCheck,
   WandSparkles
 } from 'lucide-react'
-import type { FC } from 'react'
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { FC, MouseEvent as ReactMouseEvent } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import DraggableDivider from './components/DraggableDivider'
@@ -72,6 +74,7 @@ import TranslateHistoryList from './components/TranslateHistory'
 import TranslateInputPane from './components/TranslateInputPane'
 import TranslateLanguageBar from './components/TranslateLanguageBar'
 import TranslateOutputPane from './components/TranslateOutputPane'
+import { TRANSLATE_TRACE_PANE_ID, TranslateRightPane } from './components/TranslateRightPane'
 import TranslateToolbarToggleButton from './components/TranslateToolbarToggleButton'
 import { useTranslateAutoPasteTrigger } from './hooks/useTranslateAutoPasteTrigger'
 import { type TranslateBusyStatus, useTranslateBusyLabel } from './hooks/useTranslateBusyLabel'
@@ -151,8 +154,10 @@ const useBabelDoc = (enabled: boolean) => {
 }
 const getModelInitial = (model: SelectorModel) => model.name.trim().charAt(0) || 'M'
 
-const TranslatePage: FC = () => {
+const TranslatePageContent: FC = () => {
   const { t } = useTranslation()
+  const rightPanelActions = useRightPanelActions()
+  const rightPanelState = useRightPanelState()
   const [translateModelId, setTranslateModelId] = usePreference('feature.translate.model_id')
   const { models, isLoading: modelsLoading } = useModels({ enabled: true })
   const detectLanguage = useDetectLang()
@@ -211,7 +216,15 @@ const TranslatePage: FC = () => {
     cancel
   } = useTranslate({
     loggerContext: 'TranslatePage',
-    onResponse: onStreamResponse
+    onResponse: (value, isComplete) => {
+      const snapshot = translationWorkspaceService.getSnapshot()
+      translationWorkspaceService.update(snapshot.runId, {
+        rawOutput: value,
+        status: isComplete ? 'processing' : 'running'
+      })
+      onStreamResponse(value)
+    },
+    taskOwner: translationWorkspaceService
   })
 
   const [renderedMarkdown, setRenderedMarkdown] = useState<string>('')
@@ -229,8 +242,31 @@ const TranslatePage: FC = () => {
   const [pdfStatus, setPdfStatus] = useState<PdfTranslationStatus>({ phase: 'idle', running: false })
   const [pdfHandleReady, setPdfHandleReady] = useState(false)
   const [pdfTextFallbackActive, setPdfTextFallbackActive] = useState(false)
+  const handleSettingsMouseDown = useCallback((event: ReactMouseEvent<HTMLButtonElement>) => {
+    if (event.button === 1) event.preventDefault()
+  }, [])
+  const handleSettingsAuxClick = useCallback(
+    (event: ReactMouseEvent<HTMLButtonElement>) => {
+      if (event.button !== 1) return
+      event.preventDefault()
+      event.stopPropagation()
+      if (rightPanelState.isActive(TRANSLATE_TRACE_PANE_ID)) {
+        rightPanelActions.close()
+        return
+      }
+      if (!rightPanelActions.tryOpen(TRANSLATE_TRACE_PANE_ID, { userInitiated: true })) return
+      setSettingsOpen(false)
+      setHistoryOpen(false)
+    },
+    [rightPanelActions, rightPanelState]
+  )
   const [pdfTextOcrRequired, setPdfTextOcrRequired] = useState(false)
   const [isPdfTextExtracting, setIsPdfTextExtracting] = useState(false)
+  const workspaceSnapshot = useSyncExternalStore(
+    translationWorkspaceService.subscribe,
+    translationWorkspaceService.getSnapshot,
+    translationWorkspaceService.getSnapshot
+  )
   const isOcrRunning = ocrJobId !== null
   const isPdfMode = pdfFile !== null
   const isTranslationRunning = isTranslating || pdfStatus.running
@@ -490,6 +526,10 @@ const TranslatePage: FC = () => {
     setReportedOutputTokens(undefined)
     setPdfFile(null)
     setRestoredPdf(null)
+    // A completed text-fallback run belongs to the PDF workspace that is being
+    // closed. Clear its terminal snapshot so a later React render cannot
+    // hydrate the discarded PDF output back into the text editor.
+    translationWorkspaceService.clearTerminal()
   }, [abortTextTranslationSilently, pdfTextFallbackActive, setTranslateOutput])
 
   const translatePdfText = useCallback(async () => {
@@ -592,7 +632,6 @@ const TranslatePage: FC = () => {
     prepareInput: prepareShortcutInput,
     readClipboardForTranslate,
     ready: !modelsLoading && selectedModelId !== undefined,
-    setSourceLanguageToAuto: () => setSourceLanguage('auto'),
     trigger: onPrimaryTranslate
   })
 
@@ -683,6 +722,28 @@ const TranslatePage: FC = () => {
     if (rawOutput) setTranslateOutput(processTranslation(rawOutput, outputTargetLanguage))
   }, [flowStage, isTranslating, outputTargetLanguage, processTranslation, rawOutput, setTranslateOutput])
 
+  const appliedWorkspaceRevisionRef = useRef<number | null>(null)
+  useEffect(() => {
+    if (appliedWorkspaceRevisionRef.current === workspaceSnapshot.revision) return
+    appliedWorkspaceRevisionRef.current = workspaceSnapshot.revision
+    if (workspaceSnapshot.kind !== 'text' || workspaceSnapshot.runId === 0) return
+    if (workspaceSnapshot.detectedLanguage) setDetectedLanguage(workspaceSnapshot.detectedLanguage)
+    if (workspaceSnapshot.targetLanguage && workspaceSnapshot.targetLanguage !== 'unknown') {
+      setOutputTargetLanguage(workspaceSnapshot.targetLanguage)
+    }
+    if (workspaceSnapshot.rawOutput) setRawOutput(workspaceSnapshot.rawOutput)
+
+    if (workspaceSnapshot.status === 'success' && workspaceSnapshot.displayOutput) {
+      smoothReset(workspaceSnapshot.displayOutput)
+      setTranslateOutput(workspaceSnapshot.displayOutput)
+      setFlowStage('idle')
+      setIsDetecting(false)
+    } else if (workspaceSnapshot.status === 'cancelled' || workspaceSnapshot.status === 'error') {
+      setFlowStage('idle')
+      setIsDetecting(false)
+    }
+  }, [setIsDetecting, setTranslateOutput, smoothReset, workspaceSnapshot])
+
   const { cycleLayout, inputScrollHandler, isVerticalLayout, outputScrollHandler, panelSize, setPanelSize } =
     useTranslateLayout({
       inputScrollRef,
@@ -728,7 +789,28 @@ const TranslatePage: FC = () => {
   // V2 File Processing owns OCR execution. Translate only tracks the job id;
   // dismissing the overlay intentionally fences a late result rather than
   // pretending that the backend job itself was cancelled.
-  const clearOcrJob = useCallback(() => setOcrJobId(null), [])
+  const clearOcrJob = useCallback((jobId: string) => {
+    const snapshot = translationWorkspaceService.getSnapshot()
+    if (snapshot.kind === 'ocr' && snapshot.jobId === jobId && snapshot.status === 'running') {
+      translationWorkspaceService.failOcr(jobId, new Error('OCR job did not produce text'))
+    }
+    setOcrJobId(null)
+  }, [])
+  const handleOcrStarted = useCallback((jobId: string) => {
+    translationWorkspaceService.beginOcr(jobId)
+    setOcrJobId(jobId)
+  }, [])
+  const cancelOcrJob = useCallback(() => {
+    translationWorkspaceService.cancel()
+    setOcrJobId(null)
+  }, [])
+  const handleOcrCompleted = useCallback(
+    (jobId: string, text: string) => {
+      translationWorkspaceService.completeOcr(jobId, text)
+      appendTranslateInput(text)
+    },
+    [appendTranslateInput]
+  )
 
   const handlePdfSelected = useCallback(
     (file: FileMetadata) => {
@@ -770,7 +852,7 @@ const TranslatePage: FC = () => {
     isOcrRunning,
     isProcessing,
     isTranslating,
-    onOcrStarted: setOcrJobId,
+    onOcrStarted: handleOcrStarted,
     onPdfSelected: handlePdfSelected,
     setIsProcessing,
     setText: (value) => {
@@ -805,326 +887,348 @@ const TranslatePage: FC = () => {
         : t('translate.settings.layout.horizontal')
 
   return (
-    <div
-      data-ui="translate.view"
-      className="relative flex h-full flex-col overflow-hidden bg-background"
-      onDragEnter={handleDragEnter}
-      onDragLeave={handleDragLeave}
-      onDragOver={handleDragOver}
-      onDrop={preventDrop}>
-      {ocrJobId && (
-        <OcrJobWatcher key={ocrJobId} jobId={ocrJobId} onCompleted={appendTranslateInput} onSettled={clearOcrJob} />
-      )}
-      <Navbar />
+    <div className="flex h-full min-w-0 overflow-hidden bg-background">
+      <div
+        data-ui="translate.view"
+        className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-background"
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
+        onDrop={preventDrop}>
+        {ocrJobId && (
+          <OcrJobWatcher
+            key={ocrJobId}
+            jobId={ocrJobId}
+            onCompleted={(text) => handleOcrCompleted(ocrJobId, text)}
+            onSettled={clearOcrJob}
+          />
+        )}
+        <Navbar />
 
-      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
-        <div ref={toolbarRef} className="flex shrink-0 items-center justify-between gap-1.5 px-3 pt-3 pb-1">
-          <div className="flex min-w-0 items-center gap-1.5">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={cycleLayout}
-              aria-label={layoutLabel}
-              title={layoutLabel}
-              className="size-8">
-              {flowSettings.layoutOverride === 'auto' ? (
-                <SpellCheck size={16} />
-              ) : isVerticalLayout ? (
-                <Rows2 size={16} />
-              ) : (
-                <Columns2 size={16} />
-              )}
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              className={cn('size-8', historyOpen ? 'text-foreground' : 'text-muted-foreground hover:text-foreground')}
-              onClick={() => {
-                setHistoryOpen((open) => !open)
-                setSettingsOpen(false)
-              }}
-              aria-label={t('translate.history.title')}
-              aria-pressed={historyOpen}>
-              <History size={18} />
-            </Button>
-            {!compactToolbar && (
-              <TranslateLanguageBar
-                className="px-0 py-0 lg:px-0"
-                sourceLanguage={sourceLanguage}
-                onSourceChange={(language) => {
-                  setDetectedLanguage(null)
-                  void safePersist(setSourceLanguage(language), 'translate source language')
+        <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
+          <div ref={toolbarRef} className="flex shrink-0 items-center justify-between gap-1.5 px-3 pt-3 pb-1">
+            <div className="flex min-w-0 items-center gap-1.5">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={cycleLayout}
+                aria-label={layoutLabel}
+                title={layoutLabel}
+                className="size-8">
+                {flowSettings.layoutOverride === 'auto' ? (
+                  <SpellCheck size={16} />
+                ) : isVerticalLayout ? (
+                  <Rows2 size={16} />
+                ) : (
+                  <Columns2 size={16} />
+                )}
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className={cn(
+                  'size-8',
+                  historyOpen ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
+                )}
+                onClick={() => {
+                  setHistoryOpen((open) => !open)
+                  setSettingsOpen(false)
                 }}
-                targetLanguage={targetLanguage}
-                onTargetChange={(language) =>
-                  void safePersist(setTargetLanguage(language), 'translate target language')
-                }
-                detectedLanguage={detectedLanguage}
-                isBidirectional={isPdfMode ? false : isBidirectional}
-                bidirectionalPair={bidirectionalPair}
-                disabled={isFlowBusy || isProcessing || isOcrRunning}
-                couldExchange={couldExchange}
-                onExchange={handleExchange}
-              />
-            )}
-            {!compactToolbar && <span aria-hidden="true" className="h-5 w-px shrink-0 bg-border-subtle" />}
-            <div className="flex shrink-0 items-center gap-1.5">
-              {isTranslationRunning || isFlowBusy ? (
-                <button
-                  type="button"
-                  onClick={onAbort}
-                  className="flex h-8 items-center gap-1.5 rounded-md bg-secondary px-3 text-secondary-foreground text-sm transition-all hover:bg-secondary-hover focus-visible:bg-secondary-hover focus-visible:outline-none">
-                  <CirclePause size={14} className="lucide-custom" />
-                  <span>{t('common.stop')}</span>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={(event) => void (isPdfMode ? onTranslate() : handlePrimaryClick(event))}
-                  disabled={!couldTranslate}
-                  title={t('translate.tooltip.force_refresh', { modifier: getTranslateModifierLabel() })}
-                  className={cn(
-                    'flex h-8 items-center gap-1.5 rounded-md px-3 text-sm transition-all focus-visible:outline-none',
-                    couldTranslate
-                      ? 'bg-neutral-900 text-white hover:bg-neutral-800 focus-visible:bg-neutral-800'
-                      : 'cursor-not-allowed bg-muted text-foreground-disabled'
-                  )}>
-                  <Languages size={16} className="lucide-custom" />
-                  <span>{t('translate.button.translate')}</span>
-                </button>
+                aria-label={t('translate.history.title')}
+                aria-pressed={historyOpen}>
+                <History size={18} />
+              </Button>
+              {!compactToolbar && (
+                <TranslateLanguageBar
+                  className="px-0 py-0 lg:px-0"
+                  sourceLanguage={sourceLanguage}
+                  onSourceChange={(language) => {
+                    setDetectedLanguage(null)
+                    void safePersist(setSourceLanguage(language), 'translate source language')
+                  }}
+                  targetLanguage={targetLanguage}
+                  onTargetChange={(language) =>
+                    void safePersist(setTargetLanguage(language), 'translate target language')
+                  }
+                  detectedLanguage={detectedLanguage}
+                  isBidirectional={isPdfMode ? false : isBidirectional}
+                  bidirectionalPair={bidirectionalPair}
+                  disabled={isFlowBusy || isProcessing || isOcrRunning}
+                  couldExchange={couldExchange}
+                  onExchange={handleExchange}
+                />
               )}
-              <FlipButton couldFlip={!isPdfMode && couldFlip} onFlip={() => void handleFlip()} />
-              <span aria-hidden="true" className="h-5 w-px shrink-0 bg-border-subtle" />
-              <PolishTranslateToggleButton
-                enabled={flowSettings.polishEnabled}
-                disabled={isPdfMode || isFlowBusy || isProcessing || isOcrRunning}
-                onToggle={() =>
+              {!compactToolbar && <span aria-hidden="true" className="h-5 w-px shrink-0 bg-border-subtle" />}
+              <div className="flex shrink-0 items-center gap-1.5">
+                {isTranslationRunning || isFlowBusy ? (
+                  <button
+                    type="button"
+                    onClick={onAbort}
+                    className="flex h-8 items-center gap-1.5 rounded-md bg-secondary px-3 text-secondary-foreground text-sm transition-all hover:bg-secondary-hover focus-visible:bg-secondary-hover focus-visible:outline-none">
+                    <CirclePause size={14} className="lucide-custom" />
+                    <span>{t('common.stop')}</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={(event) => void (isPdfMode ? onTranslate() : handlePrimaryClick(event))}
+                    disabled={!couldTranslate}
+                    title={t('translate.tooltip.force_refresh', { modifier: getTranslateModifierLabel() })}
+                    className={cn(
+                      'flex h-8 items-center gap-1.5 rounded-md px-3 text-sm transition-all focus-visible:outline-none',
+                      couldTranslate
+                        ? 'bg-neutral-900 text-white hover:bg-neutral-800 focus-visible:bg-neutral-800'
+                        : 'cursor-not-allowed bg-muted text-foreground-disabled'
+                    )}>
+                    <Languages size={16} className="lucide-custom" />
+                    <span>{t('translate.button.translate')}</span>
+                  </button>
+                )}
+                <FlipButton couldFlip={!isPdfMode && couldFlip} onFlip={() => void handleFlip()} />
+                <span aria-hidden="true" className="h-5 w-px shrink-0 bg-border-subtle" />
+                <PolishTranslateToggleButton
+                  enabled={flowSettings.polishEnabled}
+                  disabled={isPdfMode || isFlowBusy || isProcessing || isOcrRunning}
+                  onToggle={() =>
+                    void safePersist(
+                      updateFlowSettings({ polishEnabled: !flowSettings.polishEnabled }),
+                      'translate polish enabled'
+                    )
+                  }
+                  onTranslateOnce={() => void triggerPolishOnce()}
+                />
+                <TranslateToolbarToggleButton
+                  enabled={clipboardWatch.enabled}
+                  tone="clipboardWatch"
+                  size="icon-sm"
+                  onClick={clipboardWatch.toggle}
+                  aria-label={t('translate.clipboard_watch')}>
+                  <ClipboardCheck size={16} />
+                </TranslateToolbarToggleButton>
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-1.5">
+              <ModelSelector
+                multiple={false}
+                selectionType="id"
+                value={selectedModelId}
+                onSelect={handleModelIdSelect}
+                filter={modelSelectorFilter}
+                showTagFilter={false}
+                showPinnedModels
+                align="end"
+                trigger={
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label={selectedModel?.name ?? t('translate.settings.model_placeholder')}
+                    title={selectedModel?.name ?? t('translate.settings.model_placeholder')}
+                    className={cn(
+                      'size-8 rounded-full p-0 shadow-none hover:bg-accent',
+                      isUsingNonGlobalTranslationModel && 'saturate-0'
+                    )}>
+                    {selectedModel ? (
+                      selectedModelIcon ? (
+                        <span className="flex size-6 shrink-0 items-center justify-center overflow-hidden rounded-full">
+                          <selectedModelIcon.Avatar size={24} />
+                        </span>
+                      ) : (
+                        <Avatar className="size-6 rounded-full">
+                          <AvatarFallback className="text-[11px]">{getModelInitial(selectedModel)}</AvatarFallback>
+                        </Avatar>
+                      )
+                    ) : (
+                      <Avatar className="size-6 rounded-full">
+                        <AvatarFallback className="text-[11px]">M</AvatarFallback>
+                      </Avatar>
+                    )}
+                  </Button>
+                }
+              />
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className={cn(
+                  'size-8',
+                  settingsOpen ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
+                )}
+                onMouseDown={handleSettingsMouseDown}
+                onAuxClick={handleSettingsAuxClick}
+                onClick={() =>
+                  setSettingsOpen((open) => {
+                    const next = !open
+                    if (next) setHistoryOpen(false)
+                    return next
+                  })
+                }
+                aria-label={t('translate.settings.title')}
+                aria-pressed={settingsOpen}>
+                <SlidersHorizontal size={18} />
+              </Button>
+              <TranslateToolbarToggleButton
+                enabled={flowSettings.postProcessingEnabled}
+                tone="postProcessing"
+                size="icon-sm"
+                onClick={() =>
                   void safePersist(
-                    updateFlowSettings({ polishEnabled: !flowSettings.polishEnabled }),
-                    'translate polish enabled'
+                    updateFlowSettings({ postProcessingEnabled: !flowSettings.postProcessingEnabled }),
+                    'translate post-processing enabled'
                   )
                 }
-                onTranslateOnce={() => void triggerPolishOnce()}
-              />
+                aria-label={t('translate.post_processing.enable')}>
+                <WandSparkles size={16} />
+              </TranslateToolbarToggleButton>
               <TranslateToolbarToggleButton
-                enabled={clipboardWatch.enabled}
-                tone="clipboardWatch"
+                enabled={htmlConversionEnabled}
+                tone="htmlConversion"
                 size="icon-sm"
-                onClick={clipboardWatch.toggle}
-                aria-label={t('translate.clipboard_watch')}>
-                <ClipboardCheck size={16} />
+                onClick={() =>
+                  void safePersist(setHtmlConversionEnabled(!htmlConversionEnabled), 'HTML conversion on paste')
+                }
+                aria-label={t('translate.html_conversion')}>
+                <CodeXml size={16} />
               </TranslateToolbarToggleButton>
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-1.5">
-            <ModelSelector
-              multiple={false}
-              selectionType="id"
-              value={selectedModelId}
-              onSelect={handleModelIdSelect}
-              filter={modelSelectorFilter}
-              showTagFilter={false}
-              showPinnedModels
-              align="end"
-              trigger={
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  aria-label={selectedModel?.name ?? t('translate.settings.model_placeholder')}
-                  title={selectedModel?.name ?? t('translate.settings.model_placeholder')}
-                  className={cn(
-                    'size-8 rounded-full p-0 shadow-none hover:bg-accent',
-                    isUsingNonGlobalTranslationModel && 'saturate-0'
-                  )}>
-                  {selectedModel ? (
-                    selectedModelIcon ? (
-                      <span className="flex size-6 shrink-0 items-center justify-center overflow-hidden rounded-full">
-                        <selectedModelIcon.Avatar size={24} />
-                      </span>
-                    ) : (
-                      <Avatar className="size-6 rounded-full">
-                        <AvatarFallback className="text-[11px]">{getModelInitial(selectedModel)}</AvatarFallback>
-                      </Avatar>
-                    )
-                  ) : (
-                    <Avatar className="size-6 rounded-full">
-                      <AvatarFallback className="text-[11px]">M</AvatarFallback>
-                    </Avatar>
-                  )}
-                </Button>
-              }
-            />
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              className={cn('size-8', settingsOpen ? 'text-foreground' : 'text-muted-foreground hover:text-foreground')}
-              onClick={() =>
-                setSettingsOpen((open) => {
-                  const next = !open
-                  if (next) setHistoryOpen(false)
-                  return next
-                })
-              }
-              aria-label={t('translate.settings.title')}
-              aria-pressed={settingsOpen}>
-              <SlidersHorizontal size={18} />
-            </Button>
-            <TranslateToolbarToggleButton
-              enabled={flowSettings.postProcessingEnabled}
-              tone="postProcessing"
-              size="icon-sm"
-              onClick={() =>
-                void safePersist(
-                  updateFlowSettings({ postProcessingEnabled: !flowSettings.postProcessingEnabled }),
-                  'translate post-processing enabled'
-                )
-              }
-              aria-label={t('translate.post_processing.enable')}>
-              <WandSparkles size={16} />
-            </TranslateToolbarToggleButton>
-            <TranslateToolbarToggleButton
-              enabled={htmlConversionEnabled}
-              tone="htmlConversion"
-              size="icon-sm"
-              onClick={() =>
-                void safePersist(setHtmlConversionEnabled(!htmlConversionEnabled), 'HTML conversion on paste')
-              }
-              aria-label={t('translate.html_conversion')}>
-              <CodeXml size={16} />
-            </TranslateToolbarToggleButton>
-          </div>
-        </div>
 
-        {pdfFile ? (
-          <Suspense
-            fallback={
-              <div className="flex min-h-0 flex-1 items-center justify-center" aria-busy="true">
-                <LoaderCircle size={20} className="animate-spin text-foreground-muted" />
-              </div>
-            }>
-            <PdfTranslationView
-              key={restoredPdf?.key ?? pdfFile.path}
-              file={pdfFile}
-              restoredOutput={restoredPdf?.output}
-              modelId={isSelectedPdfModelRoutable ? selectedModelId : undefined}
-              sourceLangCode={sourceLanguage}
-              babelDocAvailability={babelDoc.availability}
-              babelDocInstalling={babelDoc.installing}
-              textFallback={
-                pdfTextFallbackActive
+          {pdfFile ? (
+            <Suspense
+              fallback={
+                <div className="flex min-h-0 flex-1 items-center justify-center" aria-busy="true">
+                  <LoaderCircle size={20} className="animate-spin text-foreground-muted" />
+                </div>
+              }>
+              <PdfTranslationView
+                key={restoredPdf?.key ?? pdfFile.path}
+                file={pdfFile}
+                restoredOutput={restoredPdf?.output}
+                modelId={isSelectedPdfModelRoutable ? selectedModelId : undefined}
+                sourceLangCode={sourceLanguage}
+                babelDocAvailability={babelDoc.availability}
+                babelDocInstalling={babelDoc.installing}
+                textFallback={
+                  pdfTextFallbackActive
+                    ? {
+                        ocrRequired: pdfTextOcrRequired,
+                        content: (
+                          <TranslateOutputPane
+                            ref={outputTextRef}
+                            translatedContent={translateOutput}
+                            renderedMarkdown={renderedMarkdown}
+                            enableMarkdown={enableMarkdown}
+                            enableJsonStructure={flowSettings.jsonStructureView}
+                            jsonStructureCopySeparator={flowSettings.jsonCopySeparator}
+                            jsonStructureCopyBlankLineBetweenRows={flowSettings.jsonCopyBlankLine}
+                            translating={isFlowBusy || isPdfTextExtracting}
+                            fontSize={normalizePersistedTranslateFontSize(flowSettings.fontSize)}
+                            copied={copied}
+                            onCopy={onCopyOutput}
+                            onScroll={outputScrollHandler}
+                            tokenCount={outputTokenCount}
+                            wordCount={outputWordCount}
+                          />
+                        )
+                      }
+                    : undefined
+                }
+                onClose={resetPdfMode}
+                onHandleChange={handlePdfHandleChange}
+                onStatusChange={handlePdfStatusChange}
+                onInstallBabelDoc={() => void babelDoc.install()}
+                onBabelDocUnavailable={babelDoc.refresh}
+              />
+            </Suspense>
+          ) : (
+            <div
+              ref={paneContainerRef}
+              className="grid min-h-0 flex-1 gap-0 overflow-hidden px-3 pt-1.5 pb-3 [--translate-pane-min-width:320px] max-[600px]:[--translate-pane-min-width:250px] max-[800px]:[--translate-pane-min-width:280px]"
+              style={
+                isVerticalLayout
                   ? {
-                      ocrRequired: pdfTextOcrRequired,
-                      content: (
-                        <TranslateOutputPane
-                          ref={outputTextRef}
-                          translatedContent={translateOutput}
-                          renderedMarkdown={renderedMarkdown}
-                          enableMarkdown={enableMarkdown}
-                          enableJsonStructure={flowSettings.jsonStructureView}
-                          jsonStructureCopySeparator={flowSettings.jsonCopySeparator}
-                          jsonStructureCopyBlankLineBetweenRows={flowSettings.jsonCopyBlankLine}
-                          translating={isFlowBusy || isPdfTextExtracting}
-                          fontSize={normalizePersistedTranslateFontSize(flowSettings.fontSize)}
-                          copied={copied}
-                          onCopy={onCopyOutput}
-                          onScroll={outputScrollHandler}
-                          tokenCount={outputTokenCount}
-                          wordCount={outputWordCount}
-                        />
-                      )
+                      gridTemplateRows: `minmax(200px, ${panelSize}%) 6px minmax(200px, 1fr)`,
+                      gridTemplateColumns: 'minmax(0, 1fr)'
                     }
-                  : undefined
-              }
-              onClose={resetPdfMode}
-              onHandleChange={handlePdfHandleChange}
-              onStatusChange={handlePdfStatusChange}
-              onInstallBabelDoc={() => void babelDoc.install()}
-              onBabelDocUnavailable={babelDoc.refresh}
-            />
-          </Suspense>
-        ) : (
-          <div
-            ref={paneContainerRef}
-            className="grid min-h-0 flex-1 gap-0 overflow-hidden px-3 pt-1.5 pb-3 [--translate-pane-min-width:320px] max-[600px]:[--translate-pane-min-width:250px] max-[800px]:[--translate-pane-min-width:280px]"
-            style={
-              isVerticalLayout
-                ? {
-                    gridTemplateRows: `minmax(200px, ${panelSize}%) 6px minmax(200px, 1fr)`,
-                    gridTemplateColumns: 'minmax(0, 1fr)'
-                  }
-                : {
-                    gridTemplateColumns: `minmax(var(--translate-pane-min-width), ${panelSize}%) 6px minmax(var(--translate-pane-min-width), 1fr)`,
-                    gridTemplateRows: 'minmax(0, 1fr)'
-                  }
-            }>
-            <section className="flex min-h-0 min-w-0 flex-col">
-              <TranslateInputPane
-                ref={inputScrollRef}
-                text={translateInput}
-                onTextChange={handleInputChange}
-                onKeyDown={(event) => {
-                  if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === 'v') {
-                    forcePlainTextPasteRef.current = true
-                    return
-                  }
-                  if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
-                    event.preventDefault()
-                    void onPrimaryTranslate()
-                  }
-                }}
-                onScroll={inputScrollHandler}
-                onPaste={onPaste}
-                onDrop={onDrop}
-                onSelectFile={handleSelectFile}
-                onPasteFromClipboard={readClipboardForTranslate}
-                onCancelOcr={clearOcrJob}
-                disabled={isTranslating || isDetecting || isProcessing || isOcrRunning}
-                ocrProcessing={isOcrRunning}
-                selecting={selecting}
-                busyLabel={translateBusyLabel}
-                fontSize={normalizePersistedTranslateFontSize(flowSettings.fontSize)}
-                tokenCount={tokenCount}
-                wordCount={wordCount}
-              />
-            </section>
+                  : {
+                      gridTemplateColumns: `minmax(var(--translate-pane-min-width), ${panelSize}%) 6px minmax(var(--translate-pane-min-width), 1fr)`,
+                      gridTemplateRows: 'minmax(0, 1fr)'
+                    }
+              }>
+              <section className="flex min-h-0 min-w-0 flex-col">
+                <TranslateInputPane
+                  ref={inputScrollRef}
+                  text={translateInput}
+                  onTextChange={handleInputChange}
+                  onKeyDown={(event) => {
+                    if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === 'v') {
+                      forcePlainTextPasteRef.current = true
+                      return
+                    }
+                    if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+                      event.preventDefault()
+                      void onPrimaryTranslate()
+                    }
+                  }}
+                  onScroll={inputScrollHandler}
+                  onPaste={onPaste}
+                  onDrop={onDrop}
+                  onSelectFile={handleSelectFile}
+                  onPasteFromClipboard={readClipboardForTranslate}
+                  onCancelOcr={cancelOcrJob}
+                  disabled={isTranslating || isDetecting || isProcessing || isOcrRunning}
+                  ocrProcessing={isOcrRunning}
+                  selecting={selecting}
+                  busyLabel={translateBusyLabel}
+                  fontSize={normalizePersistedTranslateFontSize(flowSettings.fontSize)}
+                  tokenCount={tokenCount}
+                  wordCount={wordCount}
+                />
+              </section>
 
-            <DraggableDivider
-              containerRef={paneContainerRef}
-              vertical={isVerticalLayout}
-              value={panelSize}
-              onChange={setPanelSize}
-            />
-
-            <section className="flex min-h-0 min-w-0 flex-col">
-              <TranslateOutputPane
-                ref={outputTextRef}
-                translatedContent={translateOutput}
-                renderedMarkdown={renderedMarkdown}
-                enableMarkdown={enableMarkdown}
-                enableJsonStructure={flowSettings.jsonStructureView}
-                jsonStructureCopySeparator={flowSettings.jsonCopySeparator}
-                jsonStructureCopyBlankLineBetweenRows={flowSettings.jsonCopyBlankLine}
-                translating={isFlowBusy}
-                fontSize={normalizePersistedTranslateFontSize(flowSettings.fontSize)}
-                copied={copied}
-                onCopy={onCopyOutput}
-                onScroll={outputScrollHandler}
-                tokenCount={outputTokenCount}
-                wordCount={outputWordCount}
+              <DraggableDivider
+                containerRef={paneContainerRef}
+                vertical={isVerticalLayout}
+                value={panelSize}
+                onChange={setPanelSize}
               />
-            </section>
-          </div>
-        )}
-        <TranslateHistoryList
-          isOpen={historyOpen}
-          onClose={() => setHistoryOpen(false)}
-          onHistoryItemClick={onHistoryItemClick}
-        />
-        <TranslateSettings visible={settingsOpen} onClose={() => setSettingsOpen(false)} />
+
+              <section className="flex min-h-0 min-w-0 flex-col">
+                <TranslateOutputPane
+                  ref={outputTextRef}
+                  translatedContent={translateOutput}
+                  renderedMarkdown={renderedMarkdown}
+                  enableMarkdown={enableMarkdown}
+                  enableJsonStructure={flowSettings.jsonStructureView}
+                  jsonStructureCopySeparator={flowSettings.jsonCopySeparator}
+                  jsonStructureCopyBlankLineBetweenRows={flowSettings.jsonCopyBlankLine}
+                  translating={isFlowBusy}
+                  fontSize={normalizePersistedTranslateFontSize(flowSettings.fontSize)}
+                  copied={copied}
+                  onCopy={onCopyOutput}
+                  onScroll={outputScrollHandler}
+                  tokenCount={outputTokenCount}
+                  wordCount={outputWordCount}
+                />
+              </section>
+            </div>
+          )}
+          <TranslateHistoryList
+            isOpen={historyOpen}
+            onClose={() => setHistoryOpen(false)}
+            onHistoryItemClick={onHistoryItemClick}
+          />
+          <TranslateSettings visible={settingsOpen} onClose={() => setSettingsOpen(false)} />
+        </div>
       </div>
+      <TranslateRightPane.Viewport />
     </div>
   )
 }
+
+const TranslatePage: FC = () => (
+  <TranslateRightPane.Scope>
+    <TranslatePageContent />
+  </TranslateRightPane.Scope>
+)
 
 export default TranslatePage

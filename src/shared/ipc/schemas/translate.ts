@@ -1,5 +1,6 @@
 import { TranslateLangCodeSchema } from '@shared/data/preference/preferenceTypes'
 import { UniqueModelIdSchema } from '@shared/data/types/model'
+import { TraceIdSchema } from '@shared/data/types/trace'
 import { TranslateOperationSchema } from '@shared/data/types/translate'
 import { AbsoluteFilePathSchema } from '@shared/types/file'
 import * as z from 'zod'
@@ -7,6 +8,9 @@ import * as z from 'zod'
 import { defineRoute } from '../define'
 
 const pdfJobInputSchema = z.strictObject({ jobId: z.uuid() })
+export const TranslateTraceTopicIdSchema = z
+  .string()
+  .regex(/^translate:[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)
 
 /**
  * Translate IPC schema — an independent micro-domain (plan ruling 16). `translate.open`
@@ -24,17 +28,24 @@ export const translateRequestSchemas = {
     output: z.object({ modelId: UniqueModelIdSchema })
   }),
   'translate.open': defineRoute({
-    input: z.object({
-      streamId: z.string(),
-      text: z.string(),
-      targetLangCode: TranslateLangCodeSchema,
-      operation: TranslateOperationSchema.optional(),
-      /** Freeze a model returned by translate.plan for this exact run. */
-      modelId: UniqueModelIdSchema.optional(),
-      messageId: z.string().optional(),
-      sourceLangCode: TranslateLangCodeSchema.optional()
-    }),
-    output: z.object({ streamId: z.string() })
+    input: z
+      .object({
+        streamId: z.string(),
+        text: z.string(),
+        targetLangCode: TranslateLangCodeSchema,
+        operation: TranslateOperationSchema.optional(),
+        /** Freeze a model returned by translate.plan for this exact run. */
+        modelId: UniqueModelIdSchema.optional(),
+        messageId: z.string().optional(),
+        sourceLangCode: TranslateLangCodeSchema.optional(),
+        traceTopicId: TranslateTraceTopicIdSchema.optional(),
+        traceId: TraceIdSchema.optional()
+      })
+      .refine((input) => !input.traceId || input.traceTopicId, {
+        message: 'traceTopicId is required when traceId is provided',
+        path: ['traceTopicId']
+      }),
+    output: z.object({ streamId: z.string(), traceId: TraceIdSchema.optional() })
   }),
   'translate.clipboard_watch.start': defineRoute({ input: z.void(), output: z.boolean() }),
   'translate.clipboard_watch.stop': defineRoute({ input: z.void(), output: z.void() }),

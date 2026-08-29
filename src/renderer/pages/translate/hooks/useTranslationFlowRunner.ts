@@ -2,18 +2,15 @@ import { loggerService } from '@logger'
 import type { useTranslateHistory, UseTranslateResult } from '@renderer/hooks/translate'
 import type { useTimer } from '@renderer/hooks/useTimer'
 import { toast } from '@renderer/services/toast'
-import {
-  executePreparedTranslation,
-  prepareTranslation,
-  type TranslationMode
-} from '@renderer/services/translation/TranslationUseCase'
+import { executePreparedTranslation, prepareTranslation, type TranslationMode } from '@renderer/services/translation'
+import { translationWorkspaceService } from '@renderer/services/translation'
 import { formatErrorMessageWithPrefix } from '@renderer/utils/error'
 import { determineTargetLanguage, getTranslateModifierLabel, resolveTranslatePlan } from '@renderer/utils/translate'
 import type { TranslateLangCode } from '@shared/data/preference/preferenceTypes'
 import type { TranslateHistory } from '@shared/data/types/translate'
 import type { TFunction } from 'i18next'
 import type { Dispatch, SetStateAction } from 'react'
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useRef } from 'react'
 
 const logger = loggerService.withContext('TranslatePage/TranslationFlowRunner')
 
@@ -107,16 +104,6 @@ export const useTranslationFlowRunner = ({
   const activeFlowControllerRef = useRef<AbortController | null>(null)
   const activeModeRef = useRef<TranslationMode | null>(null)
 
-  useEffect(
-    () => () => {
-      activeFlowRef.current += 1
-      activeFlowControllerRef.current?.abort()
-      activeFlowControllerRef.current = null
-      cancel()
-    },
-    [cancel]
-  )
-
   const showCached = useCallback(
     (cached: TranslateHistory, actualTargetLanguage: TranslateLangCode) => {
       const processed = processTranslation(cached.targetText, actualTargetLanguage)
@@ -155,11 +142,23 @@ export const useTranslationFlowRunner = ({
       if (processedSourceText !== effectiveSourceText) {
         setSourceText(processedSourceText)
       }
+      const workspaceRunId = translationWorkspaceService.begin('text', {
+        sourceText: processedSourceText,
+        targetLanguage: effectiveTargetLanguage
+      })
+      const traceTopicId = translationWorkspaceService.getSnapshot().traceTopicId
       const flowId = activeFlowRef.current + 1
       activeFlowRef.current = flowId
       activeFlowControllerRef.current?.abort()
       const controller = new AbortController()
       activeFlowControllerRef.current = controller
+      const finishWorkspaceTask = translationWorkspaceService.addTask(controller)
+      let workspaceTaskFinished = false
+      const finishWorkspace = () => {
+        if (workspaceTaskFinished) return
+        workspaceTaskFinished = true
+        finishWorkspaceTask()
+      }
       activeModeRef.current = effectiveMode
       const { signal } = controller
       const isCurrent = () => activeFlowRef.current === flowId
@@ -169,13 +168,14 @@ export const useTranslationFlowRunner = ({
           setDetectedLanguage(null)
         }
 
-        setFlowStage(
+        const initialStage =
           effectiveSourceLanguage === 'auto' && effectiveMode === 'translate' && !forceRefresh
             ? 'cache'
             : effectiveSourceLanguage === 'auto'
               ? 'detecting'
               : 'planning'
-        )
+        setFlowStage(initialStage)
+        translationWorkspaceService.update(workspaceRunId, { stage: initialStage })
 
         const prepared = await prepareTranslation(
           {
@@ -191,6 +191,7 @@ export const useTranslationFlowRunner = ({
           {
             detectLanguage: async (text, detectionSignal) => {
               setFlowStage('detecting')
+              translationWorkspaceService.update(workspaceRunId, { stage: 'detecting' })
               setIsDetecting(true)
               try {
                 return await detectLanguage(text, detectionSignal)
@@ -201,14 +202,17 @@ export const useTranslationFlowRunner = ({
             determineTargetLanguage,
             findBySourceText: async (text) => {
               setFlowStage('cache')
+              translationWorkspaceService.update(workspaceRunId, { stage: 'cache' })
               return history.findBySourceText(text)
             },
             findCached: async (cacheKey) => {
               setFlowStage('cache')
+              translationWorkspaceService.update(workspaceRunId, { stage: 'cache' })
               return history.findCached(cacheKey)
             },
             plan: async (actualTargetLanguage, operation) => {
               setFlowStage('planning')
+              translationWorkspaceService.update(workspaceRunId, { stage: 'planning' })
               return resolveTranslatePlan(actualTargetLanguage, operation)
             }
           },
@@ -227,6 +231,7 @@ export const useTranslationFlowRunner = ({
           toast.warning(
             t(prepared.status === 'same_language' ? 'translate.language.same' : 'translate.language.not_pair')
           )
+          translationWorkspaceService.update(workspaceRunId, { status: 'cancelled', stage: 'idle' })
           return
         }
         setDetectedLanguage(
@@ -236,8 +241,17 @@ export const useTranslationFlowRunner = ({
               : effectiveSourceLanguage
             : null
         )
+        translationWorkspaceService.update(workspaceRunId, {
+          detectedLanguage:
+            effectiveSourceLanguage === 'auto' ? prepared.value.sourceLanguage : effectiveSourceLanguage,
+          targetLanguage: prepared.value.targetLanguage
+        })
         if (prepared.status === 'cache_hit') {
           showCached(prepared.history, prepared.value.targetLanguage)
+          translationWorkspaceService.complete(workspaceRunId, {
+            rawOutput: prepared.history.targetText,
+            displayOutput: processTranslation(prepared.history.targetText, prepared.value.targetLanguage)
+          })
           return
         }
 
@@ -263,6 +277,12 @@ export const useTranslationFlowRunner = ({
                   modelId,
                   operation,
                   sourceLangCode: actualSource,
+                  traceTopicId,
+                  traceId:
+                    translationWorkspaceService.getSnapshot().runId === workspaceRunId
+                      ? translationWorkspaceService.getSnapshot().traceId
+                      : undefined,
+                  onTraceReady: (traceId) => translationWorkspaceService.update(workspaceRunId, { traceId }),
                   ...(operation === 'translate' && { onOutputTokens: setReportedOutputTokens })
                 },
                 executionSignal
@@ -275,14 +295,22 @@ export const useTranslationFlowRunner = ({
                 case 'polishing_started':
                   setFlowStage('polishing')
                   smoothReset('')
+                  translationWorkspaceService.update(workspaceRunId, { stage: 'polishing', status: 'running' })
                   break
                 case 'translation_started':
                   setFlowStage('translating')
                   setReportedOutputTokens(undefined)
                   smoothReset('')
+                  translationWorkspaceService.update(workspaceRunId, { stage: 'translating', status: 'running' })
                   break
                 case 'display_ready':
                   setFlowStage('processing')
+                  translationWorkspaceService.update(workspaceRunId, {
+                    rawOutput: progress.rawText,
+                    displayOutput: progress.displayText,
+                    stage: 'processing',
+                    status: 'processing'
+                  })
                   break
               }
             },
@@ -293,15 +321,17 @@ export const useTranslationFlowRunner = ({
 
         setRawOutput(result.rawText)
         setOutputTargetLanguage(prepared.value.targetLanguage)
-        await smoothComplete(result.displayText)
-        if (!isCurrent()) return
-        toast.success(t('translate.complete'))
-
-        if (result.historyError) {
-          // History failures must not turn a completed translation into a failed run.
-          toast.error(t('translate.history.error.add'))
-        }
-
+        translationWorkspaceService.update(workspaceRunId, {
+          rawOutput: result.rawText,
+          displayOutput: result.displayText,
+          historyError: result.historyError
+        })
+        translationWorkspaceService.complete(workspaceRunId, {
+          rawOutput: result.rawText,
+          displayOutput: result.displayText,
+          historyError: result.historyError
+        })
+        finishWorkspace()
         if (autoCopy) {
           setTimeoutTimer(
             'auto-copy',
@@ -317,12 +347,23 @@ export const useTranslationFlowRunner = ({
             100
           )
         }
+        await smoothComplete(result.displayText)
+        if (!isCurrent()) return
+        toast.success(t('translate.complete'))
+
+        if (result.historyError) {
+          // History failures must not turn a completed translation into a failed run.
+          toast.error(t('translate.history.error.add'))
+        }
       } catch (error) {
         if (isCurrent()) {
+          if (signal.aborted) return
+          translationWorkspaceService.fail(workspaceRunId, error)
           logger.error('Translation flow failed', error as Error)
           toast.error(formatErrorMessageWithPrefix(error, t('translate.error.failed')))
         }
       } finally {
+        finishWorkspace()
         if (isCurrent()) {
           setIsDetecting(false)
           activeFlowControllerRef.current = null

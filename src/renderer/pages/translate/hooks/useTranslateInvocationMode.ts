@@ -1,4 +1,4 @@
-import type { TranslationMode } from '@renderer/services/translation/TranslationUseCase'
+import type { TranslationMode } from '@renderer/services/translation'
 import type { MouseEvent } from 'react'
 import { useCallback, useEffect, useRef } from 'react'
 

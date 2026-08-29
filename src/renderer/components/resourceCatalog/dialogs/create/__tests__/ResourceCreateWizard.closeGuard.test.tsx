@@ -19,6 +19,7 @@ const dialog = vi.hoisted(() => ({
   settingsNavigate: vi.fn()
 }))
 const ipc = vi.hoisted(() => ({ request: vi.fn() }))
+const navigation = vi.hoisted(() => ({ openRoute: vi.fn() }))
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key })
@@ -30,6 +31,10 @@ vi.mock('@renderer/hooks/useModel', () => ({
 
 vi.mock('@renderer/ipc', () => ({
   ipcApi: { request: ipc.request }
+}))
+
+vi.mock('@renderer/services/mainWindowNavigation', () => ({
+  openRoute: navigation.openRoute
 }))
 
 vi.mock('@renderer/components/resourceCatalog/dialogs/components/EditDialogShared', () => ({
@@ -174,6 +179,7 @@ afterEach(() => {
   dialog.onPointerDownOutside = undefined
   dialog.renderCount = 0
   ipc.request.mockReset()
+  navigation.openRoute.mockReset()
   dialog.mountCount = 0
   dialog.unmountCount = 0
   dialog.settingsNavigate.mockReset()
@@ -273,7 +279,7 @@ describe('ResourceCreateWizard close protection', () => {
     expect(screen.getByRole('button', { name: OPEN_KNOWLEDGE })).toBeEnabled()
   })
 
-  it('opens a standalone knowledge window and keeps the wizard open', async () => {
+  it('focuses or opens the unique knowledge page and keeps the wizard open', async () => {
     const user = userEvent.setup()
     const onOpenChange = vi.fn()
 
@@ -284,11 +290,9 @@ describe('ResourceCreateWizard close protection', () => {
     await user.click(screen.getByRole('button', { name: NEXT }))
     await user.click(screen.getByRole('button', { name: OPEN_KNOWLEDGE }))
 
-    expect(ipc.request).toHaveBeenCalledTimes(1)
-    const [channel, payload] = ipc.request.mock.calls[0] as [string, Record<string, unknown>]
-    expect(channel).toBe('tab.detach')
-    expect(payload).toMatchObject({ url: '/app/knowledge', type: 'route' })
-    expect(typeof payload.id).toBe('string')
+    expect(navigation.openRoute).toHaveBeenCalledOnce()
+    expect(navigation.openRoute).toHaveBeenCalledWith('/app/knowledge')
+    expect(ipc.request).not.toHaveBeenCalled()
     expect(onOpenChange).not.toHaveBeenCalled()
     expect(screen.getByRole('dialog')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: OPEN_KNOWLEDGE })).toBeEnabled()

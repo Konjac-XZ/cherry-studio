@@ -109,7 +109,6 @@ describe('useConversationNavigationOwner', () => {
       title: 'Refactor project'
     })
     expect(owner.openTab).toHaveBeenCalledWith('/app/agents?sessionId=session-1', {
-      forceNew: true,
       title: 'Refactor project'
     })
     expect(mocks.request).not.toHaveBeenCalledWith('navigation.report_conversation_ownership', {

@@ -306,6 +306,57 @@ describe('translateService.open', () => {
     )
   })
 
+  it('ignores renderer trace input when developer mode is disabled', () => {
+    const result = translateService.open(fakeSender, {
+      streamId: 'translate:untraced',
+      text: 'hello',
+      targetLangCode: 'en-us',
+      traceTopicId: 'translate:123e4567-e89b-42d3-a456-426614174000',
+      traceId: '0123456789abcdef0123456789abcdef'
+    })
+
+    expect(result.traceId).toBeUndefined()
+    expect(streamPromptMock).toHaveBeenCalledWith(
+      expect.not.objectContaining({ traceTopicId: expect.anything(), rootSpan: expect.anything() })
+    )
+    const arg = (streamPromptMock.mock.calls as unknown as Array<[{ listener: Array<{ id: string }> }]>)[0][0]
+    expect(arg.listener.map((listener) => listener.id)).not.toContain(
+      'persistence:trace:translate:123e4567-e89b-42d3-a456-426614174000'
+    )
+  })
+
+  it('creates and then reuses one container trace across translation stages in developer mode', () => {
+    MockMainPreferenceServiceUtils.setPreferenceValue('app.developer_mode.enabled', true)
+    const traceTopicId = 'translate:123e4567-e89b-42d3-a456-426614174000'
+    const first = translateService.open(fakeSender, {
+      streamId: 'translate:polish-stage',
+      text: 'draft',
+      targetLangCode: 'en-us',
+      operation: 'polish',
+      traceTopicId
+    })
+    const second = translateService.open(fakeSender, {
+      streamId: 'translate:translate-stage',
+      text: 'polished',
+      targetLangCode: 'en-us',
+      operation: 'translate',
+      traceTopicId,
+      traceId: first.traceId
+    })
+
+    expect(first.traceId).toMatch(/^[0-9a-f]{32}$/)
+    expect(second.traceId).toBe(first.traceId)
+    const calls = streamPromptMock.mock.calls as unknown as Array<
+      [{ traceTopicId?: string; rootSpan?: unknown; listener: Array<{ id: string }> }]
+    >
+    expect(calls).toHaveLength(2)
+    for (const [input] of calls) {
+      expect(input.traceTopicId).toBe(traceTopicId)
+      expect(input.rootSpan).toBeDefined()
+      expect(input.listener.map((listener) => listener.id)).toContain(`persistence:trace:${traceTopicId}`)
+    }
+  })
+
   it('stacks a PersistenceListener when the request carries a messageId', async () => {
     const streamId = 'translate:msg-bound'
     translateService.open(fakeSender, {

@@ -868,6 +868,10 @@ export class AiStreamManager extends BaseService {
    */
   streamPrompt(input: {
     streamId: string
+    /** Stable observability ownership, independent from transport/cancellation identity. */
+    traceTopicId?: string
+    /** Optional stage root so AI SDK and HTTP spans are parented under this prompt turn. */
+    rootSpan?: Span
     uniqueModelId: UniqueModelId
     prompt?: string
     messages?: CherryUIMessage[]
@@ -888,7 +892,7 @@ export class AiStreamManager extends BaseService {
         ? input.messages
         : [{ id: 'prompt-user', role: 'user', parts: [{ type: 'text', text: input.prompt ?? '' }] }]
 
-    const chatId = input.usageContext ? input.usageContext.agentSessionId : input.streamId
+    const chatId = input.usageContext ? input.usageContext.agentSessionId : (input.traceTopicId ?? input.streamId)
     const request: ManagedAiStreamRequest = {
       chatId,
       trigger: 'submit-message',
@@ -902,7 +906,7 @@ export class AiStreamManager extends BaseService {
     }
     return this.send({
       topicId: input.streamId,
-      models: [{ modelId: input.uniqueModelId, request }],
+      models: [{ modelId: input.uniqueModelId, request, rootSpan: input.rootSpan }],
       listeners: Array.isArray(input.listener) ? input.listener : [input.listener],
       lifecycle: promptStreamLifecycle
     })

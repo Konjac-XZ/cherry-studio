@@ -220,6 +220,21 @@ describe('mainWindowNavigation', () => {
       expect(ipcApiServiceMock.send).toHaveBeenCalledTimes(1)
     })
 
+    it('deduplicates queued attaches with different ids but the same page identity', () => {
+      windowManagerMock.getWindowsByType.mockReturnValue([aliveWindow])
+
+      openTabInMainWindow({ ...tab, id: 'tab-a', url: '/app/knowledge?b=2&a=1' })
+      openTabInMainWindow({ ...tab, id: 'tab-b', url: '/app/knowledge?a=1&b=2' })
+      markMainRendererReadyForTabAttach('main-1')
+
+      expect(ipcApiServiceMock.send).toHaveBeenCalledTimes(1)
+      expect(ipcApiServiceMock.send).toHaveBeenCalledWith(
+        'main-1',
+        'tab.attached',
+        expect.objectContaining({ id: 'tab-a' })
+      )
+    })
+
     it('delivers queued tabs to the live window id at flush time', () => {
       windowManagerMock.getWindowsByType.mockReturnValue([aliveWindow])
 

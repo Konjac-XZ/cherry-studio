@@ -564,13 +564,19 @@ function RightPanelKeyboardShortcut() {
   return null
 }
 
-export function RightPanelViewport({ children = <RightPanel /> }: { children?: ReactNode }) {
+export function RightPanelViewport({
+  children = <RightPanel />,
+  registerKeyboardShortcut = true
+}: {
+  children?: ReactNode
+  registerKeyboardShortcut?: boolean
+}) {
   const state = useRightPanelState()
   const actions = useRightPanelControllerActions()
 
   return (
     <>
-      <RightPanelKeyboardShortcut />
+      {registerKeyboardShortcut ? <RightPanelKeyboardShortcut /> : null}
       <PersistentRightPaneHost
         open={state.presentationOpen}
         maximized={state.presentationMaximized}

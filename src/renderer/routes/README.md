@@ -87,8 +87,8 @@ function MyComponent() {
   // With title
   openTab('/chat/123', { title: 'Chat with Alice' })
 
-  // Force new Tab (even if same URL exists)
-  openTab('/settings', { forceNew: true })
+  // Reopening the same page focuses its existing Tab
+  openTab('/settings')
 
   // Open Webview Tab
   openTab('https://example.com', {
@@ -146,10 +146,11 @@ function SettingsPage() {
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `forceNew` | `boolean` | `false` | Force create new Tab |
 | `title` | `string` | URL path | Tab title |
 | `type` | `'route' \| 'webview'` | `'route'` | Tab type |
 | `id` | `string` | Auto-generated | Custom Tab ID |
+
+Page identity is unique across Tabs. Reopening an existing page focuses its current Tab.
 
 ## Architecture Overview
 

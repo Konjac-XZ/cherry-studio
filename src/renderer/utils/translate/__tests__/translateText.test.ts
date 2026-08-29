@@ -55,7 +55,7 @@ interface MockAiApi {
 
 interface MockListeners {
   chunk: Array<(data: { topicId: string; chunk: unknown }) => void>
-  done: Array<(data: { topicId: string }) => void>
+  done: Array<(data: { topicId: string; status: 'success' | 'paused' }) => void>
   error: Array<(data: { topicId: string; error?: { name?: string; message?: string } }) => void>
 }
 
@@ -76,7 +76,7 @@ function createMocks(): {
         if (i >= 0) listeners.chunk.splice(i, 1)
       }
     }),
-    onStreamDone: vi.fn((cb: (data: { topicId: string }) => void) => {
+    onStreamDone: vi.fn((cb: (data: { topicId: string; status: 'success' | 'paused' }) => void) => {
       listeners.done.push(cb)
       return () => {
         const i = listeners.done.indexOf(cb)
@@ -139,8 +139,8 @@ function emitOutputTokens(listeners: MockListeners, outputTokens: number, topicI
   }
 }
 
-function emitDone(listeners: MockListeners, topicId: string) {
-  for (const cb of [...listeners.done]) cb({ topicId })
+function emitDone(listeners: MockListeners, topicId: string, status: 'success' | 'paused' = 'success') {
+  for (const cb of [...listeners.done]) cb({ topicId, status })
 }
 
 function emitError(listeners: MockListeners, error: { name?: string; message: string }, topicId: string) {
@@ -197,6 +197,36 @@ describe('translateText (main-driven streaming)', () => {
 
       await expect(promise).resolves.toBe('Hello world')
       expect(mockListeners).toEqual({ chunk: [], done: [], error: [] })
+    })
+
+    it('forwards a stable trace scope and reports the main-confirmed trace id', async () => {
+      const onTraceReady = vi.fn()
+      mockTranslateOpen.mockImplementationOnce(async ({ streamId }: { streamId: string }) => ({
+        streamId,
+        traceId: '0123456789abcdef0123456789abcdef'
+      }))
+      const promise = translateText('source', TARGET, undefined, undefined, {
+        operation: 'polish',
+        traceTopicId: 'translate:123e4567-e89b-42d3-a456-426614174000',
+        traceId: 'fedcba9876543210fedcba9876543210',
+        onTraceReady
+      })
+      await waitForOpen(mockRequest)
+
+      expect(mockRequest).toHaveBeenCalledWith(
+        'translate.open',
+        expect.objectContaining({
+          operation: 'polish',
+          traceTopicId: 'translate:123e4567-e89b-42d3-a456-426614174000',
+          traceId: 'fedcba9876543210fedcba9876543210'
+        })
+      )
+      expect(onTraceReady).toHaveBeenCalledWith('0123456789abcdef0123456789abcdef')
+
+      const streamId = lastStreamId(mockRequest)
+      emitChunk(mockListeners, 'polished', streamId)
+      emitDone(mockListeners, streamId)
+      await expect(promise).resolves.toBe('polished')
     })
 
     it('trims trailing whitespace from the final accumulated text', async () => {
@@ -325,6 +355,18 @@ describe('translateText (main-driven streaming)', () => {
   })
 
   describe('stream errors', () => {
+    it('rejects a paused terminal event instead of treating partial output as a successful translation', async () => {
+      const promise = translateText('source', TARGET)
+      await waitForOpen(mockRequest)
+      const streamId = lastStreamId(mockRequest)
+
+      emitChunk(mockListeners, 'partial', streamId)
+      emitDone(mockListeners, streamId, 'paused')
+
+      const error = await promise.catch((reason) => reason)
+      expect((error as Error).name).toBe('AbortError')
+    })
+
     it('rejects with the upstream error message', async () => {
       const promise = translateText('source', TARGET)
       await waitForOpen(mockRequest)

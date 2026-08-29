@@ -291,6 +291,24 @@ describe('AiStreamManager', () => {
 
       expect(mockStreamText).toHaveBeenCalledWith(expect.objectContaining({ chatId: 'session-1' }))
     })
+
+    it('uses trace ownership for telemetry without changing stream delivery identity', () => {
+      const listener = new FakeListener('translate-listener')
+      mgr.streamPrompt({
+        streamId: 'translate:stream-1',
+        traceTopicId: 'translate:run-1',
+        uniqueModelId: 'provider-a::model-a',
+        prompt: 'hello',
+        listener
+      })
+
+      expect(mockStreamText).toHaveBeenCalledWith(expect.objectContaining({ chatId: 'translate:run-1' }))
+      const chunk = { type: 'text-delta', id: 'text-1', delta: 'translated' } as UIMessageChunk
+      mgr.onChunk('translate:run-1', 'provider-a::model-a', chunk)
+      expect(listener.chunks).toHaveLength(0)
+      mgr.onChunk('translate:stream-1', 'provider-a::model-a', chunk)
+      expect(listener.chunks).toEqual([chunk])
+    })
   })
 
   describe('approval notifications', () => {

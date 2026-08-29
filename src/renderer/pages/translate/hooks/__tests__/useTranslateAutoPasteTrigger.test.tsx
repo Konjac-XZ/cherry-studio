@@ -26,7 +26,6 @@ const createProps = () => ({
   prepareInput: vi.fn(),
   readClipboardForTranslate: vi.fn(async () => 'clipboard text'),
   ready: true,
-  setSourceLanguageToAuto: vi.fn(async () => undefined),
   trigger: vi.fn(async () => undefined)
 })
 
@@ -41,17 +40,15 @@ describe('useTranslateAutoPasteTrigger', () => {
     sessionStorage.clear()
   })
 
-  it('reads through the Translate clipboard policy, forces Auto, and translates once', async () => {
+  it('reads through the Translate clipboard policy and translates once without overriding the source language', async () => {
     const props = createProps()
     renderHook(() => useTranslateAutoPasteTrigger(props))
 
     await waitFor(() => expect(props.trigger).toHaveBeenCalledTimes(1))
 
     expect(props.readClipboardForTranslate).toHaveBeenCalledTimes(1)
-    expect(props.setSourceLanguageToAuto).toHaveBeenCalledTimes(1)
     expect(props.prepareInput).toHaveBeenCalledWith('clipboard text')
     expect(props.trigger).toHaveBeenCalledWith(undefined, 'clipboard text', {
-      sourceLanguage: 'auto',
       sourcePreprocessed: true
     })
     expect(sessionStorage.getItem('translate:paste:nonce:nonce-1')).toBe('1')
@@ -70,24 +67,6 @@ describe('useTranslateAutoPasteTrigger', () => {
     await waitFor(() => expect(props.readClipboardForTranslate).toHaveBeenCalledTimes(1))
   })
 
-  it('starts translation without waiting for source-language preference persistence', async () => {
-    let resolveSourceLanguage!: (value: undefined) => void
-    const sourceLanguagePending = new Promise<undefined>((resolve) => {
-      resolveSourceLanguage = resolve
-    })
-    const props = createProps()
-    props.setSourceLanguageToAuto.mockImplementation(() => sourceLanguagePending)
-
-    renderHook(() => useTranslateAutoPasteTrigger(props))
-
-    await waitFor(() => expect(props.trigger).toHaveBeenCalledTimes(1))
-    expect(props.trigger).toHaveBeenCalledWith(undefined, 'clipboard text', {
-      sourceLanguage: 'auto',
-      sourcePreprocessed: true
-    })
-    resolveSourceLanguage(undefined)
-  })
-
   it('keeps one clipboard read alive across callback-only rerenders', async () => {
     let resolveClipboard!: (text: string) => void
     const clipboardPending = new Promise<string>((resolve) => {
@@ -100,7 +79,6 @@ describe('useTranslateAutoPasteTrigger', () => {
     await waitFor(() => expect(props.readClipboardForTranslate).toHaveBeenCalledTimes(1))
     const latestTrigger = vi.fn(async () => undefined)
     props.trigger = latestTrigger
-    props.setSourceLanguageToAuto = vi.fn(async () => undefined)
     rerender()
     resolveClipboard('clipboard text')
 

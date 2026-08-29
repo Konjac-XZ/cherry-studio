@@ -342,6 +342,16 @@ describe('RightPanel', () => {
     expect(screen.getByTestId('right-pane-host')).toHaveAttribute('data-open', 'true')
   })
 
+  it('can render a viewport without registering the chat panel shortcut', () => {
+    render(
+      <Harness>
+        <RightPanelViewport registerKeyboardShortcut={false} />
+      </Harness>
+    )
+
+    expect(commandMock.handler).toBeUndefined()
+  })
+
   it('keeps the composer lifted from the maximize click until the pane stops covering the centre', () => {
     render(
       <Harness defaultOpen>
