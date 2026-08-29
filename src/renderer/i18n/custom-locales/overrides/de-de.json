@@ -1,0 +1,23 @@
+{
+  "library.config.agent.field.runtime.option.claude_code": "Erweitert: Claude Agent",
+  "library.config.agent.field.runtime.option.pi": "Schnell: Pi",
+  "library.config.agent.field.runtime.option_description.claude_code": "Leistungsstärker — Planmodus und Modelle je Stufe",
+  "library.config.agent.field.runtime.option_description.dsh": "Breite Anbieterunterstützung mit zielorientierter Ausführung",
+  "library.config.agent.field.runtime.option_description.pi": "Schnellere Antworten, geringerer Overhead",
+  "settings.about.diagnostics.limit": "Damit die ZIP-Datei handlich bleibt, sind Protokolle und detaillierte Aufzeichnungen auf {{size}} begrenzt. Neuere Informationen werden bevorzugt berücksichtigt.",
+  "settings.about.diagnostics.privacy.description": "Diese Aufzeichnungen können Ihre Eingaben, Dateispeicherorte, Anfrage- und Antwortinhalte sowie Informationen zu Dienstverbindungen enthalten. Cherry Studio schwärzt diese Daten nicht und lädt sie nicht automatisch hoch. Geben Sie die ZIP-Datei nur an den Support weiter und veröffentlichen Sie sie niemals auf GitHub oder anderen öffentlichen Websites.",
+  "settings.about.diagnostics.upload.actions.consent_upload": "Zustimmen und hochladen",
+  "settings.about.diagnostics.upload.dialog.title": "Diagnosepaket hochladen",
+  "settings.about.diagnostics.upload.errors.upload_failed": "Das Diagnosepaket konnte nicht erstellt oder gespeichert werden",
+  "settings.about.diagnostics.upload.manual.title": "Manuelles Hochladen erforderlich",
+  "settings.about.diagnostics.upload.unknown.description": "Die ZIP-Datei wurde im Downloads-Ordner gespeichert, aber die Serverantwort wurde unterbrochen. Die Übermittlung war möglicherweise bereits erfolgreich. Prüfen Sie dies, bevor Sie das Formular öffnen, um eine doppelte Übermittlung zu vermeiden.",
+  "settings.about.diagnostics.upload.unknown.title": "Übermittlung möglicherweise erfolgreich",
+  "settings.about.feedback.diagnostics.description": "Prüfen Sie die aktuellen Diagnoseinformationen und laden Sie sie anschließend in einem Schritt anonym hoch.",
+  "settings.about.feedback.diagnostics.title": "Diagnosepaket hochladen",
+  "settings.mcp.addServer.importFrom.connectionFailed": "Verbindung fehlgeschlagen: {{name}}",
+  "settings.models.add.max_output_tokens.placeholder": "z. B. 4096",
+  "settings.models.empty_hint": "Klicken Sie oben auf die Schaltfläche \"Modelliste abrufen\", um Modelle hinzuzufügen.",
+  "settings.models.toolbar.pull_short": "Modellliste abrufen",
+  "settings.prompts.contentPlaceholder": "Geben Sie den Prompt-Inhalt ein. Unterstützt ${variables}; drücken Sie die Tabulatortaste, um zwischen Variablen zu wechseln. Beispiel:\nHelfen Sie mir, eine Route von ${from} nach ${to} zu planen und senden Sie sie an ${email}.",
+  "settings.usage.groupBy.source": "Assistent / Agent"
+}

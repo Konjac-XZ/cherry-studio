@@ -5,13 +5,18 @@ import * as readline from 'readline/promises'
 import { type CallExpression, Node, Project, type SourceFile } from 'ts-morph'
 import { pathToFileURL } from 'url'
 
+import { composeLocale } from '../src/renderer/i18n/composeLocale'
 import { COMMAND_DEFINITIONS } from '../src/shared/utils/command/definitions'
 import { sortedObjectByKeys } from './sort'
 
 const ROOT_DIR = path.resolve(__dirname, '..')
 const LOCALES_DIR = path.join(ROOT_DIR, 'src/renderer/i18n/locales')
+const CUSTOM_LOCALES_DIR = path.join(ROOT_DIR, 'src/renderer/i18n/custom-locales')
+const CUSTOM_OVERRIDES_DIR = path.join(CUSTOM_LOCALES_DIR, 'overrides')
 const BASE_LOCALE = process.env.TRANSLATION_BASE_LOCALE ?? 'en-us'
 const BASE_LOCALE_PATH = path.join(LOCALES_DIR, `${BASE_LOCALE}.json`)
+const CUSTOM_BASE_LOCALE_PATH = path.join(CUSTOM_LOCALES_DIR, `${BASE_LOCALE}.json`)
+const CUSTOM_BASE_OVERRIDES_PATH = path.join(CUSTOM_OVERRIDES_DIR, `${BASE_LOCALE}.json`)
 const SCAN_DIRS = ['src/renderer', 'src/main', 'src/shared', 'packages'].map((dir) => path.join(ROOT_DIR, dir))
 const SOURCE_EXTENSIONS = new Set(['.ts', '.tsx'])
 const IGNORED_DIRS = new Set(['.git', '.turbo', 'dist', 'node_modules', 'out', 'release', '.vite'])
@@ -316,10 +321,12 @@ export function removeI18nKeys(locale: I18N, keys: string[]): I18N {
 }
 
 function findTranslationFiles(): string[] {
-  return fs
-    .readdirSync(LOCALES_DIR)
-    .filter((file) => file.endsWith('.json'))
-    .map((file) => path.join(LOCALES_DIR, file))
+  return [LOCALES_DIR, CUSTOM_LOCALES_DIR, CUSTOM_OVERRIDES_DIR].flatMap((directory) =>
+    fs
+      .readdirSync(directory)
+      .filter((file) => file.endsWith('.json'))
+      .map((file) => path.join(directory, file))
+  )
 }
 
 function parseGroups(groups: string | undefined): string[] {
@@ -394,7 +401,12 @@ function cleanTranslationFiles(keys: string[]): void {
 }
 
 export async function runCli(options: CliOptions): Promise<void> {
-  const baseLocale = readJsonFile(BASE_LOCALE_PATH)
+  const baseLocale = composeLocale(
+    readJsonFile(BASE_LOCALE_PATH),
+    readJsonFile(CUSTOM_BASE_LOCALE_PATH),
+    {},
+    readJsonFile(CUSTOM_BASE_OVERRIDES_PATH)
+  )
   const sourceFiles = SCAN_DIRS.flatMap(findSourceFiles)
   const result = findUnusedI18nKeys(baseLocale, sourceFiles)
 

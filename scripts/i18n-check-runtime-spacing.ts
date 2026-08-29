@@ -2,6 +2,8 @@ import * as fs from 'fs'
 import * as path from 'path'
 import { Node, Project, type SourceFile } from 'ts-morph'
 
+import { composeLocale } from '../src/renderer/i18n/composeLocale'
+
 type I18NValue = string | { [key: string]: I18NValue }
 type I18N = { [key: string]: I18NValue }
 
@@ -33,8 +35,16 @@ const flatten = (obj: I18N, prefix = '', out: Record<string, string> = {}): Reco
 }
 
 const loadChineseCatalogs = (): ChineseCatalogs => {
+  const readJson = (relativePath: string) =>
+    flatten(JSON.parse(fs.readFileSync(path.join(RENDERER_DIR, relativePath), 'utf-8')) as I18N)
+  const customEnglish = readJson('i18n/custom-locales/en-us.json')
   const read = (locale: 'zh-cn' | 'zh-tw') =>
-    flatten(JSON.parse(fs.readFileSync(path.join(RENDERER_DIR, `i18n/locales/${locale}.json`), 'utf-8')) as I18N)
+    composeLocale(
+      readJson('i18n/locales/' + locale + '.json'),
+      customEnglish,
+      readJson('i18n/custom-locales/' + locale + '.json'),
+      readJson('i18n/custom-locales/overrides/' + locale + '.json')
+    )
   return { 'zh-cn': read('zh-cn'), 'zh-tw': read('zh-tw') }
 }
 

@@ -19,24 +19,104 @@ import i18n from 'i18next'
 import resourcesToBackend from 'i18next-resources-to-backend'
 import { initReactI18next } from 'react-i18next'
 
+import { composeLocale, type LocaleCatalog } from './composeLocale'
+
 const logger = loggerService.withContext('I18N')
+
+type LocaleModule = { default: LocaleCatalog }
+
+const loadComposedLocale = async (
+  upstream: Promise<LocaleModule>,
+  customLocale: Promise<LocaleModule> | undefined,
+  overrides: Promise<LocaleModule>
+): Promise<LocaleCatalog> => {
+  const [upstreamModule, customEnglishModule, customLocaleModule, overrideModule] = await Promise.all([
+    upstream,
+    import('./custom-locales/en-us.json'),
+    customLocale ?? Promise.resolve({ default: {} }),
+    overrides
+  ])
+
+  return composeLocale(
+    upstreamModule.default,
+    customEnglishModule.default,
+    customLocaleModule.default,
+    overrideModule.default
+  )
+}
 
 // Lazy locale-pack loaders. Each dynamic import() is emitted as its own async
 // chunk, so a window entry bundles zero translation JSON up front — i18next pulls
 // the current language (and the en-US fallback) on demand inside initI18n().
 const localeLoaders = {
-  'en-US': () => import('./locales/en-us.json'),
-  'zh-CN': () => import('./locales/zh-cn.json'),
-  'zh-TW': () => import('./locales/zh-tw.json'),
-  'de-DE': () => import('./locales/de-de.json'),
-  'el-GR': () => import('./locales/el-gr.json'),
-  'es-ES': () => import('./locales/es-es.json'),
-  'fr-FR': () => import('./locales/fr-fr.json'),
-  'ja-JP': () => import('./locales/ja-jp.json'),
-  'pt-PT': () => import('./locales/pt-pt.json'),
-  'ro-RO': () => import('./locales/ro-ro.json'),
-  'ru-RU': () => import('./locales/ru-ru.json'),
-  'vi-VN': () => import('./locales/vi-vn.json')
+  'en-US': () =>
+    loadComposedLocale(import('./locales/en-us.json'), undefined, import('./custom-locales/overrides/en-us.json')),
+  'zh-CN': () =>
+    loadComposedLocale(
+      import('./locales/zh-cn.json'),
+      import('./custom-locales/zh-cn.json'),
+      import('./custom-locales/overrides/zh-cn.json')
+    ),
+  'zh-TW': () =>
+    loadComposedLocale(
+      import('./locales/zh-tw.json'),
+      import('./custom-locales/zh-tw.json'),
+      import('./custom-locales/overrides/zh-tw.json')
+    ),
+  'de-DE': () =>
+    loadComposedLocale(
+      import('./locales/de-de.json'),
+      import('./custom-locales/de-de.json'),
+      import('./custom-locales/overrides/de-de.json')
+    ),
+  'el-GR': () =>
+    loadComposedLocale(
+      import('./locales/el-gr.json'),
+      import('./custom-locales/el-gr.json'),
+      import('./custom-locales/overrides/el-gr.json')
+    ),
+  'es-ES': () =>
+    loadComposedLocale(
+      import('./locales/es-es.json'),
+      import('./custom-locales/es-es.json'),
+      import('./custom-locales/overrides/es-es.json')
+    ),
+  'fr-FR': () =>
+    loadComposedLocale(
+      import('./locales/fr-fr.json'),
+      import('./custom-locales/fr-fr.json'),
+      import('./custom-locales/overrides/fr-fr.json')
+    ),
+  'ja-JP': () =>
+    loadComposedLocale(
+      import('./locales/ja-jp.json'),
+      import('./custom-locales/ja-jp.json'),
+      import('./custom-locales/overrides/ja-jp.json')
+    ),
+  'pt-PT': () =>
+    loadComposedLocale(
+      import('./locales/pt-pt.json'),
+      import('./custom-locales/pt-pt.json'),
+      import('./custom-locales/overrides/pt-pt.json')
+    ),
+  'ro-RO': () =>
+    loadComposedLocale(
+      import('./locales/ro-ro.json'),
+      import('./custom-locales/ro-ro.json'),
+      import('./custom-locales/overrides/ro-ro.json')
+    ),
+  'ru-RU': () =>
+    loadComposedLocale(
+      import('./locales/ru-ru.json'),
+      import('./custom-locales/ru-ru.json'),
+      import('./custom-locales/overrides/ru-ru.json')
+    ),
+  'vi-VN': () =>
+    loadComposedLocale(
+      import('./locales/vi-vn.json'),
+      import('./custom-locales/vi-vn.json'),
+      import('./custom-locales/overrides/vi-vn.json')
+    )
 } satisfies Record<LanguageVarious, () => Promise<unknown>>
 
 export const getLanguage = async () => {

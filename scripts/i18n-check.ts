@@ -1,6 +1,7 @@
 import * as fs from 'fs'
 import * as path from 'path'
 
+import { composeLocale } from '../src/renderer/i18n/composeLocale'
 import { checkRuntimeChineseSpacing } from './i18n-check-runtime-spacing'
 import { checkTranslationValues } from './i18n-check-values'
 import { sortedObjectByKeys } from './sort'
@@ -9,6 +10,8 @@ const baseLocale = process.env.TRANSLATION_BASE_LOCALE ?? 'en-us'
 const baseFileName = `${baseLocale}.json`
 
 const rendererLocalesDir = path.join(__dirname, '../src/renderer/i18n/locales')
+const rendererCustomLocalesDir = path.join(__dirname, '../src/renderer/i18n/custom-locales')
+const rendererCustomOverridesDir = path.join(rendererCustomLocalesDir, 'overrides')
 const rendererTranslateSourceDirs = [
   path.join(__dirname, '../src/renderer/components/translate'),
   path.join(__dirname, '../src/renderer/pages/translate')
@@ -90,6 +93,67 @@ function listJsonFiles(dir: string): string[] {
     .readdirSync(dir)
     .filter((file) => file.endsWith('.json'))
     .map((file) => path.join(dir, file))
+}
+
+function checkSortedFlatCatalog(label: string, catalog: I18N): void {
+  if (!isSortedI18N(catalog)) throw new Error('[' + label + '] keys are not sorted')
+  for (const [key, value] of Object.entries(catalog)) {
+    if (typeof value !== 'string') throw new Error('[' + label + '] ' + key + ' is not a string')
+  }
+}
+
+/**
+ * Validate the downstream overlay independently, then verify every effective
+ * renderer catalog has exactly the composed English key set.
+ */
+function checkRendererCustomCatalogs(upstreamBase: I18N, upstreamFiles: string[]): I18N {
+  const customEnglish = readI18N(path.join(rendererCustomLocalesDir, baseFileName))
+  const englishOverrides = readI18N(path.join(rendererCustomOverridesDir, baseFileName))
+  checkSortedFlatCatalog('renderer custom/' + baseFileName, customEnglish)
+  checkSortedFlatCatalog('renderer custom overrides/' + baseFileName, englishOverrides)
+
+  for (const key of Object.keys(customEnglish)) {
+    if (key in upstreamBase) {
+      throw new Error('[renderer custom] downstream addition already exists upstream: ' + key)
+    }
+  }
+  for (const key of Object.keys(englishOverrides)) {
+    if (!(key in upstreamBase)) {
+      throw new Error('[renderer custom overrides] unknown upstream key: ' + key)
+    }
+  }
+
+  const effectiveEnglish = composeLocale(upstreamBase, customEnglish, {}, englishOverrides)
+  for (const upstreamFile of upstreamFiles) {
+    const filename = path.basename(upstreamFile)
+    const locale = filename.replace(/\.json$/, '')
+    const customLocale = locale === baseLocale ? {} : readI18N(path.join(rendererCustomLocalesDir, filename))
+    const overrides = readI18N(path.join(rendererCustomOverridesDir, filename))
+    checkSortedFlatCatalog('renderer custom/' + filename, customLocale)
+    checkSortedFlatCatalog('renderer custom overrides/' + filename, overrides)
+
+    for (const key of Object.keys(customLocale)) {
+      if (!(key in customEnglish)) {
+        throw new Error('[renderer custom/' + filename + '] locale-only key: ' + key)
+      }
+    }
+    const upstreamLocale = readI18N(upstreamFile)
+    for (const key of Object.keys(overrides)) {
+      if (!(key in upstreamLocale)) {
+        throw new Error('[renderer custom overrides/' + filename + '] unknown upstream key: ' + key)
+      }
+    }
+
+    const effective = composeLocale(upstreamLocale, customEnglish, customLocale, overrides)
+    try {
+      checkKeys(effective, effectiveEnglish)
+    } catch (error) {
+      console.error(error)
+      throw new Error('[renderer effective] invalid composed catalog for ' + filename)
+    }
+  }
+
+  return effectiveEnglish
 }
 
 function collectSourceFiles(dir: string, acc: string[] = []): string[] {
@@ -187,11 +251,9 @@ function checkRendererTranslateKeyCoverage(rendererBaseJson: I18N): void {
 }
 
 function checkTranslations(): void {
-  const rendererBaseJson = checkCatalog(
-    'renderer',
-    path.join(rendererLocalesDir, baseFileName),
-    listJsonFiles(rendererLocalesDir)
-  )
+  const rendererFiles = listJsonFiles(rendererLocalesDir)
+  const rendererUpstreamBaseJson = checkCatalog('renderer', path.join(rendererLocalesDir, baseFileName), rendererFiles)
+  const rendererBaseJson = checkRendererCustomCatalogs(rendererUpstreamBaseJson, rendererFiles)
   checkRendererTranslateKeyCoverage(rendererBaseJson)
 
   const mainBaseFilePath = path.join(mainI18nDir, 'locales', baseFileName)

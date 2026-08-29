@@ -1,0 +1,23 @@
+{
+  "library.config.agent.field.runtime.option.claude_code": "高度：Claude Agent",
+  "library.config.agent.field.runtime.option.pi": "高速：Pi",
+  "library.config.agent.field.runtime.option_description.claude_code": "より強力 — 計画モードとティア別モデル",
+  "library.config.agent.field.runtime.option_description.dsh": "広範なプロバイダー対応とゴール駆動型の実行",
+  "library.config.agent.field.runtime.option_description.pi": "高速なレスポンスと低いオーバーヘッド",
+  "settings.about.diagnostics.limit": "ZIP ファイルが大きくなりすぎないよう、ログと詳細な記録は {{size}} までに制限されます。新しい情報が優先して保持されます。",
+  "settings.about.diagnostics.privacy.description": "これらの記録には、入力した内容、ファイルの場所、リクエストとレスポンスの内容、サービスへの接続情報が含まれる場合があります。Cherry Studio はこれらを自動的にマスキングしたり、アップロードしたりしません。ZIP ファイルはサポート担当者にのみ共有し、GitHub などの公開サイトには絶対に投稿しないでください。",
+  "settings.about.diagnostics.upload.actions.consent_upload": "同意してアップロード",
+  "settings.about.diagnostics.upload.dialog.title": "診断バンドルをアップロード",
+  "settings.about.diagnostics.upload.errors.upload_failed": "診断バンドルを作成または保存できませんでした",
+  "settings.about.diagnostics.upload.manual.title": "手動アップロードが必要です",
+  "settings.about.diagnostics.upload.unknown.description": "ZIP ファイルは「ダウンロード」に保存されましたが、サーバーからの応答が途切れました。すでに送信済みの可能性があります。重複送信を避けるため、フォームを開く前に確認してください。",
+  "settings.about.diagnostics.upload.unknown.title": "送信済みの可能性があります",
+  "settings.about.feedback.diagnostics.description": "最近の診断情報を確認し、ワンクリックで匿名アップロードします。",
+  "settings.about.feedback.diagnostics.title": "診断バンドルをアップロード",
+  "settings.mcp.addServer.importFrom.connectionFailed": "{{name}} への接続に失敗しました",
+  "settings.models.add.max_output_tokens.placeholder": "例: 4096",
+  "settings.models.empty_hint": "上記の「モデル一覧を取得」ボタンをクリックして、モデルを追加してください。",
+  "settings.models.toolbar.pull_short": "モデル一覧を取得",
+  "settings.prompts.contentPlaceholder": "プロンプトの内容を入力します。${variables} をサポート；Tab キーで変数間を移動します。例：\n${from} から ${to} へのルートを計画し、${email} に送信してください。",
+  "settings.usage.groupBy.source": "アシスタント / エージェント"
+}

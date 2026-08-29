@@ -1,0 +1,23 @@
+{
+  "library.config.agent.field.runtime.option.claude_code": "Nâng cao: Claude Agent",
+  "library.config.agent.field.runtime.option.pi": "Nhanh: Pi",
+  "library.config.agent.field.runtime.option_description.claude_code": "Hiệu năng cao hơn — hỗ trợ chế độ lập kế hoạch và mô hình phân tầng",
+  "library.config.agent.field.runtime.option_description.dsh": "Tương thích nhiều nhà cung cấp với thực thi theo mục tiêu",
+  "library.config.agent.field.runtime.option_description.pi": "Phản hồi nhanh hơn, chi phí vận hành thấp hơn",
+  "settings.about.diagnostics.limit": "Để giữ dung lượng ZIP ở mức phù hợp, nhật ký và bản ghi chi tiết được giới hạn ở {{size}}. Thông tin mới hơn được ưu tiên giữ lại.",
+  "settings.about.diagnostics.privacy.description": "Các bản ghi này có thể chứa nội dung bạn đã nhập, vị trí tệp, nội dung yêu cầu và phản hồi, cũng như thông tin kết nối dịch vụ. Cherry Studio không tự động che dữ liệu nhạy cảm hoặc tải các bản ghi lên. Chỉ chia sẻ riêng tệp ZIP với bộ phận hỗ trợ và tuyệt đối không đăng lên GitHub hay trang web công khai khác.",
+  "settings.about.diagnostics.upload.actions.consent_upload": "Đồng ý và tải lên",
+  "settings.about.diagnostics.upload.dialog.title": "Tải gói chẩn đoán lên",
+  "settings.about.diagnostics.upload.errors.upload_failed": "Không thể tạo hoặc lưu gói chẩn đoán",
+  "settings.about.diagnostics.upload.manual.title": "Cần tải lên thủ công",
+  "settings.about.diagnostics.upload.unknown.description": "Tệp ZIP đã được lưu vào thư mục Tải xuống nhưng phản hồi từ máy chủ bị gián đoạn. Có thể nội dung đã được gửi. Hãy kiểm tra trước khi mở biểu mẫu để tránh gửi hai lần.",
+  "settings.about.diagnostics.upload.unknown.title": "Có thể nội dung đã được gửi",
+  "settings.about.feedback.diagnostics.description": "Xem lại thông tin chẩn đoán gần đây rồi tải lên ẩn danh chỉ trong một bước.",
+  "settings.about.feedback.diagnostics.title": "Tải gói chẩn đoán lên",
+  "settings.mcp.addServer.importFrom.connectionFailed": "Kết nối thất bại: {{name}}",
+  "settings.models.add.max_output_tokens.placeholder": "ví dụ: 4096",
+  "settings.models.empty_hint": "Nhấp vào nút Lấy danh sách mô hình ở trên để thêm các mô hình.",
+  "settings.models.toolbar.pull_short": "Lấy danh sách mô hình",
+  "settings.prompts.contentPlaceholder": "Nhập nội dung lời nhắc. Hỗ trợ ${variables}; nhấn Tab để chuyển giữa các biến. Ví dụ:\nHãy giúp tôi lên kế hoạch lộ trình từ ${from} đến ${to}, và gửi nó tới ${email}.",
+  "settings.usage.groupBy.source": "Trợ lý / Agent"
+}

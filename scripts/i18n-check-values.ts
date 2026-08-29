@@ -3,13 +3,18 @@ import * as fs from 'fs'
 import pangu from 'pangu'
 import * as path from 'path'
 
+import { composeLocale } from '../src/renderer/i18n/composeLocale'
+
 /** Catalogs are flat: every key is a dotted path mapping straight to its translated string. */
 type I18N = { [key: string]: string }
 type Glossary = { doNotTranslate: string[] }
 
 const ROOT = path.resolve(__dirname, '..')
 const BASE_LOCALE = process.env.TRANSLATION_BASE_LOCALE ?? 'en-us'
-const CATALOG_DIRECTORIES = ['src/renderer/i18n/locales', 'src/main/i18n/locales']
+const CATALOG_DIRECTORIES = ['src/main/i18n/locales']
+const RENDERER_CATALOG_DIRECTORY = 'src/renderer/i18n/locales'
+const RENDERER_CUSTOM_DIRECTORY = 'src/renderer/i18n/custom-locales'
+const RENDERER_OVERRIDE_DIRECTORY = 'src/renderer/i18n/custom-locales/overrides'
 const CHINESE_LOCALES = ['zh-cn', 'zh-tw']
 const ALLOWED_EMPTY_SOURCE_KEYS = new Set(['src/renderer/i18n/locales:settings.provider.oauth.provided_by_suffix'])
 const BLOCK_TAG_PATTERN =
@@ -81,15 +86,53 @@ export const validate = (english: string, translation: string, doNotTranslate: s
 
 const readJson = (filePath: string): I18N => JSON.parse(fs.readFileSync(filePath, 'utf-8'))
 
+const readEffectiveRendererCatalogs = (): Map<string, I18N> => {
+  const upstreamPath = path.join(ROOT, RENDERER_CATALOG_DIRECTORY)
+  const customPath = path.join(ROOT, RENDERER_CUSTOM_DIRECTORY)
+  const overridePath = path.join(ROOT, RENDERER_OVERRIDE_DIRECTORY)
+  const customEnglish = readJson(path.join(customPath, BASE_LOCALE + '.json'))
+  const catalogs = new Map<string, I18N>()
+
+  for (const filename of fs.readdirSync(upstreamPath).filter((file) => file.endsWith('.json'))) {
+    const locale = filename.replace(/\.json$/, '')
+    catalogs.set(
+      filename,
+      composeLocale(
+        readJson(path.join(upstreamPath, filename)),
+        customEnglish,
+        locale === BASE_LOCALE ? {} : readJson(path.join(customPath, filename)),
+        readJson(path.join(overridePath, filename))
+      )
+    )
+  }
+
+  return catalogs
+}
+
 export const checkTranslationValues = (): { checked: number; failures: string[] } => {
   const glossary = JSON.parse(fs.readFileSync(path.join(__dirname, 'i18n-glossary.json'), 'utf-8')) as Glossary
   const failures: string[] = []
   let checked = 0
 
-  for (const catalogDirectory of CATALOG_DIRECTORIES) {
-    const catalogPath = path.join(ROOT, catalogDirectory)
-    const basePath = path.join(catalogPath, `${BASE_LOCALE}.json`)
-    const base = readJson(basePath)
+  const catalogGroups: Array<{ directory: string; catalogs: Map<string, I18N> }> = [
+    { directory: RENDERER_CATALOG_DIRECTORY, catalogs: readEffectiveRendererCatalogs() },
+    ...CATALOG_DIRECTORIES.map((catalogDirectory) => {
+      const catalogPath = path.join(ROOT, catalogDirectory)
+      return {
+        directory: catalogDirectory,
+        catalogs: new Map(
+          fs
+            .readdirSync(catalogPath)
+            .filter((file) => file.endsWith('.json'))
+            .map((filename) => [filename, readJson(path.join(catalogPath, filename))])
+        )
+      }
+    })
+  ]
+
+  for (const { directory: catalogDirectory, catalogs } of catalogGroups) {
+    const base = catalogs.get(BASE_LOCALE + '.json')
+    if (!base) throw new Error('Missing ' + BASE_LOCALE + '.json in ' + catalogDirectory)
 
     for (const [key, source] of Object.entries(base)) {
       checked++
@@ -98,10 +141,9 @@ export const checkTranslationValues = (): { checked: number; failures: string[] 
       if (reason) failures.push(`${catalogDirectory}/${BASE_LOCALE}.json ${key}: ${reason}`)
     }
 
-    for (const filename of fs.readdirSync(catalogPath).filter((file) => file.endsWith('.json'))) {
-      if (filename === `${BASE_LOCALE}.json`) continue
+    for (const [filename, target] of catalogs) {
+      if (filename === BASE_LOCALE + '.json') continue
 
-      const target = readJson(path.join(catalogPath, filename))
       for (const [key, translation] of Object.entries(target)) {
         const english = base[key]
         if (english === undefined) continue
@@ -113,8 +155,9 @@ export const checkTranslationValues = (): { checked: number; failures: string[] 
     }
 
     for (const locale of CHINESE_LOCALES) {
-      const filename = `${locale}.json`
-      const target = readJson(path.join(catalogPath, filename))
+      const filename = locale + '.json'
+      const target = catalogs.get(filename)
+      if (!target) throw new Error('Missing ' + filename + ' in ' + catalogDirectory)
 
       for (const [key, translation] of Object.entries(target)) {
         checked++

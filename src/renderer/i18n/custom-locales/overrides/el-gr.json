@@ -1,0 +1,23 @@
+{
+  "library.config.agent.field.runtime.option.claude_code": "Προηγμένο: Claude Agent",
+  "library.config.agent.field.runtime.option.pi": "Γρήγορο: Pi",
+  "library.config.agent.field.runtime.option_description.claude_code": "Αυξημένες δυνατότητες — λειτουργία σχεδιασμού και μοντέλα ανά επίπεδο",
+  "library.config.agent.field.runtime.option_description.dsh": "Ευρεία υποστήριξη παροχέων με εκτέλεση καθοδηγούμενη από στόχους",
+  "library.config.agent.field.runtime.option_description.pi": "Ταχύτερες αποκρίσεις, μειωμένο φορτίο",
+  "settings.about.diagnostics.limit": "Για να παραμείνει διαχειρίσιμο το μέγεθος του ZIP, τα αρχεία καταγραφής και οι λεπτομερείς εγγραφές περιορίζονται σε {{size}}. Διατηρούνται πρώτα οι νεότερες πληροφορίες.",
+  "settings.about.diagnostics.privacy.description": "Αυτές οι εγγραφές ενδέχεται να περιέχουν όσα εισαγάγατε, τοποθεσίες αρχείων, περιεχόμενο αιτημάτων και αποκρίσεων, καθώς και πληροφορίες σύνδεσης υπηρεσιών. Το Cherry Studio δεν τις αποκρύπτει ούτε τις μεταφορτώνει αυτόματα. Κοινοποιήστε το ZIP μόνο στην υποστήριξη και μην το δημοσιεύετε ποτέ στο GitHub ή σε άλλους δημόσιους ιστοτόπους.",
+  "settings.about.diagnostics.upload.actions.consent_upload": "Αποδοχή και μεταφόρτωση",
+  "settings.about.diagnostics.upload.dialog.title": "Μεταφόρτωση πακέτου διαγνωστικών",
+  "settings.about.diagnostics.upload.errors.upload_failed": "Δεν ήταν δυνατή η δημιουργία ή η αποθήκευση του πακέτου διαγνωστικών",
+  "settings.about.diagnostics.upload.manual.title": "Απαιτείται μη αυτόματη μεταφόρτωση",
+  "settings.about.diagnostics.upload.unknown.description": "Το αρχείο ZIP αποθηκεύτηκε στον φάκελο Λήψεις, αλλά η απόκριση του διακομιστή διακόπηκε. Ενδέχεται να έχει ήδη υποβληθεί. Ελέγξτε πριν ανοίξετε τη φόρμα, για να αποφύγετε διπλή αποστολή.",
+  "settings.about.diagnostics.upload.unknown.title": "Η υποβολή ενδέχεται να πέτυχε",
+  "settings.about.feedback.diagnostics.description": "Ελέγξτε τις πρόσφατες διαγνωστικές πληροφορίες και μεταφορτώστε τις ανώνυμα σε ένα βήμα.",
+  "settings.about.feedback.diagnostics.title": "Μεταφόρτωση πακέτου διαγνωστικών",
+  "settings.mcp.addServer.importFrom.connectionFailed": "Αποτυχία Σύνδεσης: {{name}}",
+  "settings.models.add.max_output_tokens.placeholder": "π.χ. 4096",
+  "settings.models.empty_hint": "Κάντε κλικ στο κουμπί Λήψη λίστας μοντέλων παραπάνω για να προσθέσετε μοντέλα.",
+  "settings.models.toolbar.pull_short": "Λήψη λίστας μοντέλων",
+  "settings.prompts.contentPlaceholder": "Εισάγετε περιεχόμενο προτροπής. Υποστηρίζει ${variables}; πατήστε Tab για να μεταβείτε μεταξύ των μεταβλητών. Παράδειγμα:\nΒοηθήστε με να σχεδιάσω μια διαδρομή από ${from} προς ${to} και στείλτε την στο ${email}.",
+  "settings.usage.groupBy.source": "Βοηθός / Πράκτορας"
+}

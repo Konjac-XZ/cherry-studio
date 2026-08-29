@@ -10,6 +10,9 @@ const catalogDirectories = [
   path.join(__dirname, '../src/renderer/i18n/locales'),
   path.join(__dirname, '../src/main/i18n/locales')
 ]
+const rendererLocalesDir = path.join(__dirname, '../src/renderer/i18n/locales')
+const rendererCustomLocalesDir = path.join(__dirname, '../src/renderer/i18n/custom-locales')
+const rendererCustomOverridesDir = path.join(rendererCustomLocalesDir, 'overrides')
 
 /** Catalogs are flat: every key is a dotted path mapping straight to its translated string. */
 type I18N = { [key: string]: string }
@@ -93,6 +96,28 @@ function syncCatalog(localesDir: string) {
   }
 }
 
+function sortSparseCatalogs(directory: string, allowedKeysFor: (filename: string) => Set<string>): void {
+  for (const filename of fs.readdirSync(directory).filter((file) => file.endsWith('.json'))) {
+    const filePath = path.join(directory, filename)
+    const catalog = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as I18N
+    const allowedKeys = allowedKeysFor(filename)
+    for (const key of Object.keys(catalog)) {
+      if (!allowedKeys.has(key)) {
+        console.log('Removed orphan sparse property: ' + key + ' from ' + filename)
+        delete catalog[key]
+      }
+    }
+    fs.writeFileSync(filePath, JSON.stringify(sortedObjectByKeys(catalog), null, 2) + '\n', 'utf-8')
+  }
+}
+
 for (const localesDir of catalogDirectories) {
   syncCatalog(localesDir)
 }
+
+const customEnglish = JSON.parse(fs.readFileSync(path.join(rendererCustomLocalesDir, baseFileName), 'utf-8')) as I18N
+sortSparseCatalogs(rendererCustomLocalesDir, () => new Set(Object.keys(customEnglish)))
+sortSparseCatalogs(rendererCustomOverridesDir, (filename) => {
+  const upstream = JSON.parse(fs.readFileSync(path.join(rendererLocalesDir, filename), 'utf-8')) as I18N
+  return new Set(Object.keys(upstream))
+})

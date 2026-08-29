@@ -1,0 +1,23 @@
+{
+  "library.config.agent.field.runtime.option.claude_code": "Avansat: Claude Agent",
+  "library.config.agent.field.runtime.option.pi": "Rapid: Pi",
+  "library.config.agent.field.runtime.option_description.claude_code": "Mai capabil — modul de plan și modele pe niveluri",
+  "library.config.agent.field.runtime.option_description.dsh": "Suport larg pentru furnizori, cu execuție orientată pe obiective",
+  "library.config.agent.field.runtime.option_description.pi": "Răspunsuri mai rapide, overhead redus",
+  "settings.about.diagnostics.limit": "Pentru ca arhiva ZIP să rămână ușor de gestionat, jurnalele și înregistrările detaliate sunt limitate la {{size}}. Informațiile mai recente sunt păstrate cu prioritate.",
+  "settings.about.diagnostics.privacy.description": "Aceste înregistrări pot conține informații introduse de tine, locații de fișiere, conținutul solicitărilor și răspunsurilor și informații despre conexiunile la servicii. Cherry Studio nu le anonimizează și nu le încarcă automat. Partajează arhiva ZIP numai cu echipa de asistență și nu o publica niciodată pe GitHub sau pe alte site-uri publice.",
+  "settings.about.diagnostics.upload.actions.consent_upload": "Acceptă și încarcă",
+  "settings.about.diagnostics.upload.dialog.title": "Încarcă pachetul de diagnosticare",
+  "settings.about.diagnostics.upload.errors.upload_failed": "Pachetul de diagnosticare nu a putut fi creat sau salvat",
+  "settings.about.diagnostics.upload.manual.title": "Este necesară încărcarea manuală",
+  "settings.about.diagnostics.upload.unknown.description": "Arhiva ZIP a fost salvată în Descărcări, dar răspunsul serverului a fost întrerupt. Este posibil ca trimiterea să fi fost deja finalizată. Verifică înainte de a deschide formularul pentru a evita trimiterea de două ori.",
+  "settings.about.diagnostics.upload.unknown.title": "Este posibil ca trimiterea să fi reușit",
+  "settings.about.feedback.diagnostics.description": "Verifică informațiile recente de diagnosticare, apoi încarcă-le anonim într-un singur pas.",
+  "settings.about.feedback.diagnostics.title": "Încarcă pachetul de diagnosticare",
+  "settings.mcp.addServer.importFrom.connectionFailed": "Conexiune eșuată: {{name}}",
+  "settings.models.add.max_output_tokens.placeholder": "ex. 4096",
+  "settings.models.empty_hint": "Fă clic pe butonul „Obține lista de modele” de mai sus pentru a adăuga modele.",
+  "settings.models.toolbar.pull_short": "Obține lista de modele",
+  "settings.prompts.contentPlaceholder": "Introdu conținutul promptului. Acceptă ${variables}; apasă Tab pentru a trece între variabile. Exemplu:\nAjută-mă să planific un traseu de la ${from} la ${to} și trimite-l la ${email}.",
+  "settings.usage.groupBy.source": "Asistent / Agent"
+}

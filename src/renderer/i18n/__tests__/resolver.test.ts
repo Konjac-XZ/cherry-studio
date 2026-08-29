@@ -34,6 +34,18 @@ describe('renderer i18n lazy init', () => {
     expect(i18n.t('common.copy')).toBe('Copy')
   })
 
+  it('composes localized downstream keys into supported locale packs', async () => {
+    await i18n.changeLanguage('zh-CN')
+
+    expect(i18n.t('chat.message.beautify.label')).toBe('美化回复')
+  })
+
+  it('falls back to downstream English for sparse locale additions', async () => {
+    await i18n.changeLanguage('de-DE')
+
+    expect(i18n.t('chat.message.beautify.label')).toBe('Beautify reply')
+  })
+
   it('uses singular and plural diagnostic file summaries in English', async () => {
     await i18n.changeLanguage('en-US')
 
