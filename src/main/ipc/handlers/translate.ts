@@ -1,5 +1,5 @@
 import { application } from '@application'
-import { translateService } from '@main/services/translate/translateService'
+import { translateService } from '@main/services/translate/forkTranslateService'
 import type { translateRequestSchemas } from '@shared/ipc/schemas/translate'
 import type { IpcHandlersFor, WindowId } from '@shared/ipc/types'
 import { clipboard } from 'electron'

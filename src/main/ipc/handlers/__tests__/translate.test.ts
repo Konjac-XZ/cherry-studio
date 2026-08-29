@@ -9,7 +9,7 @@ const { appGetMock, cancelPdfMock, ipcSendMock, openMock, translatePdfMock } = v
   translatePdfMock: vi.fn()
 }))
 vi.mock('@application', () => ({ application: { get: appGetMock } }))
-vi.mock('@main/services/translate/translateService', () => ({ translateService: { open: openMock } }))
+vi.mock('@main/services/translate/forkTranslateService', () => ({ translateService: { open: openMock } }))
 
 import { translateHandlers } from '../translate'
 
