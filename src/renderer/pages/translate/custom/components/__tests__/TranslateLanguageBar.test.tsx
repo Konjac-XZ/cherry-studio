@@ -1,8 +1,14 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import {
+  chinese,
+  createLanguage,
+  createLanguagesHookResult,
+  english,
+  japanese
+} from '../../../components/__tests__/testUtils'
 import TranslateLanguageBar from '../TranslateLanguageBar'
-import { chinese, createLanguage, createLanguagesHookResult, english, japanese } from './testUtils'
 
 const mockUseLanguages = vi.fn()
 const mockT = vi.fn((key: string) => key)
@@ -95,8 +101,8 @@ const baseProps = (): BarProps => ({
   onTargetChange: vi.fn(),
   detectedLanguage: null,
   isBidirectional: false,
-  showSourceControls: true,
   bidirectionalPair: [english.langCode, chinese.langCode],
+  disabled: false,
   couldExchange: true,
   onExchange: vi.fn()
 })
@@ -109,16 +115,16 @@ describe('TranslateLanguageBar', () => {
     mockUseLanguages.mockReturnValue(createLanguagesHookResult())
   })
 
-  it('sizes language selectors from the longest option label', () => {
+  it('keeps language selectors fluid within the V1 width range', () => {
     mockUseLanguages.mockReturnValue(createLanguagesHookResult([english, chinese, japanese, longNamedLanguage]))
 
     render(<TranslateLanguageBar {...baseProps()} />)
 
     expect(screen.getByRole('button', { name: sourceLanguageButtonName })).toHaveStyle({
-      width: 'clamp(150px, calc(34ch + 72px), 260px)'
+      width: 'clamp(64px, 16vw, 200px)'
     })
     expect(screen.getByRole('button', { name: targetLanguageButtonName })).toHaveStyle({
-      width: 'clamp(150px, calc(34ch + 72px), 260px)'
+      width: 'clamp(64px, 16vw, 200px)'
     })
   })
 
@@ -127,28 +133,6 @@ describe('TranslateLanguageBar', () => {
     expect(screen.getByText('translate.source_language')).toBeInTheDocument()
     expect(screen.getByText('translate.target_language')).toBeInTheDocument()
     expect(screen.getByText('English')).toBeInTheDocument()
-  })
-
-  it('renders only the target language control for single-direction text translation', () => {
-    const props = baseProps()
-    props.showSourceControls = false
-
-    render(<TranslateLanguageBar {...props} />)
-
-    expect(screen.queryByRole('button', { name: sourceLanguageButtonName })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'translate.exchange.label' })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: targetLanguageButtonName })).toBeInTheDocument()
-  })
-
-  it('labels the lone target control so it explains what is being selected', () => {
-    const props = baseProps()
-    props.showSourceControls = false
-
-    render(<TranslateLanguageBar {...props} />)
-
-    expect(screen.getByText('translate.translate_to')).toBeInTheDocument()
-    // The visible label is decorative: the control keeps its own accessible name.
-    expect(screen.getByRole('button', { name: 'translate.target_language 🇬🇧 English' })).toBeInTheDocument()
   })
 
   it('omits the target label when the source control already provides context', () => {
@@ -160,8 +144,6 @@ describe('TranslateLanguageBar', () => {
   it('omits the target label in bidirectional mode', () => {
     const props = baseProps()
     props.isBidirectional = true
-    props.showSourceControls = false
-
     render(<TranslateLanguageBar {...props} />)
 
     expect(screen.queryByText('translate.translate_to')).not.toBeInTheDocument()
@@ -224,7 +206,16 @@ describe('TranslateLanguageBar', () => {
     expect(swapButton).toHaveAttribute('disabled')
   })
 
-  it('renders bidirectional pair display without the source dropdown', () => {
+  it('disables both language selectors while translation is active', () => {
+    const props = baseProps()
+    props.disabled = true
+    render(<TranslateLanguageBar {...props} />)
+
+    expect(screen.getByRole('button', { name: sourceLanguageButtonName })).toBeDisabled()
+    expect(screen.getByRole('button', { name: targetLanguageButtonName })).toBeDisabled()
+  })
+
+  it('keeps the source dropdown and exchange control beside the bidirectional pair display', () => {
     const props = baseProps()
     props.isBidirectional = true
     const { container } = render(<TranslateLanguageBar {...props} />)
@@ -233,9 +224,13 @@ describe('TranslateLanguageBar', () => {
     expect(container.textContent).toContain('English ⇆ Chinese')
 
     const pairButton = screen.getByRole('button', { name: 'English ⇆ Chinese' })
-    expect(pairButton).toHaveClass('h-8', 'text-sm')
+    expect(pairButton).toHaveClass('h-8', 'justify-center', 'text-sm')
+    expect(pairButton).not.toHaveClass('justify-start')
     expect(pairButton).not.toHaveClass('h-9')
-    expect(screen.queryByRole('button', { name: sourceLanguageButtonName })).not.toBeInTheDocument()
+    expect(within(pairButton).queryByText('🇺🇸')).not.toBeInTheDocument()
+    expect(within(pairButton).queryByText('🇨🇳')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: sourceLanguageButtonName })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'translate.exchange.label' })).toBeInTheDocument()
   })
 
   it('uses contained focus feedback on language trigger buttons', () => {
@@ -269,9 +264,19 @@ describe('TranslateLanguageBar', () => {
 
     const sourceTrigger = screen.getByRole('button', { name: sourceLanguageButtonName })
     expect(within(sourceTrigger).getByText(/translate\.detected\.language \(Chinese\)/)).toBeInTheDocument()
+    expect(within(sourceTrigger).queryByText('🇨🇳')).not.toBeInTheDocument()
   })
 
-  it('accounts for CJK label width when sizing the auto detected source selector', () => {
+  it('shows the source flag after the language is selected manually', () => {
+    const props = baseProps()
+    props.sourceLanguage = chinese.langCode
+    render(<TranslateLanguageBar {...props} />)
+
+    const sourceTrigger = screen.getByRole('button', { name: sourceLanguageButtonName })
+    expect(within(sourceTrigger).getByText('🇨🇳')).toBeInTheDocument()
+  })
+
+  it('keeps the fluid selector width for CJK auto-detection labels', () => {
     const simplifiedChinese = createLanguage('zh-cn', '简体中文', '🇨🇳')
     mockT.mockImplementation((key: string) => (key === 'translate.detected.language' ? '自动检测' : key))
     mockUseLanguages.mockReturnValue(createLanguagesHookResult([english, simplifiedChinese, japanese]))
@@ -281,7 +286,7 @@ describe('TranslateLanguageBar', () => {
     render(<TranslateLanguageBar {...props} />)
 
     expect(screen.getByRole('button', { name: sourceLanguageButtonName })).toHaveStyle({
-      width: 'clamp(150px, calc(19ch + 72px), 260px)'
+      width: 'clamp(64px, 16vw, 200px)'
     })
   })
 
@@ -291,7 +296,7 @@ describe('TranslateLanguageBar', () => {
     render(<TranslateLanguageBar {...props} />)
 
     const sourceTrigger = screen.getByRole('button', { name: sourceLanguageButtonName })
-    expect(within(sourceTrigger).getByText('🌐')).toBeInTheDocument()
+    expect(within(sourceTrigger).queryByText('🌐')).not.toBeInTheDocument()
     expect(within(sourceTrigger).getByText('translate.detected.language')).toBeInTheDocument()
     expect(within(sourceTrigger).queryByText(/Unknown/)).not.toBeInTheDocument()
   })

@@ -5,9 +5,9 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import type React from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type * as TranslationFilesModule from '../../translationFiles'
+import { chinese, english } from '../../../components/__tests__/testUtils'
+import type * as TranslationFilesModule from '../../../translationFiles'
 import TranslateHistory from '../TranslateHistory'
-import { chinese, english } from './testUtils'
 
 const translateHistoryMock = vi.hoisted(() => ({
   useTranslateHistory: vi.fn(),
@@ -27,7 +27,7 @@ const fileMocks = vi.hoisted(() => ({
 }))
 
 vi.mock('@renderer/ipc', () => ({ ipcApi: { request: fileMocks.ipcRequest } }))
-vi.mock('../../translationFiles', async (importOriginal) => ({
+vi.mock('../../../translationFiles', async (importOriginal) => ({
   // `isPdfTranslation` is a pure predicate on the row — keep the real one so the
   // preview button's gating is exercised, not mocked away.
   ...(await importOriginal<typeof TranslationFilesModule>()),
@@ -59,10 +59,11 @@ vi.mock('@renderer/components/VirtualList', () => ({
 
 vi.mock('@renderer/hooks/translate', () => ({
   useLanguages: () => ({
+    languages,
     getLanguage: (langCode: string) => languages.find((language) => language.langCode === langCode),
     getLabel: (language: TranslateLanguage | null) => language?.value
   }),
-  useTranslateHistories: () => translateHistoryMock.useTranslateHistories(),
+  useTranslateHistories: (options: unknown) => translateHistoryMock.useTranslateHistories(options),
   useTranslateHistory: () => translateHistoryMock.useTranslateHistory()
 }))
 
@@ -71,6 +72,18 @@ vi.mock('@renderer/utils/style', () => ({
 }))
 
 vi.mock('@cherrystudio/ui', () => ({
+  Button: ({
+    variant = 'default',
+    size: _size,
+    type = 'button',
+    ...props
+  }: React.ComponentProps<'button'> & {
+    variant?: 'default' | 'ghost' | 'secondary'
+    size?: 'icon-sm'
+  }) => {
+    void _size
+    return <button type={type} data-variant={variant} {...props} />
+  },
   ConfirmDialog: (props: {
     onConfirm?: () => void | Promise<void>
     onOpenChange?: (open: boolean) => void
@@ -80,6 +93,7 @@ vi.mock('@cherrystudio/ui', () => ({
     return <div>{props.title}</div>
   },
   EmptyState: ({ title }: { title: string }) => <div>{title}</div>,
+  Input: (props: React.ComponentProps<'input'>) => <input {...props} />,
   NormalTooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   PageSidePanel: ({
     children,
@@ -214,6 +228,22 @@ describe('TranslateHistory', () => {
     expect(translateHistoryMock.useTranslateHistory).toHaveBeenCalledTimes(1)
   })
 
+  it('queries text plus localized language matches and caps the rendered history', () => {
+    renderHistory()
+
+    fireEvent.change(screen.getByPlaceholderText('translate.history.search_placeholder'), {
+      target: { value: 'English' }
+    })
+
+    expect(translateHistoryMock.useTranslateHistories).toHaveBeenLastCalledWith({
+      search: 'English',
+      star: undefined,
+      languageCodes: [english.langCode],
+      pageSize: 100,
+      maxItems: 200
+    })
+  })
+
   it('localizes compact header spacing to the translate history drawer', () => {
     renderHistory()
 
@@ -224,7 +254,9 @@ describe('TranslateHistory', () => {
     renderHistory(onHistoryItemClick)
 
     fireEvent.click(screen.getByText('hello'))
-    expect(screen.getByText('translate.history.back')).toBeInTheDocument()
+    const backButton = screen.getByRole('button', { name: 'translate.history.back' })
+    expect(screen.getByTestId('page-side-panel-header')).toContainElement(backButton)
+    expect(screen.getByText('translate.history.source').closest('.overflow-y-auto')).toHaveClass('px-6', 'pt-3', 'pb-6')
 
     fireEvent.click(screen.getByRole('button', { name: 'translate.history.reuse' }))
     expect(onHistoryItemClick).toHaveBeenCalledWith(expect.objectContaining({ id: '1', sourceText: 'hello' }))
@@ -387,7 +419,7 @@ describe('TranslateHistory', () => {
     fireEvent.click(screen.getByText('hello'))
     expect(screen.getByRole('button', { name: 'translate.history.star' })).toHaveAttribute('aria-pressed', 'false')
 
-    fireEvent.click(screen.getByText('translate.history.back'))
+    fireEvent.click(screen.getByRole('button', { name: 'translate.history.back' }))
     fireEvent.click(screen.getByText('bye'))
     expect(screen.getByRole('button', { name: 'translate.history.star' })).toHaveAttribute('aria-pressed', 'true')
   })
@@ -411,7 +443,7 @@ describe('TranslateHistory', () => {
     const detailStarIndex = actionLabels.indexOf('translate.history.star')
     expect(actionLabels.indexOf('translate.history.delete')).toBeLessThan(detailStarIndex)
     const copyTargetButton = screen.getByRole('button', { name: 'translate.history.copy_target' })
-    expect(copyTargetButton).toHaveClass('text-primary-foreground')
+    expect(copyTargetButton).toHaveAttribute('data-variant', 'default')
     fireEvent.click(copyTargetButton)
 
     await waitFor(() => expect(writeTextMock).toHaveBeenCalledWith('你好'))

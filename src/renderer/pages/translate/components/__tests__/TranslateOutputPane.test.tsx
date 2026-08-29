@@ -1,7 +1,7 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
-import TranslateOutputPane from '../../custom/components/TranslateOutputPane'
+import TranslateOutputPane from '../TranslateOutputPane'
 
 vi.mock('react-i18next', () => ({
   initReactI18next: {
@@ -31,24 +31,19 @@ const baseProps = () => ({
   translating: false,
   copied: false,
   onCopy: vi.fn(),
+  onExportToNotes: vi.fn(),
   onScroll: vi.fn()
 })
 
 describe('TranslateOutputPane', () => {
-  it('shows the V1 placeholder while the output is empty', () => {
-    render(<TranslateOutputPane {...baseProps()} />)
-
-    expect(screen.getByText('translate.output.placeholder')).toBeInTheDocument()
-  })
-
-  it('shows translated content with its word and token counter', () => {
+  it('shows translated content, length, and a copy button', () => {
     const props = baseProps()
     props.translatedContent = 'partial output'
 
-    render(<TranslateOutputPane {...props} wordCount={2} tokenCount={7} />)
+    render(<TranslateOutputPane {...props} />)
 
     expect(screen.getByText('partial output')).toBeInTheDocument()
-    expect(screen.getByText('2 translate.counter.words / 7 translate.counter.tokens')).toBeInTheDocument()
+    expect(screen.getByText('14')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'common.copy' })).toBeEnabled()
   })
 
@@ -61,33 +56,18 @@ describe('TranslateOutputPane', () => {
     expect(screen.getByText('translate.processing')).toBeInTheDocument()
   })
 
-  it('shows completed structured JSON ahead of Markdown when explicitly enabled', () => {
+  it('shows an export-to-notes button in the bottom-right footer and calls it for translated content', () => {
     const props = baseProps()
-    props.translatedContent = '{"message":"line 1\\nline 2"}'
-    props.renderedMarkdown = '<strong>markdown</strong>'
-    props.enableMarkdown = true
+    props.translatedContent = 'translated output'
 
-    render(
-      <TranslateOutputPane
-        {...props}
-        enableJsonStructure
-        jsonStructureCopyBlankLineBetweenRows={false}
-        jsonStructureCopySeparator="colon-space"
-      />
-    )
+    render(<TranslateOutputPane {...props} />)
 
-    expect(screen.getByTestId('json-structure-view')).toBeInTheDocument()
-    expect(screen.queryByText('markdown')).not.toBeInTheDocument()
-  })
+    const buttons = screen.getAllByRole('button')
+    expect(buttons.map((button) => button.getAttribute('aria-label'))).toEqual(['common.copy', 'notes.save'])
+    expect(screen.getByRole('button', { name: 'notes.save' })).toHaveClass('ml-auto')
 
-  it('keeps rendering streaming JSON as text until translation completes', () => {
-    const props = baseProps()
-    props.translatedContent = '{"value":1}'
-    props.translating = true
+    fireEvent.click(screen.getByRole('button', { name: 'notes.save' }))
 
-    render(<TranslateOutputPane {...props} enableJsonStructure />)
-
-    expect(screen.queryByTestId('json-structure-view')).not.toBeInTheDocument()
-    expect(screen.getByText('{"value":1}')).toBeInTheDocument()
+    expect(props.onExportToNotes).toHaveBeenCalledTimes(1)
   })
 })
