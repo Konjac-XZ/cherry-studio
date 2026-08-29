@@ -477,16 +477,6 @@ describe('AppShellTabBar', () => {
     expect(closeTabs).toHaveBeenCalledWith(['b', 'c'], 'a')
   })
 
-  it('keeps destructive menu affordances off the protected home tab', () => {
-    const tabs = [createTab('home'), createTab('a')]
-
-    renderTabBar({ tabs, activeTabId: 'home' })
-
-    expect(screen.queryAllByTestId('menu-tab.move-to-first')).toHaveLength(1)
-    expect(screen.queryAllByTestId('menu-tab.close')).toHaveLength(1)
-    expect(within(screen.getByRole('button', { name: 'Chat' })).queryByRole('button', { name: 'tab.close' })).toBeNull()
-  })
-
   it('keeps tab buttons no-drag while leaving tabbar whitespace draggable', () => {
     const tabs = [createTab('home'), createTab('a'), createTab('p', { isPinned: true })]
 
@@ -1241,7 +1231,7 @@ describe('AppShellTabBar', () => {
 
     renderTabBar({ tabs, activeTabId: 'home' })
 
-    expect(screen.queryAllByTestId('menu-tab.close')).toHaveLength(2)
+    expect(screen.queryAllByTestId('menu-tab.close')).toHaveLength(3)
   })
   it('closes a normal tab on double click or middle click', () => {
     const handleDoubleClick = vi.fn()
@@ -1322,18 +1312,6 @@ describe('getTabCapabilities', () => {
     })
   })
 
-  it('keeps the global Translate workspace visible while retaining safe batch actions', () => {
-    expect(getTabCapabilities({ id: 'translate', isPinned: false }, ctx({ normalCount: 3, normalIndex: 1 }))).toEqual({
-      menu: true,
-      reorder: false,
-      togglePin: false,
-      detach: false,
-      close: false,
-      closeOthers: true,
-      closeToRight: true
-    })
-  })
-
   it('unlocks every normal action once a second normal tab exists', () => {
     expect(getTabCapabilities({ id: 'a', isPinned: false }, ctx({ normalCount: 2, normalIndex: 0 }))).toEqual({
       menu: true,
@@ -1346,7 +1324,7 @@ describe('getTabCapabilities', () => {
     })
   })
 
-  it('does not treat newly-created chat tabs as the fixed home tab', () => {
+  it('treats chat tabs as ordinary normal tabs', () => {
     expect(getTabCapabilities({ id: 'chat', isPinned: false }, ctx({ normalCount: 2, normalIndex: 1 }))).toEqual({
       menu: true,
       reorder: true,
@@ -1355,18 +1333,6 @@ describe('getTabCapabilities', () => {
       close: true,
       closeOthers: true,
       closeToRight: false
-    })
-  })
-
-  it('protects the fixed home workspace while retaining safe batch actions', () => {
-    expect(getTabCapabilities({ id: 'home', isPinned: false }, ctx({ normalCount: 3, normalIndex: 0 }))).toEqual({
-      menu: true,
-      reorder: false,
-      togglePin: false,
-      detach: false,
-      close: false,
-      closeOthers: true,
-      closeToRight: true
     })
   })
 

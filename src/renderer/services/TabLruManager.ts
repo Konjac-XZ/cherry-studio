@@ -1,5 +1,4 @@
 import { loggerService } from '@logger'
-import { isProtectedAppTab } from '@renderer/utils/translateTabPolicy'
 import type { Tab } from '@shared/data/cache/cacheValueTypes'
 
 const logger = loggerService.withContext('TabLRU')
@@ -127,7 +126,7 @@ export class TabLruManager {
   }
 
   private isHardExempt(tab: Tab, activeTabId: string): boolean {
-    return tab.id === activeTabId || isProtectedAppTab(tab) || tab.isDormant === true
+    return tab.id === activeTabId || tab.id === 'home' || tab.isDormant === true
   }
 
   private getLRUCandidates(tabs: Tab[], activeTabId: string): Tab[] {
@@ -148,7 +147,7 @@ export class TabLruManager {
   private isExempt(tab: Tab, activeTabId: string): boolean {
     return (
       tab.id === activeTabId || // 当前活动标签
-      isProtectedAppTab(tab) || // 全局受保护工作区永不休眠
+      tab.id === 'home' || // 默认聊天标签（须与 TabsContext 的 DEFAULT_TAB.id 一致）
       tab.isPinned === true || // 置顶标签
       tab.isDormant === true // 已休眠的不再参与
     )

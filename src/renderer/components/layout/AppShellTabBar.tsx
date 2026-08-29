@@ -5,7 +5,6 @@ import type { OpenTabOptions, Tab } from '@renderer/hooks/tab'
 import useMacTransparentWindow from '@renderer/hooks/useMacTransparentWindow'
 import { isMac } from '@renderer/utils/platform'
 import { cn } from '@renderer/utils/style'
-import { CHAT_HOME_TAB_ID, TRANSLATE_TAB_ID } from '@renderer/utils/translateTabPolicy'
 import { ArrowLeft, Plus, X } from 'lucide-react'
 import {
   cloneElement,
@@ -425,17 +424,6 @@ export function getTabCapabilities(
   tab: Pick<Tab, 'id' | 'isPinned' | 'metadata'>,
   ctx: { pinnedCount: number; normalCount: number; canDetach: boolean; normalIndex?: number }
 ): TabCapabilities {
-  if (tab.id === TRANSLATE_TAB_ID || tab.id === CHAT_HOME_TAB_ID) {
-    return {
-      menu: true,
-      reorder: false,
-      togglePin: false,
-      detach: false,
-      close: false,
-      closeOthers: ctx.normalCount > 1,
-      closeToRight: ctx.normalIndex !== undefined && ctx.normalIndex < ctx.normalCount - 1
-    }
-  }
   const detach = ctx.canDetach
   if (tab.isPinned) {
     const hasSiblings = ctx.pinnedCount > 1

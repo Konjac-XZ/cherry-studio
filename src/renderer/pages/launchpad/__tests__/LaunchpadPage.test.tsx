@@ -285,7 +285,7 @@ describe('LaunchpadPage', () => {
     expect(mocks.navigate).toHaveBeenCalledWith({ to: '/app/knowledge' })
   })
 
-  it('focuses protected Chat and Translate workspaces instead of navigating the launchpad tab into duplicates', async () => {
+  it('navigates Chat and Translate inside the current launchpad tab', async () => {
     const user = userEvent.setup()
 
     render(<LaunchpadPage />)
@@ -293,9 +293,8 @@ describe('LaunchpadPage', () => {
     await user.click(screen.getByRole('button', { name: 'Chat' }))
     await user.click(screen.getByRole('button', { name: 'Translate' }))
 
-    expect(mocks.setActiveTab).toHaveBeenNthCalledWith(1, 'home')
-    expect(mocks.setActiveTab).toHaveBeenNthCalledWith(2, 'translate')
-    expect(mocks.navigate).not.toHaveBeenCalled()
+    expect(mocks.navigate).toHaveBeenNthCalledWith(1, { to: '/app/chat' })
+    expect(mocks.navigate).toHaveBeenNthCalledWith(2, { to: '/app/translate' })
   })
 
   it('opens the dedicated DeepSeek Harness CodeMate view from its app shortcut', async () => {
@@ -323,12 +322,11 @@ describe('LaunchpadPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Knowledge' }))
     fireEvent.click(screen.getByRole('button', { name: 'Chat' }))
 
-    expect(mocks.navigate).not.toHaveBeenCalled()
-    expect(mocks.setActiveTab).toHaveBeenCalledOnce()
-    expect(mocks.setActiveTab).toHaveBeenCalledWith('home')
+    expect(mocks.navigate).toHaveBeenCalledOnce()
+    expect(mocks.navigate).toHaveBeenCalledWith({ to: '/app/chat' })
   })
 
-  it('focuses Chat home while opening an Agent session in the current tab', async () => {
+  it('opens Chat and Agent entries in the current tab', async () => {
     const user = userEvent.setup()
 
     render(<LaunchpadPage />)
@@ -336,9 +334,8 @@ describe('LaunchpadPage', () => {
     await user.click(screen.getByRole('button', { name: 'Chat' }))
     await user.click(screen.getByRole('button', { name: 'Agent' }))
 
-    expect(mocks.setActiveTab).toHaveBeenCalledWith('home')
-    expect(mocks.navigate).toHaveBeenCalledOnce()
-    expect(mocks.navigate).toHaveBeenCalledWith({ to: '/app/agents' })
+    expect(mocks.navigate).toHaveBeenNthCalledWith(1, { to: '/app/chat' })
+    expect(mocks.navigate).toHaveBeenNthCalledWith(2, { to: '/app/agents' })
   })
 
   it('navigates concrete mini apps inside the current launchpad tab', async () => {

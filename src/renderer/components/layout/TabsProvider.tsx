@@ -12,20 +12,6 @@ import {
 import { ipcApi, useIpcOn } from '@renderer/ipc'
 import { TabLruManager } from '@renderer/services/TabLruManager'
 import { getDefaultRouteTitle, isPageTitledRoute, isTopLevelRoute } from '@renderer/utils/routeTitle'
-import {
-  canUpdateProtectedAppTabUrl,
-  CHAT_HOME_TAB_ID,
-  createProtectedChatTab,
-  createProtectedTranslateTab,
-  isChatHomeEntryUrl,
-  isChatRouteTab,
-  isProtectedAppTab,
-  isProtectedChatTab,
-  isProtectedTranslateTab,
-  isTranslateTab,
-  reconcileProtectedAppTabs,
-  TRANSLATE_TAB_ID
-} from '@renderer/utils/translateTabPolicy'
 import type { Tab, TabSavedState } from '@shared/data/cache/cacheValueTypes'
 import { deduplicateTabsByPage, isSameTabPage } from '@shared/utils/tabIdentity'
 import type { ReactNode } from 'react'
@@ -36,7 +22,7 @@ import { v4 as uuid } from 'uuid'
 const logger = loggerService.withContext('TabsProvider')
 
 const DEFAULT_TAB: Tab = {
-  id: CHAT_HOME_TAB_ID,
+  id: 'home',
   type: 'route',
   url: '/app/chat',
   title: '',
@@ -126,8 +112,7 @@ function withLocalizedRouteTitle(tab: Tab): Tab {
   // routes (e.g. /app/mini-app/<id>) preserve the title supplied at openTab
   // time so callers can pass per-entity names like a mini-app's display name.
   //
-  // The protected `home` tab stays inside the Chat route, whose page owns its
-  // topic title and icon just like every other conversation tab.
+  // The `home` tab follows the same rule. Chat owns its topic title and icon.
   if (!isTopLevelRoute(tab.url) && !isSettingsRouteTab(tab)) return tab
   return { ...tab, title: getDefaultRouteTitle(tab.url) }
 }
@@ -139,7 +124,7 @@ function isSettingsRouteTab(tab: Tab): boolean {
 type InitialSession = { normalTabs: Tab[]; pinnedTabs: Tab[]; activeTabId: string }
 
 function restoreTabs(tabs: Tab[], activeTabId: string): Tab[] {
-  return tabs.map((tab) => ({ ...tab, isDormant: isProtectedAppTab(tab) ? false : tab.id !== activeTabId }))
+  return tabs.map((tab) => ({ ...tab, isDormant: tab.id !== activeTabId }))
 }
 
 /**
@@ -158,36 +143,12 @@ function computeInitialSession(params: {
   persistedActiveTabId: string
 }): InitialSession {
   const { includePinnedTabs, initialDefaultTab, pinnedTabs, persistedNormalTabs, persistedActiveTabId } = params
-  const persistedActiveTab = [...pinnedTabs, ...persistedNormalTabs].find((tab) => tab.id === persistedActiveTabId)
-  const protectedActiveTabId = persistedActiveTab
-    ? isProtectedChatTab(persistedActiveTab) || isChatHomeEntryUrl(persistedActiveTab.url)
-      ? CHAT_HOME_TAB_ID
-      : isTranslateTab(persistedActiveTab)
-        ? TRANSLATE_TAB_ID
-        : null
-    : null
-  const normalizedActiveTabId = protectedActiveTabId ?? persistedActiveTabId
   const restorableTabs = deduplicateTabsByPage(
-    [
-      ...pinnedTabs.filter((tab) => !isProtectedAppTab(tab) && !isTranslateTab(tab) && !isChatHomeEntryUrl(tab.url)),
-      ...persistedNormalTabs.filter(
-        (tab) =>
-          !isTransientMiniAppTab(tab) && !isProtectedAppTab(tab) && !isTranslateTab(tab) && !isChatHomeEntryUrl(tab.url)
-      )
-    ],
-    normalizedActiveTabId
+    [...pinnedTabs, ...persistedNormalTabs.filter((tab) => !isTransientMiniAppTab(tab))],
+    persistedActiveTabId
   ).tabs
   const availablePinnedTabs = restorableTabs.filter((tab) => tab.isPinned)
   const restorableNormalTabs = restorableTabs.filter((tab) => !tab.isPinned)
-  const persistedHome = [...persistedNormalTabs, ...pinnedTabs].find(isProtectedChatTab)
-  const protectedChatTab =
-    persistedHome && isChatRouteTab(persistedHome)
-      ? { ...persistedHome, id: CHAT_HOME_TAB_ID, isDormant: false, isPinned: false }
-      : createProtectedChatTab()
-  const persistedTranslate = [...persistedNormalTabs, ...pinnedTabs].find(isTranslateTab)
-  const protectedTranslateTab = persistedTranslate
-    ? { ...persistedTranslate, id: TRANSLATE_TAB_ID, isDormant: false, isPinned: false }
-    : createProtectedTranslateTab()
 
   const freshSession: InitialSession = {
     normalTabs: initialDefaultTab ? [initialDefaultTab] : [],
@@ -198,22 +159,15 @@ function computeInitialSession(params: {
   // Detached windows never persist/restore a session.
   if (!includePinnedTabs) return freshSession
 
-  freshSession.normalTabs = freshSession.normalTabs.filter(
-    (tab) => !isProtectedAppTab(tab) && !isTranslateTab(tab) && !isChatHomeEntryUrl(tab.url)
-  )
-  freshSession.normalTabs.push(protectedChatTab, protectedTranslateTab)
-
-  const pinnedHasActive = !!normalizedActiveTabId && availablePinnedTabs.some((t) => t.id === normalizedActiveTabId)
+  const pinnedHasActive = !!persistedActiveTabId && availablePinnedTabs.some((t) => t.id === persistedActiveTabId)
 
   // Empty persisted session (incl. first-ever launch) → fresh default. If the last active tab was a
   // pinned one (no unpinned tabs were open), honor that selection — the default tab stays as a
   // dormant fallback so the user lands back on the pinned tab they left.
   if (restorableNormalTabs.length === 0) {
-    const activeTabId = protectedActiveTabId
-      ? protectedActiveTabId
-      : pinnedHasActive
-        ? normalizedActiveTabId
-        : (initialDefaultTab?.id ?? availablePinnedTabs[0]?.id ?? CHAT_HOME_TAB_ID)
+    const activeTabId = pinnedHasActive
+      ? persistedActiveTabId
+      : (initialDefaultTab?.id ?? availablePinnedTabs[0]?.id ?? '')
     return {
       normalTabs: restoreTabs(freshSession.normalTabs, activeTabId),
       pinnedTabs: restoreTabs(availablePinnedTabs, activeTabId),
@@ -226,21 +180,14 @@ function computeInitialSession(params: {
   // stale persisted id leaves every tab dormant, AppShell mounts zero TabRouters, and the content
   // area is blank until the user clicks a tab.
   const activeInSession =
-    !!protectedActiveTabId ||
-    pinnedHasActive ||
-    (!!normalizedActiveTabId && restorableNormalTabs.some((t) => t.id === normalizedActiveTabId))
+    pinnedHasActive || (!!persistedActiveTabId && restorableNormalTabs.some((t) => t.id === persistedActiveTabId))
   const activeTabId = activeInSession
-    ? normalizedActiveTabId
-    : (restorableNormalTabs[0]?.id ?? availablePinnedTabs[0]?.id ?? initialDefaultTab?.id ?? CHAT_HOME_TAB_ID)
-  const reconciledNormalTabs = reconcileProtectedAppTabs([
-    ...restorableNormalTabs,
-    protectedChatTab,
-    protectedTranslateTab
-  ]).tabs
+    ? persistedActiveTabId
+    : (restorableNormalTabs[0]?.id ?? availablePinnedTabs[0]?.id ?? initialDefaultTab?.id ?? '')
 
   // Only the active tab stays awake; everything else restores dormant.
   return {
-    normalTabs: restoreTabs(reconciledNormalTabs, activeTabId),
+    normalTabs: restoreTabs(restorableNormalTabs, activeTabId),
     pinnedTabs: restoreTabs(availablePinnedTabs, activeTabId),
     activeTabId
   }
@@ -429,7 +376,6 @@ export function TabsProvider({
     (id: string, updates: Partial<Tab>) => {
       const tab = tabs.find((t) => t.id === id)
       if (!tab) return
-      if (isProtectedAppTab(tab) && updates.url && !canUpdateProtectedAppTabUrl(tab, updates.url)) return
 
       if (updates.url) {
         const target = { type: tab.type, url: updates.url }
@@ -437,17 +383,14 @@ export function TabsProvider({
           (candidate) => candidate.id !== id && isSameTabPage(candidate, target)
         )
         if (existing) {
-          const removedTab = isProtectedAppTab(tab) ? existing : tab
-          projectedTabsRef.current = projectedTabsRef.current.filter((candidate) => candidate.id !== removedTab.id)
-          if (storesPinned(removedTab)) {
-            setPinnedTabs((prev) => prev.filter((candidate) => candidate.id !== removedTab.id))
+          projectedTabsRef.current = projectedTabsRef.current.filter((candidate) => candidate.id !== tab.id)
+          if (storesPinned(tab)) {
+            setPinnedTabs((prev) => prev.filter((candidate) => candidate.id !== tab.id))
           } else {
-            setNormalTabs((prev) => prev.filter((candidate) => candidate.id !== removedTab.id))
+            setNormalTabs((prev) => prev.filter((candidate) => candidate.id !== tab.id))
           }
-          if (removedTab.id === tab.id) {
-            setActiveTab(existing.id)
-            return
-          }
+          setActiveTab(existing.id)
+          return
         }
       }
 
@@ -462,21 +405,6 @@ export function TabsProvider({
 
   const addTab = useCallback(
     (tab: Tab) => {
-      if (isTranslateTab(tab)) {
-        const owner = projectedTabsRef.current.find(isProtectedTranslateTab)
-        if (owner && owner.id !== tab.id) {
-          setActiveTab(owner.id)
-          return
-        }
-      }
-      if (isChatHomeEntryUrl(tab.url)) {
-        const owner = projectedTabsRef.current.find(isProtectedChatTab)
-        if (owner && owner.id !== tab.id) {
-          setActiveTab(owner.id)
-          return
-        }
-      }
-
       const existingPage = projectedTabsRef.current.find((candidate) => isSameTabPage(candidate, tab))
       if (existingPage) {
         setActiveTab(existingPage.id)
@@ -520,12 +448,7 @@ export function TabsProvider({
 
   const closeTabs = useCallback(
     (ids: readonly string[], activateId?: string) => {
-      const closingIdSet = new Set(
-        ids.filter((id) => {
-          const tab = tabs.find((candidate) => candidate.id === id)
-          return !tab || !isProtectedAppTab(tab)
-        })
-      )
+      const closingIdSet = new Set(ids)
       if (closingIdSet.size === 0) return
 
       const closingTabs = tabs.filter((tab) => closingIdSet.has(tab.id))
@@ -609,24 +532,6 @@ export function TabsProvider({
     (url: string, options: OpenTabOptions = {}) => {
       const { title, type = 'route', id, icon, metadata, isPinned } = options
 
-      if (type === 'route' && isTranslateTab({ type, url })) {
-        const translateTab =
-          projectedTabsRef.current.find(isProtectedTranslateTab) ?? projectedTabsRef.current.find(isTranslateTab)
-        if (translateTab) {
-          if (translateTab.url !== url) updateTab(translateTab.id, { url })
-          setActiveTab(translateTab.id)
-          return translateTab.id
-        }
-      }
-
-      if (type === 'route' && isChatHomeEntryUrl(url)) {
-        const homeTab = projectedTabsRef.current.find(isProtectedChatTab)
-        if (homeTab) {
-          setActiveTab(homeTab.id)
-          return homeTab.id
-        }
-      }
-
       const existingTab = projectedTabsRef.current.find((tab) => isSameTabPage(tab, { type, url }))
       if (existingTab) {
         if (existingTab.url !== url) updateTab(existingTab.id, { url })
@@ -659,7 +564,7 @@ export function TabsProvider({
   const pinTab = useCallback(
     (id: string) => {
       const tab = projectedTabsRef.current.find((t) => t.id === id)
-      if (!tab || tab.isPinned || isTransientMiniAppTab(tab) || isProtectedAppTab(tab)) return
+      if (!tab || tab.isPinned || isTransientMiniAppTab(tab)) return
       const pinnedTab = { ...tab, isPinned: true }
       projectedTabsRef.current = projectedTabsRef.current.map((candidate) =>
         candidate.id === id ? pinnedTab : candidate
@@ -728,7 +633,7 @@ export function TabsProvider({
   const detachTab = useCallback(
     (tabId: string) => {
       const tab = projectedTabsRef.current.find((t) => t.id === tabId)
-      if (!tab || isProtectedAppTab(tab) || detachingTabIdsRef.current.has(tabId)) return
+      if (!tab || detachingTabIdsRef.current.has(tabId)) return
       detachingTabIdsRef.current.add(tabId)
 
       // Send IPC message to create new window
@@ -752,15 +657,6 @@ export function TabsProvider({
         logger.info('Tab already exists, activating', { tabId: tabData.id })
         return
       }
-      if (isTranslateTab(tabData)) {
-        setActiveTab(TRANSLATE_TAB_ID)
-        return
-      }
-      if (isProtectedChatTab(tabData)) {
-        setActiveTab(CHAT_HOME_TAB_ID)
-        return
-      }
-
       // Restore tab with updated timestamp. addTab applies the shared awake budget
       // before the attached route can be committed.
       const restoredTab: Tab = {
