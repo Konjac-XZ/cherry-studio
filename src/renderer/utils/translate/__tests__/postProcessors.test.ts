@@ -83,6 +83,39 @@ describe('translation post-processor pipeline', () => {
     ).toBe('baz 15/01/2024')
   })
 
+  it.each([
+    [String.raw`\n`, 'a\nb'],
+    [String.raw`\t`, 'a\tb'],
+    [String.raw`\r`, 'a\rb'],
+    [String.raw`\f`, 'a\fb'],
+    [String.raw`\0`, 'a\0b'],
+    [String.raw`\b`, 'a\bb'],
+    [String.raw`\v`, 'a\vb'],
+    [String.raw`\x41`, 'aAb'],
+    [String.raw`\u0041`, 'aAb'],
+    [String.raw`\[`, 'a[b'],
+    [String.raw`\\n`, String.raw`a\nb`]
+  ])('decodes the regex101 JavaScript substitution %s', (replacement, expected) => {
+    expect(applyRegexReplacementRules('a,b', [rule(',', replacement)])).toBe(expected)
+  })
+
+  it('applies JavaScript substitution tokens after decoding replacement escapes', () => {
+    expect(
+      applyRegexReplacementRules('a,b', [
+        rule('(,)', String.raw`\x241`),
+        rule('(b)', '$&$$'),
+        rule('(?<letter>a)', '$<letter>')
+      ])
+    ).toBe('a,b$')
+  })
+
+  it.each([String.raw`\xZ`, String.raw`\x1`, String.raw`\u12`, String.raw`\u12XZ`, '\\'])(
+    'skips the invalid regex101 substitution %s and continues with later rules',
+    (replacement) => {
+      expect(applyRegexReplacementRules('a,b', [rule(',', replacement), rule('b', 'c')])).toBe('a,c')
+    }
+  )
+
   it('applies regex rules only through the selected list position', () => {
     const rules = [rule('foo', 'bar'), { ...rule('bar', 'ignored'), enabled: false }, rule('bar', 'baz')]
 

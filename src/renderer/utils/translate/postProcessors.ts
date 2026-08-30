@@ -121,6 +121,16 @@ const SHELL_COMMAND_PATTERN =
 const CJK_PATTERN = /[\u3400-\u9fff\uf900-\ufaff]/u
 const DIGIT_PATTERN = /\p{N}/u
 const LATIN_LETTER_PATTERN = /[A-Za-z]/u
+const HEX_ESCAPE_PATTERN = /^[\dA-Fa-f]+$/u
+const REGEX_REPLACEMENT_ESCAPES: Record<string, string> = {
+  '0': '\0',
+  b: '\b',
+  f: '\f',
+  n: '\n',
+  r: '\r',
+  t: '\t',
+  v: '\v'
+}
 
 export { normalizeZhMarkdownTextSpacing }
 
@@ -162,11 +172,44 @@ export function applyRegexReplacementRulesThrough(
     .reduce((current, rule) => {
       try {
         const regex = new RegExp(rule.pattern, rule.flags)
-        return current.replace(regex, rule.replacement)
+        return current.replace(regex, decodeRegexReplacement(rule.replacement))
       } catch {
         return current
       }
     }, text)
+}
+
+function decodeRegexReplacement(replacement: string): string {
+  let decoded = ''
+
+  for (let index = 0; index < replacement.length; index += 1) {
+    const character = replacement[index]
+    if (character !== '\\') {
+      decoded += character
+      continue
+    }
+
+    index += 1
+    if (index >= replacement.length) {
+      throw new SyntaxError('Incomplete regex replacement escape')
+    }
+
+    const escaped = replacement[index]
+    const hexLength = escaped === 'x' ? 2 : escaped === 'u' ? 4 : 0
+    if (hexLength > 0) {
+      const hexValue = replacement.slice(index + 1, index + 1 + hexLength)
+      if (hexValue.length !== hexLength || !HEX_ESCAPE_PATTERN.test(hexValue)) {
+        throw new SyntaxError('Invalid hexadecimal regex replacement escape')
+      }
+      decoded += String.fromCharCode(Number.parseInt(hexValue, 16))
+      index += hexLength
+      continue
+    }
+
+    decoded += REGEX_REPLACEMENT_ESCAPES[escaped] ?? escaped
+  }
+
+  return decoded
 }
 
 function isRuleEnabled(rule: RegexReplacementRule): boolean {
