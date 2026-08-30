@@ -45,7 +45,7 @@ describe('useConversationNavigation', () => {
     tabsMock.ctx = ctx
     const { result } = renderHook(() => useConversationNavigation('agents'))
 
-    result.current.openConversationTab('s1', 'Session 1')
+    result.current.openConversationTab('s1', 'Session 1', { forceNew: true })
     expect(ctx.openTab).toHaveBeenCalledWith('/app/agents?sessionId=s1', { title: 'Session 1' })
     expect(tabsMock.emitResourceListReveal).not.toHaveBeenCalled()
   })

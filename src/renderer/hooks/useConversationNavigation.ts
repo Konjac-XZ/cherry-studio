@@ -8,9 +8,11 @@ import { useMemo } from 'react'
 export interface ConversationNavigation {
   /**
    * Open a new tab on the conversation's own URL. Detached windows return
-   * `undefined` instead of creating a hidden internal tab.
+   * `undefined` instead of creating a hidden internal tab. The legacy
+   * `forceNew` hint is accepted for upstream call-site compatibility but is
+   * intentionally not forwarded to the unique-tab boundary.
    */
-  openConversationTab: (key: string, title?: string) => string | undefined
+  openConversationTab: (key: string, title?: string, options?: { forceNew?: boolean }) => string | undefined
   /**
    * Open conversation `key` in the current tabs context when available; otherwise
    * open it in a detached window. Detached host windows always open elsewhere.
