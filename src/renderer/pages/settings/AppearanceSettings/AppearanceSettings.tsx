@@ -28,6 +28,7 @@ import {
 } from '@renderer/components/SettingsPrimitives'
 import { useLanguages } from '@renderer/hooks/translate'
 import { useCodeStyle } from '@renderer/hooks/useCodeStyle'
+import { useSidebarFavorites } from '@renderer/hooks/useSidebarFavorites'
 import { useTheme } from '@renderer/hooks/useTheme'
 import { useTimer } from '@renderer/hooks/useTimer'
 import useUserTheme from '@renderer/hooks/useUserTheme'
@@ -122,6 +123,8 @@ const AppearanceSettings: FC = () => {
   const { userTheme, setUserTheme } = useUserTheme()
   const { activeCmTheme } = useCodeStyle()
   const { languages, getLabel: getLanguageLabel } = useLanguages()
+  const { appFavorites, setAppPinned } = useSidebarFavorites()
+  const isChatAssistantVisible = appFavorites.includes('assistants')
 
   const [language, setLanguage] = usePreference('app.language')
   const [nativeLanguage, setNativeLanguage] = usePreference('feature.translate.native_language')
@@ -450,6 +453,20 @@ const AppearanceSettings: FC = () => {
             options={listPositionOptions}
             aria-label={t('settings.display.list_position.work')}
             size="sm"
+          />
+        </SettingRow>
+      </SettingGroup>
+
+      <SettingGroup theme={theme}>
+        <SettingTitle>{t('settings.display.sidebar.title')}</SettingTitle>
+        <SettingDivider />
+        <SettingRow>
+          <SettingRowTitle>{t('settings.display.sidebar.chat.visible')}</SettingRowTitle>
+          <Switch
+            checked={isChatAssistantVisible}
+            disabled={isChatAssistantVisible && appFavorites.length <= 1}
+            onCheckedChange={(checked) => setAppPinned('assistants', checked)}
+            aria-label={t('settings.display.sidebar.chat.visible')}
           />
         </SettingRow>
       </SettingGroup>

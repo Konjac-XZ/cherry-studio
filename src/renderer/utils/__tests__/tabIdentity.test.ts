@@ -14,27 +14,30 @@ describe('tabIdentity', () => {
     ).toBe(true)
   })
 
-  it('keeps distinct entity routes and tab types separate', () => {
+  it('treats every chat route as the same application page while keeping tab types separate', () => {
     expect(
       isSameTabPage({ type: 'route', url: '/app/chat?topicId=one' }, { type: 'route', url: '/app/chat?topicId=two' })
-    ).toBe(false)
+    ).toBe(true)
+    expect(
+      isSameTabPage(
+        { type: 'route', url: '/app/chat?assistantId=assistant-one' },
+        { type: 'route', url: '/app/chat?topicId=topic-two' }
+      )
+    ).toBe(true)
     expect(getTabPageIdentity({ type: 'route', url: 'https://example.com' })).not.toBe(
       getTabPageIdentity({ type: 'webview', url: 'https://example.com' })
     )
   })
 
-  it('uses stable entity identity while ignoring conversation actions', () => {
+  it('treats every agent route as the same application page', () => {
     expect(
       isSameTabPage(
-        { type: 'route', url: '/app/chat?topicId=t1&view=message&intent=feedback' },
-        { type: 'route', url: '/app/chat?topicId=t1' }
+        { type: 'route', url: '/app/agents?sessionId=session-one&agentId=agent-one' },
+        { type: 'route', url: '/app/agents?agentId=agent-two' }
       )
     ).toBe(true)
     expect(
-      isSameTabPage(
-        { type: 'route', url: '/app/agents?sessionId=s1&agentId=a1' },
-        { type: 'route', url: '/app/agents?sessionId=s1' }
-      )
+      isSameTabPage({ type: 'route', url: '/app/agents?sessionId=session-one' }, { type: 'route', url: '/app/agents' })
     ).toBe(true)
   })
 

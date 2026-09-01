@@ -197,7 +197,7 @@ function BatchCloseControls() {
             addTab({
               id,
               type: 'route',
-              url: `/app/chat?topicId=${id}`,
+              url: `/app/mini-app/batch-${id}`,
               title: id.toUpperCase(),
               lastAccessTime: 0,
               isDormant: false
@@ -304,6 +304,18 @@ function ForceNewSameUrlOpener() {
   return <TabSnapshot />
 }
 
+function DetachHomeControls() {
+  const { detachTab, tabs } = useTabsContext()
+  return (
+    <>
+      <button type="button" onClick={() => detachTab('home')}>
+        Detach home
+      </button>
+      <div data-testid="detach-tab-ids">{tabs.map((tab) => tab.id).join(',')}</div>
+    </>
+  )
+}
+
 // Materializes a pinned tab from "init" the way a detached sub-window re-creates its tab.
 function PinnedTabMaterializer() {
   const { tabs, openTab } = useTabsContext()
@@ -328,7 +340,7 @@ function PinnedOverflowSeeder() {
           addTab({
             id: `pinned-${i}`,
             type: 'route',
-            url: `/app/chat?topicId=pinned-${i}`,
+            url: `/app/mini-app/pinned-${i}`,
             title: `Pinned ${i}`,
             lastAccessTime: i,
             isDormant: false,
@@ -702,6 +714,17 @@ describe('TabsProvider', () => {
     expect(ids).toEqual(['home'])
   })
 
+  it('keeps the application page in place when legacy callers request detachment', () => {
+    render(
+      <TabsProvider initialDefaultTab={HOME_TAB} includePinnedTabs={false}>
+        <DetachHomeControls />
+      </TabsProvider>
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Detach home' }))
+    expect(screen.getByTestId('detach-tab-ids')).toHaveTextContent('home')
+  })
+
   it('focuses the existing page when a tab update converges on its canonical URL', async () => {
     render(
       <TabsProvider initialDefaultTab={HOME_TAB}>
@@ -880,7 +903,7 @@ describe('TabsProvider session restore', () => {
     const many: Tab[] = Array.from({ length: overflow }, (_, i) => ({
       id: `n${i}`,
       type: 'route',
-      url: `/app/chat?topicId=${i}`,
+      url: `/app/mini-app/session-${i}`,
       title: '',
       lastAccessTime: i,
       isDormant: false

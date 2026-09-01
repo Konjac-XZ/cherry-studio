@@ -43,9 +43,8 @@ import type { ResourceEditDialogTarget } from '@renderer/components/resourceCata
 import { useClearTopicMessages } from '@renderer/hooks/chat/useClearTopicMessages'
 import { useTopicMenuActions } from '@renderer/hooks/chat/useTopicMenuActions'
 import type { AssistantTopicsSource } from '@renderer/hooks/resourceViewSources'
-import { useCloseConversationTabs, useOptionalTabsContext } from '@renderer/hooks/tab'
+import { useCloseConversationTabs } from '@renderer/hooks/tab'
 import { useAssistantMutations, useAssistantsApi } from '@renderer/hooks/useAssistant'
-import { useConversationNavigation } from '@renderer/hooks/useConversationNavigation'
 import { useGroupReorder, useGroups } from '@renderer/hooks/useGroups'
 import { useImageCaptureTargets } from '@renderer/hooks/useImageCaptureTargets'
 import { useNotesSettings } from '@renderer/hooks/useNotesSettings'
@@ -60,7 +59,6 @@ import {
   useTopicMutations
 } from '@renderer/hooks/useTopic'
 import { useTopicStreamStatus } from '@renderer/hooks/useTopicStreamStatus'
-import { useWindowFrame } from '@renderer/hooks/useWindowFrame'
 import { popup } from '@renderer/services/popup'
 import { toast } from '@renderer/services/toast'
 import type { Topic } from '@renderer/types/topic'
@@ -271,9 +269,6 @@ export function Topics({
   const { t } = useTranslation()
   const clearTopicMessages = useClearTopicMessages()
   const isRightPanel = presentation === 'right-panel'
-  const tabs = useOptionalTabsContext()
-  const conversationNav = useConversationNavigation('assistants')
-  const isWindowFrame = useWindowFrame().mode === 'window'
   const [groupNow, setGroupNow] = useState(() => dayjs())
 
   useEffect(() => {
@@ -890,19 +885,6 @@ export function Topics({
   const openAssistantEditor = useCallback((assistantId: string) => {
     setEditDialogTarget({ kind: 'assistant', id: assistantId })
   }, [])
-  const openTopicInNewTab = useCallback(
-    (topic: Topic) => {
-      conversationNav.openConversationTab(topic.id, topic.name, { forceNew: true })
-    },
-    [conversationNav]
-  )
-  const openTopicInNewWindow = useCallback(
-    (topic: Topic) => {
-      conversationNav.openConversationWindow(topic.id, topic.name)
-    },
-    [conversationNav]
-  )
-
   const handleToggleAssistantPin = useCallback(
     async (assistantId: string) => {
       if (isAssistantPinActionDisabled) return
@@ -1547,8 +1529,6 @@ export function Topics({
           onConfirmDelete={handleConfirmDeleteTopic}
           onDeleteClick={handleDeleteTopicClick}
           onDeleteFromMenu={handleDeleteTopicFromMenu}
-          onOpenInNewTab={tabs && !isWindowFrame ? openTopicInNewTab : undefined}
-          onOpenInNewWindow={tabs ? openTopicInNewWindow : undefined}
           onMoveToAssistant={handleMoveTopicToAssistant}
           onPinTopic={handlePinTopic}
           onRequestTopicImageAction={handleTopicImageAction}

@@ -35,17 +35,24 @@ v2-refactor-temp/tools/data-classify/
 │   ├── generate-preferences.js             # 生成 preferenceSchemas.ts
 │   ├── generate-boot-config.js             # 生成 bootConfigSchemas.ts
 │   ├── generate-migration.js               # 生成 PreferencesMappings.ts + BootConfigMappings.ts
+│   ├── lib/merge-fork-data.js               # 合并下游扩展输入
 │   ├── DO-NOT-USE-extract-inventory.js     # [已弃用] 从源码提取数据清单
 │   ├── DO-NOT-USE-validate-consistency.js  # [已弃用] 验证数据一致性
 │   ├── DO-NOT-USE-validate-generation.js   # [已弃用] 验证生成代码质量
 │   └── DO-NOT-USE-check-duplicates.js      # [已弃用] 检查重复的目标键
 ├── data/
 │   ├── classification.json         # 分类映射（自动生成，人工维护）
+│   ├── fork-classification.json    # 下游专有迁移映射增量
+│   ├── fork-target-key-definitions.json # 下游专有 preference 定义与覆盖
 │   ├── inventory.json              # 数据清单（脚本生成）
 │   └── target-key-definitions.json # 复杂映射的 target key 定义（人工维护）
 ├── package.json
 └── README.md                       # 本文档
 ```
+
+下游专有 preference 和迁移来源分别维护在 `fork-target-key-definitions.json` 和
+`fork-classification.json`。生成器在上游输入之后合并这些增量，同名下游定义覆盖上游默认值；
+不要把下游定义只写入自动生成的 TypeScript 文件。
 
 ## 快速开始
 

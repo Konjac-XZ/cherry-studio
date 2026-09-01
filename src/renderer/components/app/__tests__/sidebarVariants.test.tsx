@@ -17,7 +17,7 @@ function createContext(overrides: Partial<SidebarVariantContext> = {}): SidebarV
     assistantIconType: 'emoji',
     agentIconType: 'emoji',
     defaultModelId: null,
-    isRequiredApp: () => false,
+    visibleAppCount: 2,
     openApp: vi.fn(),
     openMiniApp: vi.fn(),
     openAgent: vi.fn(),
@@ -123,8 +123,8 @@ describe('sidebarVariants icons', () => {
     expect(screen.getByTestId('icon')).not.toHaveTextContent('⭐️')
   })
 
-  describe('onOpen and onOpenNewTab actions', () => {
-    it('wires openApp with and without inNewTab for app variant', () => {
+  describe('singleton open actions', () => {
+    it('routes both app click actions through the same singleton opener', () => {
       const openApp = vi.fn()
       const ctx = createContext({ openApp })
       const appFavorite: SidebarFavoriteItem = { type: 'app', id: 'assistants' }
@@ -136,10 +136,10 @@ describe('sidebarVariants icons', () => {
       expect(openApp).toHaveBeenCalledWith('assistants')
 
       entry?.onOpenNewTab?.()
-      expect(openApp).toHaveBeenCalledWith('assistants', { inNewTab: true })
+      expect(openApp).toHaveBeenLastCalledWith('assistants')
     })
 
-    it('wires openMiniApp with and without inNewTab for mini_app variant', () => {
+    it('routes both mini app click actions through the same singleton opener', () => {
       const openMiniApp = vi.fn()
       const miniApp = {
         appId: 'mini-1',
@@ -159,10 +159,10 @@ describe('sidebarVariants icons', () => {
       expect(openMiniApp).toHaveBeenCalledWith('mini-1')
 
       entry?.onOpenNewTab?.()
-      expect(openMiniApp).toHaveBeenCalledWith('mini-1', { inNewTab: true })
+      expect(openMiniApp).toHaveBeenLastCalledWith('mini-1')
     })
 
-    it('wires openAgent with and without inNewTab for agent variant', () => {
+    it('routes both agent click actions through the same application opener', () => {
       const openAgent = vi.fn()
       const ctx = createContext({
         openAgent,
@@ -176,10 +176,10 @@ describe('sidebarVariants icons', () => {
       expect(openAgent).toHaveBeenCalledWith('agent-1')
 
       entry?.onOpenNewTab?.()
-      expect(openAgent).toHaveBeenCalledWith('agent-1', { inNewTab: true })
+      expect(openAgent).toHaveBeenLastCalledWith('agent-1')
     })
 
-    it('wires openAssistant with and without inNewTab for assistant variant', () => {
+    it('routes both assistant click actions through the same chat opener', () => {
       const openAssistant = vi.fn()
       const ctx = createContext({
         openAssistant,
@@ -193,7 +193,7 @@ describe('sidebarVariants icons', () => {
       expect(openAssistant).toHaveBeenCalledWith('assistant-1')
 
       entry?.onOpenNewTab?.()
-      expect(openAssistant).toHaveBeenCalledWith('assistant-1', { inNewTab: true })
+      expect(openAssistant).toHaveBeenLastCalledWith('assistant-1')
     })
   })
 })

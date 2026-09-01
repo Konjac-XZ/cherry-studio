@@ -9,7 +9,7 @@ import {
   type TabsContextValue,
   useConversationNavigationOwner
 } from '@renderer/hooks/tab'
-import { ipcApi, useIpcOn } from '@renderer/ipc'
+import { useIpcOn } from '@renderer/ipc'
 import { TabLruManager } from '@renderer/services/TabLruManager'
 import { getDefaultRouteTitle, isPageTitledRoute, isTopLevelRoute } from '@renderer/utils/routeTitle'
 import type { Tab, TabSavedState } from '@shared/data/cache/cacheValueTypes'
@@ -304,7 +304,6 @@ export function TabsProvider({
   // Local actions can span the normal and persisted pinned stores before React commits.
   // Keep a projected merged state for those batches, then reset it to committed state.
   const projectedTabsRef = useRef(tabs)
-  const detachingTabIdsRef = useRef(new Set<string>())
   useLayoutEffect(() => {
     projectedTabsRef.current = tabs
   }, [tabs])
@@ -627,23 +626,10 @@ export function TabsProvider({
     [setPinnedTabs]
   )
 
-  /**
-   * Detach a tab to a new window
-   */
-  const detachTab = useCallback(
-    (tabId: string) => {
-      const tab = projectedTabsRef.current.find((t) => t.id === tabId)
-      if (!tab || detachingTabIdsRef.current.has(tabId)) return
-      detachingTabIdsRef.current.add(tabId)
-
-      // Send IPC message to create new window
-      void ipcApi.request('tab.detach', tab)
-
-      // Remove tab from current window — closeTab handles both pinned and normal tabs
-      closeTab(tabId)
-    },
-    [closeTab]
-  )
+  // This fork keeps application pages globally singleton. Retain the context method for
+  // upstream compatibility and legacy detached-window reattachment, but never create a
+  // second window from a tab action.
+  const detachTab: TabsContextValue['detachTab'] = useCallback(() => {}, [])
 
   /**
    * Attach a tab from detached window

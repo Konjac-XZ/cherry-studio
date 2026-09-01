@@ -244,7 +244,7 @@ describe('AppShell', () => {
     expect(tabBarTabs?.map((tab) => tab.id)).toEqual(['home', 'settings', 'files'])
   })
 
-  it('restores the tab that was active before Settings when the focused tab closes or detaches', () => {
+  it('restores the tab that was active before Settings when the focused tab closes', () => {
     const workspaceTabs = [
       { id: 'first', isDormant: false, title: 'First', type: 'route' as const, url: '/app/chat' },
       { id: 'second', isDormant: false, title: 'Second', type: 'route' as const, url: '/app/files' },
@@ -271,11 +271,7 @@ describe('AppShell', () => {
     expect(mocks.closeTabs).toHaveBeenCalledWith([settingsTab.id], 'first')
     expect(mocks.closeTab).not.toHaveBeenCalled()
 
-    const detachFocusedTab = mocks.tabBarProps?.detachTab as ((id: string) => void) | undefined
-    detachFocusedTab?.(settingsTab.id)
-
-    expect(mocks.detachTab).toHaveBeenCalledWith(settingsTab.id)
-    expect(mocks.setActiveTab).toHaveBeenCalledWith('first')
+    expect(mocks.tabBarProps?.detachTab).toBeUndefined()
   })
 
   it('restores the most recently accessed workspace tab when Settings is restored active', () => {
@@ -308,10 +304,7 @@ describe('AppShell', () => {
     closeFocusedTab?.(settingsTab.id)
     expect(mocks.closeTabs).toHaveBeenCalledWith([settingsTab.id], 'home')
 
-    const detachFocusedTab = mocks.tabBarProps?.detachTab as ((id: string) => void) | undefined
-    detachFocusedTab?.(settingsTab.id)
-    expect(mocks.detachTab).toHaveBeenCalledWith(settingsTab.id)
-    expect(mocks.setActiveTab).toHaveBeenCalledWith('home')
+    expect(mocks.tabBarProps?.detachTab).toBeUndefined()
   })
 
   it('blocks and dismisses global search while the Settings tab is focused', () => {
@@ -495,7 +488,7 @@ describe('AppShell', () => {
     expect(MockUseCacheUtils.getCacheValue('mini_app.split_id')).toBe('right-app')
   })
 
-  it('clears the split state when the last mini-app tab detaches', () => {
+  it('does not expose tab detachment while a mini-app split is active', () => {
     MockUseCacheUtils.setCacheValue('mini_app.split_open', true)
     MockUseCacheUtils.setCacheValue('mini_app.split_id', 'right-app')
     mocks.tabs = [
@@ -504,42 +497,7 @@ describe('AppShell', () => {
     ]
 
     render(<AppShell />)
-    const detachTab = mocks.tabBarProps?.detachTab as ((id: string) => void) | undefined
-    detachTab?.('mini-left')
-
-    // Split state does not follow the tab to the new window, so leaving it set
-    // here reopens the next mini app straight into a split nobody asked for.
-    expect(MockUseCacheUtils.getCacheValue('mini_app.split_open')).toBe(false)
-    expect(MockUseCacheUtils.getCacheValue('mini_app.split_id')).toBe('')
-    expect(mocks.detachTab).toHaveBeenCalledWith('mini-left')
-  })
-
-  it('keeps the split state when detaching leaves another mini-app tab behind', () => {
-    MockUseCacheUtils.setCacheValue('mini_app.split_open', true)
-    MockUseCacheUtils.setCacheValue('mini_app.split_id', 'right-app')
-    mocks.tabs = [
-      ...mocks.tabs,
-      { id: 'mini-left', isDormant: false, title: 'Left', type: 'route', url: '/app/mini-app/left-app' },
-      { id: 'mini-other', isDormant: false, title: 'Other', type: 'route', url: '/app/mini-app/other-app' }
-    ]
-
-    render(<AppShell />)
-    const detachTab = mocks.tabBarProps?.detachTab as ((id: string) => void) | undefined
-    detachTab?.('mini-left')
-
-    // The mini-app tab still in this window keeps rendering the split.
-    expect(MockUseCacheUtils.getCacheValue('mini_app.split_open')).toBe(true)
-    expect(MockUseCacheUtils.getCacheValue('mini_app.split_id')).toBe('right-app')
-  })
-
-  it('leaves non mini-app tab detaches untouched', () => {
-    MockUseCacheUtils.setCacheValue('mini_app.split_open', true)
-    MockUseCacheUtils.setCacheValue('mini_app.split_id', 'right-app')
-
-    render(<AppShell />)
-    const detachTab = mocks.tabBarProps?.detachTab as ((id: string) => void) | undefined
-    detachTab?.('home')
-
+    expect(mocks.tabBarProps?.detachTab).toBeUndefined()
     expect(MockUseCacheUtils.getCacheValue('mini_app.split_open')).toBe(true)
     expect(MockUseCacheUtils.getCacheValue('mini_app.split_id')).toBe('right-app')
   })

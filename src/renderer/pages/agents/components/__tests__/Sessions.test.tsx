@@ -2215,7 +2215,7 @@ describe('Sessions', () => {
     expect(menuContent).not.toHaveTextContent('Open in new tab')
   })
 
-  it('hides open-in-new-tab but keeps open-in-new-window for inactive sessions in a detached window', () => {
+  it('hides duplicate-page actions for inactive sessions in a detached window', () => {
     windowFrameMocks.mode = 'window'
     render(<SessionsForTest />)
 
@@ -2224,7 +2224,7 @@ describe('Sessions', () => {
     const menuContent = betaMenu?.querySelector('[data-testid="context-menu-content"]')
 
     expect(menuContent).not.toHaveTextContent('Open in new tab')
-    expect(menuContent).toHaveTextContent('Open in New Window')
+    expect(menuContent).not.toHaveTextContent('Open in New Window')
   })
 
   it('hides the inline delete action for pinned sessions', () => {
@@ -3547,7 +3547,6 @@ describe('Sessions', () => {
 
     await vi.waitFor(() =>
       expect(preferenceMocks.setPreference).toHaveBeenCalledWith('ui.sidebar.favorites', [
-        { type: 'app', id: 'assistants' },
         { type: 'agent', id: 'agent-a' }
       ])
     )
@@ -3577,11 +3576,7 @@ describe('Sessions', () => {
 
     fireEvent.click(unpinMenuItem as HTMLElement)
 
-    await vi.waitFor(() =>
-      expect(preferenceMocks.setPreference).toHaveBeenCalledWith('ui.sidebar.favorites', [
-        { type: 'app', id: 'assistants' }
-      ])
-    )
+    await vi.waitFor(() => expect(preferenceMocks.setPreference).toHaveBeenCalledWith('ui.sidebar.favorites', []))
   })
 
   it('deletes an agent from the agent group menu', async () => {

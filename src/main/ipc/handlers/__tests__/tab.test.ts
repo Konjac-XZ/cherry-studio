@@ -27,9 +27,9 @@ describe('tabHandlers', () => {
     expect(subWindowService.attachTab).toHaveBeenCalledWith(tab, 'sub1')
   })
 
-  it('detach spawns a fresh sub-window via SubWindowService', async () => {
+  it('rejects detach requests at the main-process boundary', async () => {
     await tabHandlers['tab.detach'](detachPayload, ctx('w1'))
-    expect(subWindowService.createWindow).toHaveBeenCalledWith(detachPayload)
+    expect(subWindowService.createWindow).not.toHaveBeenCalled()
   })
 
   it('drag_end restores the caller window opacity when below 1', async () => {

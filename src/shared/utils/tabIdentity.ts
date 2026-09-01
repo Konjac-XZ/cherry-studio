@@ -24,19 +24,7 @@ const routeIdentity = (parsed: URL): string => {
     if (appId) return `${MINI_APP_ROUTE_PREFIX}${encodeURIComponent(appId)}`
   }
 
-  if (pathname === '/app/chat') {
-    const topicId = searchParams.get('topicId')
-    if (topicId) return `/app/chat?topicId=${encodeURIComponent(topicId)}`
-    const assistantId = searchParams.get('assistantId')
-    return assistantId ? `/app/chat?assistantId=${encodeURIComponent(assistantId)}` : pathname
-  }
-
-  if (pathname === '/app/agents') {
-    const sessionId = searchParams.get('sessionId')
-    if (sessionId) return `/app/agents?sessionId=${encodeURIComponent(sessionId)}`
-    const agentId = searchParams.get('agentId')
-    return agentId ? `/app/agents?agentId=${encodeURIComponent(agentId)}` : pathname
-  }
+  if (pathname === '/app/chat' || pathname === '/app/agents') return pathname
 
   if (pathname === FILE_PREVIEW_ROUTE) {
     const path = searchParams.get('path')

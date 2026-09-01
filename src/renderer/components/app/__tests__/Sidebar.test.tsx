@@ -534,7 +534,21 @@ describe('app Sidebar', () => {
     expect(mocks.setSidebarFavorites).toHaveBeenCalledWith([appFavorite('assistants'), appFavorite('files')])
   })
 
-  it('keeps required sidebar favorites protected in the context menu', () => {
+  it('allows removing the chat assistant from the sidebar when other apps remain', () => {
+    mocks.sidebarFavorites = [
+      { type: 'app', id: 'assistants' },
+      { type: 'app', id: 'knowledge' }
+    ]
+    render(<Sidebar />)
+
+    expect(screen.getByTestId('sidebar-menu-sidebar.remove-app.assistants')).not.toBeDisabled()
+
+    fireEvent.click(screen.getByTestId('sidebar-menu-sidebar.remove-app.assistants'))
+
+    expect(mocks.setSidebarFavorites).toHaveBeenCalledWith([{ type: 'app', id: 'knowledge' }])
+  })
+
+  it('disables removing the last sidebar app', () => {
     render(<Sidebar />)
 
     expect(screen.getByTestId('sidebar-menu-sidebar.remove-app.assistants')).toBeDisabled()
@@ -787,7 +801,7 @@ describe('app Sidebar', () => {
     expect(mocks.emitResourceListReveal).not.toHaveBeenCalled()
   })
 
-  it('reuses the active tab without revealing its resource list', () => {
+  it('focuses an existing singleton app page without replacing the active tab', () => {
     mocks.sidebarFavorites = [appFavorite('agents')]
     mocks.activeTab = {
       id: 'chat',
@@ -800,14 +814,9 @@ describe('app Sidebar', () => {
     render(<Sidebar />)
     fireEvent.click(screen.getByTestId('sidebar-item-agents'))
 
-    expect(mocks.updateTab).toHaveBeenCalledWith('chat', {
-      url: '/app/agents',
-      title: 'Work',
-      icon: undefined,
-      metadata: undefined
-    })
+    expect(mocks.updateTab).not.toHaveBeenCalled()
     expect(mocks.emitResourceListReveal).not.toHaveBeenCalled()
-    expect(mocks.setActiveTab).not.toHaveBeenCalled()
+    expect(mocks.setActiveTab).toHaveBeenCalledWith('agents-1')
     expect(mocks.openTab).not.toHaveBeenCalled()
   })
 
@@ -852,9 +861,10 @@ describe('app Sidebar', () => {
     // conversation — an owned tab is already "there", whatever session it shows.
     expect(mocks.updateTab).not.toHaveBeenCalled()
     expect(mocks.openTab).not.toHaveBeenCalled()
+    expect(mocks.setActiveTab).toHaveBeenCalledWith('agents-1')
   })
 
-  it('navigates a message-only viewer of the same app back to the app entry', () => {
+  it('keeps a message-only viewer as the singleton app page', () => {
     mocks.sidebarFavorites = [appFavorite('agents')]
     mocks.activeTab = {
       id: 'viewer',
@@ -866,12 +876,8 @@ describe('app Sidebar', () => {
     render(<Sidebar />)
     fireEvent.click(screen.getByTestId('sidebar-item-agents'))
 
-    expect(mocks.updateTab).toHaveBeenCalledWith('viewer', {
-      url: '/app/agents',
-      title: 'Work',
-      icon: undefined,
-      metadata: undefined
-    })
+    expect(mocks.updateTab).not.toHaveBeenCalled()
+    expect(mocks.setActiveTab).toHaveBeenCalledWith('viewer')
   })
 
   it('opens or focuses a tab without revealing its resource list when the active tab is pinned', () => {
@@ -941,5 +947,21 @@ describe('app Sidebar', () => {
 
     expect(screen.getByTestId('ui-sidebar')).toHaveAttribute('data-width', '50')
     expect(document.documentElement.style.getPropertyValue('--sidebar-width')).toBe('50px')
+  })
+
+  it('keeps middle-click on the singleton application page', () => {
+    mocks.sidebarFavorites = [appFavorite('assistants')]
+    mocks.activeTab = { id: 'chat', type: 'route', url: '/app/chat?topicId=existing', title: 'Chat' }
+    mocks.tabs = [mocks.activeTab]
+
+    render(<Sidebar />)
+    fireEvent(
+      screen.getByTestId('sidebar-item-assistants'),
+      new MouseEvent('auxclick', { button: 1, bubbles: true, cancelable: true })
+    )
+
+    expect(mocks.openTab).not.toHaveBeenCalled()
+    expect(mocks.updateTab).not.toHaveBeenCalled()
+    expect(mocks.setActiveTab).toHaveBeenCalledWith('chat')
   })
 })

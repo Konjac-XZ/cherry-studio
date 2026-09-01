@@ -1,6 +1,6 @@
 /**
  * Auto-generated preference mappings from classification.json
- * Generated at: 2026-08-30T00:59:29.429Z
+ * Generated at: 2026-09-01T03:10:49.461Z
  *
  * This file contains pure mapping relationships without default values.
  * Default values are managed in src/shared/data/preferences.ts
@@ -97,10 +97,6 @@ export const REDUX_STORE_MAPPINGS = {
     {
       originalKey: 'targetLanguage',
       targetKey: 'chat.input.translate.target_language'
-    },
-    {
-      originalKey: 'userNativeLanguage',
-      targetKey: 'feature.translate.native_language'
     },
     {
       originalKey: 'proxyMode',
@@ -313,18 +309,6 @@ export const REDUX_STORE_MAPPINGS = {
     {
       originalKey: 'translateModelPrompt',
       targetKey: 'feature.translate.model_prompt'
-    },
-    {
-      originalKey: 'nativeLanguageTranslateModelPrompt',
-      targetKey: 'feature.translate.prompt.native_to_other'
-    },
-    {
-      originalKey: 'otherLanguageTranslateModelPrompt',
-      targetKey: 'feature.translate.prompt.other_to_native'
-    },
-    {
-      originalKey: 'polishPrompt',
-      targetKey: 'feature.translate.prompt.polish'
     },
     {
       originalKey: 'autoTranslateWithSpace',
@@ -621,6 +605,22 @@ export const REDUX_STORE_MAPPINGS = {
     {
       originalKey: 'showMessageOutline',
       targetKey: 'chat.message.show_outline'
+    },
+    {
+      originalKey: 'userNativeLanguage',
+      targetKey: 'feature.translate.native_language'
+    },
+    {
+      originalKey: 'nativeLanguageTranslateModelPrompt',
+      targetKey: 'feature.translate.prompt.native_to_other'
+    },
+    {
+      originalKey: 'otherLanguageTranslateModelPrompt',
+      targetKey: 'feature.translate.prompt.other_to_native'
+    },
+    {
+      originalKey: 'polishPrompt',
+      targetKey: 'feature.translate.prompt.polish'
     }
   ],
   selectionStore: [

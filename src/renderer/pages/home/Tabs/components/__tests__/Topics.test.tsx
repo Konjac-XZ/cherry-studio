@@ -1553,7 +1553,6 @@ describe('Topics', () => {
       'Edit conversation name',
       'Pin Conversation',
       expect.stringMatching(/^Move to/),
-      'Open in New Window',
       'Conversation positionLeftRight',
       'Clear messages',
       '',
@@ -1590,31 +1589,16 @@ describe('Topics', () => {
     )
   })
 
-  it('opens a topic message page in a new app tab from the context menu', async () => {
+  it('does not expose duplicate-page actions for inactive topics', () => {
     const { getByText } = renderTopicList()
 
     fireEvent.contextMenu(getByText('Gamma topic'))
     const gammaMenu = getByText('Gamma topic').closest('[data-testid="context-menu"]')
     const menuContent = gammaMenu?.querySelector('[data-testid="context-menu-content"]')
-    const animationFrameCallbacks: FrameRequestCallback[] = []
-    const requestAnimationFrameSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
-      animationFrameCallbacks.push(callback)
-      return animationFrameCallbacks.length
-    })
 
-    fireEvent.click(within(menuContent as HTMLElement).getByRole('button', { name: 'Open in new tab' }))
-
+    expect(menuContent).not.toHaveTextContent('Open in new tab')
+    expect(menuContent).not.toHaveTextContent('Open in New Window')
     expect(tabsContextMocks.openTab).not.toHaveBeenCalled()
-    await vi.waitFor(() => expect(animationFrameCallbacks.length).toBeGreaterThan(0))
-    act(() => {
-      for (const callback of animationFrameCallbacks.splice(0)) {
-        callback(0)
-      }
-    })
-    expect(tabsContextMocks.openTab).toHaveBeenCalledWith('/app/chat?topicId=topic-c', {
-      title: 'Gamma topic'
-    })
-    requestAnimationFrameSpy.mockRestore()
   })
 
   it('hides open-in-new-tab for the active topic context menu', () => {
@@ -1627,7 +1611,7 @@ describe('Topics', () => {
     expect(menuContent).not.toHaveTextContent('Open in new tab')
   })
 
-  it('hides open-in-new-tab but keeps open-in-new-window for inactive topics in a detached window', () => {
+  it('hides duplicate-page actions for inactive topics in a detached window', () => {
     windowFrameMocks.mode = 'window'
     const { getByText } = renderTopicList()
 
@@ -1636,7 +1620,7 @@ describe('Topics', () => {
     const menuContent = gammaMenu?.querySelector('[data-testid="context-menu-content"]')
 
     expect(menuContent).not.toHaveTextContent('Open in new tab')
-    expect(menuContent).toHaveTextContent('Open in New Window')
+    expect(menuContent).not.toHaveTextContent('Open in New Window')
   })
 
   it('shows loading while exporting a right-clicked topic as an image without switching topics', async () => {
@@ -3394,7 +3378,6 @@ describe('Topics', () => {
 
     await vi.waitFor(() =>
       expect(MockUsePreferenceUtils.getPreferenceValue('ui.sidebar.favorites' as never)).toEqual([
-        { type: 'app', id: 'assistants' },
         { type: 'assistant', id: 'assistant-1' }
       ])
     )
@@ -3415,9 +3398,7 @@ describe('Topics', () => {
     fireEvent.click(within(assistantHeader as HTMLElement).getByRole('button', { name: 'Remove from sidebar' }))
 
     await vi.waitFor(() =>
-      expect(MockUsePreferenceUtils.getPreferenceValue('ui.sidebar.favorites' as never)).toEqual([
-        { type: 'app', id: 'assistants' }
-      ])
+      expect(MockUsePreferenceUtils.getPreferenceValue('ui.sidebar.favorites' as never)).toEqual([])
     )
   })
 

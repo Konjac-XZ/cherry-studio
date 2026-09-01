@@ -26,19 +26,8 @@ const isCompactMinWidthRoute = (url?: string): boolean =>
 
 export const AppShell = () => {
   const isMacTransparentWindow = useMacTransparentWindow()
-  const {
-    tabs,
-    activeTabId,
-    setActiveTab,
-    closeTab,
-    closeTabs,
-    updateTab,
-    reorderTabs,
-    pinTab,
-    unpinTab,
-    detachTab,
-    openTab
-  } = useTabs()
+  const { tabs, activeTabId, setActiveTab, closeTab, closeTabs, updateTab, reorderTabs, pinTab, unpinTab, openTab } =
+    useTabs()
   const activeTab = useMemo(() => tabs.find((tab) => tab.id === activeTabId), [activeTabId, tabs])
   const canCycleTabs = tabs.length > 1 && !!activeTab
   const isSettingsTabActive = isSettingsPath(activeTab?.url)
@@ -85,18 +74,6 @@ export const AppShell = () => {
       closeTab(id)
     },
     [clearSplitWithLastMiniAppTab, closeTab, closeTabs, tabs]
-  )
-
-  const handleDetachTab = useCallback(
-    (id: string) => {
-      const tab = tabs.find((candidate) => candidate.id === id)
-      clearSplitWithLastMiniAppTab(id, tab?.url)
-      detachTab(id)
-      if (isSettingsPath(tab?.url) && previousWorkspaceTabIdRef.current) {
-        setActiveTab(previousWorkspaceTabIdRef.current)
-      }
-    },
-    [clearSplitWithLastMiniAppTab, detachTab, setActiveTab, tabs]
   )
 
   const handleOpenGlobalSearch = useCallback(() => {
@@ -192,7 +169,6 @@ export const AppShell = () => {
       reorderTabs={reorderTabs}
       pinTab={pinTab}
       unpinTab={unpinTab}
-      detachTab={handleDetachTab}
       openTab={openTab}
     />
   )

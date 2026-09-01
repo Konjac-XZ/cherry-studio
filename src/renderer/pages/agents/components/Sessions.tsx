@@ -33,14 +33,12 @@ import { useAgents } from '@renderer/hooks/agent/useAgent'
 import { useUpdateSession } from '@renderer/hooks/agent/useSession'
 import type { AgentSessionsSource } from '@renderer/hooks/resourceViewSources'
 import { useCloseConversationTabs } from '@renderer/hooks/tab'
-import { useConversationNavigation } from '@renderer/hooks/useConversationNavigation'
 import { useImageCaptureTargets } from '@renderer/hooks/useImageCaptureTargets'
 import { useNotesSettings } from '@renderer/hooks/useNotesSettings'
 import { useOptimisticResourceName } from '@renderer/hooks/useOptimisticResourceName'
 import { usePins } from '@renderer/hooks/usePins'
 import { useSidebarFavorites } from '@renderer/hooks/useSidebarFavorites'
 import { finishTopicRenaming, startTopicRenaming } from '@renderer/hooks/useTopic'
-import { useWindowFrame } from '@renderer/hooks/useWindowFrame'
 import { ipcApi } from '@renderer/ipc'
 import type { AgentSessionExportOptions } from '@renderer/services/agentSessionExport'
 import { popup } from '@renderer/services/popup'
@@ -352,8 +350,6 @@ const Sessions = ({
   const { t } = useTranslation()
   const closeConversationTabs = useCloseConversationTabs()
   const isRightPanel = presentation === 'right-panel'
-  const conversationNav = useConversationNavigation('agents')
-  const isWindowFrame = useWindowFrame().mode === 'window'
   const [groupNow, setGroupNow] = useState(() => new Date())
 
   useEffect(() => {
@@ -1402,19 +1398,6 @@ const Sessions = ({
   const openAgentEditor = useCallback((agentId: string) => {
     setEditDialogTarget({ kind: 'agent', id: agentId })
   }, [])
-  const openSessionInNewTab = useCallback(
-    (session: AgentSessionEntity) => {
-      conversationNav.openConversationTab(session.id, session.name || t('common.unnamed'))
-    },
-    [conversationNav, t]
-  )
-  const openSessionInNewWindow = useCallback(
-    (session: AgentSessionEntity) => {
-      conversationNav.openConversationWindow(session.id, session.name || t('common.unnamed'))
-    },
-    [conversationNav, t]
-  )
-
   const handleToggleAgentPin = useCallback(
     async (agentId: string) => {
       if (isAgentPinActionDisabled) return
@@ -2043,8 +2026,6 @@ const Sessions = ({
         isValidating={listValidating}
         listRef={listRef}
         onDeleteSession={handleDeleteSession}
-        onOpenInNewTab={isWindowFrame ? undefined : openSessionInNewTab}
-        onOpenInNewWindow={openSessionInNewWindow}
         onOpenRenameDialog={handleOpenRenameSessionDialog}
         onRetry={handleRetry}
         onSetPanePosition={canSetPanePosition ? setResolvedPanePosition : undefined}

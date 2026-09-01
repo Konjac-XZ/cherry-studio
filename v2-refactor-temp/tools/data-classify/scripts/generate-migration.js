@@ -2,12 +2,14 @@
 
 const fs = require('fs')
 const path = require('path')
+const { mergeForkClassification } = require('./lib/merge-fork-data')
 
 class SimpleMappingGenerator {
   constructor() {
     this.dataDir = path.resolve(__dirname, '../data')
     this.targetDir = path.resolve(__dirname, '../../../../src/main/data/migration/v2/migrators/mappings')
     this.classificationFile = path.join(this.dataDir, 'classification.json')
+    this.forkClassificationFile = path.join(this.dataDir, 'fork-classification.json')
   }
 
   generate() {
@@ -39,8 +41,10 @@ class SimpleMappingGenerator {
       throw new Error(`分类文件不存在: ${this.classificationFile}`)
     }
 
-    const content = fs.readFileSync(this.classificationFile, 'utf8')
-    return JSON.parse(content)
+    const classification = JSON.parse(fs.readFileSync(this.classificationFile, 'utf8'))
+    if (!fs.existsSync(this.forkClassificationFile)) return classification
+    const forkClassification = JSON.parse(fs.readFileSync(this.forkClassificationFile, 'utf8'))
+    return mergeForkClassification(classification, forkClassification)
   }
 
   extractCategoryData(classification, targetCategory) {
