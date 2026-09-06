@@ -85,6 +85,7 @@ export const validate = (english: string, translation: string, doNotTranslate: s
 }
 
 const readJson = (filePath: string): I18N => JSON.parse(fs.readFileSync(filePath, 'utf-8'))
+const readOptionalJson = (filePath: string): I18N => (fs.existsSync(filePath) ? readJson(filePath) : {})
 
 const readEffectiveRendererCatalogs = (): Map<string, I18N> => {
   const upstreamPath = path.join(ROOT, RENDERER_CATALOG_DIRECTORY)
@@ -100,8 +101,8 @@ const readEffectiveRendererCatalogs = (): Map<string, I18N> => {
       composeLocale(
         readJson(path.join(upstreamPath, filename)),
         customEnglish,
-        locale === BASE_LOCALE ? {} : readJson(path.join(customPath, filename)),
-        readJson(path.join(overridePath, filename))
+        locale === BASE_LOCALE ? {} : readOptionalJson(path.join(customPath, filename)),
+        readOptionalJson(path.join(overridePath, filename))
       )
     )
   }

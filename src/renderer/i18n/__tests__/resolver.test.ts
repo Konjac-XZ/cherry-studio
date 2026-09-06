@@ -46,6 +46,14 @@ describe('renderer i18n lazy init', () => {
     expect(i18n.t('chat.message.beautify.label')).toBe('Beautify reply')
   })
 
+  it('lazy-loads the Turkish pack when switching language', async () => {
+    await i18n.changeLanguage('tr-TR')
+
+    expect(i18n.hasResourceBundle('tr-TR', 'translation')).toBe(true)
+    expect(i18n.t('common.copy')).toBe('Kopyala')
+    expect(i18n.t('chat.message.beautify.label')).toBe('Beautify reply')
+  })
+
   it('uses singular and plural diagnostic file summaries in English', async () => {
     await i18n.changeLanguage('en-US')
 

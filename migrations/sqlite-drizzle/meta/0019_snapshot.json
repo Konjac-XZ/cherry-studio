@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "5eed1493-d238-4fa0-b3eb-5ae1084c20af",
+  "id": "a644ff4c-db21-420b-8b23-7fc6022f9e3b",
   "prevId": "dfd148a9-f46d-4296-a914-d3af8b69e23d",
   "tables": {
     "agent": {
@@ -844,6 +844,11 @@
         "agent_session_message_status_idx": {
           "name": "agent_session_message_status_idx",
           "columns": ["status"],
+          "isUnique": false
+        },
+        "agent_session_message_model_id_idx": {
+          "name": "agent_session_message_model_id_idx",
+          "columns": ["model_id"],
           "isUnique": false
         },
         "agent_session_message_delivery_status_idx": {
@@ -3780,6 +3785,11 @@
           "columns": ["status"],
           "isUnique": false
         },
+        "message_model_id_idx": {
+          "name": "message_model_id_idx",
+          "columns": ["model_id"],
+          "isUnique": false
+        },
         "message_topic_root_uniq": {
           "name": "message_topic_root_uniq",
           "columns": ["topic_id"],
@@ -4838,82 +4848,6 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "translate_glossary": {
-      "name": "translate_glossary",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "source_phrase": {
-          "name": "source_phrase",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "target_phrase": {
-          "name": "target_phrase",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "target_language": {
-          "name": "target_language",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "enabled": {
-          "name": "enabled",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "translate_glossary_target_language_idx": {
-          "name": "translate_glossary_target_language_idx",
-          "columns": ["target_language", "created_at"],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "translate_glossary_target_language_translate_language_lang_code_fk": {
-          "name": "translate_glossary_target_language_translate_language_lang_code_fk",
-          "tableFrom": "translate_glossary",
-          "tableTo": "translate_language",
-          "columnsFrom": ["target_language"],
-          "columnsTo": ["lang_code"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
     "translate_history": {
       "name": "translate_history",
       "columns": {
@@ -4960,20 +4894,6 @@
           "notNull": false,
           "autoincrement": false
         },
-        "model_id": {
-          "name": "model_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "cache_key": {
-          "name": "cache_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
         "star": {
           "name": "star",
           "type": "integer",
@@ -5006,16 +4926,6 @@
         "translate_history_star_created_at_idx": {
           "name": "translate_history_star_created_at_idx",
           "columns": ["star", "created_at"],
-          "isUnique": false
-        },
-        "translate_history_cache_key_idx": {
-          "name": "translate_history_cache_key_idx",
-          "columns": ["cache_key"],
-          "isUnique": false
-        },
-        "translate_history_model_id_idx": {
-          "name": "translate_history_model_id_idx",
-          "columns": ["model_id"],
           "isUnique": false
         }
       },

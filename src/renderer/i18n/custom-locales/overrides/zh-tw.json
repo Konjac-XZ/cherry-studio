@@ -44,6 +44,7 @@
   "settings.about.diagnostics.upload.unknown.title": "可能已提交",
   "settings.about.feedback.diagnostics.description": "確認最近的診斷資訊後，一鍵匿名上傳。",
   "settings.about.feedback.diagnostics.title": "上傳診斷包",
+  "settings.data.webdav.allowSelfSignedTls.help": "預設關閉：WebDAV 伺服器的 TLS 憑證會受到驗證。開啟後將完全跳過對該伺服器的憑證驗證 —— 自簽、私有 CA、過期或網域不符的憑證均會被接受 — 此時中間人攻擊者可能攔截你的 WebDAV 密碼與完整備份資料。",
   "settings.dependencies.addToolDescription": "使用 mise 工具鍵新增工具（例如 github:sharkdp / fd、uv、bun）。",
   "settings.dependencies.installSettings.verifySignatures.help": "驗證 aqua 類工具的 Sigstore / SLSA 簽章。僅當你的網路無法完成驗證時才關閉 —— 關閉會略過供應鏈驗證。",
   "settings.dependencies.localModels.embedding.subtitle": "Qwen3 Embedding 0.6B・約 614 MB",

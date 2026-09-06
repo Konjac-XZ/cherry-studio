@@ -26,6 +26,7 @@ interface UseMentionedModelSelectorResult {
   handleMentionedModelMultiSelectModeChange: (enabled: boolean) => void
   handleMentionedModelSelectorRestore: () => void
   restoreMentionedModelDraft: (models: Model[], multiSelectMode: boolean) => void
+  restoreMentionedModelSelection: (selectorModels: Model[], mentionedModels: Model[], multiSelectMode: boolean) => void
 }
 
 const haveSameModelIds = (left: readonly Model[], right: readonly Model[]): boolean =>
@@ -203,16 +204,23 @@ export function useChatMentionedModels({
     persistModels([])
   }, [persistModels, runtimeModel, setMentionedModels])
 
-  const restoreMentionedModelDraft = useCallback(
-    (models: Model[], multiSelectMode: boolean) => {
-      mentionedModelsRef.current = models
-      mentionedModelSelectorValueRef.current = models
+  const restoreMentionedModelSelection = useCallback(
+    (selectorModels: Model[], restoredMentionedModels: Model[], multiSelectMode: boolean) => {
+      mentionedModelsRef.current = restoredMentionedModels
+      mentionedModelSelectorValueRef.current = selectorModels
       mentionedModelMultiSelectModeRef.current = multiSelectMode
-      setMentionedModels(models)
-      setMentionedModelSelectorValue(models)
+      setMentionedModels(restoredMentionedModels)
+      setMentionedModelSelectorValue(selectorModels)
       setMentionedModelMultiSelectMode(multiSelectMode)
     },
     [setMentionedModels]
+  )
+
+  const restoreMentionedModelDraft = useCallback(
+    (models: Model[], multiSelectMode: boolean) => {
+      restoreMentionedModelSelection(models, models, multiSelectMode)
+    },
+    [restoreMentionedModelSelection]
   )
 
   return {
@@ -221,6 +229,7 @@ export function useChatMentionedModels({
     handleMentionedModelsSelect,
     handleMentionedModelMultiSelectModeChange,
     handleMentionedModelSelectorRestore,
-    restoreMentionedModelDraft
+    restoreMentionedModelDraft,
+    restoreMentionedModelSelection
   }
 }

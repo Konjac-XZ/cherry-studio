@@ -6,6 +6,7 @@ import 'dayjs/locale/ja'
 import 'dayjs/locale/pt'
 import 'dayjs/locale/ro'
 import 'dayjs/locale/ru'
+import 'dayjs/locale/tr'
 import 'dayjs/locale/vi'
 import 'dayjs/locale/zh-cn'
 import 'dayjs/locale/zh-tw'
@@ -28,13 +29,13 @@ type LocaleModule = { default: LocaleCatalog }
 const loadComposedLocale = async (
   upstream: Promise<LocaleModule>,
   customLocale: Promise<LocaleModule> | undefined,
-  overrides: Promise<LocaleModule>
+  overrides: Promise<LocaleModule> | undefined
 ): Promise<LocaleCatalog> => {
   const [upstreamModule, customEnglishModule, customLocaleModule, overrideModule] = await Promise.all([
     upstream,
     import('./custom-locales/en-us.json'),
     customLocale ?? Promise.resolve({ default: {} }),
-    overrides
+    overrides ?? Promise.resolve({ default: {} })
   ])
 
   return composeLocale(
@@ -116,7 +117,9 @@ const localeLoaders = {
       import('./locales/vi-vn.json'),
       import('./custom-locales/vi-vn.json'),
       import('./custom-locales/overrides/vi-vn.json')
-    )
+    ),
+  'tr-TR': () =>
+    loadComposedLocale(import('./locales/tr-tr.json'), undefined, import('./custom-locales/overrides/tr-tr.json'))
 } satisfies Record<LanguageVarious, () => Promise<unknown>>
 
 export const getLanguage = async () => {
@@ -140,7 +143,8 @@ const dayjsLocaleMap: Record<string, string> = {
   'fr-FR': 'fr',
   'pt-PT': 'pt',
   'ro-RO': 'ro',
-  'vi-VN': 'vi'
+  'vi-VN': 'vi',
+  'tr-TR': 'tr'
 }
 
 export const setDayjsLocale = (language: string) => {

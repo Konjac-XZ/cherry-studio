@@ -34,7 +34,7 @@ function verifyWorkspaceBetterSqlite3(env) {
       const Database = require(${JSON.stringify(betterSqlite3Entry)})
       const database = new Database(':memory:')
       database.close()
-      console.log('[build:win:x64] better-sqlite3 Electron ABI verification passed')
+      console.log('[build:win:x64:test] better-sqlite3 Electron ABI verification passed')
     } catch (error) {
       console.error(error)
       process.exit(1)
@@ -66,7 +66,7 @@ function verifyPackagedBetterSqlite3(env) {
   const script = `
     try {
       require(${JSON.stringify(nativeModule)})
-      console.log('[build:win:x64] Packaged better-sqlite3 ABI verification passed')
+      console.log('[build:win:x64:test] Packaged better-sqlite3 ABI verification passed')
     } catch (error) {
       console.error(error)
       process.exit(1)

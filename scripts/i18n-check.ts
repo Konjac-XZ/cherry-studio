@@ -57,6 +57,10 @@ function readI18N(filePath: string): I18N {
   }
 }
 
+function readOptionalI18N(filePath: string): I18N {
+  return fs.existsSync(filePath) ? readI18N(filePath) : {}
+}
+
 /**
  * 校验一组翻译文件：基准模板有序，其余文件有序且与基准键集合完全一致。
  *
@@ -127,8 +131,8 @@ function checkRendererCustomCatalogs(upstreamBase: I18N, upstreamFiles: string[]
   for (const upstreamFile of upstreamFiles) {
     const filename = path.basename(upstreamFile)
     const locale = filename.replace(/\.json$/, '')
-    const customLocale = locale === baseLocale ? {} : readI18N(path.join(rendererCustomLocalesDir, filename))
-    const overrides = readI18N(path.join(rendererCustomOverridesDir, filename))
+    const customLocale = locale === baseLocale ? {} : readOptionalI18N(path.join(rendererCustomLocalesDir, filename))
+    const overrides = readOptionalI18N(path.join(rendererCustomOverridesDir, filename))
     checkSortedFlatCatalog('renderer custom/' + filename, customLocale)
     checkSortedFlatCatalog('renderer custom overrides/' + filename, overrides)
 

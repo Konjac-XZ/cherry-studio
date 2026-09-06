@@ -500,11 +500,82 @@ describe('applyMigrations over a populated database', () => {
       sqlite
         .prepare(
           `SELECT created_at FROM __drizzle_migrations
-           WHERE created_at IN (1787286408660, 1787345194710, 1787991847247)
+           WHERE created_at IN (1787286408660, 1787345194710)
            ORDER BY created_at`
         )
         .all()
-    ).toEqual([{ created_at: 1787286408660 }, { created_at: 1787345194710 }, { created_at: 1787991847247 }])
+    ).toEqual([{ created_at: 1787286408660 }, { created_at: 1787345194710 }])
+    expect(sqlite.pragma('foreign_key_check')).toEqual([])
+    expect(String(sqlite.pragma('integrity_check', { simple: true }))).toBe('ok')
+  })
+
+  it('replays the merged migration chain after the retired personal 0019 migration', () => {
+    applyMigrations(db, baselineMigrationsFolder(join(tempDir, 'baseline'), '0019_colorful_gladiator'))
+    const now = Date.now()
+
+    sqlite
+      .prepare(
+        `INSERT INTO translate_language (lang_code, value, emoji, created_at, updated_at)
+         VALUES ('zh-cn', 'Chinese', 'CN', ?, ?)`
+      )
+      .run(now, now)
+    sqlite
+      .prepare(
+        `INSERT INTO user_provider (provider_id, name, order_key, created_at, updated_at)
+         VALUES ('legacy-provider', 'Legacy Provider', 'a0', ?, ?)`
+      )
+      .run(now, now)
+    sqlite
+      .prepare(
+        `INSERT INTO user_model
+          (id, provider_id, model_id, preset_model_id, \`group\`, order_key, created_at, updated_at)
+         VALUES ('legacy-provider::legacy-model', 'legacy-provider', 'legacy-model', 'legacy-model',
+                 'legacy-provider', 'a0', ?, ?)`
+      )
+      .run(now, now)
+    sqlite.exec(`
+      CREATE TABLE translate_glossary (
+        id text PRIMARY KEY NOT NULL,
+        source_phrase text NOT NULL,
+        target_phrase text NOT NULL,
+        target_language text NOT NULL,
+        enabled integer DEFAULT true NOT NULL,
+        created_at integer NOT NULL,
+        updated_at integer NOT NULL,
+        FOREIGN KEY (target_language) REFERENCES translate_language(lang_code) ON DELETE cascade
+      );
+      CREATE INDEX translate_glossary_target_language_idx
+        ON translate_glossary (target_language, created_at);
+    `)
+    sqlite
+      .prepare(
+        `INSERT INTO translate_glossary
+          (id, source_phrase, target_phrase, target_language, enabled, created_at, updated_at)
+         VALUES ('legacy-glossary-0019', 'model', '模型', 'zh-cn', 1, ?, ?)`
+      )
+      .run(now, now)
+    sqlite
+      .prepare('INSERT INTO __drizzle_migrations (hash, created_at) VALUES (?, ?)')
+      .run('retired-personal-0019', 1787991847247)
+
+    expect(() => applyMigrations(db, resolveMigrationsPath())).not.toThrow()
+
+    expect(sqlite.prepare(`SELECT id FROM translate_glossary`).all()).toEqual([{ id: 'legacy-glossary-0019' }])
+    expect(sqlite.prepare(`SELECT \`group\` FROM user_model WHERE id = 'legacy-provider::legacy-model'`).get()).toEqual(
+      { group: null }
+    )
+    expect(sqlite.prepare(`PRAGMA index_list('message')`).all()).toEqual(
+      expect.arrayContaining([expect.objectContaining({ name: 'message_model_id_idx' })])
+    )
+    expect(sqlite.prepare(`PRAGMA index_list('agent_session_message')`).all()).toEqual(
+      expect.arrayContaining([expect.objectContaining({ name: 'agent_session_message_model_id_idx' })])
+    )
+    expect(sqlite.prepare(`PRAGMA table_info('job')`).all()).toEqual(
+      expect.arrayContaining([expect.objectContaining({ name: 'cancel_requested_at' })])
+    )
+
+    expect(() => applyMigrations(db, resolveMigrationsPath())).not.toThrow()
+    expect(sqlite.prepare(`SELECT count(*) AS count FROM translate_glossary`).get()).toEqual({ count: 1 })
     expect(sqlite.pragma('foreign_key_check')).toEqual([])
     expect(String(sqlite.pragma('integrity_check', { simple: true }))).toBe('ok')
   })
@@ -929,6 +1000,34 @@ describe('applyMigrations over a populated database', () => {
       task_schedule_id: null
     })
     expect(sqlite.pragma('foreign_key_check')).toEqual([])
+  })
+
+  it('backfills cancel_requested_at from updated_at only for cancel-requested job rows', () => {
+    applyMigrations(db, baselineMigrationsFolder(join(tempDir, 'baseline'), '0020_wooden_fat_cobra'))
+    const now = Date.now()
+    const insert = sqlite.prepare(
+      `INSERT INTO job
+        (id, type, status, priority, queue, scheduled_at, started_at, finished_at, attempt, max_attempts, input, cancel_requested, metadata, created_at, updated_at)
+       VALUES (?, 'agent.task', ?, 0, 'agent.task', ?, ?, ?, 0, 1, '{}', ?, '{}', ?, ?)`
+    )
+    // Leftover cancel-requested running row: the cancel tx was its last write,
+    // so updated_at approximates the request time the new column records.
+    insert.run('job-leftover', 'running', now - 9_000, now - 8_000, null, 1, now - 9_000, now - 5_000)
+    // Live-cancelled terminal row: settled at updated_at.
+    insert.run('job-cancelled', 'cancelled', now - 20_000, now - 19_000, now - 15_000, 1, now - 20_000, now - 15_000)
+    // Terminal row whose updated_at was bumped by a post-terminal no-op cancel:
+    // the backfill must cap at finished_at, not adopt the later bump.
+    insert.run('job-noop-bumped', 'cancelled', now - 50_000, now - 49_000, now - 40_000, 1, now - 50_000, now - 10_000)
+    insert.run('job-completed', 'completed', now - 30_000, now - 29_000, now - 25_000, 0, now - 30_000, now - 25_000)
+
+    applyMigrations(db, resolveMigrationsPath())
+
+    expect(sqlite.prepare(`SELECT id, cancel_requested_at FROM job ORDER BY id`).all()).toEqual([
+      { id: 'job-cancelled', cancel_requested_at: now - 15_000 },
+      { id: 'job-completed', cancel_requested_at: null },
+      { id: 'job-leftover', cancel_requested_at: now - 5_000 },
+      { id: 'job-noop-bumped', cancel_requested_at: now - 40_000 }
+    ])
   })
 
   it('backfills conversation activity from message phases without losing populated rows', () => {

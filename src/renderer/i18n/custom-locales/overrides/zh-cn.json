@@ -85,6 +85,7 @@
   "settings.about.feedback.diagnostics.description": "确认最近的诊断信息后，一键匿名上传。",
   "settings.about.feedback.diagnostics.title": "上传诊断包",
   "settings.data.s3.title.help": "与 AWS S3 API 兼容的对象存储服务, 例如 AWS S3, Cloudflare R2, 阿里云 OSS, 腾讯云 COS 等",
+  "settings.data.webdav.allowSelfSignedTls.help": "默认关闭：将校验 WebDAV 服务器的 TLS 证书。开启后将完全跳过对该服务器的证书校验 —— 自签、私有 CA、过期或域名不匹配的证书均会被接受，中间人可能截获你的 WebDAV 密码与全部备份数据。",
   "settings.data.webdav.disableStream.help": "开启后，将文件加载到内存中再上传，可解决部分 WebDAV 服务不兼容 chunked 上传的问题，但会增加内存占用。",
   "settings.data.yuque.check.empty_repo_url": ".key 请先输入知识库 URL",
   "settings.dependencies.addToolDescription": "使用 mise 工具键添加工具（例如 github:sharkdp / fd、uv、bun）。",
