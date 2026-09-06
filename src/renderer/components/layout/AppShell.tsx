@@ -212,7 +212,7 @@ export const AppShell = () => {
           'flex h-screen w-screen flex-row overflow-hidden text-foreground',
           isMacTransparentWindow ? 'bg-transparent' : 'bg-sidebar'
         )}>
-        {!isSettingsTabActive && <Sidebar />}
+        {!isSettingsTabActive && <Sidebar isFullscreen={isFullscreen} />}
         {contentColumn}
       </div>
     )
@@ -240,7 +240,7 @@ export const AppShell = () => {
               className="h-11 shrink-0 [-webkit-app-region:drag]"
             />
           )}
-          <Sidebar />
+          <Sidebar isFullscreen={isFullscreen} />
         </div>
       )}
       {contentColumn}

@@ -5,6 +5,7 @@ import type {
   QuickPanelCloseAction,
   QuickPanelContextType,
   QuickPanelFilterFn,
+  QuickPanelFooterAction,
   QuickPanelKeyDownEvent,
   QuickPanelKeyDownHandler,
   QuickPanelListItem,
@@ -27,6 +28,7 @@ export const QuickPanelProvider: React.FC<React.PropsWithChildren> = ({ children
   const [symbol, setSymbol] = useState<string>('')
 
   const [list, setList] = useState<QuickPanelListItem[]>([])
+  const [footerActions, setFooterActions] = useState<QuickPanelFooterAction[]>([])
   const [title, setTitle] = useState<string | undefined>()
   const [defaultIndex, setDefaultIndex] = useState<number>(-1)
   const [pageSize, setPageSize] = useState<number>(DEFAULT_QUICK_PANEL_PAGE_SIZE)
@@ -101,8 +103,13 @@ export const QuickPanelProvider: React.FC<React.PropsWithChildren> = ({ children
     [ensureListItemIds]
   )
 
+  const updateFooterActions = useCallback((actions: QuickPanelFooterAction[]) => {
+    setFooterActions(actions)
+  }, [])
+
   const clearPanelState = useCallback(() => {
     setList([])
+    setFooterActions([])
     setOnClose(undefined)
     setBeforeAction(undefined)
     setAfterAction(undefined)
@@ -110,6 +117,7 @@ export const QuickPanelProvider: React.FC<React.PropsWithChildren> = ({ children
     setSortFn(undefined)
     setTitle(undefined)
     setSymbol('')
+    setDefaultIndex(-1)
     setTriggerInfo(undefined)
     setQueryAnchor(undefined)
     setTrackInputQuery(false)
@@ -130,6 +138,7 @@ export const QuickPanelProvider: React.FC<React.PropsWithChildren> = ({ children
       setLastCloseAction(undefined)
       setTitle(options.title)
       setList(ensureListItemIds(options.list))
+      setFooterActions(options.footerActions ?? [])
       const nextDefaultIndex = typeof options.defaultIndex === 'number' ? Math.max(-1, options.defaultIndex) : -1
       setDefaultIndex(nextDefaultIndex)
       setPageSize(options.pageSize ?? DEFAULT_QUICK_PANEL_PAGE_SIZE)
@@ -216,11 +225,13 @@ export const QuickPanelProvider: React.FC<React.PropsWithChildren> = ({ children
       close,
       updateItemSelection,
       updateList,
+      updateFooterActions,
 
       isVisible,
       symbol,
 
       list,
+      footerActions,
       title,
       defaultIndex,
       pageSize,
@@ -249,12 +260,14 @@ export const QuickPanelProvider: React.FC<React.PropsWithChildren> = ({ children
       close,
       updateItemSelection,
       updateList,
+      updateFooterActions,
       dispatchKeyDown,
       getPanelGeneration,
       registerKeyDownHandler,
       isVisible,
       symbol,
       list,
+      footerActions,
       title,
       defaultIndex,
       pageSize,

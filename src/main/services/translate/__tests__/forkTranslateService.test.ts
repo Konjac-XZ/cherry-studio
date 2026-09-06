@@ -280,7 +280,7 @@ describe('translateService.open', () => {
     expect(arg.streamId).toBe(streamId)
     expect(arg.uniqueModelId).toBe('openai::gpt-4o')
     expect(arg.prompt).toBe('Translate to English: hello')
-    // Translation always requests thinking off; unsupported models degrade to omit downstream.
+    // Prefer thinking off, or the lowest supported tier when the model cannot turn it off.
     expect(arg.reasoningEffort).toBe('none')
     const listeners = Array.isArray(arg.listener) ? arg.listener : [arg.listener]
     expect(listeners).toHaveLength(1)
@@ -301,6 +301,37 @@ describe('translateService.open', () => {
     expect(streamPromptMock).toHaveBeenCalledWith(
       expect.objectContaining({
         callOverrides: { customParameters: { temperature: 0.25 } },
+        reasoningEffort: 'none'
+      })
+    )
+  })
+
+  it('gates sampling against the frozen model without adopting the upstream global parameter settings', () => {
+    MockMainPreferenceServiceUtils.setPreferenceValue('feature.translate.request.custom_parameters', [
+      { name: 'temperature', type: 'number', value: 0.25 },
+      { name: 'top_p', type: 'number', value: 0.8 },
+      { name: 'seed', type: 'number', value: 42 }
+    ])
+    MockMainPreferenceServiceUtils.setPreferenceValue('feature.translate.reasoning_effort', 'high')
+    getByKeyMock.mockReturnValue({
+      id: 'moonshot::kimi-k3',
+      providerId: 'moonshot',
+      apiModelId: 'kimi-k3',
+      name: 'Kimi K3',
+      capabilities: []
+    })
+
+    translateService.open(fakeSender, {
+      streamId: 'translate:frozen-sampling',
+      text: 'hello',
+      targetLangCode: 'en-us',
+      modelId: 'moonshot::kimi-k3'
+    })
+
+    expect(streamPromptMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        uniqueModelId: 'moonshot::kimi-k3',
+        callOverrides: { customParameters: { seed: 42 } },
         reasoningEffort: 'none'
       })
     )

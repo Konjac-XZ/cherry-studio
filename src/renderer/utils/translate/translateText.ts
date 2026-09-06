@@ -68,22 +68,23 @@ export const translateText = async (
     if (signal && abortListener) signal.removeEventListener('abort', abortListener)
   }
 
-  if (signal) {
-    abortListener = () => {
-      void ipcApi.request('ai.stream.abort', { topicId: streamId }).catch(() => {
-        // Already aborted / stream gone — main drives the final reject via the stream error event.
-      })
-    }
-    signal.addEventListener('abort', abortListener, { once: true })
-  }
-
   return new Promise<string>((resolve, reject) => {
+    if (signal) {
+      abortListener = () => {
+        cleanup()
+        reject(new DOMException('Translation aborted', 'AbortError'))
+        void ipcApi.request('ai.stream.abort', { topicId: streamId }).catch(() => {
+          // Local cancellation must settle even if main cannot acknowledge it.
+        })
+      }
+      signal.addEventListener('abort', abortListener, { once: true })
+    }
     // Subscribe **before** calling main. Main starts the stream synchronously
     // inside `translate.open`, so the first chunk can land between `open()`'s
     // resolve and any post-await subscriber registration.
     unsubscribers.push(
       ipcApi.on('ai.stream.chunk', ({ topicId, chunk }) => {
-        if (topicId !== streamId) return
+        if (cleaned || topicId !== streamId) return
         if (chunk?.type === 'message-metadata') {
           const outputTokens = (chunk as Extract<CherryUIMessageChunk, { type: 'message-metadata' }>).messageMetadata
             ?.stats?.outputTokens
@@ -105,7 +106,7 @@ export const translateText = async (
 
     unsubscribers.push(
       ipcApi.on('ai.stream.done', ({ topicId, status }) => {
-        if (topicId !== streamId) return
+        if (cleaned || topicId !== streamId) return
         if (status !== 'success') {
           cleanup()
           reject(new DOMException('Translation stream paused', 'AbortError'))
@@ -124,7 +125,7 @@ export const translateText = async (
 
     unsubscribers.push(
       ipcApi.on('ai.stream.error', ({ topicId, error }) => {
-        if (topicId !== streamId) return
+        if (cleaned || topicId !== streamId) return
         cleanup()
         // Preserve error.name (e.g. 'AbortError') so downstream
         // `isAbortError(...)` classifies user stops correctly.
@@ -146,7 +147,7 @@ export const translateText = async (
         ...(options?.traceId && { traceId: options.traceId })
       })
       .then(({ traceId }) => {
-        if (traceId) options?.onTraceReady?.(traceId)
+        if (!cleaned && traceId) options?.onTraceReady?.(traceId)
       })
       .catch((openError: unknown) => {
         cleanup()

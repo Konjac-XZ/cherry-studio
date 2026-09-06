@@ -5,17 +5,11 @@ import { useEffect, useRef } from 'react'
 import type { TranslationRunOverride } from './useTranslationFlowRunner'
 
 const logger = loggerService.withContext('TranslatePage/AutoPasteTrigger')
-const RUNNING_KEY = 'translate:paste:running'
-const LAST_TIMESTAMP_KEY = 'translate:paste:lastTs'
-const RECENT_TRIGGER_WINDOW_MS = 1_000
-const RUNNING_GUARD_RELEASE_MS = 500
 
 type Params = {
-  busy: boolean
   notReadyReason: 'models-loading' | 'model-unavailable'
   ready: boolean
   readClipboardForTranslate: () => Promise<string>
-  prepareInput: (text: string) => void
   trigger: (
     options?: { forceRefresh?: boolean; polish?: boolean },
     sourceTextOverride?: string,
@@ -34,9 +28,7 @@ const isPasteRouteCommand = (value: unknown): boolean => value === 1 || value ==
  * the already-extracted translation flow.
  */
 export const useTranslateAutoPasteTrigger = ({
-  busy,
   notReadyReason,
-  prepareInput,
   readClipboardForTranslate,
   ready,
   trigger
@@ -45,16 +37,12 @@ export const useTranslateAutoPasteTrigger = ({
   const navigate = useNavigate()
   const handledNonceRef = useRef(new Set<string>())
   const latestRef = useRef({
-    busy,
     navigate,
-    prepareInput,
     readClipboardForTranslate,
     trigger
   })
   latestRef.current = {
-    busy,
     navigate,
-    prepareInput,
     readClipboardForTranslate,
     trigger
   }
@@ -85,33 +73,16 @@ export const useTranslateAutoPasteTrigger = ({
       void latestRef.current.navigate({ to: '/app/translate', replace: true })
     }
 
-    if (alreadyHandled || latestRef.current.busy) {
+    if (alreadyHandled) {
       logger.info('Translate Clipboard route command was skipped', {
         nonce: nonce || null,
-        reason: alreadyHandled ? 'already-handled' : 'page-busy'
-      })
-      clearRouteCommand()
-      return
-    }
-
-    const now = Date.now()
-    const lastTimestamp = Number(sessionStorage.getItem(LAST_TIMESTAMP_KEY) ?? '0')
-    if (sessionStorage.getItem(RUNNING_KEY) === '1' || now - lastTimestamp < RECENT_TRIGGER_WINDOW_MS) {
-      logger.info('Translate Clipboard route command was skipped', {
-        nonce: nonce || null,
-        reason: sessionStorage.getItem(RUNNING_KEY) === '1' ? 'translation-running' : 'recent-trigger'
+        reason: 'already-handled'
       })
       clearRouteCommand()
       return
     }
 
     let cancelled = false
-    let guardTimer: ReturnType<typeof setTimeout> | undefined
-    sessionStorage.setItem(RUNNING_KEY, '1')
-
-    const releaseGuard = () => {
-      guardTimer = setTimeout(() => sessionStorage.removeItem(RUNNING_KEY), RUNNING_GUARD_RELEASE_MS)
-    }
 
     const run = async () => {
       try {
@@ -124,11 +95,18 @@ export const useTranslateAutoPasteTrigger = ({
         })
 
         if (text.trim()) {
-          const { prepareInput: prepareLatestInput } = latestRef.current
-          prepareLatestInput(text)
           logger.info('Translate Clipboard translation dispatch started', { nonce: nonce || null })
 
-          await latestRef.current.trigger(undefined, text, { sourcePreprocessed: true })
+          const pending = latestRef.current.trigger(undefined, text, {
+            replaceActive: true,
+            updateSource: true,
+            sourcePreprocessed: true
+          })
+          if (nonce) {
+            handledNonceRef.current.add(nonce)
+            sessionStorage.setItem(nonceKey, '1')
+          }
+          await pending
           logger.info('Translate Clipboard translation dispatch completed', { nonce: nonce || null })
         } else {
           logger.info('Translate Clipboard route command had no translatable clipboard text', {
@@ -140,20 +118,16 @@ export const useTranslateAutoPasteTrigger = ({
           handledNonceRef.current.add(nonce)
           sessionStorage.setItem(nonceKey, '1')
         }
-        sessionStorage.setItem(LAST_TIMESTAMP_KEY, String(now))
       } catch (error) {
         logger.warn('Failed to consume Translate Clipboard route command', error as Error)
       } finally {
         if (!cancelled) clearRouteCommand()
-        releaseGuard()
       }
     }
 
     void run()
     return () => {
       cancelled = true
-      if (guardTimer) clearTimeout(guardTimer)
-      sessionStorage.removeItem(RUNNING_KEY)
     }
   }, [nonce, pasteRequested, ready])
 }

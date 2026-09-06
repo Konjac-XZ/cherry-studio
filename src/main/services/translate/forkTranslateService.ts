@@ -41,6 +41,7 @@ import {
   WebContentsListener
 } from '../../ai/streamManager'
 import {
+  gateTranslateSamplingParameters,
   hasTranslateReasoningOverride,
   isSameTranslateLanguageFamily,
   translateCustomParametersToRecord
@@ -321,7 +322,11 @@ export class TranslateService {
     return {
       uniqueModelId: resolved.uniqueModelId,
       content,
-      customParameters: translateCustomParametersToRecord(parameters),
+      customParameters: gateTranslateSamplingParameters(
+        translateCustomParametersToRecord(parameters),
+        resolved.model,
+        reasoningEffort
+      ),
       reasoningEffort
     }
   }

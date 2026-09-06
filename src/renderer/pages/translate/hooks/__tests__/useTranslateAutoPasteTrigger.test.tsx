@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { renderHook, waitFor } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const routerMocks = vi.hoisted(() => ({
@@ -21,12 +21,10 @@ vi.mock('@logger', () => ({
 import { useTranslateAutoPasteTrigger } from '../useTranslateAutoPasteTrigger'
 
 const createProps = () => ({
-  busy: false,
   notReadyReason: 'model-unavailable' as const,
-  prepareInput: vi.fn(),
   readClipboardForTranslate: vi.fn(async () => 'clipboard text'),
   ready: true,
-  trigger: vi.fn(async () => undefined)
+  trigger: vi.fn<(...args: unknown[]) => Promise<void>>(async () => undefined)
 })
 
 describe('useTranslateAutoPasteTrigger', () => {
@@ -47,8 +45,9 @@ describe('useTranslateAutoPasteTrigger', () => {
     await waitFor(() => expect(props.trigger).toHaveBeenCalledTimes(1))
 
     expect(props.readClipboardForTranslate).toHaveBeenCalledTimes(1)
-    expect(props.prepareInput).toHaveBeenCalledWith('clipboard text')
     expect(props.trigger).toHaveBeenCalledWith(undefined, 'clipboard text', {
+      replaceActive: true,
+      updateSource: true,
       sourcePreprocessed: true
     })
     expect(sessionStorage.getItem('translate:paste:nonce:nonce-1')).toBe('1')
@@ -95,13 +94,52 @@ describe('useTranslateAutoPasteTrigger', () => {
     expect(props.readClipboardForTranslate).not.toHaveBeenCalled()
   })
 
-  it('removes a running route command without starting a second flow', async () => {
+  it('accepts a new nonce while the previous translation is still pending', async () => {
     const props = createProps()
-    props.busy = true
-    renderHook(() => useTranslateAutoPasteTrigger(props))
+    let finish!: () => void
+    props.trigger.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          finish = resolve
+        })
+    )
+    const { rerender } = renderHook(() => useTranslateAutoPasteTrigger(props))
+    await waitFor(() => expect(props.trigger).toHaveBeenCalledTimes(1))
+    routerMocks.search = { paste: 1, _: 'nonce-2' }
+    rerender()
+    await waitFor(() => expect(props.trigger).toHaveBeenCalledTimes(2))
+    await act(async () => finish())
+    expect(sessionStorage.getItem('translate:paste:nonce:nonce-2')).toBe('1')
+  })
 
-    await waitFor(() => expect(routerMocks.navigate).toHaveBeenCalledTimes(1))
-    expect(props.readClipboardForTranslate).not.toHaveBeenCalled()
+  it.each(['', 'error'])('keeps the current task when clipboard reading yields %s', async (value) => {
+    const props = createProps()
+    if (value) props.readClipboardForTranslate.mockRejectedValueOnce(new Error('read failed'))
+    else props.readClipboardForTranslate.mockResolvedValueOnce('')
+    renderHook(() => useTranslateAutoPasteTrigger(props))
+    await waitFor(() => expect(routerMocks.navigate).toHaveBeenCalledOnce())
     expect(props.trigger).not.toHaveBeenCalled()
+  })
+
+  it('discards an older clipboard read when a newer shortcut arrives', async () => {
+    const props = createProps()
+    let finish!: (text: string) => void
+    props.readClipboardForTranslate.mockImplementationOnce(
+      () =>
+        new Promise<string>((resolve) => {
+          finish = resolve
+        })
+    )
+    const { rerender } = renderHook(() => useTranslateAutoPasteTrigger(props))
+    routerMocks.search = { paste: 1, _: 'nonce-2' }
+    rerender()
+    await waitFor(() => expect(props.trigger).toHaveBeenCalledOnce())
+    await act(async () => finish('stale text'))
+    expect(props.trigger).toHaveBeenCalledOnce()
+    expect(props.trigger).toHaveBeenCalledWith(
+      undefined,
+      'clipboard text',
+      expect.objectContaining({ replaceActive: true })
+    )
   })
 })

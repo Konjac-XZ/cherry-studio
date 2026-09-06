@@ -2,6 +2,7 @@ import type * as TranslateHooks from '@renderer/hooks/translate'
 import { toast } from '@renderer/services/toast'
 import { translationWorkspaceService } from '@renderer/services/translation'
 import type * as TranslateUtils from '@renderer/utils/translate'
+import type * as TranslateTextModule from '@renderer/utils/translate/translateText'
 import type { BinaryToolSnapshot } from '@shared/types/binary'
 import type { AbsoluteFilePath } from '@shared/types/file'
 import { MockUseCacheUtils } from '@test-mocks/renderer/useCache'
@@ -246,7 +247,15 @@ vi.mock('@renderer/hooks/useSmoothStream', () => ({
 }))
 
 vi.mock('@renderer/ipc', () => ({
-  ipcApi: { request: ipcRequestMock },
+  ipcApi: {
+    request: ipcRequestMock,
+    on: (event: string, handler: (payload: unknown) => void) => {
+      ipcEventHandlers.set(event, handler)
+      return () => {
+        if (ipcEventHandlers.get(event) === handler) ipcEventHandlers.delete(event)
+      }
+    }
+  },
   useIpcOn: (event: string, handler: (payload: unknown) => void) => {
     ipcEventHandlers.set(event, handler)
   }
@@ -327,6 +336,19 @@ vi.mock('../components/TranslateHistory', () => ({
   }) =>
     isOpen ? (
       <div data-testid="translate-history-open">
+        <button
+          type="button"
+          aria-label="reuse-known-language-history"
+          onClick={() =>
+            onHistoryItemClick({
+              kind: 'text',
+              sourceText: 'history source',
+              targetText: '历史译文',
+              sourceLanguage: 'en-us',
+              targetLanguage: 'zh-cn'
+            })
+          }
+        />
         <button
           type="button"
           aria-label="reuse-null-target-history"
@@ -1654,6 +1676,27 @@ describe('TranslatePage', () => {
     )
   })
 
+  it('releases the workspace when preprocessing removes all source text', async () => {
+    MockUsePreferenceUtils.setMultiplePreferenceValues({
+      'feature.translate.model_id': 'openai::gpt-4.1',
+      'feature.translate.page.source_language': 'en-us',
+      'feature.translate.page.target_language': 'zh-cn',
+      'feature.translate.post_processing.regex_rules': [
+        { pattern: 'hello', replacement: '', flags: 'g', enabled: true, stage: 'before' }
+      ]
+    })
+    const { rerender } = render(<TranslatePage />)
+    fireEvent.change(screen.getByLabelText('translate.input.placeholder'), { target: { value: 'hello' } })
+    rerender(<TranslatePage />)
+    fireEvent.click(screen.getByRole('button', { name: 'translate.button.translate' }))
+
+    await waitFor(() => expect(translationWorkspaceService.getSnapshot().status).toBe('error'))
+    expect(translationWorkspaceService.isBusy()).toBe(false)
+    expect(translateCoreMock.translateText).not.toHaveBeenCalled()
+    expect(translateCoreMock.addHistory).not.toHaveBeenCalled()
+    expect(toast.error).toHaveBeenCalledTimes(1)
+  })
+
   it('preprocesses once before Markdown formatting throughout the global clipboard shortcut flow', async () => {
     MockUsePreferenceUtils.setMultiplePreferenceValues({
       'feature.translate.model_id': 'openai::gpt-4.1',
@@ -1992,27 +2035,45 @@ describe('TranslatePage', () => {
     await waitFor(() => expect(translateCoreMock.translateText).toHaveBeenCalledTimes(1))
     expect(toast.success).not.toHaveBeenCalled()
     expect(translateCoreMock.addHistory).not.toHaveBeenCalled()
+    await waitFor(() => expect(translationWorkspaceService.isBusy()).toBe(false))
+    expect(translationWorkspaceService.getSnapshot().status).toBe('cancelled')
   })
 
-  it('shows failure toast and resets translating state when translate throws non-abort error', async () => {
-    MockUsePreferenceUtils.setMultiplePreferenceValues({
-      'feature.translate.model_id': 'openai::gpt-4.1',
-      'feature.translate.page.source_language': 'zh-cn',
-      'feature.translate.page.target_language': 'en-us'
-    })
-    const translateError = new Error('translate failed')
-    translateCoreMock.translateText.mockRejectedValueOnce(translateError)
-    translateCoreMock.formatErrorMessageWithPrefix.mockImplementationOnce((_error: unknown, prefix: string) => {
-      return `${prefix}: reason`
-    })
+  it.each(['', 'partial translation'])(
+    'preserves output "%s" on failure and permits an immediate retry',
+    async (partial) => {
+      MockUsePreferenceUtils.setMultiplePreferenceValues({
+        'feature.translate.model_id': 'openai::gpt-4.1',
+        'feature.translate.page.source_language': 'zh-cn',
+        'feature.translate.page.target_language': 'en-us'
+      })
+      const translateError = new Error('translate failed')
+      translateCoreMock.translateText.mockImplementationOnce(
+        async (_text: string, _target: string, onResponse?: (text: string, done: boolean) => void) => {
+          if (partial) onResponse?.(partial, false)
+          throw translateError
+        }
+      )
+      translateCoreMock.formatErrorMessageWithPrefix.mockImplementationOnce((_error: unknown, prefix: string) => {
+        return `${prefix}: reason`
+      })
 
-    const { rerender } = render(<TranslatePage />)
-    fireEvent.change(screen.getByLabelText('translate.input.placeholder'), { target: { value: 'hello' } })
-    rerender(<TranslatePage />)
-    fireEvent.click(screen.getByRole('button', { name: 'translate.button.translate' }))
+      const { rerender } = render(<TranslatePage />)
+      fireEvent.change(screen.getByLabelText('translate.input.placeholder'), { target: { value: 'hello' } })
+      rerender(<TranslatePage />)
+      fireEvent.click(screen.getByRole('button', { name: 'translate.button.translate' }))
 
-    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('translate.error.failed: reason'))
-  })
+      await waitFor(() => expect(toast.error).toHaveBeenCalledWith('translate.error.failed: reason'))
+      expect(translationWorkspaceService.getSnapshot()).toMatchObject({ status: 'error', error: translateError })
+      expect(translationWorkspaceService.isBusy()).toBe(false)
+      expect(MockUseCacheUtils.getCacheValue('translate.output')).toBe(partial)
+      expect(toast.error).toHaveBeenCalledTimes(1)
+      expect(translateCoreMock.addHistory).not.toHaveBeenCalled()
+      translateCoreMock.translateText.mockResolvedValueOnce('retry succeeded')
+      fireEvent.click(screen.getByRole('button', { name: 'translate.button.translate' }))
+      await waitFor(() => expect(translationWorkspaceService.getSnapshot().status).toBe('success'))
+    }
+  )
 
   it('triggers translate on Cmd/Ctrl+Enter keyboard shortcut', async () => {
     MockUsePreferenceUtils.setMultiplePreferenceValues({
@@ -2246,6 +2307,108 @@ describe('TranslatePage', () => {
     expect(MockUsePreferenceUtils.getPreferenceValue('feature.translate.page.source_language')).toBe('auto')
     expect(MockUseCacheUtils.getCacheValue('translate.input')).toBe('hello')
     expect(MockUseCacheUtils.getCacheValue('translate.output')).toBe('你好')
+  })
+
+  it('reusing history cancels the old task and preserves both language preferences', async () => {
+    MockUsePreferenceUtils.setMultiplePreferenceValues({
+      'feature.translate.model_id': 'openai::gpt-4.1',
+      'feature.translate.page.source_language': 'auto',
+      'feature.translate.page.target_language': 'ja-jp',
+      'feature.translate.page.auto_copy': true
+    })
+    let finish!: (value: string) => void
+    let lateChunk!: (value: string, complete: boolean) => void
+    let signal!: AbortSignal
+    translateCoreMock.translateText.mockImplementationOnce((_text, _language, response, abortSignal) => {
+      lateChunk = response
+      signal = abortSignal
+      return new Promise<string>((resolve) => {
+        finish = resolve
+      })
+    })
+    const view = render(<TranslatePage />)
+    fireEvent.change(screen.getByLabelText('translate.input.placeholder'), { target: { value: 'old source' } })
+    view.rerender(<TranslatePage />)
+    fireEvent.click(screen.getByRole('button', { name: 'translate.button.translate' }))
+    await waitFor(() => expect(translateCoreMock.translateText).toHaveBeenCalledOnce())
+    fireEvent.click(screen.getByRole('button', { name: 'translate.history.title' }))
+    expect(signal.aborted).toBe(false)
+    fireEvent.click(screen.getByRole('button', { name: 'reuse-known-language-history' }))
+    await act(async () => {
+      lateChunk('late old output', true)
+      finish('late old output')
+    })
+
+    expect(signal.aborted).toBe(true)
+    expect(MockUseCacheUtils.getCacheValue('translate.input')).toBe('history source')
+    expect(MockUseCacheUtils.getCacheValue('translate.output')).toBe('历史译文')
+    expect(MockUsePreferenceUtils.getPreferenceValue('feature.translate.page.source_language')).toBe('auto')
+    expect(MockUsePreferenceUtils.getPreferenceValue('feature.translate.page.target_language')).toBe('ja-jp')
+    expect(translationWorkspaceService.isBusy()).toBe(false)
+    expect(translateCoreMock.addHistory).not.toHaveBeenCalled()
+    expect(translateCoreMock.setTimeoutTimer).not.toHaveBeenCalledWith('auto-copy', expect.any(Function), 100)
+  })
+
+  it('replaces a live IPC translation only after the shortcut has read valid text', async () => {
+    const { translateText } = await vi.importActual<typeof TranslateTextModule>(
+      '@renderer/utils/translate/translateText'
+    )
+    translateCoreMock.translateText.mockImplementation(translateText)
+    let nextId = 0
+    uuidMock.mockImplementation(() => `stream-${++nextId}`)
+    MockUsePreferenceUtils.setMultiplePreferenceValues({
+      'feature.translate.model_id': 'openai::gpt-4.1',
+      'feature.translate.page.source_language': 'en-us',
+      'feature.translate.page.target_language': 'zh-cn'
+    })
+    let resolveRead!: (value: { html: string; text: string }) => void
+    const streams: string[] = []
+    ipcRequestMock.mockImplementation((route: string, input: { streamId?: string }) => {
+      if (route === 'binary.get_tool_snapshots') return Promise.resolve(binaryMock.snapshots)
+      if (route === 'translate.open') {
+        streams.push(input.streamId!)
+        return Promise.resolve({ streamId: input.streamId })
+      }
+      if (route === 'translate.clipboard.read')
+        return new Promise((resolve) => {
+          resolveRead = resolve
+        })
+      return Promise.resolve(undefined)
+    })
+    const view = render(<TranslatePage />)
+    fireEvent.change(screen.getByLabelText('translate.input.placeholder'), { target: { value: 'old source' } })
+    view.rerender(<TranslatePage />)
+    fireEvent.click(screen.getByRole('button', { name: 'translate.button.translate' }))
+    await waitFor(() => expect(streams).toHaveLength(1))
+    await act(async () =>
+      ipcEventHandlers.get('ai.stream.chunk')?.({
+        topicId: streams[0],
+        chunk: { type: 'text-delta', delta: 'old partial' }
+      })
+    )
+    routeMocks.search = { paste: 1, _: 'replacement' }
+    view.rerender(<TranslatePage />)
+    await waitFor(() => expect(resolveRead).toBeTypeOf('function'))
+    expect(MockUseCacheUtils.getCacheValue('translate.input')).toBe('old source')
+    expect(MockUseCacheUtils.getCacheValue('translate.output')).toBe('old partial')
+    expect(ipcRequestMock).not.toHaveBeenCalledWith('ai.stream.abort', expect.anything())
+    await act(async () => resolveRead({ html: '', text: 'new source' }))
+    await waitFor(() => expect(streams).toHaveLength(2))
+    expect(ipcRequestMock).toHaveBeenCalledWith('ai.stream.abort', { topicId: streams[0] })
+    await act(async () => {
+      ipcEventHandlers.get('ai.stream.chunk')?.({ topicId: streams[0], chunk: { type: 'text-delta', delta: 'stale' } })
+      ipcEventHandlers.get('ai.stream.chunk')?.({
+        topicId: streams[1],
+        chunk: { type: 'text-delta', delta: 'new output' }
+      })
+      ipcEventHandlers.get('ai.stream.done')?.({ topicId: streams[1], status: 'success' })
+    })
+    await waitFor(() => expect(translationWorkspaceService.getSnapshot().status).toBe('success'))
+    expect(MockUseCacheUtils.getCacheValue('translate.input')).toBe('new source')
+    expect(MockUseCacheUtils.getCacheValue('translate.output')).toBe('new output')
+    expect(translateCoreMock.addHistory).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ sourceText: 'new source', targetText: 'new output' })
+    )
   })
 
   it('does not mutate an unknown target selector when manually reusing history', async () => {

@@ -157,7 +157,7 @@ export function useWorkspaceTranslate(options?: UseWorkspaceTranslateOptions): U
       const onResponse = optionsRef.current?.onResponse
       const guardedOnResponse = onResponse
         ? (chunkText: string, isComplete: boolean) => {
-            if (activeAbortKeyRef.current !== abortKey) return
+            if (controller.signal.aborted || activeAbortKeyRef.current !== abortKey) return
             onResponse(chunkText, isComplete)
           }
         : undefined
@@ -166,20 +166,20 @@ export function useWorkspaceTranslate(options?: UseWorkspaceTranslateOptions): U
             ...runOptions,
             ...(runOptions.onOutputTokens && {
               onOutputTokens: (outputTokens: number) => {
-                if (activeAbortKeyRef.current !== abortKey) return
+                if (controller.signal.aborted || activeAbortKeyRef.current !== abortKey) return
                 runOptions.onOutputTokens?.(outputTokens)
               }
             }),
             ...(runOptions.onTraceReady && {
               onTraceReady: (traceId: string) => {
-                if (activeAbortKeyRef.current !== abortKey) return
+                if (controller.signal.aborted || activeAbortKeyRef.current !== abortKey) return
                 runOptions.onTraceReady?.(traceId)
               }
             })
           }
         : undefined
 
-      const wasSuperseded = () => activeAbortKeyRef.current !== abortKey
+      const wasSuperseded = () => controller.signal.aborted || activeAbortKeyRef.current !== abortKey
       const finishIfActive = () => {
         finishTask?.()
         if (activeAbortKeyRef.current === abortKey) {
@@ -217,7 +217,7 @@ export function useWorkspaceTranslate(options?: UseWorkspaceTranslateOptions): U
         if (showErrorToast) {
           toast.error(formatErrorMessageWithPrefix(localizeTranslateError(error, t), t(errorPrefixI18nKey)))
         }
-        if (opts?.rethrowError) throw error
+        if (opts?.rethrowError) throw localizeTranslateError(error, t)
         return undefined
       } finally {
         externalSignal?.removeEventListener('abort', onExternalAbort)

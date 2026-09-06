@@ -1,6 +1,6 @@
 import { translationWorkspaceService } from '@renderer/services/translation'
 import { parseTranslateLangCode } from '@shared/data/preference/preferenceTypes'
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react'
 import { Activity, useState } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -52,6 +52,39 @@ afterEach(() => {
 })
 
 describe('useWorkspaceTranslate with a workspace owner inside Activity', () => {
+  it('discards callbacks and results cancelled directly by the workspace owner', async () => {
+    let resolve!: (value: string) => void
+    mocks.translateText.mockImplementation(
+      () =>
+        new Promise<string>((done) => {
+          resolve = done
+        })
+    )
+    const onResponse = vi.fn()
+    const onOutputTokens = vi.fn()
+    const onTraceReady = vi.fn()
+    const { result } = renderHook(() => useWorkspaceTranslate({ taskOwner: translationWorkspaceService, onResponse }))
+    let pending!: Promise<string | undefined>
+    act(() => {
+      pending = result.current.translate('source', parseTranslateLangCode('en-us'), { onOutputTokens, onTraceReady })
+    })
+
+    await act(async () => {
+      translationWorkspaceService.cancel()
+      const [, , response, , options] = mocks.translateText.mock.calls[0]
+      response('late partial', false)
+      options.onOutputTokens(100)
+      options.onTraceReady('late trace')
+      resolve('late completion')
+      expect(await pending).toBeUndefined()
+    })
+
+    expect(result.current.isTranslating).toBe(false)
+    expect(onResponse).not.toHaveBeenCalled()
+    expect(onOutputTokens).not.toHaveBeenCalled()
+    expect(onTraceReady).not.toHaveBeenCalled()
+  })
+
   it('continues while hidden and exposes the terminal result when visible again', async () => {
     let resolveTranslation!: (value: string) => void
     mocks.translateText.mockImplementation(

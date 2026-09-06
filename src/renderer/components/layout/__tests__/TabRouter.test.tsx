@@ -7,6 +7,7 @@ import { PageSidePanel } from '@cherrystudio/ui/components/composites/page-side-
 import { Combobox } from '@cherrystudio/ui/components/primitives/combobox'
 import { Dialog, DialogContent } from '@cherrystudio/ui/components/primitives/dialog'
 import type { Tab } from '@shared/data/cache/cacheValueTypes'
+import type * as ReactRouter from '@tanstack/react-router'
 import { createMemoryHistory, createRouter } from '@tanstack/react-router'
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import * as React from 'react'
@@ -249,6 +250,25 @@ describe('TabRouter PageSidePanel portal isolation', () => {
 })
 
 describe('TabRouter', () => {
+  it.each([
+    ['/app/chat?topicId=current-topic', '/app/chat', { topicId: 'current-topic' }, ''],
+    ['/app/translate?paste=1&_=nonce-1', '/app/translate', { paste: 1, _: 'nonce-1' }, ''],
+    ['/settings/appearance?focus=ui.theme_mode#preview', '/settings/appearance', { focus: 'ui.theme_mode' }, 'preview']
+  ])('preserves the destination of %s with the installed router', async (href, pathname, search, hash) => {
+    const real = await vi.importActual<typeof ReactRouter>('@tanstack/react-router')
+    const rootRoute = real.createRootRoute()
+    const routeTree = rootRoute.addChildren([
+      real.createRoute({ getParentRoute: () => rootRoute, path: '/', component: () => null }),
+      ...['/app/chat', '/app/translate', '/settings/appearance'].map((path) =>
+        real.createRoute({ getParentRoute: () => rootRoute, path, validateSearch: (value) => value })
+      )
+    ])
+    const router = real.createRouter({ routeTree, history: real.createMemoryHistory({ initialEntries: ['/'] }) })
+    await router.load()
+    await router.navigate({ href })
+    expect(router.state.location).toMatchObject({ pathname, search, hash })
+  })
+
   it('uses the tab entry URL as the initial history entry', () => {
     render(
       <TabRouter

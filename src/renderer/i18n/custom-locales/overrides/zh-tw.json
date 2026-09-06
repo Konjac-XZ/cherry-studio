@@ -61,7 +61,6 @@
   "settings.prompts.contentPlaceholder": "輸入提示詞內容。支援 ${variables}；按 Tab 可在變數間快速跳轉。例如：\n請幫我規劃從 ${from} 到 ${to} 的路線，並傳送至 ${email}。",
   "settings.provider.claude_code.description_detail": "此供應商會沿用 Claude Code CLI 的登入資訊（Claude Pro / Max），且僅供 Agent 使用。請開啟終端機並執行 `claude /login` 登入。",
   "settings.provider.codex.description_detail": "此供應商透過你的 ChatGPT Plus / Pro 登入 (OAuth) 存取 OpenAI Codex 模型。將開啟瀏覽器完成登入。",
-  "settings.provider.radeon_cloud.benefits.description": "每日 10 美元等值 API 額度，按目前費率約可使用 1,000 萬–1.11 億輸入 / 輸出 Token，實際用量依模型和 Token 類型而異。額度每日重設，目前暫不支援儲值。",
   "settings.proxy.tip": "支援模糊比對（*.test.com，192.168.0.0 / 16）",
   "settings.scheduledTasks.paginationStatus": "第 {{page}} 頁，共 {{pageCount}} 頁・{{total}} 個任務",
   "settings.usage.groupBy.source": "助理 / Agent",

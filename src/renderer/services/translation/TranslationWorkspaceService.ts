@@ -134,7 +134,7 @@ class TranslationWorkspaceService implements TranslationTaskOwner {
   }
 
   update(runId: number, patch: Partial<TranslationWorkspaceSnapshot>): void {
-    if (this.#snapshot.runId !== runId) return
+    if (this.#snapshot.runId !== runId || !isActiveStatus(this.#snapshot.status)) return
     this.#snapshot = { ...this.#snapshot, ...patch, revision: this.#snapshot.revision + 1, runId }
     this.#notify()
   }

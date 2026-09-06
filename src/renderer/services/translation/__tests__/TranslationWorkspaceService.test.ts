@@ -7,6 +7,24 @@ afterEach(() => {
 })
 
 describe('TranslationWorkspaceService', () => {
+  it.each(['cancelled', 'error', 'success'] as const)('keeps %s terminal despite late events', (status) => {
+    const runId = translationWorkspaceService.begin('pdf')
+    translationWorkspaceService.update(runId, { rawOutput: 'partial' })
+    if (status === 'cancelled') translationWorkspaceService.cancel()
+    else if (status === 'error') translationWorkspaceService.fail(runId, new Error('disconnected'))
+    else translationWorkspaceService.complete(runId)
+
+    translationWorkspaceService.update(runId, { status: 'running', progress: 90 })
+    translationWorkspaceService.complete(runId, { rawOutput: 'late result' })
+    translationWorkspaceService.fail(runId, new Error('late failure'))
+
+    expect(translationWorkspaceService.getSnapshot()).toMatchObject({ status, rawOutput: 'partial' })
+    expect(translationWorkspaceService.isBusy()).toBe(false)
+    translationWorkspaceService.clearTerminal()
+    translationWorkspaceService.update(runId, { status: 'running' })
+    expect(translationWorkspaceService.getSnapshot().status).toBe('idle')
+  })
+
   it('creates a fresh text-run trace topic and accepts trace identity only for the current run', () => {
     const oldRunId = translationWorkspaceService.begin('text')
     const oldTopicId = translationWorkspaceService.getSnapshot().traceTopicId

@@ -25,6 +25,8 @@ interface ModelSelectorCommonProps {
   showPinnedModels?: boolean
   showPinActions?: boolean
   fixedTopOption?: ModelSelectorFixedTopOption
+  isModelDisabled?: ModelSelectorFilter
+  includeAgentOnlyModels?: boolean
   prioritizedProviderIds?: readonly string[]
   side?: ModelSelectorSide
   align?: ModelSelectorAlign
@@ -104,6 +106,7 @@ export type FlatListItem = ModelSelectorGroupItem | ModelSelectorModelItem
 
 export interface UseModelSelectorDataOptions {
   enabled?: boolean
+  includeAgentOnlyModels?: boolean
   selectedModelIds?: readonly UniqueModelId[]
   maxSelectedCount?: number
   searchText: string

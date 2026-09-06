@@ -68,7 +68,7 @@ import {
   resolveServiceTierWireValue
 } from '../../../utils/options'
 import { getCustomParameters } from '../../../utils/reasoning'
-import { resolveReasoningInvocation } from '../../../utils/reasoningSerializers'
+import { normalizeRequestedSelection, resolveReasoningInvocation } from '../../../utils/reasoningSerializers'
 import { createToolCallLimitStopCondition } from '../loop/toolLoopTermination'
 import type { AgentLoopHooks, AgentOptions } from '../loop/types'
 import { assembleSystemPrompt } from './assembleSystemPrompt'
@@ -231,10 +231,7 @@ export async function buildAgentParams(input: BuildAgentParamsInput): Promise<Bu
     endpointType
   )
   const requestedReasoningSelection = request.reasoningEffort ?? assistant?.settings.reasoning_effort ?? 'default'
-  const reasoningSelection =
-    requestedReasoningSelection === 'auto' && !invocationModel.reasoning?.selectableEfforts.includes('auto')
-      ? 'default'
-      : requestedReasoningSelection
+  const reasoningSelection = normalizeRequestedSelection(requestedReasoningSelection, invocationModel)
   const reasoning = resolveReasoningInvocation({
     selection: reasoningSelection,
     model: invocationModel,
@@ -623,8 +620,8 @@ function buildAgentOptions(
   // the standard set below so their sampling switches remain authoritative.
   let standardParams: Partial<Record<string, unknown>> = assistant ? {} : { ...customParameters.standardParams }
   if (assistant) {
-    const temperature = getTemperature(assistant, model, reasoning)
-    const topP = getTopP(assistant, model, reasoning)
+    const temperature = getTemperature(assistant.settings, model, reasoning)
+    const topP = getTopP(assistant.settings, model, reasoning)
     standardParams = {
       ...(temperature !== undefined && { temperature }),
       ...(topP !== undefined && { topP }),

@@ -33,6 +33,7 @@ type TranslationHistoryPort = Pick<
 export type TranslationRunOverride = {
   isBidirectional?: boolean
   replaceActive?: boolean
+  updateSource?: boolean
   sourcePreprocessed?: boolean
   sourceLanguage?: TranslateLangCode | 'auto'
   targetLanguage?: TranslateLangCode
@@ -133,7 +134,8 @@ export const useTranslationFlowRunner = ({
       if (
         !effectiveSourceText.trim() ||
         !selectedModelAvailable ||
-        (!replacingActive && (flowStage !== 'idle' || isDetecting || isTranslating))
+        (!replacingActive &&
+          (translationWorkspaceService.isBusy() || flowStage !== 'idle' || isDetecting || isTranslating))
       )
         return
 
@@ -141,14 +143,8 @@ export const useTranslationFlowRunner = ({
       const effectiveSourceLanguage = runOverride.sourceLanguage ?? sourceLanguage
       const effectiveTargetLanguage = runOverride.targetLanguage ?? targetLanguage
       const effectiveBidirectional = runOverride.isBidirectional ?? isBidirectional
-      const processedSourceText = runOverride.sourcePreprocessed
-        ? effectiveSourceText
-        : preprocessTranslation(effectiveSourceText)
-      if (processedSourceText !== effectiveSourceText) {
-        setSourceText(processedSourceText)
-      }
       const workspaceRunId = translationWorkspaceService.begin('text', {
-        sourceText: processedSourceText,
+        sourceText: effectiveSourceText,
         targetLanguage: effectiveTargetLanguage
       })
       const traceTopicId = translationWorkspaceService.getSnapshot().traceTopicId
@@ -166,9 +162,21 @@ export const useTranslationFlowRunner = ({
       }
       activeModeRef.current = effectiveMode
       const { signal } = controller
-      const isCurrent = () => activeFlowRef.current === flowId
+      const isCurrent = () =>
+        activeFlowRef.current === flowId && translationWorkspaceService.getSnapshot().runId === workspaceRunId
 
       try {
+        const processedSourceText = runOverride.sourcePreprocessed
+          ? effectiveSourceText
+          : preprocessTranslation(effectiveSourceText)
+        if (runOverride.updateSource || processedSourceText !== effectiveSourceText) setSourceText(processedSourceText)
+        if (!processedSourceText.trim()) throw new Error(t('translate.error.empty'))
+        if (runOverride.updateSource) {
+          setRawOutput('')
+          setDetectedLanguage(null)
+          smoothReset('')
+        }
+        translationWorkspaceService.update(workspaceRunId, { sourceText: processedSourceText })
         if (effectiveSourceLanguage !== 'auto' && sourceLanguage !== 'auto') {
           setDetectedLanguage(null)
         }
@@ -304,9 +312,14 @@ export const useTranslationFlowRunner = ({
                   break
                 case 'translation_started':
                   setFlowStage('translating')
+                  setRawOutput('')
                   setReportedOutputTokens(undefined)
                   smoothReset('')
-                  translationWorkspaceService.update(workspaceRunId, { stage: 'translating', status: 'running' })
+                  translationWorkspaceService.update(workspaceRunId, {
+                    rawOutput: '',
+                    stage: 'translating',
+                    status: 'running'
+                  })
                   break
                 case 'display_ready':
                   setFlowStage('processing')
@@ -322,7 +335,11 @@ export const useTranslationFlowRunner = ({
             signal
           }
         )
-        if (!isCurrent() || !result) return
+        if (!isCurrent()) return
+        if (!result) {
+          translationWorkspaceService.update(workspaceRunId, { status: 'cancelled', stage: 'idle' })
+          return
+        }
 
         setRawOutput(result.rawText)
         setOutputTargetLanguage(prepared.value.targetLanguage)

@@ -116,7 +116,6 @@
   "settings.provider.claude_code.description_detail": "该提供商复用 Claude Code CLI 的登录信息（Claude Pro / Max），仅供 Agent 使用。请打开终端运行 `claude /login` 完成登录。",
   "settings.provider.codex.description_detail": "该提供商通过你的 ChatGPT Plus / Pro 登录 (OAuth) 访问 OpenAI Codex 模型。将打开浏览器完成登录。",
   "settings.provider.codex.sign_in_failed": "登录失败, 请重试。",
-  "settings.provider.radeon_cloud.benefits.description": "每日 10 美元等值 API 额度，按当前费率约可使用 1000 万–1.11 亿输入 / 输出 Token，实际用量因模型和 Token 类型而异。额度每日重置，暂不支持充值。",
   "settings.proxy.tip": "支持模糊匹配 (*.test.com,192.168.0.0 / 16)",
   "settings.scheduledTasks.paginationStatus": "第 {{page}} / {{pageCount}} 页・共 {{total}} 个任务",
   "settings.tool.websearch.blacklist_tooltip": "请使用以下格式 (换行分隔)\n匹配模式: *://*.example.com/*\n正则表达式: /example\\.(net|org)/",

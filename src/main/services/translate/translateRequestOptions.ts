@@ -1,5 +1,40 @@
+import { getTemperature, getTopP } from '@main/ai/utils/modelParameters'
+import { normalizeRequestedSelection, resolveSelection } from '@main/ai/utils/reasoningSerializers'
 import type { TranslateCustomParameters, TranslateLangCode } from '@shared/data/preference/preferenceTypes'
+import type { Model } from '@shared/data/types/model'
+import type { ReasoningEffortOption } from '@shared/types/aiSdk'
+import * as z from 'zod'
+
 export { hasTranslateReasoningOverride } from '@shared/utils/translateRequestOptions'
+
+export function gateTranslateSamplingParameters(
+  parameters: Record<string, unknown>,
+  model: Model,
+  effort: ReasoningEffortOption
+): Record<string, unknown> {
+  const { temperature, topP, top_p, ...rest } = parameters
+  const settings = {
+    temperature: z.number().min(0).max(2).optional().parse(temperature) ?? 1,
+    enableTemperature: temperature !== undefined,
+    topP:
+      z
+        .number()
+        .min(0)
+        .max(1)
+        .optional()
+        .parse(topP ?? top_p) ?? 1,
+    enableTopP: topP !== undefined || top_p !== undefined
+  }
+  const selection = resolveSelection(normalizeRequestedSelection(effort, model), model)
+  const kind = selection === undefined || selection === 'default' ? 'omit' : selection === 'none' ? 'off' : 'effort'
+  const gatedTemperature = getTemperature(settings, model, { kind })
+  const gatedTopP = getTopP(settings, model, { kind })
+  return {
+    ...rest,
+    ...(gatedTemperature !== undefined && { temperature: gatedTemperature }),
+    ...(gatedTopP !== undefined && { topP: gatedTopP })
+  }
+}
 
 /**
  * Convert the persisted parameter editor shape into the request dictionary
@@ -35,11 +70,6 @@ export function translateCustomParametersToRecord(parameters: TranslateCustomPar
   }, {})
 }
 
-/**
- * A persisted model-specific reasoning parameter must win over the generic
- * auto-disable switch. The broad body/container names are intentional: their
- * nested contents may carry a provider's reasoning dialect.
- */
 /** Chinese script variants are one native-language family for direction-model selection. */
 export function isSameTranslateLanguageFamily(
   left: TranslateLangCode | null | undefined,

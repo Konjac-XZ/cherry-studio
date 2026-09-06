@@ -16,9 +16,10 @@ import { useTranslation } from 'react-i18next'
 
 import { modelListClasses } from '../primitives/ProviderSettingsPrimitives'
 import { getModelOperationErrorMessage } from './errorMessage'
+import { useModelHealthStatus } from './modelHealthStatusCache'
 import { applyModelListLayoutDrag } from './modelLayout'
 import ModelListGroup from './ModelListGroup'
-import { useModelListHealthResults, useModelListHealthRun } from './modelListHealthContext'
+import { useModelListHealthRun } from './modelListHealthContext'
 import ModelListItem from './ModelListItem'
 import type { ModelListGroupItem, ModelListGroupSection } from './useProviderModelList'
 
@@ -26,6 +27,13 @@ const logger = loggerService.withContext('ModelListSections')
 const MODEL_LIST_GROUP_ROW_ESTIMATE = 38
 const MODEL_LIST_MODEL_ROW_ESTIMATE = 44
 const MODEL_LIST_GROUP_SEPARATOR_HEIGHT = 10
+
+type HealthAwareModelListItemProps = Omit<React.ComponentProps<typeof ModelListItem>, 'modelStatus'>
+
+const HealthAwareModelListItem: React.FC<HealthAwareModelListItemProps> = (props) => {
+  const modelStatus = useModelHealthStatus(props.model.id)
+  return <ModelListItem {...props} modelStatus={modelStatus} />
+}
 
 interface ModelListSectionsProps {
   provider?: Provider
@@ -71,7 +79,6 @@ const ModelListSections: React.FC<ModelListSectionsProps> = ({
   onContinueApiSetup
 }) => {
   const { t } = useTranslation()
-  const { modelStatusMap } = useModelListHealthResults()
   const { apiKeyEntries, savingKeyId, toggleApiKey } = useModelListHealthRun()
   const [groupOpenOverrides, setGroupOpenOverrides] = useState<Record<string, boolean>>({})
   const [renameTarget, setRenameTarget] = useState<string | null>(null)
@@ -227,10 +234,9 @@ const ModelListSections: React.FC<ModelListSectionsProps> = ({
               modelListClasses.virtualModelRow,
               itemIndexInGroup === section.items.length - 1 && modelListClasses.virtualModelRowLast
             )}>
-            <ModelListItem
+            <HealthAwareModelListItem
               provider={provider}
               model={model}
-              modelStatus={modelStatusMap.get(model.id)}
               apiKeyEntries={apiKeyEntries}
               savingKeyId={savingKeyId}
               onToggleApiKey={toggleApiKey}

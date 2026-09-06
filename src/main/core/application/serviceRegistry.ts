@@ -8,6 +8,7 @@ import { AgentSessionRuntimeService } from '@main/ai/agentSession/AgentSessionRu
 import { AiService } from '@main/ai/AiService'
 import { ChannelManager } from '@main/ai/channels'
 import { EmbeddingInferenceService } from '@main/ai/localModel'
+import { LocalModelService } from '@main/ai/localModel'
 import { OcrInferenceService } from '@main/ai/localModel'
 import { McpCatalogService } from '@main/ai/mcp/McpCatalogService'
 import { McpPackageService } from '@main/ai/mcp/McpPackageService'
@@ -35,6 +36,7 @@ import { AppService } from '@main/services/AppService'
 import { AppUpdaterService } from '@main/services/AppUpdaterService'
 import { AutoBackupService } from '@main/services/AutoBackupService'
 import { BinaryManager } from '@main/services/binaryManager'
+import { CherryCloudService } from '@main/services/cherryCloud/CherryCloudService'
 import { CitationPreviewService } from '@main/services/CitationPreviewService'
 import { ClipboardWatchService } from '@main/services/ClipboardWatchService'
 import { CodeCliService } from '@main/services/codeCli'
@@ -108,6 +110,7 @@ export const services = {
   ConversationNavigationService,
   CitationPreviewService,
   ClipboardWatchService,
+  CherryCloudService,
   DeepSeekHarnessService,
   HermesDashboardService,
   LanTransferService,
@@ -152,6 +155,7 @@ export const services = {
   AiStreamManager,
   EmbeddingInferenceService,
   OcrInferenceService,
+  LocalModelService,
   KnowledgeService,
   KnowledgeVectorStoreService,
   MiniAppRuntimeService,

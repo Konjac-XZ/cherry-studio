@@ -216,6 +216,8 @@ const TranslatePageContent: FC = () => {
     cancel
   } = useWorkspaceTranslate({
     loggerContext: 'TranslatePage',
+    rethrowError: true,
+    showErrorToast: false,
     onResponse: (value, isComplete) => {
       const snapshot = translationWorkspaceService.getSnapshot()
       translationWorkspaceService.update(snapshot.runId, {
@@ -616,20 +618,8 @@ const TranslatePageContent: FC = () => {
     abortTextTranslation()
   }, [abortTextTranslation, pdfStatus.running, pdfTextFallbackActive, t])
 
-  const prepareShortcutInput = useCallback(
-    (text: string) => {
-      setTranslateInput(text)
-      setRawOutput('')
-      setTranslateOutput('')
-      setDetectedLanguage(null)
-    },
-    [setTranslateInput, setTranslateOutput]
-  )
-
   useTranslateAutoPasteTrigger({
-    busy: isFlowBusy || isProcessing || isOcrRunning,
     notReadyReason: modelsLoading ? 'models-loading' : 'model-unavailable',
-    prepareInput: prepareShortcutInput,
     readClipboardForTranslate,
     ready: !modelsLoading && selectedModelId !== undefined,
     trigger: onPrimaryTranslate
@@ -668,23 +658,25 @@ const TranslatePageContent: FC = () => {
     readClipboardForTranslate,
     readClipboardPlainTextForWatch,
     onText: async (text) => {
-      setTranslateInput(text)
-      setRawOutput('')
-      setTranslateOutput('')
-      setDetectedLanguage(null)
-      await onPrimaryTranslate(undefined, text, { sourcePreprocessed: true })
+      if (translationWorkspaceService.isBusy()) return false
+      await onPrimaryTranslate(undefined, text, { sourcePreprocessed: true, updateSource: true })
+      return true
     }
   })
 
   const onHistoryItemClick = useCallback(
     (history: TranslateHistory, files?: TranslationFiles) => {
       const historyTarget = history.targetLanguage ?? targetLanguage
+      if (history.kind === 'file' && (!files?.source?.path || !files.target?.path)) {
+        toast.error(t('translate.history.file.unavailable'))
+        return
+      }
+      const restoredText = history.kind === 'text' ? processTranslation(history.targetText, historyTarget) : ''
+      abortTextTranslationSilently()
+      setOcrJobId(null)
+      smoothReset('')
 
-      if (history.kind === 'file') {
-        if (!files?.source?.path || !files.target?.path) {
-          toast.error(t('translate.history.file.unavailable'))
-          return
-        }
+      if (history.kind === 'file' && files?.source?.path && files.target?.path) {
         resetPdfMode()
         setRestoredPdf({ output: { outputPath: files.target.path, fileName: history.targetText }, key: history.id })
         setPdfFile({ name: history.sourceText, path: files.source.path })
@@ -694,23 +686,19 @@ const TranslatePageContent: FC = () => {
         setRawOutput(history.targetText)
         setReportedOutputTokens(undefined)
         setOutputTargetLanguage(historyTarget)
-        setTranslateOutput(processTranslation(history.targetText, historyTarget))
+        smoothReset(restoredText)
       }
 
-      void safePersist(setSourceLanguage(history.sourceLanguage ?? 'auto'), 'translate source language')
-      void safePersist(setTargetLanguage(historyTarget), 'translate target language')
       setDetectedLanguage(null)
       setHistoryOpen(false)
     },
     [
+      abortTextTranslationSilently,
       processTranslation,
       resetPdfMode,
-      safePersist,
       setReportedOutputTokens,
-      setSourceLanguage,
-      setTargetLanguage,
       setTranslateInput,
-      setTranslateOutput,
+      smoothReset,
       t,
       targetLanguage
     ]
@@ -739,6 +727,8 @@ const TranslatePageContent: FC = () => {
       setFlowStage('idle')
       setIsDetecting(false)
     } else if (workspaceSnapshot.status === 'cancelled' || workspaceSnapshot.status === 'error') {
+      setRawOutput(workspaceSnapshot.rawOutput)
+      smoothReset(workspaceSnapshot.rawOutput)
       setFlowStage('idle')
       setIsDetecting(false)
     }
