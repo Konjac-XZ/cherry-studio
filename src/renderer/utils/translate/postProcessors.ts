@@ -57,6 +57,18 @@ export type RegexReplacementRule = {
   enabled?: boolean
 }
 
+export type RegexReplacementIssue = {
+  ruleId: string
+  ruleIndex: number
+  field: 'flags' | 'pattern' | 'replacement'
+  message: string
+}
+
+export type RegexReplacementEvaluation = {
+  text: string
+  issues: RegexReplacementIssue[]
+}
+
 export type TranslationPostProcessorFeatures = {
   enMarkdownStraightQuotes: boolean
   zhCnMarkdownSmartQuotes: boolean
@@ -166,20 +178,46 @@ export function applyRegexReplacementRulesThrough(
   rules: RegexReplacementRule[],
   ruleCount: number
 ): string {
-  return rules
-    .slice(0, Math.max(0, ruleCount))
-    .filter(isRuleEnabled)
-    .reduce((current, rule) => {
-      try {
-        const regex = new RegExp(rule.pattern, rule.flags)
-        return current.replace(regex, decodeRegexReplacement(rule.replacement))
-      } catch {
-        return current
-      }
-    }, text)
+  return evaluateRegexReplacementRulesThrough(text, rules, ruleCount).text
 }
 
-function decodeRegexReplacement(replacement: string): string {
+export function evaluateRegexReplacementRulesThrough(
+  text: string,
+  rules: RegexReplacementRule[],
+  ruleCount: number
+): RegexReplacementEvaluation {
+  const issues: RegexReplacementIssue[] = []
+  let current = text
+
+  for (const [ruleIndex, rule] of rules.slice(0, Math.max(0, ruleCount)).entries()) {
+    if (!isRuleEnabled(rule)) continue
+
+    try {
+      RegExp('', rule.flags)
+    } catch (error) {
+      issues.push({ ruleId: rule.id, ruleIndex, field: 'flags', message: getErrorMessage(error) })
+      continue
+    }
+
+    let regex: RegExp
+    try {
+      regex = new RegExp(rule.pattern, rule.flags)
+    } catch (error) {
+      issues.push({ ruleId: rule.id, ruleIndex, field: 'pattern', message: getErrorMessage(error) })
+      continue
+    }
+
+    try {
+      current = current.replace(regex, parseRegex101Replacement(rule.replacement))
+    } catch (error) {
+      issues.push({ ruleId: rule.id, ruleIndex, field: 'replacement', message: getErrorMessage(error) })
+    }
+  }
+
+  return { text: current, issues }
+}
+
+function parseRegex101Replacement(replacement: string): string {
   let decoded = ''
 
   for (let index = 0; index < replacement.length; index += 1) {
@@ -210,6 +248,10 @@ function decodeRegexReplacement(replacement: string): string {
   }
 
   return decoded
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
 }
 
 function isRuleEnabled(rule: RegexReplacementRule): boolean {

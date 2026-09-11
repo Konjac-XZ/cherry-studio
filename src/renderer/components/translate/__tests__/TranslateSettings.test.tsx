@@ -4,6 +4,7 @@ import { parsePersistedLangCode } from '@shared/data/preference/preferenceTypes'
 import type { TranslateLanguage } from '@shared/data/types/translate'
 import { mockUsePreference, MockUsePreferenceUtils } from '@test-mocks/renderer/usePreference'
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import type React from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -28,7 +29,11 @@ vi.mock('react-i18next', () => ({
     type: '3rdParty',
     init: vi.fn()
   },
-  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en-us' } })
+  useTranslation: () => ({
+    t: (key: string, options?: { index?: number }) =>
+      key === 'translate.settings.regex_rules.preview_issue_rule' ? `${key} ${options?.index}` : key,
+    i18n: { language: 'en-us' }
+  })
 }))
 
 vi.mock('@renderer/hooks/translate', () => ({
@@ -184,6 +189,16 @@ vi.mock('@renderer/components/translate/IconButton', () => ({
 }))
 
 vi.mock('@cherrystudio/ui', () => ({
+  Alert: ({ children, ...props }: React.ComponentProps<'div'> & { type?: string; showIcon?: boolean }) => {
+    const { type, showIcon, ...divProps } = props
+    void type
+    void showIcon
+    return (
+      <div role="alert" {...divProps}>
+        {children}
+      </div>
+    )
+  },
   Button: ({ children, ...props }: React.ComponentProps<'button'>) => (
     <button type="button" {...props}>
       {children}
@@ -595,6 +610,47 @@ describe('TranslateSettings', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'common.back' }))
     expect(screen.getByRole('heading', { name: 'settings.moresetting.label' })).toBeInTheDocument()
+  })
+
+  it('shows skipped regex rule errors while later valid rules still affect the preview', async () => {
+    const user = userEvent.setup()
+    MockUsePreferenceUtils.setPreferenceValue('feature.translate.post_processing.regex_rules', [
+      { id: 'flags', pattern: 'foo', replacement: 'x', flags: 'z', enabled: true, stage: 'before' },
+      { id: 'pattern', pattern: '[', replacement: 'x', flags: 'g', enabled: true, stage: 'before' },
+      { id: 'replacement', pattern: 'foo', replacement: String.raw`\xZ`, flags: 'g', enabled: true, stage: 'before' },
+      { id: 'disabled', pattern: '[', replacement: 'x', flags: 'z', enabled: false, stage: 'before' },
+      { id: 'valid', pattern: 'foo', replacement: 'bar', flags: 'g', enabled: true, stage: 'before' }
+    ])
+    render(<TranslateSettings visible onClose={vi.fn()} />)
+    await user.click(screen.getByRole('button', { name: 'settings.moresetting.label' }))
+    await user.click(
+      within(screen.getByRole('group', { name: 'translate.settings.regex_rules.before_translation' })).getByRole(
+        'button',
+        { name: 'common.preview' }
+      )
+    )
+
+    const sourceUpdateListener = mergeViewTestState.configs[0].a.extensions
+      .flat()
+      .find((extension: any) => extension?.kind === 'updateListener')?.value
+    void act(() => sourceUpdateListener({ docChanged: true, state: { doc: { toString: () => 'foo' } } }))
+
+    const alert = await screen.findByRole('alert')
+    expect(within(alert).getByText('translate.settings.regex_rules.preview_issues')).toBeInTheDocument()
+    expect(within(alert).getByText('translate.settings.regex_rules.preview_issue_rule 1')).toBeInTheDocument()
+    expect(within(alert).getByText('translate.settings.regex_rules.preview_issue_rule 2')).toBeInTheDocument()
+    expect(within(alert).getByText('translate.settings.regex_rules.preview_issue_rule 3')).toBeInTheDocument()
+    expect(within(alert).queryByText('translate.settings.regex_rules.preview_issue_rule 4')).toBeNull()
+    expect(within(alert).getByText('translate.settings.regex_rules.preview_issue_field.flags')).toBeInTheDocument()
+    expect(within(alert).getByText('translate.settings.regex_rules.preview_issue_field.pattern')).toBeInTheDocument()
+    expect(
+      within(alert).getByText('translate.settings.regex_rules.preview_issue_field.replacement')
+    ).toBeInTheDocument()
+    expect(alert).toHaveTextContent(/Invalid|invalid/)
+    expect(screen.getByRole('textbox', { name: 'translate.settings.regex_rules.preview_diff' })).toHaveValue('bar')
+
+    await user.click(screen.getByRole('button', { name: /translate\.settings\.regex_rules\.preview_source/ }))
+    expect(screen.queryByRole('alert')).toBeNull()
   })
 
   it('selects follow-global or a direction model from the same model menu', async () => {

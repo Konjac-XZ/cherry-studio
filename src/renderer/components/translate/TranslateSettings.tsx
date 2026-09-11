@@ -1,4 +1,5 @@
 import {
+  Alert,
   Button,
   ConfirmDialog,
   Dialog,
@@ -38,7 +39,7 @@ import { useProviders } from '@renderer/hooks/useProvider'
 import { toast } from '@renderer/services/toast'
 import { cn } from '@renderer/utils/style'
 import {
-  applyRegexReplacementRulesThrough,
+  evaluateRegexReplacementRulesThrough,
   normalizeEditedTranslateFontSize,
   normalizePersistedTranslateFontSize,
   UNKNOWN_LANG_CODE
@@ -935,8 +936,8 @@ const RegexRulesPreview: FC<{ stage: RegexStage }> = ({ stage }) => {
     setRuleCount((current) => Math.min(current, stageRules.length))
   }, [stageRules.length])
 
-  const result = useMemo(
-    () => applyRegexReplacementRulesThrough(source, stageRules, ruleCount),
+  const evaluation = useMemo(
+    () => evaluateRegexReplacementRulesThrough(source, stageRules, ruleCount),
     [ruleCount, source, stageRules]
   )
 
@@ -994,18 +995,42 @@ const RegexRulesPreview: FC<{ stage: RegexStage }> = ({ stage }) => {
         </div>
       </div>
 
-      <RegexMergeDiff
-        source={source}
-        result={result}
-        sourceLabel={t('translate.settings.regex_rules.preview_source')}
-        sourcePlaceholder={t('translate.settings.regex_rules.preview_source_placeholder')}
-        resultLabel={t('translate.settings.regex_rules.preview_diff')}
-        resultPlaceholder={t('translate.settings.regex_rules.preview_result_placeholder')}
-        onSourceChange={setSource}
-      />
+      <div className="flex min-h-0 min-w-0 flex-col gap-3">
+        {evaluation.issues.length > 0 && (
+          <Alert type="error" showIcon className="shrink-0">
+            <div className="font-medium">{t('translate.settings.regex_rules.preview_issues')}</div>
+            <ul className="mt-1 list-disc space-y-0.5 pl-4 text-xs">
+              {evaluation.issues.map((issue) => (
+                <li key={`${issue.ruleId}:${issue.ruleIndex}:${issue.field}`}>
+                  <span>{t('translate.settings.regex_rules.preview_issue_rule', { index: issue.ruleIndex + 1 })}</span>
+                  {' · '}
+                  <span>{t(REGEX_REPLACEMENT_ISSUE_FIELD_KEYS[issue.field])}</span>
+                  {': '}
+                  <span className="font-mono">{issue.message}</span>
+                </li>
+              ))}
+            </ul>
+          </Alert>
+        )}
+        <RegexMergeDiff
+          source={source}
+          result={evaluation.text}
+          sourceLabel={t('translate.settings.regex_rules.preview_source')}
+          sourcePlaceholder={t('translate.settings.regex_rules.preview_source_placeholder')}
+          resultLabel={t('translate.settings.regex_rules.preview_diff')}
+          resultPlaceholder={t('translate.settings.regex_rules.preview_result_placeholder')}
+          onSourceChange={setSource}
+        />
+      </div>
     </div>
   )
 }
+
+const REGEX_REPLACEMENT_ISSUE_FIELD_KEYS = {
+  flags: 'translate.settings.regex_rules.preview_issue_field.flags',
+  pattern: 'translate.settings.regex_rules.preview_issue_field.pattern',
+  replacement: 'translate.settings.regex_rules.preview_issue_field.replacement'
+} as const
 
 const RegexMergeDiff: FC<{
   source: string
