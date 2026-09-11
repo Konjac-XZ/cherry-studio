@@ -44,4 +44,13 @@ describe('useTranslateBusyLabel', () => {
     rerender({ status: null })
     expect(result.current).toBeNull()
   })
+
+  it('includes time elapsed before the hook mounts when given a workspace start time', () => {
+    const startedAt = Date.now()
+    vi.advanceTimersByTime(1200)
+
+    const { result } = renderHook(() => useTranslateBusyLabel('processing', startedAt))
+
+    expect(result.current).toBe('translate.processing 1.2s')
+  })
 })

@@ -1,9 +1,13 @@
 import { loggerService } from '@logger'
-import type { useTimer } from '@renderer/hooks/useTimer'
 import type { useWorkspaceTranslateHistory } from '@renderer/pages/translate/custom/hooks/useWorkspaceTranslateHistory'
 import { toast } from '@renderer/services/toast'
-import { executePreparedTranslation, prepareTranslation, type TranslationMode } from '@renderer/services/translation'
-import { translationWorkspaceService } from '@renderer/services/translation'
+import {
+  executePreparedTranslation,
+  prepareTranslation,
+  translationWorkspaceService,
+  type TranslationMode,
+  type TranslationWorkspacePdfContext
+} from '@renderer/services/translation'
 import { formatErrorMessageWithPrefix } from '@renderer/utils/error'
 import { determineTargetLanguage, getTranslateModifierLabel, resolveTranslatePlan } from '@renderer/utils/translate'
 import type { TranslateLangCode } from '@shared/data/preference/preferenceTypes'
@@ -37,6 +41,7 @@ export type TranslationRunOverride = {
   sourcePreprocessed?: boolean
   sourceLanguage?: TranslateLangCode | 'auto'
   targetLanguage?: TranslateLangCode
+  pdfContext?: TranslationWorkspacePdfContext
 }
 
 type UseTranslationFlowRunnerParams = {
@@ -64,9 +69,6 @@ type UseTranslationFlowRunnerParams = {
   setRawOutput: Dispatch<SetStateAction<string>>
   setSourceText: (value: string) => void
   setTranslateOutput: (value: string) => void
-  setTimeoutTimer: ReturnType<typeof useTimer>['setTimeoutTimer']
-  smoothComplete: (value: string) => Promise<void>
-  smoothReset: (value?: string) => void
   sourceLanguage: TranslateLangCode | 'auto'
   sourceText: string
   t: TFunction
@@ -98,9 +100,6 @@ export const useTranslationFlowRunner = ({
   setRawOutput,
   setSourceText,
   setTranslateOutput,
-  setTimeoutTimer,
-  smoothComplete,
-  smoothReset,
   sourceLanguage,
   sourceText,
   t,
@@ -144,6 +143,7 @@ export const useTranslationFlowRunner = ({
       const effectiveTargetLanguage = runOverride.targetLanguage ?? targetLanguage
       const effectiveBidirectional = runOverride.isBidirectional ?? isBidirectional
       const workspaceRunId = translationWorkspaceService.begin('text', {
+        pdfContext: runOverride.pdfContext,
         sourceText: effectiveSourceText,
         targetLanguage: effectiveTargetLanguage
       })
@@ -174,7 +174,6 @@ export const useTranslationFlowRunner = ({
         if (runOverride.updateSource) {
           setRawOutput('')
           setDetectedLanguage(null)
-          smoothReset('')
         }
         translationWorkspaceService.update(workspaceRunId, { sourceText: processedSourceText })
         if (effectiveSourceLanguage !== 'auto' && sourceLanguage !== 'auto') {
@@ -296,7 +295,12 @@ export const useTranslationFlowRunner = ({
                       ? translationWorkspaceService.getSnapshot().traceId
                       : undefined,
                   onTraceReady: (traceId) => translationWorkspaceService.update(workspaceRunId, { traceId }),
-                  ...(operation === 'translate' && { onOutputTokens: setReportedOutputTokens })
+                  ...(operation === 'translate' && {
+                    onOutputTokens: (outputTokens: number) => {
+                      setReportedOutputTokens(outputTokens)
+                      translationWorkspaceService.update(workspaceRunId, { outputTokens })
+                    }
+                  })
                 },
                 executionSignal
               )
@@ -307,14 +311,12 @@ export const useTranslationFlowRunner = ({
               switch (progress.stage) {
                 case 'polishing_started':
                   setFlowStage('polishing')
-                  smoothReset('')
                   translationWorkspaceService.update(workspaceRunId, { stage: 'polishing', status: 'running' })
                   break
                 case 'translation_started':
                   setFlowStage('translating')
                   setRawOutput('')
                   setReportedOutputTokens(undefined)
-                  smoothReset('')
                   translationWorkspaceService.update(workspaceRunId, {
                     rawOutput: '',
                     stage: 'translating',
@@ -355,21 +357,14 @@ export const useTranslationFlowRunner = ({
         })
         finishWorkspace()
         if (autoCopy) {
-          setTimeoutTimer(
-            'auto-copy',
-            async () => {
-              if (!isCurrent()) return
-              try {
-                await copy(result.displayText)
-              } catch (error) {
-                logger.error('Failed to auto copy translated text', error as Error)
-                toast.error(t('translate.error.auto_copy_failed'))
-              }
-            },
-            100
-          )
+          if (!isCurrent()) return
+          try {
+            await copy(result.displayText)
+          } catch (error) {
+            logger.error('Failed to auto copy translated text', error as Error)
+            toast.error(t('translate.error.auto_copy_failed'))
+          }
         }
-        await smoothComplete(result.displayText)
         if (!isCurrent()) return
         toast.success(t('translate.complete'))
 
@@ -417,10 +412,7 @@ export const useTranslationFlowRunner = ({
       setReportedOutputTokens,
       setRawOutput,
       setSourceText,
-      setTimeoutTimer,
       showCached,
-      smoothComplete,
-      smoothReset,
       sourceLanguage,
       sourceText,
       t,

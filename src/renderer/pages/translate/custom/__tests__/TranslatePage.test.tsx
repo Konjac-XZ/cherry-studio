@@ -57,7 +57,6 @@ const translateCoreMock = vi.hoisted(() => ({
   findCached: vi.fn(),
   resolveTranslatePlan: vi.fn(),
   detectLanguage: vi.fn(),
-  setTimeoutTimer: vi.fn(),
   translateText: vi.fn(),
   isAbortError: vi.fn(),
   formatErrorMessageWithPrefix: vi.fn((_: unknown, prefix: string) => prefix)
@@ -225,10 +224,6 @@ vi.mock('@renderer/hooks/useModel', () => ({
 
 vi.mock('@renderer/hooks/useTemporaryValue', () => ({
   useTemporaryValue: () => [false, vi.fn()]
-}))
-
-vi.mock('@renderer/hooks/useTimer', () => ({
-  useTimer: () => ({ setTimeoutTimer: translateCoreMock.setTimeoutTimer })
 }))
 
 vi.mock('@renderer/hooks/useSmoothStream', () => ({
@@ -588,7 +583,6 @@ describe('TranslatePage', () => {
     translateCoreMock.addHistory.mockResolvedValue(undefined)
     translateCoreMock.detectLanguage.mockReset()
     translateCoreMock.detectLanguage.mockResolvedValue('en-us')
-    translateCoreMock.setTimeoutTimer.mockReset()
     translateCoreMock.findCached.mockReset()
     translateCoreMock.findCached.mockResolvedValue(undefined)
     translateCoreMock.findBySourceText.mockReset()
@@ -745,10 +739,10 @@ describe('TranslatePage', () => {
     expect(screen.getByLabelText('translate.input.placeholder')).toHaveValue('typed while reading file content')
   })
 
-  it('starts a File Processing image_to_text job and appends recognized text from the job snapshot', async () => {
+  it('reconnects an OCR job after remount and appends its text once', async () => {
     fileMock.onSelectFile.mockResolvedValue([{ path: '/tmp/image.png', size: 10, type: 'image' }])
 
-    const { rerender } = render(<TranslatePage />)
+    const { unmount } = render(<TranslatePage />)
 
     fireEvent.click(screen.getByRole('button', { name: 'translate.files.upload' }))
 
@@ -764,6 +758,7 @@ describe('TranslatePage', () => {
     )
     await waitFor(() => expect(screen.getByLabelText('translate.input.placeholder')).toBeDisabled())
     expect(fileMock.readText).not.toHaveBeenCalled()
+    unmount()
 
     useJobMock.mockReturnValue({
       data: {
@@ -775,14 +770,15 @@ describe('TranslatePage', () => {
       },
       isTerminal: true
     })
-    rerender(<TranslatePage />)
+    const remounted = render(<TranslatePage />)
 
     await waitFor(() => expect(MockUseCacheUtils.getCacheValue('translate.input')).toBe('recognized image text'))
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith('translate.files.ocr_completed'))
     await waitFor(() => expect(screen.queryByTestId('translate-input-ocr-processing')).not.toBeInTheDocument())
     await waitFor(() => expect(screen.getByLabelText('translate.input.placeholder')).not.toBeDisabled())
-    rerender(<TranslatePage />)
+    remounted.rerender(<TranslatePage />)
     expect(screen.getByLabelText('translate.input.placeholder')).toHaveValue('recognized image text')
+    expect(toast.success).toHaveBeenCalledTimes(1)
   })
 
   it('treats a completed OCR job without a text artifact as a failure', async () => {
@@ -874,6 +870,57 @@ describe('TranslatePage', () => {
     fireEvent.click(translateButton)
 
     expect(pdfHandleMock.start).toHaveBeenCalledWith('zh-cn')
+  })
+
+  it('restores the native PDF shell from the active workspace context', async () => {
+    translationWorkspaceService.begin('pdf', {
+      jobId: 'pdf-job',
+      pdfContext: {
+        sourceFileName: 'restored.pdf',
+        sourcePath: '/tmp/restored.pdf' as AbsoluteFilePath,
+        textFallback: false
+      },
+      stage: 'translating',
+      status: 'running'
+    })
+
+    render(<TranslatePage />)
+
+    await waitFor(() =>
+      expect(screen.getByTestId('pdf-translation-view')).toHaveAttribute('data-file-path', '/tmp/restored.pdf')
+    )
+    expect(pdfViewMock).toHaveBeenLastCalledWith(expect.objectContaining({ textFallback: undefined }))
+  })
+
+  it('restores a PDF text fallback shell and returns to the saved text when closed', async () => {
+    MockUseCacheUtils.setCacheValue('translate.input', 'previous input')
+    MockUseCacheUtils.setCacheValue('translate.output', 'previous display')
+    translationWorkspaceService.begin('text', {
+      pdfContext: {
+        sourceFileName: 'fallback.pdf',
+        sourcePath: '/tmp/fallback.pdf' as AbsoluteFilePath,
+        textFallback: true,
+        previousRawOutput: 'previous raw',
+        previousDisplayOutput: 'previous display'
+      },
+      rawOutput: 'partial fallback translation',
+      sourceText: 'PDF extracted text',
+      stage: 'translating',
+      status: 'running'
+    })
+
+    render(<TranslatePage />)
+
+    await waitFor(() =>
+      expect(screen.getByTestId('pdf-translation-view')).toHaveAttribute('data-file-path', '/tmp/fallback.pdf')
+    )
+    await waitFor(() =>
+      expect(screen.getByTestId('translate-output-content')).toHaveTextContent('partial fallback translation')
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'translate.pdf.action.close' }))
+    await waitFor(() => expect(MockUseCacheUtils.getCacheValue('translate.input')).toBe('previous input'))
+    await waitFor(() => expect(MockUseCacheUtils.getCacheValue('translate.output')).toBe('previous display'))
   })
 
   it('discards PDF view state when a different PDF replaces the selected file', async () => {
@@ -2119,17 +2166,30 @@ describe('TranslatePage', () => {
     })
   })
 
-  it('keeps in-flight workspace translation alive on unmount', async () => {
+  it('restores streaming text and output tokens after an in-flight workspace remount', async () => {
     MockUsePreferenceUtils.setMultiplePreferenceValues({
       'feature.translate.model_id': 'openai::gpt-4.1',
       'feature.translate.page.source_language': 'zh-cn',
       'feature.translate.page.target_language': 'en-us'
     })
     let signal: AbortSignal | undefined
+    let onResponse: ((text: string, isComplete: boolean) => void) | undefined
+    let onOutputTokens: ((value: number) => void) | undefined
+    let resolveTranslate!: (value: string) => void
     translateCoreMock.translateText.mockImplementationOnce(
-      (_text: string, _targetLanguage: string, _onResponse?: unknown, abortSignal?: AbortSignal) => {
+      (
+        _text: string,
+        _targetLanguage: string,
+        response?: (text: string, isComplete: boolean) => void,
+        abortSignal?: AbortSignal,
+        options?: { onOutputTokens?: (value: number) => void }
+      ) => {
         signal = abortSignal
-        return new Promise<string>(() => {})
+        onResponse = response
+        onOutputTokens = options?.onOutputTokens
+        return new Promise<string>((resolve) => {
+          resolveTranslate = resolve
+        })
       }
     )
 
@@ -2138,12 +2198,28 @@ describe('TranslatePage', () => {
     rerender(<TranslatePage />)
     fireEvent.click(screen.getByRole('button', { name: 'translate.button.translate' }))
     await waitFor(() => expect(signal).toBeDefined())
+    act(() => onResponse?.('visible prefix', false))
+    await waitFor(() => expect(screen.getByTestId('translate-output-content')).toHaveTextContent('visible prefix'))
     unmount()
 
     expect(signal?.aborted).toBe(false)
-    expect(translationWorkspaceService.getSnapshot()).toEqual(
-      expect.objectContaining({ kind: 'text', status: expect.not.stringMatching(/cancelled|error/) })
+    act(() => {
+      onResponse?.('visible prefix and hidden suffix', false)
+      onOutputTokens?.(17)
+    })
+
+    render(<TranslatePage />)
+    await waitFor(() =>
+      expect(screen.getByTestId('translate-output-content')).toHaveTextContent('visible prefix and hidden suffix')
     )
+    await waitFor(() =>
+      expect(translateOutputPaneMock).toHaveBeenLastCalledWith(expect.objectContaining({ tokenCount: 17 }))
+    )
+    expect(screen.getByRole('button', { name: 'common.stop' })).toBeInTheDocument()
+
+    await act(async () => resolveTranslate('visible prefix and hidden suffix'))
+    await waitFor(() => expect(translationWorkspaceService.getSnapshot().status).toBe('success'))
+    expect(translateCoreMock.addHistory).toHaveBeenCalledTimes(1)
   })
 
   it('cancels in-flight translation when stop is clicked', async () => {
@@ -2252,10 +2328,9 @@ describe('TranslatePage', () => {
     expect(toast.info).toHaveBeenCalledWith('translate.info.aborted')
     expect(toast.success).not.toHaveBeenCalled()
     expect(translateCoreMock.addHistory).not.toHaveBeenCalled()
-    expect(translateCoreMock.setTimeoutTimer).not.toHaveBeenCalledWith('auto-copy', expect.any(Function), 100)
   })
 
-  it('schedules auto-copy after successful translation when auto-copy is enabled', async () => {
+  it('auto-copies a successful translation before the page can be hidden', async () => {
     MockUsePreferenceUtils.setMultiplePreferenceValues({
       'feature.translate.model_id': 'openai::gpt-4.1',
       'feature.translate.page.source_language': 'zh-cn',
@@ -2268,9 +2343,7 @@ describe('TranslatePage', () => {
     rerender(<TranslatePage />)
     fireEvent.click(screen.getByRole('button', { name: 'translate.button.translate' }))
 
-    await waitFor(() =>
-      expect(translateCoreMock.setTimeoutTimer).toHaveBeenCalledWith('auto-copy', expect.any(Function), 100)
-    )
+    await waitFor(() => expect(clipboardWriteTextMock).toHaveBeenCalledWith('translated text'))
 
     await waitFor(() =>
       expect(translateCoreMock.addHistory).toHaveBeenCalledWith({
@@ -2283,14 +2356,6 @@ describe('TranslatePage', () => {
       })
     )
     expect(toast.success).toHaveBeenCalledWith('translate.complete')
-
-    const autoCopyCallback = translateCoreMock.setTimeoutTimer.mock.calls[0]?.[1] as (() => Promise<void>) | undefined
-    expect(autoCopyCallback).toBeTypeOf('function')
-    await act(async () => {
-      await autoCopyCallback?.()
-    })
-
-    expect(clipboardWriteTextMock).toHaveBeenCalledWith('translated text')
   })
 
   it('keeps the current target language when reusing history with a null target language', async () => {
@@ -2346,7 +2411,6 @@ describe('TranslatePage', () => {
     expect(MockUsePreferenceUtils.getPreferenceValue('feature.translate.page.target_language')).toBe('ja-jp')
     expect(translationWorkspaceService.isBusy()).toBe(false)
     expect(translateCoreMock.addHistory).not.toHaveBeenCalled()
-    expect(translateCoreMock.setTimeoutTimer).not.toHaveBeenCalledWith('auto-copy', expect.any(Function), 100)
   })
 
   it('replaces a live IPC translation only after the shortcut has read valid text', async () => {

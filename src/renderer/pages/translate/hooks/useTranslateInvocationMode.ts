@@ -37,6 +37,7 @@ export const useTranslateInvocationMode = ({ persistentPolishEnabled, run }: Par
     window.addEventListener('keyup', onKeyUp)
     window.addEventListener('blur', onBlur)
     return () => {
+      altKeyHeldRef.current = false
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('keyup', onKeyUp)
       window.removeEventListener('blur', onBlur)

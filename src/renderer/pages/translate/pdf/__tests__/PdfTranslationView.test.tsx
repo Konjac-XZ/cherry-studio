@@ -330,6 +330,11 @@ describe('PdfTranslationView', () => {
     await waitFor(() => expect(handle).not.toBeNull())
     act(() => handle!.start('zh-cn'))
     await waitFor(() => expect(mocks.ipcRequest).toHaveBeenCalledWith('translate.pdf.start', expect.anything()))
+    expect(translationWorkspaceService.getSnapshot().pdfContext).toEqual({
+      sourceFileName: 'paper.pdf',
+      sourcePath: PAPER_PATH,
+      textFallback: false
+    })
 
     unmount()
     expect(mocks.ipcRequest).not.toHaveBeenCalledWith('translate.pdf.cancel', expect.anything())

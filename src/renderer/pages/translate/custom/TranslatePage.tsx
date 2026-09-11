@@ -21,7 +21,6 @@ import {
 import { useCodeStyle } from '@renderer/hooks/useCodeStyle'
 import { useModels } from '@renderer/hooks/useModel'
 import { useSmoothStream } from '@renderer/hooks/useSmoothStream'
-import { useTimer } from '@renderer/hooks/useTimer'
 import { ipcApi, useIpcOn } from '@renderer/ipc'
 import { useWorkspaceTranslateHistory } from '@renderer/pages/translate/custom/hooks/useWorkspaceTranslateHistory'
 import { toast } from '@renderer/services/toast'
@@ -163,7 +162,6 @@ const TranslatePageContent: FC = () => {
   const detectLanguage = useDetectLang()
   const translateHistory = useWorkspaceTranslateHistory()
   const { shikiMarkdownIt } = useCodeStyle()
-  const { setTimeoutTimer } = useTimer()
   const [sourceLanguage, setSourceLanguage] = usePreference('feature.translate.page.source_language')
   const [targetLanguage, setTargetLanguage] = usePreference('feature.translate.page.target_language')
   const [autoCopy] = usePreference('feature.translate.page.auto_copy')
@@ -201,14 +199,10 @@ const TranslatePageContent: FC = () => {
   const [translateOutput, setTranslateOutput] = useCache('translate.output')
   const [isDetecting, setIsDetecting] = useCache('translate.detecting')
 
-  const {
-    complete: smoothComplete,
-    reset: smoothReset,
-    update: smoothUpdate
-  } = useSmoothStream({
+  const { reset: smoothReset, update: smoothUpdate } = useSmoothStream({
+    initialText: translateOutput,
     onUpdate: setTranslateOutput
   })
-  const onStreamResponse = useCallback((value: string) => smoothUpdate(value, false), [smoothUpdate])
 
   const {
     translate: runTranslate,
@@ -224,7 +218,6 @@ const TranslatePageContent: FC = () => {
         rawOutput: value,
         status: isComplete ? 'processing' : 'running'
       })
-      onStreamResponse(value)
     },
     taskOwner: translationWorkspaceService
   })
@@ -238,7 +231,10 @@ const TranslatePageContent: FC = () => {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [detectedLanguage, setDetectedLanguage] = useState<TranslateLangCode | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
-  const [ocrJobId, setOcrJobId] = useState<string | null>(null)
+  const [ocrJobId, setOcrJobId] = useState<string | null>(() => {
+    const snapshot = translationWorkspaceService.getSnapshot()
+    return snapshot.kind === 'ocr' && snapshot.status === 'running' ? (snapshot.jobId ?? null) : null
+  })
   const [pdfFile, setPdfFile] = useState<PdfTranslationFile | null>(null)
   const [restoredPdf, setRestoredPdf] = useState<{ output: PdfTranslationOutput; key: string } | null>(null)
   const [pdfStatus, setPdfStatus] = useState<PdfTranslationStatus>({ phase: 'idle', running: false })
@@ -300,6 +296,7 @@ const TranslatePageContent: FC = () => {
   const prePdfRawOutputRef = useRef<string | null>(null)
   const rawOutputRef = useRef(rawOutput)
   const translateOutputRef = useRef(translateOutput)
+  const skipRawPostProcessingRef = useRef<string | null>(null)
   const preprocessedSourceTextRef = useRef<string | null>(null)
   rawOutputRef.current = rawOutput
   translateOutputRef.current = translateOutput
@@ -477,9 +474,6 @@ const TranslatePageContent: FC = () => {
     setRawOutput,
     setSourceText: setTranslateInput,
     setTranslateOutput,
-    setTimeoutTimer,
-    smoothComplete,
-    smoothReset,
     sourceLanguage,
     sourceText: translateInput,
     t,
@@ -496,14 +490,18 @@ const TranslatePageContent: FC = () => {
   })
   const isFlowBusy = flowStage !== 'idle' || isTranslating || isDetecting
   const busyStatus: TranslateBusyStatus | null =
-    isDetecting || flowStage === 'detecting'
+    workspaceSnapshot.busyStage ??
+    (isDetecting || flowStage === 'detecting'
       ? 'detecting'
       : flowStage === 'polishing'
         ? 'polishing'
         : isFlowBusy || isProcessing
           ? 'processing'
-          : null
-  const translateBusyLabel = useTranslateBusyLabel(busyStatus)
+          : null)
+  const translateBusyLabel = useTranslateBusyLabel(
+    busyStatus,
+    workspaceSnapshot.busyStage === busyStatus ? workspaceSnapshot.busyStartedAt : undefined
+  )
 
   const resetPdfMode = useCallback(() => {
     pdfTextRequestIdRef.current += 1
@@ -513,6 +511,7 @@ const TranslatePageContent: FC = () => {
     if (pdfTextFallbackStartedRef.current) {
       const restoredRawOutput = prePdfRawOutputRef.current ?? ''
       rawOutputRef.current = restoredRawOutput
+      skipRawPostProcessingRef.current = restoredRawOutput
       setRawOutput(restoredRawOutput)
       setTranslateOutput(prePdfOutputRef.current ?? '')
     }
@@ -557,7 +556,16 @@ const TranslatePageContent: FC = () => {
         return
       }
 
-      await onPrimaryTranslate(undefined, extractedText, { isBidirectional: false })
+      await onPrimaryTranslate(undefined, extractedText, {
+        isBidirectional: false,
+        pdfContext: {
+          sourceFileName: pdfFile.name,
+          sourcePath: pdfFile.path,
+          textFallback: true,
+          previousRawOutput: prePdfRawOutputRef.current ?? '',
+          previousDisplayOutput: prePdfOutputRef.current ?? ''
+        }
+      })
     } catch (error) {
       if (pdfTextRequestIdRef.current !== requestId) return
       logger.error('Failed to extract PDF text', error as Error)
@@ -707,6 +715,10 @@ const TranslatePageContent: FC = () => {
   useEffect(() => {
     if (isTranslating || flowStage !== 'idle') return
     if (rawOutput !== rawOutputRef.current) return
+    if (skipRawPostProcessingRef.current === rawOutput) {
+      return
+    }
+    skipRawPostProcessingRef.current = null
     if (rawOutput) setTranslateOutput(processTranslation(rawOutput, outputTargetLanguage))
   }, [flowStage, isTranslating, outputTargetLanguage, processTranslation, rawOutput, setTranslateOutput])
 
@@ -715,24 +727,55 @@ const TranslatePageContent: FC = () => {
     if (appliedWorkspaceRevisionRef.current === workspaceSnapshot.revision) return
     appliedWorkspaceRevisionRef.current = workspaceSnapshot.revision
     if (workspaceSnapshot.kind !== 'text' || workspaceSnapshot.runId === 0) return
+    if (workspaceSnapshot.sourceText && !workspaceSnapshot.pdfContext) {
+      setTranslateInput(workspaceSnapshot.sourceText)
+    }
     if (workspaceSnapshot.detectedLanguage) setDetectedLanguage(workspaceSnapshot.detectedLanguage)
     if (workspaceSnapshot.targetLanguage && workspaceSnapshot.targetLanguage !== 'unknown') {
       setOutputTargetLanguage(workspaceSnapshot.targetLanguage)
     }
-    if (workspaceSnapshot.rawOutput) setRawOutput(workspaceSnapshot.rawOutput)
+    setRawOutput(workspaceSnapshot.rawOutput)
+    setReportedOutputTokens(workspaceSnapshot.outputTokens)
 
-    if (workspaceSnapshot.status === 'success' && workspaceSnapshot.displayOutput) {
-      smoothReset(workspaceSnapshot.displayOutput)
-      setTranslateOutput(workspaceSnapshot.displayOutput)
+    if (workspaceSnapshot.status === 'success') {
+      smoothUpdate(workspaceSnapshot.displayOutput, true)
       setFlowStage('idle')
       setIsDetecting(false)
     } else if (workspaceSnapshot.status === 'cancelled' || workspaceSnapshot.status === 'error') {
-      setRawOutput(workspaceSnapshot.rawOutput)
-      smoothReset(workspaceSnapshot.rawOutput)
+      smoothUpdate(workspaceSnapshot.rawOutput, true)
       setFlowStage('idle')
       setIsDetecting(false)
+    } else {
+      smoothUpdate(workspaceSnapshot.rawOutput, false)
+      setIsDetecting(workspaceSnapshot.busyStage === 'detecting')
+      if (
+        workspaceSnapshot.stage === 'detecting' ||
+        workspaceSnapshot.stage === 'planning' ||
+        workspaceSnapshot.stage === 'cache' ||
+        workspaceSnapshot.stage === 'polishing' ||
+        workspaceSnapshot.stage === 'translating' ||
+        workspaceSnapshot.stage === 'processing'
+      ) {
+        setFlowStage(workspaceSnapshot.stage)
+      }
     }
-  }, [setIsDetecting, setTranslateOutput, smoothReset, workspaceSnapshot])
+  }, [setIsDetecting, setTranslateInput, smoothUpdate, workspaceSnapshot])
+
+  useEffect(() => {
+    const context = workspaceSnapshot.pdfContext
+    if (!context || (workspaceSnapshot.kind !== 'pdf' && workspaceSnapshot.kind !== 'text')) return
+    setPdfFile((current) =>
+      current?.path === context.sourcePath && current.name === context.sourceFileName
+        ? current
+        : { name: context.sourceFileName, path: context.sourcePath }
+    )
+    setPdfTextFallbackActive(context.textFallback)
+    if (context.textFallback) {
+      pdfTextFallbackStartedRef.current = true
+      prePdfRawOutputRef.current = context.previousRawOutput ?? ''
+      prePdfOutputRef.current = context.previousDisplayOutput ?? ''
+    }
+  }, [workspaceSnapshot.kind, workspaceSnapshot.pdfContext])
 
   const { cycleLayout, inputScrollHandler, isVerticalLayout, outputScrollHandler, panelSize, setPanelSize } =
     useTranslateLayout({
@@ -784,6 +827,7 @@ const TranslatePageContent: FC = () => {
     if (snapshot.kind === 'ocr' && snapshot.jobId === jobId && snapshot.status === 'running') {
       translationWorkspaceService.failOcr(jobId, new Error('OCR job did not produce text'))
     }
+    translationWorkspaceService.clearTerminal()
     setOcrJobId(null)
   }, [])
   const handleOcrStarted = useCallback((jobId: string) => {
@@ -792,6 +836,7 @@ const TranslatePageContent: FC = () => {
   }, [])
   const cancelOcrJob = useCallback(() => {
     translationWorkspaceService.cancel()
+    translationWorkspaceService.clearTerminal()
     setOcrJobId(null)
   }, [])
   const handleOcrCompleted = useCallback(

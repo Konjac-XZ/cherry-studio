@@ -62,4 +62,16 @@ describe('useTranslateInvocationMode', () => {
     )
     expect(run).toHaveBeenLastCalledWith(true, undefined, 'translate')
   })
+
+  it('clears temporary Alt mode during Activity cleanup', async () => {
+    const run = vi.fn(async () => undefined)
+    const { result, unmount } = renderHook(() => useTranslateInvocationMode({ persistentPolishEnabled: false, run }))
+
+    void act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Alt' })))
+    const trigger = result.current.trigger
+    unmount()
+
+    await trigger()
+    expect(run).toHaveBeenLastCalledWith(false, undefined, 'translate')
+  })
 })

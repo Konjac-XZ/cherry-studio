@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import type { AbsoluteFilePath } from '@shared/types/file'
 
 import { translationWorkspaceService } from '../index'
 
 afterEach(() => {
+  vi.restoreAllMocks()
   translationWorkspaceService.resetForTests()
 })
 
@@ -103,5 +105,66 @@ describe('TranslationWorkspaceService', () => {
       jobId: 'ocr-1',
       status: 'cancelled'
     })
+  })
+
+  it('times visible stages without restarting for chunks, traces, tokens, or same-stage updates', () => {
+    const now = vi.spyOn(Date, 'now').mockReturnValue(1000)
+    const runId = translationWorkspaceService.begin('text')
+    expect(translationWorkspaceService.getSnapshot()).toMatchObject({
+      busyStage: 'processing',
+      busyStartedAt: 1000
+    })
+
+    now.mockReturnValue(1100)
+    translationWorkspaceService.update(runId, { rawOutput: 'chunk', traceId: 'trace', outputTokens: 3 })
+    expect(translationWorkspaceService.getSnapshot().busyStartedAt).toBe(1000)
+
+    now.mockReturnValue(1200)
+    translationWorkspaceService.update(runId, { stage: 'detecting' })
+    expect(translationWorkspaceService.getSnapshot()).toMatchObject({ busyStage: 'detecting', busyStartedAt: 1200 })
+
+    now.mockReturnValue(1300)
+    translationWorkspaceService.update(runId, { rawOutput: 'same stage' })
+    expect(translationWorkspaceService.getSnapshot().busyStartedAt).toBe(1200)
+
+    now.mockReturnValue(1400)
+    translationWorkspaceService.update(runId, { stage: 'polishing' })
+    expect(translationWorkspaceService.getSnapshot()).toMatchObject({ busyStage: 'polishing', busyStartedAt: 1400 })
+
+    now.mockReturnValue(1500)
+    translationWorkspaceService.update(runId, { stage: 'translating' })
+    expect(translationWorkspaceService.getSnapshot()).toMatchObject({ busyStage: 'processing', busyStartedAt: 1500 })
+
+    translationWorkspaceService.complete(runId)
+    expect(translationWorkspaceService.getSnapshot()).toMatchObject({ busyStage: null, busyStartedAt: null })
+  })
+
+  it('retains output tokens and PDF fallback context until the terminal workspace is cleared', () => {
+    const runId = translationWorkspaceService.begin('text', {
+      pdfContext: {
+        sourceFileName: 'source.pdf',
+        sourcePath: 'C:\\source.pdf' as AbsoluteFilePath,
+        textFallback: true,
+        previousRawOutput: 'raw before PDF',
+        previousDisplayOutput: 'display before PDF'
+      }
+    })
+
+    translationWorkspaceService.update(runId, { outputTokens: 42 })
+    translationWorkspaceService.complete(runId, { displayOutput: 'translated' })
+
+    expect(translationWorkspaceService.getSnapshot()).toMatchObject({
+      outputTokens: 42,
+      pdfContext: {
+        sourceFileName: 'source.pdf',
+        textFallback: true,
+        previousRawOutput: 'raw before PDF',
+        previousDisplayOutput: 'display before PDF'
+      }
+    })
+
+    translationWorkspaceService.clearTerminal()
+    expect(translationWorkspaceService.getSnapshot()).not.toHaveProperty('pdfContext')
+    expect(translationWorkspaceService.getSnapshot()).not.toHaveProperty('outputTokens')
   })
 })

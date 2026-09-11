@@ -9,7 +9,7 @@ const STATUS_KEYS: Record<TranslateBusyStatus, string> = {
   processing: 'translate.processing'
 }
 
-export const useTranslateBusyLabel = (status: TranslateBusyStatus | null) => {
+export const useTranslateBusyLabel = (status: TranslateBusyStatus | null, startedAt?: number | null) => {
   const { t } = useTranslation()
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
 
@@ -19,16 +19,15 @@ export const useTranslateBusyLabel = (status: TranslateBusyStatus | null) => {
       return undefined
     }
 
-    const startedAt = performance.now()
-    setElapsedSeconds(0)
-
+    const effectiveStartedAt = startedAt ?? Date.now()
     const updateElapsed = () => {
-      setElapsedSeconds(Math.max(0, (performance.now() - startedAt) / 1000))
+      setElapsedSeconds(Math.max(0, (Date.now() - effectiveStartedAt) / 1000))
     }
+    updateElapsed()
     const intervalId = window.setInterval(updateElapsed, 100)
 
     return () => window.clearInterval(intervalId)
-  }, [status])
+  }, [startedAt, status])
 
   return useMemo(
     () => (status ? `${t(STATUS_KEYS[status])} ${elapsedSeconds.toFixed(1)}s` : null),

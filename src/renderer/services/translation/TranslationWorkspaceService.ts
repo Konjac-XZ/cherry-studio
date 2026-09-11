@@ -10,6 +10,7 @@ import type { AbsoluteFilePath } from '@shared/types/file'
 const logger = loggerService.withContext('TranslationWorkspaceService')
 
 export type TranslationWorkspaceKind = 'text' | 'pdf' | 'ocr' | null
+export type TranslationWorkspaceBusyStage = 'detecting' | 'polishing' | 'processing'
 export type TranslationWorkspaceStatus =
   | 'idle'
   | 'preparing'
@@ -30,6 +31,8 @@ export interface TranslationWorkspaceSnapshot {
   displayOutput: string
   detectedLanguage: TranslateLangCode | null
   targetLanguage: TranslateLangCode | null
+  busyStage: TranslationWorkspaceBusyStage | null
+  busyStartedAt: number | null
   outputTokens?: number
   traceTopicId?: string
   traceId?: string
@@ -38,6 +41,7 @@ export interface TranslationWorkspaceSnapshot {
   progressStage?: PdfTranslationProgressStage
   stageProgress?: number | null
   pdfOutput?: TranslationWorkspacePdfOutput
+  pdfContext?: TranslationWorkspacePdfContext
   error?: unknown
   historyError?: unknown
 }
@@ -47,8 +51,17 @@ export interface TranslationWorkspacePdfOutput {
   fileName: string
 }
 
+export interface TranslationWorkspacePdfContext {
+  sourceFileName: string
+  sourcePath: AbsoluteFilePath
+  textFallback: boolean
+  previousRawOutput?: string
+  previousDisplayOutput?: string
+}
+
 export interface StartPdfTranslationCommand {
   modelId: UniqueModelId
+  sourceFileName: string
   sourceLangCode: TranslateSourceLanguage
   sourcePath: AbsoluteFilePath
   targetLangCode: TranslateLangCode
@@ -71,11 +84,19 @@ const IDLE_SNAPSHOT: TranslationWorkspaceSnapshot = Object.freeze({
   rawOutput: '',
   displayOutput: '',
   detectedLanguage: null,
-  targetLanguage: null
+  targetLanguage: null,
+  busyStage: null,
+  busyStartedAt: null
 })
 
 const isActiveStatus = (status: TranslationWorkspaceStatus): boolean =>
   status === 'preparing' || status === 'running' || status === 'processing'
+
+const getBusyStage = (status: TranslationWorkspaceStatus, stage: string): TranslationWorkspaceBusyStage | null => {
+  if (!isActiveStatus(status)) return null
+  if (stage === 'detecting' || stage === 'polishing') return stage
+  return 'processing'
+}
 
 class TranslationWorkspaceService implements TranslationTaskOwner {
   readonly #tasks = new Set<AbortController>()
@@ -109,7 +130,9 @@ class TranslationWorkspaceService implements TranslationTaskOwner {
       ...this.#snapshot,
       revision: this.#snapshot.revision + 1,
       status: 'cancelled',
-      stage: 'idle'
+      stage: 'idle',
+      busyStage: null,
+      busyStartedAt: null
     }
     this.#notify()
   }
@@ -119,6 +142,9 @@ class TranslationWorkspaceService implements TranslationTaskOwner {
   begin(kind: Exclude<TranslationWorkspaceKind, null>, initial: Partial<TranslationWorkspaceSnapshot> = {}): number {
     this.abortTasks()
     const runId = this.#snapshot.runId + 1
+    const status = initial.status ?? 'preparing'
+    const stage = initial.stage ?? 'preparing'
+    const busyStage = getBusyStage(status, stage)
     this.#snapshot = {
       ...IDLE_SNAPSHOT,
       ...initial,
@@ -126,8 +152,10 @@ class TranslationWorkspaceService implements TranslationTaskOwner {
       runId,
       kind,
       ...(kind === 'text' && { traceTopicId: `translate:${uuid()}` }),
-      status: initial.status ?? 'preparing',
-      stage: initial.stage ?? 'preparing'
+      status,
+      stage,
+      busyStage,
+      busyStartedAt: busyStage ? Date.now() : null
     }
     this.#notify()
     return runId
@@ -135,7 +163,18 @@ class TranslationWorkspaceService implements TranslationTaskOwner {
 
   update(runId: number, patch: Partial<TranslationWorkspaceSnapshot>): void {
     if (this.#snapshot.runId !== runId || !isActiveStatus(this.#snapshot.status)) return
-    this.#snapshot = { ...this.#snapshot, ...patch, revision: this.#snapshot.revision + 1, runId }
+    const status = patch.status ?? this.#snapshot.status
+    const stage = patch.stage ?? this.#snapshot.stage
+    const busyStage = getBusyStage(status, stage)
+    this.#snapshot = {
+      ...this.#snapshot,
+      ...patch,
+      revision: this.#snapshot.revision + 1,
+      runId,
+      busyStage,
+      busyStartedAt:
+        busyStage === this.#snapshot.busyStage ? this.#snapshot.busyStartedAt : busyStage ? Date.now() : null
+    }
     this.#notify()
   }
 
@@ -162,6 +201,11 @@ class TranslationWorkspaceService implements TranslationTaskOwner {
     const jobId = uuid()
     const runId = this.begin('pdf', {
       jobId,
+      pdfContext: {
+        sourceFileName: command.sourceFileName,
+        sourcePath: command.sourcePath,
+        textFallback: false
+      },
       stage: 'preparing',
       targetLanguage: command.targetLangCode
     })
@@ -175,7 +219,13 @@ class TranslationWorkspaceService implements TranslationTaskOwner {
     controller.signal.addEventListener('abort', cancel, { once: true })
 
     try {
-      const output = await ipcApi.request('translate.pdf.start', { jobId, ...command })
+      const output = await ipcApi.request('translate.pdf.start', {
+        jobId,
+        modelId: command.modelId,
+        sourceLangCode: command.sourceLangCode,
+        sourcePath: command.sourcePath,
+        targetLangCode: command.targetLangCode
+      })
       if (controller.signal.aborted || this.#snapshot.runId !== runId) return undefined
       this.complete(runId, { pdfOutput: output, progress: 100 })
       return output

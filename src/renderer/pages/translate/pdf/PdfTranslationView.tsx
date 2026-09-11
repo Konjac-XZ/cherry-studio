@@ -212,6 +212,7 @@ const PdfTranslationView = ({
       void translationWorkspaceService
         .startPdf({
           modelId,
+          sourceFileName: file.name,
           sourceLangCode,
           sourcePath: file.path,
           targetLangCode

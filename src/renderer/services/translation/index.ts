@@ -12,7 +12,9 @@ export {
 export {
   type StartPdfTranslationCommand,
   type TranslationTaskOwner,
+  type TranslationWorkspaceBusyStage,
   type TranslationWorkspaceKind,
+  type TranslationWorkspacePdfContext,
   type TranslationWorkspacePdfOutput,
   translationWorkspaceService,
   type TranslationWorkspaceSnapshot,
