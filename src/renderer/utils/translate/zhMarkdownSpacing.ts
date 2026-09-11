@@ -83,6 +83,7 @@ const SLASH_COMPOUND_PATTERN =
   /(?:[\u3400-\u9fff\uf900-\ufaff]{1,2}\/[\u3400-\u9fff\uf900-\ufaff]{1,2}|[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+)/gu
 const FILE_EXTENSION_PATTERN = /\.[A-Za-z][A-Za-z0-9_-]*/gu
 const HYPHENATED_IDENTIFIER_PATTERN = /\b[A-Za-z0-9]+(?:[._][A-Za-z0-9]+)*(?:-[A-Za-z0-9]+(?:[._][A-Za-z0-9]+)*)+\b/gu
+const SINGLE_ASTERISK_EMPHASIS_PATTERN = /(?<!\*)\*(?=\S)[^*\r\n]*?\S\*(?!\*)/gu
 const STRUCTURED_JSON_PATTERN = /^\s*[[{][\s\S]*[\]}]\s*$/u
 const YAML_LINE_PATTERN = /^\s*[A-Za-z0-9_-]+\s*:\s*.+$/u
 const SHELL_COMMAND_PATTERN =
@@ -519,7 +520,8 @@ function collectTextAtomRanges(text: string): ProtectedRange[] {
     UNIX_PATH_PATTERN,
     SLASH_COMPOUND_PATTERN,
     FILE_EXTENSION_PATTERN,
-    HYPHENATED_IDENTIFIER_PATTERN
+    HYPHENATED_IDENTIFIER_PATTERN,
+    SINGLE_ASTERISK_EMPHASIS_PATTERN
   ].flatMap((pattern) => {
     const ranges: ProtectedRange[] = []
     pattern.lastIndex = 0
@@ -660,14 +662,14 @@ function detectLeadingFrontmatterRanges(markdown: string): ProtectedRange[] {
 
 function cleanupZhMarkdownSpacing(text: string): string {
   return text
-    .replace(/(\*\*|__)\s+([\u3400-\u9fff\uf900-\ufaff\p{N}])/gu, '$1$2')
-    .replace(/([\u3400-\u9fff\uf900-\ufaff\p{N}])\s+(\*\*|__)(?![A-Za-z])/gu, '$1$2')
-    .replace(/([\u3400-\u9fff\uf900-\ufaff])\s+(["“‘])/gu, '$1$2')
-    .replace(/(["”’])\s+([\u3400-\u9fff\uf900-\ufaff])/gu, '$1$2')
-    .replace(/(["”’])\s+([、。！，；：？！])/gu, '$1$2')
-    .replace(/([^\s])\s+(——)\s+([^\s])/gu, '$1$2$3')
-    .replace(/([^\s])\s+(——)/gu, '$1$2')
-    .replace(/(——)\s+([^\s])/gu, '$1$2')
+    .replace(/(\*\*|__)[^\S\r\n]+([\u3400-\u9fff\uf900-\ufaff\p{N}])/gu, '$1$2')
+    .replace(/([\u3400-\u9fff\uf900-\ufaff\p{N}])[^\S\r\n]+(\*\*|__)(?![A-Za-z])/gu, '$1$2')
+    .replace(/([\u3400-\u9fff\uf900-\ufaff])[^\S\r\n]+(["“‘])/gu, '$1$2')
+    .replace(/(["”’])[^\S\r\n]+([\u3400-\u9fff\uf900-\ufaff])/gu, '$1$2')
+    .replace(/(["”’])[^\S\r\n]+([、。！，；：？！])/gu, '$1$2')
+    .replace(/([^\s])[^\S\r\n]+(——)[^\S\r\n]+([^\s])/gu, '$1$2$3')
+    .replace(/([^\s])[^\S\r\n]+(——)/gu, '$1$2')
+    .replace(/(——)[^\S\r\n]+([^\s])/gu, '$1$2')
 }
 
 function applyOffsetEdits(source: string, edits: OffsetEdit[]): string {
