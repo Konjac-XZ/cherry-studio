@@ -79,9 +79,19 @@ export function serializeError(error: unknown): SerializedError {
 
     return serialized
   }
+  const serialized = toSerializable(error)
   return {
     name: null,
-    message: String(error),
+    message:
+      serialized &&
+      typeof serialized === 'object' &&
+      !Array.isArray(serialized) &&
+      typeof serialized.message === 'string' &&
+      serialized.message
+        ? serialized.message
+        : typeof serialized === 'string'
+          ? serialized
+          : JSON.stringify(serialized),
     stack: null
   }
 }

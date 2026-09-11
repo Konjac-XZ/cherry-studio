@@ -4,6 +4,24 @@ import { describe, expect, it } from 'vitest'
 import { serializeError } from '../serializeError'
 
 describe('serializeError', () => {
+  describe('non-Error values', () => {
+    it('preserves the message from an upstream error object', () => {
+      const result = serializeError({
+        code: 503,
+        message: 'JSON error injected into SSE stream',
+        metadata: { error_type: 'provider_overloaded' }
+      })
+
+      expect(result.message).toBe('JSON error injected into SSE stream')
+    })
+
+    it('serializes an object without a message instead of returning [object Object]', () => {
+      const result = serializeError({ code: 503, metadata: { error_type: 'provider_overloaded' } })
+
+      expect(result.message).toBe('{"code":503,"metadata":{"error_type":"provider_overloaded"}}')
+    })
+  })
+
   describe('null preservation (FIX error-1)', () => {
     it('serializes an absent cause to real null, not the string "null"', () => {
       const result = serializeError(new Error('boom'))
