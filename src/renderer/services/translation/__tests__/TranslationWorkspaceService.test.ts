@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { AbsoluteFilePath } from '@shared/types/file'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { translationWorkspaceService } from '../index'
 

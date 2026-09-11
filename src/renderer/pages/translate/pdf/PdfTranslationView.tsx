@@ -245,7 +245,7 @@ const PdfTranslationView = ({
           setPhase('error')
         })
     },
-    [file.path, invalidate, modelId, onBabelDocUnavailable, sourceLangCode, t]
+    [file.name, file.path, invalidate, modelId, onBabelDocUnavailable, sourceLangCode, t]
   )
 
   useEffect(() => {

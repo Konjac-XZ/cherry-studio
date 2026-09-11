@@ -58,7 +58,8 @@ export function toMessageListItem(message: CherryUIMessage, ctx: MessageListItem
     isActiveBranch: metadata.isActiveBranch,
     hiddenInChat: metadata.hiddenInChat,
     stats: statsFromMetadata(message.metadata),
-    delivery: metadata.delivery
+    delivery: metadata.delivery,
+    turnOrigin: metadata.turnOrigin
   }
 }
 

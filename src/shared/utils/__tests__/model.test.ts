@@ -4,6 +4,7 @@ import {
   deriveModelGroupName,
   flattenModelsByLayout,
   getEffectiveModelGroup,
+  getRawModelId,
   groupModelsByLayout,
   isAudioModel,
   isEmbeddingModel,
@@ -33,6 +34,14 @@ const createModel = (capabilities: Model['capabilities'] = []): Model => ({
 })
 
 describe('shared model capability helpers', () => {
+  it.each([
+    [undefined, 'gpt-4o'],
+    ['', 'gpt-4o'],
+    ['custom-wire-id', 'custom-wire-id']
+  ])('resolves a usable wire model id for apiModelId %j', (apiModelId, expected) => {
+    expect(getRawModelId({ ...createModel(), apiModelId })).toBe(expected)
+  })
+
   describe('deriveModelGroupName', () => {
     it.each([
       ['openai/gpt-4o', 'openai'],
