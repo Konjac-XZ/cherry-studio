@@ -1,17 +1,27 @@
 // Downstream-owned Translate UI implementation.
-import { Scrollbar } from '@cherrystudio/ui'
+import { defaultMarkdownPlugins, Scrollbar, StreamingMarkdown, withMath } from '@cherrystudio/ui'
+import { remarkLatexMath } from '@renderer/components/markdown'
 import { getJsonStructureForDisplay, type JsonStructureCopySeparator } from '@renderer/utils/translate'
 import { Check, Copy } from 'lucide-react'
 import { type Ref, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { Components } from 'streamdown'
 
 import FloatingActionBar from '../../components/FloatingActionBar'
 import JsonStructureView from '../../components/JsonStructureView'
 
+const markdownPlugins = { ...defaultMarkdownPlugins, math: withMath({ singleDollar: true }) }
+const remarkPlugins = [remarkLatexMath]
+const markdownComponents = {
+  table: ({ node: _node, ...props }) => {
+    void _node
+    return <table {...props} />
+  }
+} satisfies Partial<Components>
+
 type Props = {
   ref?: Ref<HTMLDivElement>
   translatedContent: string
-  renderedMarkdown: string
   enableMarkdown: boolean
   enableJsonStructure?: boolean
   jsonStructureCopySeparator?: JsonStructureCopySeparator
@@ -28,7 +38,6 @@ type Props = {
 const TranslateOutputPane = ({
   ref,
   translatedContent,
-  renderedMarkdown,
   enableMarkdown,
   enableJsonStructure = false,
   jsonStructureCopySeparator = 'colon-space',
@@ -70,7 +79,15 @@ const TranslateOutputPane = ({
                 value={jsonStructure}
               />
             ) : enableMarkdown ? (
-              <div className="markdown" dangerouslySetInnerHTML={{ __html: renderedMarkdown }} />
+              <StreamingMarkdown
+                id="translate-output"
+                plugins={markdownPlugins}
+                remarkPlugins={remarkPlugins}
+                components={markdownComponents}
+                animated={false}
+                parseIncompleteMarkdown={translating}>
+                {translatedContent}
+              </StreamingMarkdown>
             ) : (
               <div className="wrap-break-word whitespace-pre-wrap text-foreground">{translatedContent}</div>
             )

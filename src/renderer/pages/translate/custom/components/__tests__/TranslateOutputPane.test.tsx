@@ -1,3 +1,4 @@
+import type * as CherryStudioUi from '@cherrystudio/ui'
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -15,18 +16,10 @@ vi.mock('@renderer/utils/style', () => ({
   cn: (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(' ')
 }))
 
-vi.mock('@cherrystudio/ui', () => ({
-  Scrollbar: ({ children, ref, ...props }: React.ComponentProps<'div'> & { ref?: React.Ref<HTMLDivElement> }) => (
-    <div ref={ref} {...props}>
-      {children}
-    </div>
-  ),
-  NormalTooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>
-}))
+vi.mock('@cherrystudio/ui', async (importOriginal) => importOriginal<typeof CherryStudioUi>())
 
 const baseProps = () => ({
   translatedContent: '',
-  renderedMarkdown: '',
   enableMarkdown: false,
   translating: false,
   copied: false,
@@ -61,13 +54,43 @@ describe('TranslateOutputPane', () => {
     expect(screen.getByText('translate.processing')).toBeInTheDocument()
   })
 
+  it('renders Markdown and LaTeX delimiters through KaTeX', () => {
+    const props = baseProps()
+    props.enableMarkdown = true
+    props.translatedContent = ['Inline $x^2$ and \\(y^2\\).', '', '$$', 'z^2', '$$', '', '\\[', 'w^2', '\\]'].join('\n')
+
+    const { container, rerender } = render(<TranslateOutputPane {...props} />)
+
+    expect(container.querySelector('[data-ui~="translate.output"] .markdown')).not.toBeNull()
+    expect(container.querySelector('.markdown')?.closest('.overflow-x-auto')).not.toBeNull()
+    expect(container.querySelectorAll('.katex')).toHaveLength(4)
+    expect(container.querySelectorAll('.katex-display')).toHaveLength(2)
+    expect(container.querySelector('.katex-error')).toBeNull()
+
+    props.enableMarkdown = false
+    rerender(<TranslateOutputPane {...props} />)
+    expect(container.querySelector('.katex')).toBeNull()
+    expect(screen.getByText(/Inline \$x\^2\$/)).toBeInTheDocument()
+  })
+
+  it('renders Markdown tables without Streamdown action chrome', () => {
+    const props = baseProps()
+    props.enableMarkdown = true
+    props.translatedContent = '| Name | Value |\n| --- | --- |\n| Alpha | 1 |'
+
+    const { container } = render(<TranslateOutputPane {...props} />)
+
+    expect(screen.getByRole('table')).toBeInTheDocument()
+    expect(container.querySelector('.markdown [data-streamdown="table-wrapper"]')).toBeNull()
+    expect(container.querySelector('.markdown button')).toBeNull()
+  })
+
   it('shows completed structured JSON ahead of Markdown when explicitly enabled', () => {
     const props = baseProps()
     props.translatedContent = '{"message":"line 1\\nline 2"}'
-    props.renderedMarkdown = '<strong>markdown</strong>'
     props.enableMarkdown = true
 
-    render(
+    const { container } = render(
       <TranslateOutputPane
         {...props}
         enableJsonStructure
@@ -77,7 +100,7 @@ describe('TranslateOutputPane', () => {
     )
 
     expect(screen.getByTestId('json-structure-view')).toBeInTheDocument()
-    expect(screen.queryByText('markdown')).not.toBeInTheDocument()
+    expect(container.querySelector('.katex')).toBeNull()
   })
 
   it('keeps rendering streaming JSON as text until translation completes', () => {

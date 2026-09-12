@@ -140,12 +140,6 @@ vi.mock('@renderer/components/chat/trace/TracePane', () => ({
   )
 }))
 
-vi.mock('@renderer/hooks/useCodeStyle', () => ({
-  useCodeStyle: () => ({
-    shikiMarkdownIt: vi.fn().mockResolvedValue('')
-  })
-}))
-
 vi.mock('@renderer/hooks/translate', async (importOriginal) => ({
   ...(await importOriginal<typeof TranslateHooks>()),
   detectLanguageOrUnknown: async (

@@ -18,7 +18,6 @@ import {
   useTranslateClipboardWatch,
   useTranslateClipboardWrite
 } from '@renderer/hooks/translate'
-import { useCodeStyle } from '@renderer/hooks/useCodeStyle'
 import { useModels } from '@renderer/hooks/useModel'
 import { useSmoothStream } from '@renderer/hooks/useSmoothStream'
 import { ipcApi, useIpcOn } from '@renderer/ipc'
@@ -161,7 +160,6 @@ const TranslatePageContent: FC = () => {
   const { models, isLoading: modelsLoading } = useModels({ enabled: true })
   const detectLanguage = useDetectLang()
   const translateHistory = useWorkspaceTranslateHistory()
-  const { shikiMarkdownIt } = useCodeStyle()
   const [sourceLanguage, setSourceLanguage] = usePreference('feature.translate.page.source_language')
   const [targetLanguage, setTargetLanguage] = usePreference('feature.translate.page.target_language')
   const [autoCopy] = usePreference('feature.translate.page.auto_copy')
@@ -222,7 +220,6 @@ const TranslatePageContent: FC = () => {
     taskOwner: translationWorkspaceService
   })
 
-  const [renderedMarkdown, setRenderedMarkdown] = useState<string>('')
   const [rawOutput, setRawOutput] = useState(translateOutput)
   const [reportedOutputTokens, setReportedOutputTokens] = useState<number | undefined>()
   const [outputTargetLanguage, setOutputTargetLanguage] = useState<TranslateLangCode>(targetLanguage)
@@ -788,24 +785,6 @@ const TranslatePageContent: FC = () => {
       outputScrollRef: outputTextRef
     })
 
-  useEffect(() => {
-    let cancelled = false
-    const render = async () => {
-      if (!enableMarkdown || !translateOutput) {
-        setRenderedMarkdown('')
-        return
-      }
-      const markdown = await shikiMarkdownIt(translateOutput)
-      if (!cancelled) {
-        setRenderedMarkdown(markdown)
-      }
-    }
-    void render()
-    return () => {
-      cancelled = true
-    }
-  }, [enableMarkdown, shikiMarkdownIt, translateOutput])
-
   const modelSelectorFilter = useCallback(
     (model: SelectorModel) =>
       !isNonChatModel(model) && (!isPdfMode || babelDoc.availability === 'missing' || isGatewayRoutableModel(model)),
@@ -1151,7 +1130,6 @@ const TranslatePageContent: FC = () => {
                           <TranslateOutputPane
                             ref={outputTextRef}
                             translatedContent={translateOutput}
-                            renderedMarkdown={renderedMarkdown}
                             enableMarkdown={enableMarkdown}
                             enableJsonStructure={flowSettings.jsonStructureView}
                             jsonStructureCopySeparator={flowSettings.jsonCopySeparator}
@@ -1232,7 +1210,6 @@ const TranslatePageContent: FC = () => {
                 <TranslateOutputPane
                   ref={outputTextRef}
                   translatedContent={translateOutput}
-                  renderedMarkdown={renderedMarkdown}
                   enableMarkdown={enableMarkdown}
                   enableJsonStructure={flowSettings.jsonStructureView}
                   jsonStructureCopySeparator={flowSettings.jsonCopySeparator}
