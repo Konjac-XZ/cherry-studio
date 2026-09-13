@@ -104,7 +104,7 @@ const TranslateInputPane = ({
             spellCheck={false}
             style={{ fontSize }}
             placeholder={t('translate.input.placeholder')}
-            className="min-h-full w-full resize-none overflow-hidden bg-transparent pt-[15px] pr-[77px] pb-[5px] pl-[21px] text-base text-foreground leading-relaxed outline-none placeholder:font-normal placeholder:text-muted-foreground"
+            className="min-h-full w-full resize-none overflow-hidden bg-transparent px-[21px] pt-[15px] pb-[5px] text-base text-foreground leading-relaxed outline-none placeholder:font-normal placeholder:text-muted-foreground"
           />
         </Scrollbar>
         <FloatingActionBar
