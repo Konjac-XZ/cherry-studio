@@ -1,18 +1,39 @@
 // Downstream-owned Translate UI implementation.
 import { defaultMarkdownPlugins, Scrollbar, StreamingMarkdown, withMath } from '@cherrystudio/ui'
+import { CodeBlockView } from '@renderer/components/CodeBlockView/CodeBlockView'
 import { remarkLatexMath } from '@renderer/components/markdown'
+import { getNodeText } from '@renderer/utils/reactNodeText'
 import { getJsonStructureForDisplay, type JsonStructureCopySeparator } from '@renderer/utils/translate'
 import { Check, Copy } from 'lucide-react'
-import { type Ref, useMemo } from 'react'
+import { type JSX, type Ref, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { Components } from 'streamdown'
+import type { Components, ExtraProps } from 'streamdown'
+import { useIsCodeFenceIncomplete } from 'streamdown'
 
 import FloatingActionBar from '../../components/FloatingActionBar'
 import JsonStructureView from '../../components/JsonStructureView'
 
 const markdownPlugins = { ...defaultMarkdownPlugins, math: withMath({ singleDollar: true }) }
 const remarkPlugins = [remarkLatexMath]
+type MarkdownCodeProps = JSX.IntrinsicElements['code'] & ExtraProps
+
+const TranslateMarkdownCode = ({ children: rawChildren, className, node: _node }: MarkdownCodeProps) => {
+  void _node
+  const children = getNodeText(rawChildren)
+  const language = /language-([\w-+]+)/.exec(className || '')?.[1] ?? (children.includes('\n') ? 'text' : null)
+  const isIncomplete = useIsCodeFenceIncomplete()
+
+  return language ? (
+    <CodeBlockView language={language} editable={false} allowExecution={false} isStreaming={isIncomplete} wrappable>
+      {children}
+    </CodeBlockView>
+  ) : (
+    <code className={className}>{children}</code>
+  )
+}
+
 const markdownComponents = {
+  code: TranslateMarkdownCode,
   table: ({ node: _node, ...props }) => {
     void _node
     return <table {...props} />

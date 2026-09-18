@@ -1,19 +1,36 @@
 import type * as CherryStudioUi from '@cherrystudio/ui'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import TranslateOutputPane from '../TranslateOutputPane'
+
+const mocks = vi.hoisted(() => ({
+  codeViewer: vi.fn(),
+  t: vi.fn((key: string) => key)
+}))
 
 vi.mock('react-i18next', () => ({
   initReactI18next: {
     type: '3rdParty',
     init: vi.fn()
   },
-  useTranslation: () => ({ t: (key: string) => key })
+  useTranslation: () => ({ t: mocks.t })
 }))
 
 vi.mock('@renderer/utils/style', () => ({
   cn: (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(' ')
+}))
+
+vi.mock('@renderer/hooks/useCodeStyle', () => ({
+  useCmTheme: () => 'light'
+}))
+
+vi.mock('@renderer/components/CodeViewer', () => ({
+  default: (props: { value: string; wrapped: boolean }) => {
+    mocks.codeViewer(props)
+    return <pre data-wrapped={props.wrapped}>{props.value}</pre>
+  }
 }))
 
 vi.mock('@cherrystudio/ui', async (importOriginal) => importOriginal<typeof CherryStudioUi>())
@@ -83,6 +100,23 @@ describe('TranslateOutputPane', () => {
     expect(screen.getByRole('table')).toBeInTheDocument()
     expect(container.querySelector('.markdown [data-streamdown="table-wrapper"]')).toBeNull()
     expect(container.querySelector('.markdown button')).toBeNull()
+  })
+
+  it('lets each Markdown code block toggle automatic wrapping', async () => {
+    const user = userEvent.setup()
+    const props = baseProps()
+    props.enableMarkdown = true
+    props.translatedContent = '```latex\n\\section{A very long translated line}\n```'
+
+    const { container } = render(<TranslateOutputPane {...props} />)
+
+    const unwrapButton = await screen.findByRole('button', { name: 'code_block.wrap.off' })
+    expect(container.querySelector('pre')).toHaveAttribute('data-wrapped', 'true')
+
+    await user.click(unwrapButton)
+
+    expect(screen.getByRole('button', { name: 'code_block.wrap.on' })).toBeInTheDocument()
+    expect(container.querySelector('pre')).toHaveAttribute('data-wrapped', 'false')
   })
 
   it('shows completed structured JSON ahead of Markdown when explicitly enabled', () => {
