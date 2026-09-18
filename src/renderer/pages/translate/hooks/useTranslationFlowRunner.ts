@@ -69,6 +69,7 @@ type UseTranslationFlowRunnerParams = {
   setRawOutput: Dispatch<SetStateAction<string>>
   setSourceText: (value: string) => void
   setTranslateOutput: (value: string) => void
+  completeDisplay: (value: string) => Promise<void>
   sourceLanguage: TranslateLangCode | 'auto'
   sourceText: string
   t: TFunction
@@ -100,6 +101,7 @@ export const useTranslationFlowRunner = ({
   setRawOutput,
   setSourceText,
   setTranslateOutput,
+  completeDisplay,
   sourceLanguage,
   sourceText,
   t,
@@ -366,6 +368,8 @@ export const useTranslationFlowRunner = ({
           }
         }
         if (!isCurrent()) return
+        await completeDisplay(result.displayText)
+        if (!isCurrent()) return
         toast.success(t('translate.complete'))
 
         if (result.historyError) {
@@ -393,6 +397,7 @@ export const useTranslationFlowRunner = ({
       autoCopy,
       bidirectionalPair,
       copy,
+      completeDisplay,
       detectLanguage,
       flowStage,
       history,

@@ -197,7 +197,11 @@ const TranslatePageContent: FC = () => {
   const [translateOutput, setTranslateOutput] = useCache('translate.output')
   const [isDetecting, setIsDetecting] = useCache('translate.detecting')
 
-  const { reset: smoothReset, update: smoothUpdate } = useSmoothStream({
+  const {
+    complete: smoothComplete,
+    reset: smoothReset,
+    update: smoothUpdate
+  } = useSmoothStream({
     initialText: translateOutput,
     onUpdate: setTranslateOutput
   })
@@ -262,6 +266,8 @@ const TranslatePageContent: FC = () => {
     translationWorkspaceService.getSnapshot,
     translationWorkspaceService.getSnapshot
   )
+  const smoothRunIdRef = useRef(workspaceSnapshot.runId)
+  const completingSmoothRunIdRef = useRef<number | null>(null)
   const isOcrRunning = ocrJobId !== null
   const isPdfMode = pdfFile !== null
   const isTranslationRunning = isTranslating || pdfStatus.running
@@ -434,6 +440,14 @@ const TranslatePageContent: FC = () => {
     }
   }, [copy, t, translateOutput])
 
+  const completeDisplay = useCallback(
+    async (text: string) => {
+      completingSmoothRunIdRef.current = translationWorkspaceService.getSnapshot().runId
+      await smoothComplete(text)
+    },
+    [smoothComplete]
+  )
+
   const {
     abortSilently: abortTextTranslationSilently,
     onAbort: abortTextTranslation,
@@ -443,6 +457,7 @@ const TranslatePageContent: FC = () => {
     bidirectionalPair,
     cancel,
     copy,
+    completeDisplay,
     detectLanguage: (text, signal) =>
       detectLanguageOrUnknown(
         text,
@@ -470,7 +485,7 @@ const TranslatePageContent: FC = () => {
     setReportedOutputTokens,
     setRawOutput,
     setSourceText: setTranslateInput,
-    setTranslateOutput,
+    setTranslateOutput: smoothReset,
     sourceLanguage,
     sourceText: translateInput,
     t,
@@ -716,14 +731,37 @@ const TranslatePageContent: FC = () => {
       return
     }
     skipRawPostProcessingRef.current = null
-    if (rawOutput) setTranslateOutput(processTranslation(rawOutput, outputTargetLanguage))
-  }, [flowStage, isTranslating, outputTargetLanguage, processTranslation, rawOutput, setTranslateOutput])
+    if (!rawOutput) return
+    const processed = processTranslation(rawOutput, outputTargetLanguage)
+    if (
+      workspaceSnapshot.kind === 'text' &&
+      workspaceSnapshot.status === 'success' &&
+      workspaceSnapshot.rawOutput === rawOutput &&
+      workspaceSnapshot.displayOutput === processed
+    )
+      return
+    smoothReset(processed)
+    void smoothComplete(processed)
+  }, [
+    flowStage,
+    isTranslating,
+    outputTargetLanguage,
+    processTranslation,
+    rawOutput,
+    smoothComplete,
+    smoothReset,
+    workspaceSnapshot
+  ])
 
   const appliedWorkspaceRevisionRef = useRef<number | null>(null)
   useEffect(() => {
     if (appliedWorkspaceRevisionRef.current === workspaceSnapshot.revision) return
     appliedWorkspaceRevisionRef.current = workspaceSnapshot.revision
     if (workspaceSnapshot.kind !== 'text' || workspaceSnapshot.runId === 0) return
+    if (smoothRunIdRef.current !== workspaceSnapshot.runId) {
+      smoothRunIdRef.current = workspaceSnapshot.runId
+      smoothReset('')
+    }
     if (workspaceSnapshot.sourceText && !workspaceSnapshot.pdfContext) {
       setTranslateInput(workspaceSnapshot.sourceText)
     }
@@ -735,7 +773,9 @@ const TranslatePageContent: FC = () => {
     setReportedOutputTokens(workspaceSnapshot.outputTokens)
 
     if (workspaceSnapshot.status === 'success') {
-      smoothUpdate(workspaceSnapshot.displayOutput, true)
+      if (completingSmoothRunIdRef.current !== workspaceSnapshot.runId) {
+        void smoothComplete(workspaceSnapshot.displayOutput)
+      }
       setFlowStage('idle')
       setIsDetecting(false)
     } else if (workspaceSnapshot.status === 'cancelled' || workspaceSnapshot.status === 'error') {
@@ -756,7 +796,7 @@ const TranslatePageContent: FC = () => {
         setFlowStage(workspaceSnapshot.stage)
       }
     }
-  }, [setIsDetecting, setTranslateInput, smoothUpdate, workspaceSnapshot])
+  }, [setIsDetecting, setTranslateInput, smoothComplete, smoothReset, smoothUpdate, workspaceSnapshot])
 
   useEffect(() => {
     const context = workspaceSnapshot.pdfContext

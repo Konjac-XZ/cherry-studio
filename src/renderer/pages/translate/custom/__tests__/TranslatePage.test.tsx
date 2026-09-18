@@ -63,6 +63,7 @@ const translateCoreMock = vi.hoisted(() => ({
 }))
 const smoothStreamUpdateMock = vi.hoisted(() => vi.fn())
 const smoothStreamCompleteMock = vi.hoisted(() => vi.fn<(_: string) => Promise<void>>())
+const smoothStreamResetMock = vi.hoisted(() => vi.fn())
 const loggerWarnMock = vi.hoisted(() => vi.fn())
 const loggerErrorMock = vi.hoisted(() => vi.fn())
 const clipboardWriteTextMock = vi.hoisted(() => vi.fn())
@@ -227,7 +228,10 @@ vi.mock('@renderer/hooks/useSmoothStream', () => ({
       await smoothStreamCompleteMock(text)
       onUpdate(text)
     },
-    reset: (text = '') => onUpdate(text),
+    reset: (text = '') => {
+      smoothStreamResetMock(text)
+      onUpdate(text)
+    },
     update: (text: string, isComplete: boolean) => {
       smoothStreamUpdateMock(text, isComplete)
       onUpdate(text)
@@ -588,6 +592,7 @@ describe('TranslatePage', () => {
     smoothStreamUpdateMock.mockReset()
     smoothStreamCompleteMock.mockReset()
     smoothStreamCompleteMock.mockResolvedValue(undefined)
+    smoothStreamResetMock.mockReset()
     translateCoreMock.isAbortError.mockReset()
     translateCoreMock.isAbortError.mockReturnValue(false)
     translateCoreMock.formatErrorMessageWithPrefix.mockReset()
@@ -1598,7 +1603,7 @@ describe('TranslatePage', () => {
     )
   })
 
-  it('commits the post-processed result through the smooth stream completion boundary', async () => {
+  it('keeps the post-processed result behind the smooth stream completion boundary', async () => {
     MockUsePreferenceUtils.setMultiplePreferenceValues({
       'feature.translate.model_id': 'openai::gpt-4.1',
       'feature.translate.page.source_language': 'en-us',
@@ -1627,12 +1632,11 @@ describe('TranslatePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'translate.button.translate' }))
 
     await waitFor(() => expect(smoothStreamUpdateMock).toHaveBeenCalledWith('OpenAI translated text', false))
-    await waitFor(() => expect(smoothStreamUpdateMock).toHaveBeenLastCalledWith('AI translated text', true))
-    // The workspace owns the authoritative terminal result. UI smoothing may
-    // still be pending, but it must not gate business completion or hide the
-    // final post-processed value while the Activity is hidden.
-    expect(screen.getByTestId('translate-output-content')).toHaveTextContent('AI translated text')
+    await waitFor(() => expect(smoothStreamCompleteMock).toHaveBeenCalledWith('AI translated text'))
+    expect(smoothStreamResetMock).toHaveBeenCalledWith('')
+    expect(screen.getByTestId('translate-output-content')).toHaveTextContent('OpenAI translated text')
     expect(screen.queryByText('translate.processing')).not.toBeInTheDocument()
+    expect(toast.success).not.toHaveBeenCalled()
 
     await act(async () => {
       resolveCompletion()
@@ -1640,6 +1644,41 @@ describe('TranslatePage', () => {
 
     await waitFor(() => expect(screen.getByTestId('translate-output-content')).toHaveTextContent('AI translated text'))
     await waitFor(() => expect(screen.queryByText('translate.processing')).not.toBeInTheDocument())
+    expect(toast.success).toHaveBeenCalledWith('translate.complete')
+
+    fireEvent.click(screen.getByRole('button', { name: 'translate.button.translate' }))
+    await waitFor(() => expect(smoothStreamResetMock).toHaveBeenCalledTimes(2))
+  })
+
+  it('shows a cached translation immediately without replaying the smooth stream', async () => {
+    MockUsePreferenceUtils.setMultiplePreferenceValues({
+      'feature.translate.model_id': 'openai::gpt-4.1',
+      'feature.translate.page.source_language': 'en-us',
+      'feature.translate.page.target_language': 'zh-cn'
+    })
+    translateCoreMock.findCached.mockResolvedValueOnce({
+      id: '01900000-0000-7000-8000-000000000000',
+      kind: 'text',
+      sourceText: 'hello',
+      targetText: '缓存译文',
+      sourceLanguage: 'en-us',
+      targetLanguage: 'zh-cn',
+      modelId: 'openai::gpt-4.1',
+      cacheKey: 'translate:openai::gpt-4.1:en-us:zh-cn:hello',
+      star: false,
+      createdAt: '2026-09-18T00:00:00.000Z',
+      updatedAt: '2026-09-18T00:00:00.000Z'
+    })
+
+    const { rerender } = render(<TranslatePage />)
+    fireEvent.change(screen.getByLabelText('translate.input.placeholder'), { target: { value: 'hello' } })
+    rerender(<TranslatePage />)
+    fireEvent.click(screen.getByRole('button', { name: 'translate.button.translate' }))
+
+    await waitFor(() => expect(screen.getByTestId('translate-output-content')).toHaveTextContent('缓存译文'))
+    expect(smoothStreamResetMock).toHaveBeenLastCalledWith('缓存译文')
+    expect(translateCoreMock.translateText).not.toHaveBeenCalled()
+    expect(toast.info).toHaveBeenCalledWith('translate.info.reused_cached')
   })
 
   it('shows upstream output tokens in the translated pane', async () => {
