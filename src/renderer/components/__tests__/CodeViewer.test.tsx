@@ -215,4 +215,22 @@ describe('CodeViewer', () => {
     expect(lineContent).toHaveClass('[&_*]:whitespace-pre-wrap!')
     expect(lineContent).toHaveClass('[&_*]:break-words!')
   })
+
+  it('keeps unwrapped lines at content width so the code viewer scrolls horizontally', () => {
+    const { container } = render(
+      <CodeViewer
+        value="long=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        language="text"
+        wrapped={false}
+      />
+    )
+
+    expect(container.querySelector('.line')).toHaveClass('w-max', 'min-w-full')
+    expect(container.querySelector('.line-content')).toHaveClass(
+      'flex-none',
+      'whitespace-pre!',
+      '[&_*]:whitespace-pre!',
+      '[&_*]:break-normal!'
+    )
+  })
 })

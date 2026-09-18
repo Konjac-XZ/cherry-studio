@@ -638,7 +638,7 @@ const VirtualizedRow = memo(
 
     return (
       <div
-        className="line flex w-full items-start leading-[var(--line-height)]"
+        className={cn('line flex items-start leading-[var(--line-height)]', wrapped ? 'w-full' : 'w-max min-w-full')}
         style={{
           contain: wrapped ? 'content' : 'none',
           willChange: !wrapped && !expanded ? 'transform' : 'auto'
@@ -657,8 +657,10 @@ const VirtualizedRow = memo(
             // The !important on the wrapped whitespace beats global markdown CSS
             // (`.markdown pre span { white-space: pre }`) that would otherwise pin
             // token spans to `pre` and defeat wrapping inside chat code blocks.
-            'line-content min-w-0 flex-1 whitespace-pre pr-[1em]',
-            wrapped ? '[&_*]:whitespace-pre-wrap! [&_*]:break-words!' : '[&_*]:whitespace-pre [&_*]:break-normal'
+            'line-content pr-[1em]',
+            wrapped
+              ? '[&_*]:whitespace-pre-wrap! [&_*]:break-words! min-w-0 flex-1 whitespace-pre'
+              : 'whitespace-pre! [&_*]:whitespace-pre! [&_*]:break-normal! flex-none'
           )}>
           {completeTokenLine.map((token, tokenIndex) => (
             <span key={tokenIndex} style={getReactStyleFromToken(token, { isDarkTheme })}>

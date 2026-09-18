@@ -55,6 +55,7 @@ interface Props {
   isStreaming?: boolean
   showToolbar?: boolean
   maxHeight?: string | number
+  wrappable?: boolean
 }
 
 /**
@@ -83,14 +84,15 @@ export const CodeBlockView: React.FC<Props> = memo((props) => {
     allowExecution = true,
     isStreaming = false,
     showToolbar = true,
-    maxHeight
+    maxHeight,
+    wrappable
   } = props
   const { t } = useTranslation()
 
   const [codeExecutionEnabled] = usePreference('chat.code.execution.enabled')
   const [codeExecutionTimeoutMinutes] = usePreference('chat.code.execution.timeout_minutes')
   const [codeCollapsible] = usePreference('chat.code.collapsible')
-  const [codeWrappable] = usePreference('chat.code.wrappable')
+  const [codeWrappablePreference] = usePreference('chat.code.wrappable')
   const [codeImageTools] = usePreference('chat.code.image_tools')
   const [fontSize] = usePreference('chat.message.font_size')
   const [codeShowLineNumbers] = usePreference('chat.code.show_line_numbers')
@@ -161,6 +163,7 @@ export const CodeBlockView: React.FC<Props> = memo((props) => {
   const activeCmTheme = useCmTheme(isEditing)
 
   const [expandOverride, setExpandOverride] = useState(!codeCollapsible)
+  const codeWrappable = wrappable ?? codeWrappablePreference
   const [wrapOverride, setWrapOverride] = useState(codeWrappable)
   const handleRequestExpand = useCallback(() => setExpandOverride(true), [])
 
