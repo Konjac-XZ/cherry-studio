@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import ThinkingBlock from '../ThinkingBlock'
+import ThinkingBlock, { THINKING_CONTENT_PANEL_CLASSNAME } from '../ThinkingBlock'
 
 // Mock dependencies
 const mockUseTranslation = vi.fn()
@@ -349,6 +349,38 @@ describe('ThinkingBlock', () => {
 
       expect(getToggleButton()).toHaveAttribute('aria-expanded', 'true')
       expect(getContentContainer()).not.toHaveAttribute('hidden')
+    })
+  })
+
+  describe('layout and readability', () => {
+    it('uses viewport-aware max height and overscroll containment on the content panel', () => {
+      mockRenderConfig.thoughtAutoCollapse = false
+      const block = createThinkingBlock()
+      renderThinkingBlock(block)
+
+      expect(getContentContainer()).toHaveClass(THINKING_CONTENT_PANEL_CLASSNAME)
+    })
+
+    it('uses theme-aware muted foreground for panel and markdown content', () => {
+      mockRenderConfig.thoughtAutoCollapse = false
+      const block = createThinkingBlock({ content: 'Readable reasoning text' })
+      renderThinkingBlock(block)
+
+      const panel = getContentContainer()!
+      expect(panel).toHaveClass('text-muted-foreground')
+      expect(panel).not.toHaveAttribute('style')
+
+      const markdownWrapper = screen.getByText('Markdown: Readable reasoning text').parentElement
+      expect(markdownWrapper).toHaveClass('text-muted-foreground')
+      expect(markdownWrapper).toHaveStyle({ '--markdown-foreground': 'var(--muted-foreground)' })
+    })
+
+    it('keeps short thinking content compact without a minimum panel height', () => {
+      mockRenderConfig.thoughtAutoCollapse = false
+      const block = createThinkingBlock({ content: 'Short thought.' })
+      renderThinkingBlock(block)
+
+      expect(getContentContainer()?.className).not.toMatch(/min-h-/)
     })
   })
 

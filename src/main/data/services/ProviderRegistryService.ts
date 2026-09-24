@@ -81,6 +81,8 @@ export interface ProviderDisplayMetadata {
   availableInEditions?: Provider['availableInEditions']
   /** Registry capability: where the model list comes from (default `'api'`). */
   modelListSource?: 'api' | 'registry'
+  /** Registry-owned opt-in for incomplete API model lists. */
+  supplementModelsFromRegistry?: boolean
   /** Registry capability: accepted credential kinds (default `['api-key']`). */
   authMethods?: ('api-key' | 'oauth' | 'external-cli')[]
   /** Registry capability: serves requests without any credential (default false). */
@@ -232,6 +234,11 @@ export function resolveReasoningProfileFromRegistry(input: {
       : baseWire
 
   return { format: formatType, support: input.contract?.support, wire }
+}
+
+function resolveReasoningSummaryDialect(provider: ReasoningProviderContext, endpointType: EndpointType | undefined) {
+  const explicit = endpointType ? provider.endpointConfigs?.[endpointType]?.dialect?.reasoningSummary : undefined
+  return explicit ?? (provider.id === 'openai' || provider.presetProviderId === 'openai' ? undefined : false)
 }
 
 /**
@@ -789,6 +796,7 @@ class ProviderRegistryService {
         websites: provider?.metadata?.website,
         availableInEditions: provider?.availableInEditions,
         modelListSource: provider?.modelListSource,
+        supplementModelsFromRegistry: provider?.supplementModelsFromRegistry,
         authMethods: provider?.authMethods,
         authOptional: provider?.authOptional,
         serverTools: provider?.serverTools,
@@ -952,7 +960,7 @@ class ProviderRegistryService {
       format: endpointType ? profileProvider?.endpointConfigs?.[endpointType]?.reasoningFormat : undefined,
       contract,
       wireDialect: reasoning?.wireDialect,
-      reasoningSummary: endpointType ? context.endpointConfigs?.[endpointType]?.dialect?.reasoningSummary : undefined
+      reasoningSummary: resolveReasoningSummaryDialect(context, endpointType)
     })
     return { ...resolved, support: reasoning }
   }
@@ -1036,9 +1044,7 @@ class ProviderRegistryService {
       format: effectiveEndpoint ? formatProvider?.endpointConfigs?.[effectiveEndpoint]?.reasoningFormat : undefined,
       contract,
       wireDialect,
-      reasoningSummary: effectiveEndpoint
-        ? provider.endpointConfigs?.[effectiveEndpoint]?.dialect?.reasoningSummary
-        : undefined
+      reasoningSummary: resolveReasoningSummaryDialect(provider, effectiveEndpoint)
     })
     return { ...resolved, support }
   }

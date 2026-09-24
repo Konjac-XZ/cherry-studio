@@ -1,7 +1,6 @@
 import { renderHook } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
-
 import { countTranslateWords, useTranslateCounters, useTranslateOutputCounters } from '../useTranslateCounters'
 
 type CounterProps = Parameters<typeof useTranslateCounters>[0]

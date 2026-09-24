@@ -181,7 +181,7 @@ function AgentGroupMoreMenu({
   pinDisabled?: boolean
   pinned: boolean
   sidebarPinned: boolean
-  onDeleteAgent: (agentId: string, permanent?: boolean) => void | Promise<void>
+  onDeleteAgent: (agentId: string) => void | Promise<void>
   onEdit: (agentId: string) => void
   onSetAgentIconType: (iconType: AssistantIconType) => void | Promise<void>
   onTogglePin: (agentId: string) => void | Promise<void>
@@ -634,6 +634,7 @@ const Sessions = ({
     isRefreshing: isWorkspacesRefreshing,
     refetch: refetchWorkspaces
   } = useQuery('/agent-workspaces', { enabled: displayMode === 'workdir' })
+  useDataChange(displayMode === 'workdir' ? '/agent-workspaces' : [], () => void refetchWorkspaces())
   const workspaceRows = workspaces ?? EMPTY_WORKSPACE_ROWS
   const isWorkdirMetadataLoading = displayMode === 'workdir' && isWorkspacesLoading
   const isWorkdirMetadataRefreshing = displayMode === 'workdir' && isWorkspacesRefreshing
@@ -842,7 +843,7 @@ const Sessions = ({
   )
 
   const handleDeleteSession = useCallback(
-    async (id: string, permanent = false) => {
+    async (id: string) => {
       const deletedSession =
         filteredGroupedSessions.find((session) => session.id === id) ??
         sessionItemsRef.current.find((session) => session.id === id)
@@ -857,18 +858,13 @@ const Sessions = ({
       const wasActive = activeSessionIdRef.current === id
 
       const performDelete = async () => {
-        const success = permanent ? await deleteSession(id, { permanent: true }) : await deleteSession(id)
+        const success = await deleteSession(id)
         if (!success) {
           if (replacement && wasActive && activeSessionIdRef.current === replacement.id) setActiveSessionId(id)
           return
         }
 
         if (wasActive && !replacement) setTrackedActiveSessionId(null, null)
-
-        if (permanent) {
-          toast.success(t('settings.data.trash.permanent_delete.success'))
-          return
-        }
 
         showRecycleBinUndo({
           itemName: deletedSession?.name || t('common.unnamed'),
@@ -1281,12 +1277,11 @@ const Sessions = ({
   }, [refetchAgents, reload])
 
   const handleDeleteAgent = useCallback(
-    async (agentId: string, permanent = false) => {
+    async (agentId: string) => {
       if (deletingAgentId) return
 
       const agent = agentById.get(agentId)
       const deleteSessionsOnly = isProtectedBuiltinAgentRole(agent?.configuration?.builtin_role)
-      if (permanent && deleteSessionsOnly) return
 
       const performDelete = async (deleteSessions: boolean) => {
         const currentActiveSessionId = activeSessionIdRef.current
@@ -1299,7 +1294,7 @@ const Sessions = ({
             deletedSessionIds = result.deletedIds
             deletionChangedState = deletedSessionIds.length > 0
           } else {
-            const result = await ipcApi.request(permanent ? 'ai.agent.delete_permanently' : 'ai.agent.delete', {
+            const result = await ipcApi.request('ai.agent.delete', {
               agentId,
               deleteSessions
             })
@@ -1347,10 +1342,6 @@ const Sessions = ({
           }
 
           await reloadResources()
-          if (permanent) {
-            toast.success(t('settings.data.trash.permanent_delete.success'))
-            return
-          }
           if (deleteSessionsOnly) {
             if (deletedSessionIds.length > 0) {
               const restoredIds = [...deletedSessionIds]
@@ -1403,7 +1394,7 @@ const Sessions = ({
         return
       }
 
-      await deleteConversationOwnerPopup.show({ type: 'agent', permanent, action: performDelete })
+      await deleteConversationOwnerPopup.show({ type: 'agent', action: performDelete })
     },
     [
       closeConversationTabs,
@@ -2238,7 +2229,7 @@ interface SessionListBodyProps {
   isDraggable: boolean
   isValidating: boolean
   listRef: RefObject<HTMLDivElement | null>
-  onDeleteSession: (id: string, permanent?: boolean) => Promise<void>
+  onDeleteSession: (id: string) => Promise<void>
   onOpenInNewTab?: (session: AgentSessionEntity) => void
   onOpenInNewWindow?: (session: AgentSessionEntity) => void
   onOpenRenameDialog: (session: AgentSessionEntity) => void

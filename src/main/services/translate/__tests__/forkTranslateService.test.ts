@@ -1,6 +1,7 @@
 import { MockMainPreferenceServiceUtils } from '@test-mocks/main/PreferenceService'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { MODEL_CAPABILITY } from '@shared/data/types/model'
 import type { TranslateLanguage } from '@shared/data/types/translate'
 
 // `application.get('PreferenceService')` is mocked globally via
@@ -42,12 +43,17 @@ vi.mock('@main/data/services/MessageService', () => ({
 // `WebContentsListener` writes to `event.sender.send(...)` — stub it so the
 // test doesn't need a real WebContents.
 vi.mock('../../../ai/streamManager/listeners/WebContentsListener', () => ({
-  WebContentsListener: vi.fn().mockImplementation((sender: unknown, streamId: string) => ({
-    id: `wc:test:${streamId}`,
-    sender,
-    streamId,
-    onError: vi.fn()
-  }))
+  WebContentsListener: class {
+    id: string
+    onError = vi.fn()
+
+    constructor(
+      readonly sender: unknown,
+      readonly streamId: string
+    ) {
+      this.id = `wc:test:${streamId}`
+    }
+  }
 }))
 
 const { TerminalPersistenceError } = await import('../../../ai/streamManager/listeners/PersistenceListener')
@@ -315,23 +321,24 @@ describe('translateService.open', () => {
     ])
     MockMainPreferenceServiceUtils.setPreferenceValue('feature.translate.reasoning_effort', 'high')
     getByKeyMock.mockReturnValue({
-      id: 'moonshot::kimi-k3',
-      providerId: 'moonshot',
-      apiModelId: 'kimi-k3',
-      name: 'Kimi K3',
-      capabilities: []
+      id: 'anthropic::claude-sonnet-4-5',
+      providerId: 'anthropic',
+      apiModelId: 'claude-sonnet-4-5',
+      name: 'Claude Sonnet 4.5',
+      capabilities: [MODEL_CAPABILITY.REASONING],
+      reasoning: { controls: [{ kind: 'effort', values: ['low', 'high'] }], selectableEfforts: ['low', 'high'] }
     })
 
     translateService.open(fakeSender, {
       streamId: 'translate:frozen-sampling',
       text: 'hello',
       targetLangCode: 'en-us',
-      modelId: 'moonshot::kimi-k3'
+      modelId: 'anthropic::claude-sonnet-4-5'
     })
 
     expect(streamPromptMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        uniqueModelId: 'moonshot::kimi-k3',
+        uniqueModelId: 'anthropic::claude-sonnet-4-5',
         callOverrides: { customParameters: { seed: 42 } },
         reasoningEffort: 'none'
       })

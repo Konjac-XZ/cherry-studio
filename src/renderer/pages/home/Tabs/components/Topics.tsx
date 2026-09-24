@@ -213,7 +213,7 @@ function AssistantGroupMoreMenu({
   isGroupGrouping: boolean
   pinned: boolean
   sidebarPinned: boolean
-  onDeleteAssistant: (assistantId: string, permanent?: boolean) => void | Promise<void>
+  onDeleteAssistant: (assistantId: string) => void | Promise<void>
   onDeleteAllTopics: (assistantId: string) => void | Promise<void>
   onEdit: (assistantId: string) => void
   onSetAssistantIconType: (iconType: AssistantIconType) => void | Promise<void>
@@ -669,7 +669,7 @@ export function Topics({
   )
 
   const handleDeleteTopicFromMenu = useCallback(
-    async (topic: Topic, permanent = false) => {
+    async (topic: Topic) => {
       const wasActiveAtStart = topic.id === activeTopicIdRef.current
       const assistantTopicsBeforeDelete = topicsRef.current.filter(
         (candidate) => candidate.assistantId === topic.assistantId
@@ -679,13 +679,11 @@ export function Topics({
         findLatestActive(topicsRef.current.filter((candidate) => candidate.id !== topic.id))
 
       try {
-        if (permanent) await deleteTopicById(topic.id, { permanent: true, targetState: 'active' })
-        else await deleteTopicById(topic.id)
+        await deleteTopicById(topic.id)
       } catch (err) {
         logger.error('Failed to delete topic', { topicId: topic.id, err })
         if (isTrashTargetNotFoundError(err)) toast.info(t('recycle_bin.already_moved'))
-        else if (isTrashTopicBusyError(err))
-          toast.info(t(permanent ? 'chat.topics.delete.blocked_generation' : 'recycle_bin.move.blocked_generation'))
+        else if (isTrashTopicBusyError(err)) toast.info(t('recycle_bin.move.blocked_generation'))
         else toast.error(err instanceof Error ? err.message : t('chat.topics.manage.delete.error'))
         return
       }
@@ -698,11 +696,6 @@ export function Topics({
       if (shouldReplaceSelection) {
         if (replacement) setActiveTopic(replacement)
         else clearActiveTopic()
-      }
-
-      if (permanent) {
-        toast.success(t('settings.data.trash.permanent_delete.success'))
-        return
       }
 
       showRecycleBinUndo({
@@ -999,7 +992,7 @@ export function Topics({
   }, [refreshAssistants, refreshTopics])
 
   const handleDeleteAssistant = useCallback(
-    async (assistantId: string, permanent = false) => {
+    async (assistantId: string) => {
       if (deletingAssistantId) return
 
       const assistantName = assistantById.get(assistantId)?.name ?? t('common.unnamed')
@@ -1009,9 +1002,9 @@ export function Topics({
         try {
           let result
           try {
-            result = await deleteAssistant(assistantId, { deleteTopics, permanent })
+            result = await deleteAssistant(assistantId, { deleteTopics })
           } catch (err) {
-            if (permanent || !isTrashTargetNotFoundError(err)) throw err
+            if (!isTrashTargetNotFoundError(err)) throw err
             await refreshAssistantResources()
             toast.info(t('recycle_bin.already_moved'))
             return
@@ -1023,24 +1016,23 @@ export function Topics({
           }
 
           const deletedTopicIds = result.deletedTopicIds ?? []
-          if (!permanent)
-            showRecycleBinUndo({
-              itemName: assistantName,
-              onUndo: () =>
-                restoreRecycleBinUndoGroup({
-                  primary: {
-                    id: assistantId,
-                    restore: restoreAssistant,
-                    getActive: (id) => dataApiService.get(`/assistants/${id}`)
-                  },
-                  related: {
-                    ids: deletedTopicIds,
-                    restore: restoreTopic,
-                    getActive: (id) => dataApiService.get(`/topics/${id}`)
-                  },
-                  refresh: refreshAssistantResources
-                })
-            })
+          showRecycleBinUndo({
+            itemName: assistantName,
+            onUndo: () =>
+              restoreRecycleBinUndoGroup({
+                primary: {
+                  id: assistantId,
+                  restore: restoreAssistant,
+                  getActive: (id) => dataApiService.get(`/assistants/${id}`)
+                },
+                related: {
+                  ids: deletedTopicIds,
+                  restore: restoreTopic,
+                  getActive: (id) => dataApiService.get(`/topics/${id}`)
+                },
+                refresh: refreshAssistantResources
+              })
+          })
           if (deletedTopicIds.length > 0) closeConversationTabs('assistants', deletedTopicIds)
           if (currentActiveTopicId && deletedTopicIds.includes(currentActiveTopicId)) {
             try {
@@ -1054,10 +1046,9 @@ export function Topics({
           }
 
           await refreshAssistantResources()
-          if (permanent) toast.success(t('settings.data.trash.permanent_delete.success'))
         } catch (err) {
           logger.error('Failed to delete assistant from topic group', { assistantId, err })
-          if (!permanent && isTrashTopicBusyError(err)) {
+          if (isTrashTopicBusyError(err)) {
             toast.info(t('recycle_bin.move.blocked_generation'))
             return
           }
@@ -1069,7 +1060,6 @@ export function Topics({
 
       await deleteConversationOwnerPopup.show({
         type: 'assistant',
-        permanent,
         action: performDelete
       })
     },
@@ -1708,7 +1698,7 @@ interface TopicListBodyProps {
   notesPath: string
   onAutoRename: (topic: Topic) => Promise<void>
   onClearMessages: (topic: Topic) => void
-  onDeleteFromMenu: (topic: Topic, permanent?: boolean) => Promise<void>
+  onDeleteFromMenu: (topic: Topic) => Promise<void>
   onMoveToAssistant: (topic: Topic, assistantId: string) => void | Promise<void>
   onOpenInNewTab?: (topic: Topic) => void
   onOpenInNewWindow?: (topic: Topic) => void
@@ -1904,7 +1894,6 @@ const TopicRow = memo(function TopicRow({
     onClearMessages,
     onCopyImage: (topic) => onRequestTopicImageAction('copy', topic),
     onDelete: onDeleteFromMenu,
-    onDeletePermanently: (topic) => onDeleteFromMenu(topic, true),
     onExportImage: (topic) => onRequestTopicImageAction('export', topic),
     onMoveToAssistant,
     onOpenInNewTab,
@@ -1930,6 +1919,14 @@ const TopicRow = memo(function TopicRow({
       onClick={() => {
         if (rightPanelState?.maximized) rightPanelActions?.minimize()
         onSwitchTopic(topic)
+      }}
+      onAuxClick={(event) => {
+        if (event.button !== 1) return
+
+        event.preventDefault()
+        event.stopPropagation()
+        if (!canDeleteTopic || rowState.renaming || isArchiveBlocked || !deleteAction) return
+        void handleMenuAction(deleteAction)
       }}>
       {showLeadingSlot && <ResourceList.ItemLeadingSlot className="relative" />}
       <ResourceList.RenameField
