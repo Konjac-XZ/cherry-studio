@@ -1,9 +1,10 @@
+import { useMemo } from 'react'
+
 import { type TabsContextValue, useOptionalTabsContext } from '@renderer/hooks/tab'
 import { useWindowFrame } from '@renderer/hooks/useWindowFrame'
 import { ipcApi } from '@renderer/ipc'
 import type { ConversationAppId } from '@renderer/types/conversation'
 import { getSidebarApp } from '@renderer/utils/sidebar'
-import { useMemo } from 'react'
 
 export interface ConversationNavigation {
   /**

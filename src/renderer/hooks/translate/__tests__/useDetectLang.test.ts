@@ -1,9 +1,10 @@
-import { toast } from '@renderer/services/toast'
-import { parseTranslateLangCode, type TranslateLangCode } from '@shared/data/preference/preferenceTypes'
 import { mockUsePreference } from '@test-mocks/renderer/usePreference'
 import { mockRendererLoggerService } from '@test-mocks/RendererLoggerService'
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { toast } from '@renderer/services/toast'
+import { parseTranslateLangCode } from '@shared/data/preference/preferenceTypes'
 
 import { UNKNOWN_LANG_CODE } from '../../../utils/translate'
 import {
@@ -174,7 +175,7 @@ describe('detectLanguageByHeuristic', () => {
   })
 
   it('falls back deterministically to an allowed custom candidate', () => {
-    expect(detectLanguageByHeuristic('中文', ['custom-language' as TranslateLangCode])).toBe('custom-language')
+    expect(detectLanguageByHeuristic('中文', ['custom-language'])).toBe('custom-language')
   })
 })
 

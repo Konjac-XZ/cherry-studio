@@ -7,7 +7,6 @@
   "settings.about.diagnostics.limit": "ZIP ファイルが大きくなりすぎないよう、ログと詳細な記録は {{size}} までに制限されます。新しい情報が優先して保持されます。",
   "settings.about.diagnostics.privacy.description": "これらの記録には、入力した内容、ファイルの場所、リクエストとレスポンスの内容、サービスへの接続情報が含まれる場合があります。Cherry Studio はこれらを自動的にマスキングしたり、アップロードしたりしません。ZIP ファイルはサポート担当者にのみ共有し、GitHub などの公開サイトには絶対に投稿しないでください。",
   "settings.about.diagnostics.upload.actions.consent_upload": "同意してアップロード",
-  "settings.about.diagnostics.upload.dialog.title": "診断バンドルをアップロード",
   "settings.about.diagnostics.upload.errors.upload_failed": "診断バンドルを作成または保存できませんでした",
   "settings.about.diagnostics.upload.manual.title": "手動アップロードが必要です",
   "settings.about.diagnostics.upload.unknown.description": "ZIP ファイルは「ダウンロード」に保存されましたが、サーバーからの応答が途切れました。すでに送信済みの可能性があります。重複送信を避けるため、フォームを開く前に確認してください。",

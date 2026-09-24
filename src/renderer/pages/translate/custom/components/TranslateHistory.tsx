@@ -1,19 +1,3 @@
-// Downstream-owned Translate history UI implementation.
-import { Button, ConfirmDialog, EmptyState, Input, PageSidePanel } from '@cherrystudio/ui'
-import { loggerService } from '@logger'
-import IconButton from '@renderer/components/translate/IconButton'
-import { DynamicVirtualList } from '@renderer/components/VirtualList'
-import { useLanguages } from '@renderer/hooks/translate'
-import { ipcApi } from '@renderer/ipc'
-import { useCustomTranslateHistories } from '@renderer/pages/translate/custom/hooks/useCustomTranslateHistories'
-import { useWorkspaceTranslateHistory } from '@renderer/pages/translate/custom/hooks/useWorkspaceTranslateHistory'
-import { toast } from '@renderer/services/toast'
-import { cn } from '@renderer/utils/style'
-import { formatDate } from '@renderer/utils/time'
-import type { TranslateLangCode } from '@shared/data/preference/preferenceTypes'
-import type { FileEntryId } from '@shared/data/types/file'
-import type { TranslateHistory, TranslateLanguage } from '@shared/data/types/translate'
-import { createFileEntryHandle } from '@shared/utils/file'
 import {
   ArrowRight,
   ChevronRight,
@@ -30,6 +14,23 @@ import {
 import type { FC, UIEvent } from 'react'
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+
+// Downstream-owned Translate history UI implementation.
+import { Button, ConfirmDialog, EmptyState, Input, PageSidePanel } from '@cherrystudio/ui'
+import { loggerService } from '@logger'
+import IconButton from '@renderer/components/translate/IconButton'
+import { DynamicVirtualList } from '@renderer/components/VirtualList'
+import { useLanguages } from '@renderer/hooks/translate'
+import { ipcApi } from '@renderer/ipc'
+import { useCustomTranslateHistories } from '@renderer/pages/translate/custom/hooks/useCustomTranslateHistories'
+import { useWorkspaceTranslateHistory } from '@renderer/pages/translate/custom/hooks/useWorkspaceTranslateHistory'
+import { toast } from '@renderer/services/toast'
+import { cn } from '@renderer/utils/style'
+import { formatDate } from '@renderer/utils/time'
+import type { TranslateLangCode } from '@shared/data/preference/preferenceTypes'
+import type { FileEntryId } from '@shared/data/types/file'
+import type { TranslateHistory, TranslateLanguage } from '@shared/data/types/translate'
+import { createFileEntryHandle } from '@shared/utils/file'
 
 import {
   isPdfTranslation,

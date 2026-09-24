@@ -1,3 +1,5 @@
+import { useCallback, useEffect, useRef } from 'react'
+
 import { loggerService } from '@logger'
 import { useWindowInitData } from '@renderer/hooks/useWindowInitData'
 import i18n from '@renderer/i18n/resolver'
@@ -5,7 +7,6 @@ import { ipcApi } from '@renderer/ipc'
 import { OPEN_MAIN_ROUTE_EVENT, type OpenMainRouteEvent } from '@renderer/services/mainWindowNavigation'
 import { isSettingsPath, normalizeSettingsPath, type SettingsPath } from '@shared/data/types/settingsPath'
 import type { MainWindowInitData } from '@shared/types/mainWindow'
-import { useCallback, useEffect, useRef } from 'react'
 
 import { useTabs } from './useTabs'
 

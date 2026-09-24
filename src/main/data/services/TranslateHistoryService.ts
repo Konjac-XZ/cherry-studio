@@ -2,6 +2,8 @@
  * Translate History Service - handles translate history CRUD
  */
 
+import { type SQL, and, eq, or, sql, inArray } from 'drizzle-orm'
+
 import { application } from '@application'
 import { type InsertTranslateHistoryFileRefRow, translateHistoryFileRefTable } from '@data/db/schemas/fileRelations'
 import { translateHistoryTable } from '@data/db/schemas/translateHistory'
@@ -17,8 +19,6 @@ import type {
 import { parsePersistedLangCode, type PersistedLangCode } from '@shared/data/preference/preferenceTypes'
 import { type TranslateHistory, TranslateHistoryKindSchema } from '@shared/data/types/translate'
 import { createTranslateHistoryCacheKey } from '@shared/utils/translateHistory'
-import type { SQL } from 'drizzle-orm'
-import { and, eq, inArray, or, sql } from 'drizzle-orm'
 
 import { asNumericKey, decodeListCursor, encodeCursor, keysetOrdering } from './utils/keysetCursor'
 import { timestampToISO } from './utils/rowMappers'

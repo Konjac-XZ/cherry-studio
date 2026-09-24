@@ -1,3 +1,5 @@
+import { and, desc, eq, ne, type SQL, sql } from 'drizzle-orm'
+
 import { application } from '@application'
 import { translateGlossaryTable } from '@data/db/schemas/translateGlossary'
 import { loggerService } from '@logger'
@@ -8,7 +10,6 @@ import type {
   UpdateTranslateGlossaryEntryDto
 } from '@shared/data/api/schemas/translate'
 import type { TranslateGlossaryEntry } from '@shared/data/types/translate'
-import { and, desc, eq, ne, type SQL, sql } from 'drizzle-orm'
 
 import { timestampToISO } from './utils/rowMappers'
 

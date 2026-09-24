@@ -105,7 +105,7 @@ export function normalizeZhMarkdownTextSpacing(markdown: string): string {
 
   let root: MarkdownNode
   try {
-    root = unified().use(remarkParse).use(remarkGfm).use(remarkMath).parse(markdown) as MarkdownNode
+    root = unified().use(remarkParse).use(remarkGfm).use(remarkMath).parse(markdown)
   } catch {
     return markdown
   }

@@ -4,21 +4,32 @@ import { describe, expect, it } from 'vitest'
 import { serializeError } from '../serializeError'
 
 describe('serializeError', () => {
-  describe('non-Error values', () => {
-    it('preserves the message from an upstream error object', () => {
+  describe('unknown thrown values', () => {
+    it('serializes only the safe message from a structured provider event', () => {
       const result = serializeError({
-        code: 503,
-        message: 'JSON error injected into SSE stream',
-        metadata: { error_type: 'provider_overloaded' }
+        type: 'error',
+        sequence_number: 2,
+        error: {
+          code: 'credit_balance_exhausted',
+          message: 'You have no credits remaining.'
+        },
+        apiKey: 'object-secret',
+        prompt: 'private prompt'
       })
 
-      expect(result.message).toBe('JSON error injected into SSE stream')
+      expect(result).toEqual({
+        name: null,
+        message: 'You have no credits remaining.',
+        stack: null
+      })
+      expect(JSON.stringify(result)).not.toMatch(/object-secret|private prompt/)
     })
 
-    it('serializes an object without a message instead of returning [object Object]', () => {
-      const result = serializeError({ code: 503, metadata: { error_type: 'provider_overloaded' } })
+    it('drops an opaque object instead of stringifying it', () => {
+      const result = serializeError({ apiKey: 'object-secret', nested: { token: 'nested-secret' } })
 
-      expect(result.message).toBe('{"code":503,"metadata":{"error_type":"provider_overloaded"}}')
+      expect(result).toEqual({ name: null, message: null, stack: null })
+      expect(JSON.stringify(result)).not.toMatch(/object-secret|nested-secret|\[object Object\]/)
     })
   })
 
@@ -235,10 +246,7 @@ describe('serializeError', () => {
       const retryError = new RetryError({
         message: 'Failed after retries',
         reason: 'maxRetriesExceeded',
-        errors: [
-          'Authorization: Bearer string-secret',
-          { apiKey: 'object-secret', nested: { token: 'nested-secret' } }
-        ] as unknown as Error[]
+        errors: ['Authorization: Bearer string-secret', { apiKey: 'object-secret', nested: { token: 'nested-secret' } }]
       })
 
       const result = serializeError(retryError)

@@ -19,6 +19,9 @@ export function createDateFormatter(language: string | undefined, options: Intl.
   }
 }
 
+export const formatRelativeDay = (offset: number, language: string) =>
+  normalizeChineseSpacing(new Intl.RelativeTimeFormat(language, { numeric: 'auto' }).format(offset, 'day'), language)
+
 function toDate(value: DateValue): Date {
   return value instanceof Date ? value : new Date(value)
 }

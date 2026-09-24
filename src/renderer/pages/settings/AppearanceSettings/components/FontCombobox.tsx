@@ -1,8 +1,9 @@
+import { Check, ChevronDown } from 'lucide-react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
+
 import { Input, Popover, PopoverAnchor, PopoverContent, PopoverTrigger, Tooltip } from '@cherrystudio/ui'
 import { DynamicVirtualList, type DynamicVirtualListRef } from '@renderer/components/VirtualList'
 import { cn } from '@renderer/utils/style'
-import { Check, ChevronDown } from 'lucide-react'
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
 
 const FONT_OPTION_HEIGHT = 32
 const FONT_LIST_MAX_HEIGHT = 320

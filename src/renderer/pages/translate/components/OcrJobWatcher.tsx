@@ -1,11 +1,12 @@
+import type { FC } from 'react'
+import { useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
+
 import { loggerService } from '@logger'
 import { useJob } from '@renderer/hooks/useJob'
 import { toast } from '@renderer/services/toast'
 import { formatErrorMessageWithPrefix } from '@renderer/utils/error'
 import { FileProcessingJobOutputSchema } from '@shared/data/types/fileProcessing'
-import type { FC } from 'react'
-import { useEffect, useRef } from 'react'
-import { useTranslation } from 'react-i18next'
 
 const logger = loggerService.withContext('TranslateOcrJobWatcher')
 

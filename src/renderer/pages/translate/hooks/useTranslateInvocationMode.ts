@@ -1,6 +1,7 @@
-import type { TranslationMode } from '@renderer/services/translation'
 import type { MouseEvent } from 'react'
 import { useCallback, useEffect, useRef } from 'react'
+
+import type { TranslationMode } from '@renderer/services/translation'
 
 import type { TranslationRunOverride } from './useTranslationFlowRunner'
 

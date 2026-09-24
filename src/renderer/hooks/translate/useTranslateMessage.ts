@@ -20,16 +20,16 @@
  * don't go through this hook.
  */
 
+import { useCallback, useEffect, useRef } from 'react'
+import { v4 as uuid } from 'uuid'
+
 import { loggerService } from '@logger'
 import {
   useOptionalTranslationOverlaySetter,
   useRefresh
 } from '@renderer/components/chat/messages/blocks/MessagePartsContext'
 import { ipcApi } from '@renderer/ipc'
-import type { TranslateLangCode } from '@shared/data/preference/preferenceTypes'
 import type { TranslateLanguage } from '@shared/data/types/translate'
-import { useCallback, useEffect, useRef } from 'react'
-import { v4 as uuid } from 'uuid'
 
 const logger = loggerService.withContext('useTranslateMessage')
 
@@ -104,7 +104,7 @@ export function useTranslateMessage(messageId: string): UseTranslateMessageResul
       let accumulated = ''
       setOverlay?.(messageId, {
         content: '',
-        targetLanguage: language.langCode as TranslateLangCode
+        targetLanguage: language.langCode
       })
 
       const unsubChunk = ipcApi.on('ai.stream.chunk', ({ topicId, chunk }) => {
@@ -117,7 +117,7 @@ export function useTranslateMessage(messageId: string): UseTranslateMessageResul
           accumulated += (chunk as { delta: string }).delta
           setOverlay?.(messageId, {
             content: accumulated,
-            targetLanguage: language.langCode as TranslateLangCode
+            targetLanguage: language.langCode
           })
         }
       })

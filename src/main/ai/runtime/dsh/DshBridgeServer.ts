@@ -11,6 +11,9 @@ import net from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
 
+import type { JsonRpcLineTransport, SessionEventNotification } from '@deepseek-ai/dsh-sdk-protocol'
+import type { SessionEvent } from '@deepseek-ai/dsh-session'
+
 import type {
   BridgeCommandResult,
   BridgeContextUsage,
@@ -19,8 +22,6 @@ import type {
   BridgePluginRequestMap,
   BridgeToolCallResult
 } from '@cherrystudio/dsh-bridge'
-import type { JsonRpcLineTransport, SessionEventNotification } from '@deepseek-ai/dsh-sdk-protocol'
-import type { SessionEvent } from '@deepseek-ai/dsh-session'
 import { loggerService } from '@logger'
 import { toolApprovalRegistry } from '@main/ai/toolApproval/ToolApprovalRegistry'
 import type { CherryToolMeta } from '@shared/data/types/uiParts'
@@ -53,6 +54,8 @@ export interface DshBridgeServerOptions {
   ) => Promise<BridgePluginRequestMap['guard/check']['result']>
   /** One subagent residency-epoch edge from the plugin's lifecycle listeners. */
   onSubagentLifecycle?: (edge: BridgeNotificationMap['subagent/lifecycle']) => void
+  /** Called when an authenticated connection closes unexpectedly. */
+  onDisconnect?: () => void
   /** Deadline for an accepted socket to authenticate; also bounds `whenReady()`. */
   readyTimeoutMs?: number
 }
@@ -129,24 +132,25 @@ export class DshBridgeServer {
   request<M extends keyof BridgeHostRequestMap>(
     method: M,
     params: BridgeHostRequestMap[M]['params'],
-    options?: { timeoutMs?: number }
+    options?: { timeoutMs?: number; signal?: AbortSignal }
   ): Promise<BridgeHostRequestMap[M]['result']> {
     const transport = this.transport
     if (!transport || !this.connection || this.connection.destroyed) {
       return Promise.reject(new Error('dsh bridge plugin is not connected'))
     }
     if (options?.timeoutMs === undefined) {
-      return transport.request(method, params) as Promise<BridgeHostRequestMap[M]['result']>
+      return transport.request(method, params, options?.signal) as Promise<BridgeHostRequestMap[M]['result']>
     }
     // The transport has no timeouts; aborting drops the pending entry and rejects with this reason.
     const { timeoutMs } = options
     const controller = new AbortController()
+    const signal = options.signal ? AbortSignal.any([options.signal, controller.signal]) : controller.signal
     const timer = setTimeout(() => {
       controller.abort(new Error(`dsh bridge ${method} timed out after ${timeoutMs}ms`))
     }, timeoutMs)
     timer.unref?.()
-    return (transport.request(method, params, controller.signal) as Promise<BridgeHostRequestMap[M]['result']>).finally(
-      () => clearTimeout(timer)
+    return (transport.request(method, params, signal) as Promise<BridgeHostRequestMap[M]['result']>).finally(() =>
+      clearTimeout(timer)
     )
   }
 
@@ -203,6 +207,7 @@ export class DshBridgeServer {
         this.connection = undefined
         this.transport = undefined
         this.abortToolCalls()
+        if (!this.closed) this.options.onDisconnect?.()
       }
     })
     transport.onRequest(async (method, params) => {

@@ -1,3 +1,7 @@
+import type { TFunction } from 'i18next'
+import type { Dispatch, SetStateAction } from 'react'
+import { useCallback, useRef } from 'react'
+
 import { loggerService } from '@logger'
 import type { useWorkspaceTranslateHistory } from '@renderer/pages/translate/custom/hooks/useWorkspaceTranslateHistory'
 import { toast } from '@renderer/services/toast'
@@ -12,9 +16,6 @@ import { formatErrorMessageWithPrefix } from '@renderer/utils/error'
 import { determineTargetLanguage, getTranslateModifierLabel, resolveTranslatePlan } from '@renderer/utils/translate'
 import type { TranslateLangCode } from '@shared/data/preference/preferenceTypes'
 import type { TranslateHistory } from '@shared/data/types/translate'
-import type { TFunction } from 'i18next'
-import type { Dispatch, SetStateAction } from 'react'
-import { useCallback, useRef } from 'react'
 
 import type { UseWorkspaceTranslateResult } from '../custom/hooks/useWorkspaceTranslate'
 
@@ -119,6 +120,7 @@ export const useTranslationFlowRunner = ({
       setOutputTargetLanguage(actualTargetLanguage)
       setTranslateOutput(processed)
       toast.info(t('translate.info.reused_cached', { modifier: getTranslateModifierLabel() }))
+      return processed
     },
     [processTranslation, setOutputTargetLanguage, setRawOutput, setReportedOutputTokens, setTranslateOutput, t]
   )
@@ -166,6 +168,15 @@ export const useTranslationFlowRunner = ({
       const { signal } = controller
       const isCurrent = () =>
         activeFlowRef.current === flowId && translationWorkspaceService.getSnapshot().runId === workspaceRunId
+      const copyOutput = async (text: string) => {
+        if (!isCurrent()) return
+        try {
+          await copy(text)
+        } catch (error) {
+          logger.error('Failed to auto copy translated text', error as Error)
+          toast.error(t('translate.error.auto_copy_failed'))
+        }
+      }
 
       try {
         const processedSourceText = runOverride.sourcePreprocessed
@@ -261,11 +272,13 @@ export const useTranslationFlowRunner = ({
           targetLanguage: prepared.value.targetLanguage
         })
         if (prepared.status === 'cache_hit') {
-          showCached(prepared.history, prepared.value.targetLanguage)
+          const displayOutput = showCached(prepared.history, prepared.value.targetLanguage)
           translationWorkspaceService.complete(workspaceRunId, {
             rawOutput: prepared.history.targetText,
-            displayOutput: processTranslation(prepared.history.targetText, prepared.value.targetLanguage)
+            displayOutput
           })
+          finishWorkspace()
+          if (autoCopy) await copyOutput(displayOutput)
           return
         }
 
@@ -358,15 +371,7 @@ export const useTranslationFlowRunner = ({
           historyError: result.historyError
         })
         finishWorkspace()
-        if (autoCopy) {
-          if (!isCurrent()) return
-          try {
-            await copy(result.displayText)
-          } catch (error) {
-            logger.error('Failed to auto copy translated text', error as Error)
-            toast.error(t('translate.error.auto_copy_failed'))
-          }
-        }
+        if (autoCopy) await copyOutput(result.displayText)
         if (!isCurrent()) return
         await completeDisplay(result.displayText)
         if (!isCurrent()) return

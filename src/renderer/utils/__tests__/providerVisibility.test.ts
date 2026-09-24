@@ -1,6 +1,7 @@
+import { describe, expect, it } from 'vitest'
+
 import { CHERRYAI_PROVIDER_ID } from '@shared/data/presets/cherryai'
 import type { Provider } from '@shared/data/types/provider'
-import { describe, expect, it } from 'vitest'
 
 import {
   filterHiddenBuiltInProviders,

@@ -1,3 +1,21 @@
+import { isEmpty } from 'es-toolkit/compat'
+import {
+  CirclePause,
+  ClipboardCheck,
+  CodeXml,
+  Columns2,
+  History,
+  Languages,
+  LoaderCircle,
+  Rows2,
+  SlidersHorizontal,
+  SpellCheck,
+  WandSparkles
+} from 'lucide-react'
+import type { FC, MouseEvent as ReactMouseEvent } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { useTranslation } from 'react-i18next'
+
 import { Avatar, AvatarFallback, Button } from '@cherrystudio/ui'
 import { useIcon } from '@cherrystudio/ui/icons'
 import { useCache } from '@data/hooks/useCache'
@@ -46,23 +64,6 @@ import { isUniqueModelId, type Model as SelectorModel, type UniqueModelId } from
 import type { TranslateHistory } from '@shared/data/types/translate'
 import { AbsoluteFilePathSchema } from '@shared/types/file'
 import { isGatewayRoutableModel, isNonChatModel } from '@shared/utils/model'
-import { isEmpty } from 'es-toolkit/compat'
-import {
-  CirclePause,
-  ClipboardCheck,
-  CodeXml,
-  Columns2,
-  History,
-  Languages,
-  LoaderCircle,
-  Rows2,
-  SlidersHorizontal,
-  SpellCheck,
-  WandSparkles
-} from 'lucide-react'
-import type { FC, MouseEvent as ReactMouseEvent } from 'react'
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
-import { useTranslation } from 'react-i18next'
 
 import DraggableDivider from '../components/DraggableDivider'
 import FlipButton from '../components/FlipButton'

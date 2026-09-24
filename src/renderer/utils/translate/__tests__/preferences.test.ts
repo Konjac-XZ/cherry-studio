@@ -1,5 +1,6 @@
-import { normalizeEditedTranslateFontSize, normalizePersistedTranslateFontSize } from '@renderer/utils/translate'
 import { describe, expect, it } from 'vitest'
+
+import { normalizeEditedTranslateFontSize, normalizePersistedTranslateFontSize } from '@renderer/utils/translate'
 
 describe('translate preference normalization', () => {
   it('accepts only persisted integer font sizes in the supported range', () => {

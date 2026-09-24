@@ -1,5 +1,6 @@
-import { getTranslateModifierLabel } from '@renderer/utils/translate'
 import { describe, expect, it } from 'vitest'
+
+import { getTranslateModifierLabel } from '@renderer/utils/translate'
 
 describe('translate platform labels', () => {
   it('uses Cmd on Apple platforms and Ctrl elsewhere', () => {

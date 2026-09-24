@@ -1,6 +1,7 @@
+import { describe, expect, it } from 'vitest'
+
 import { makeModel } from '@main/ai/__tests__/fixtures'
 import { MODEL_CAPABILITY } from '@shared/data/types/model'
-import { describe, expect, it } from 'vitest'
 
 import {
   gateTranslateSamplingParameters,

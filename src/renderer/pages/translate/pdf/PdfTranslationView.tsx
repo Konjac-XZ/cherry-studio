@@ -1,3 +1,8 @@
+import type { TFunction } from 'i18next'
+import { AlertCircle, Download, Languages, X } from 'lucide-react'
+import { type ReactNode, useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useTranslation } from 'react-i18next'
+
 import { Button, CircularProgress, EmptyState, Tooltip } from '@cherrystudio/ui'
 import { useInvalidateCache } from '@data/hooks/useDataApi'
 import { loggerService } from '@logger'
@@ -12,11 +17,6 @@ import { IpcError } from '@shared/ipc/errors/IpcError'
 import { translateErrorCodes } from '@shared/ipc/errors/translate'
 import type { PdfTranslationProgressStage, PdfTranslationStage } from '@shared/ipc/schemas/translate'
 import type { AbsoluteFilePath } from '@shared/types/file'
-import type { TFunction } from 'i18next'
-import { AlertCircle, Download, Languages, X } from 'lucide-react'
-import type { ReactNode } from 'react'
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
-import { useTranslation } from 'react-i18next'
 
 import { saveTranslationFileAs } from '../translationFiles'
 

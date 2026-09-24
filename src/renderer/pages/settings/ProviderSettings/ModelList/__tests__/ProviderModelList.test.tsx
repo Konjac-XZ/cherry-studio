@@ -1,6 +1,7 @@
-import { toast } from '@renderer/services/toast'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { toast } from '@renderer/services/toast'
 
 import ProviderModelList from '../ProviderModelList'
 

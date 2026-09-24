@@ -1,3 +1,7 @@
+import { Plus } from 'lucide-react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+
 import { usePersistCache } from '@data/hooks/useCache'
 import { useReorder } from '@data/hooks/useReorder'
 import ConfirmActionPopup from '@renderer/components/popups/ConfirmActionPopup'
@@ -18,9 +22,6 @@ import {
 } from '@renderer/utils/providerVisibility'
 import type { Provider } from '@shared/data/types/provider'
 import { canManageProvider } from '@shared/utils/provider'
-import { Plus } from 'lucide-react'
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
 
 import { useOvmsSupport } from '../hooks/useOvmsSupport'
 import type { ProviderFilterMode } from './providerFilterMode'

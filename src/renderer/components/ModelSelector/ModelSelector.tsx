@@ -1,17 +1,3 @@
-import { Avatar, AvatarFallback, Button, Checkbox, Tooltip } from '@cherrystudio/ui'
-import { useIcon } from '@cherrystudio/ui/icons'
-import { cn } from '@cherrystudio/ui/lib/utils'
-import { loggerService } from '@logger'
-import { getModelDisplayTags, ModelTag } from '@renderer/components/tags/Model'
-import { DynamicVirtualList, type DynamicVirtualListRef } from '@renderer/components/VirtualList'
-import { useCommandHandler } from '@renderer/hooks/command'
-import { openSettingsTab } from '@renderer/services/mainWindowNavigation'
-import { toast } from '@renderer/services/toast'
-import { getModelLogoRef } from '@renderer/utils/model'
-import { isDev } from '@renderer/utils/platform'
-import { isUniqueModelId, type Model, type UniqueModelId } from '@shared/data/types/model'
-import type { Provider } from '@shared/data/types/provider'
-import type { SettingsPath } from '@shared/data/types/settingsPath'
 import { first } from 'es-toolkit/compat'
 import { CircleSlash, Globe2, Pin, Settings2 } from 'lucide-react'
 import {
@@ -27,8 +13,22 @@ import {
 } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import type { SelectorShellBottomAction, SelectorShellLayout } from '../SelectorShell'
-import { SelectorShell } from '../SelectorShell'
+import { Avatar, AvatarFallback, Button, Checkbox, Tooltip } from '@cherrystudio/ui'
+import { useIcon } from '@cherrystudio/ui/icons'
+import { cn } from '@cherrystudio/ui/lib/utils'
+import { loggerService } from '@logger'
+import { getModelDisplayTags, ModelTag } from '@renderer/components/tags/Model'
+import { DynamicVirtualList, type DynamicVirtualListRef } from '@renderer/components/VirtualList'
+import { useCommandHandler } from '@renderer/hooks/command'
+import { openSettingsTab } from '@renderer/services/mainWindowNavigation'
+import { toast } from '@renderer/services/toast'
+import { getModelLogoRef } from '@renderer/utils/model'
+import { isDev } from '@renderer/utils/platform'
+import { isUniqueModelId, type Model, type UniqueModelId } from '@shared/data/types/model'
+import type { Provider } from '@shared/data/types/provider'
+import type { SettingsPath } from '@shared/data/types/settingsPath'
+
+import { type SelectorShellBottomAction, type SelectorShellLayout, SelectorShell } from '../SelectorShell'
 import type { ModelSelectorTag } from './filters'
 import { ModelSelectorDetailCard } from './ModelSelectorDetailCard'
 import { MODEL_SELECTOR_ROW_CLASS, ModelSelectorRow, ModelSelectorRowActionButton } from './ModelSelectorRow'
@@ -313,7 +313,7 @@ function ModelSelectorFilterTags({
       ref={scrollRef}
       onScroll={updateFadeState}
       style={maskImage ? { maskImage } : undefined}
-      className="flex min-w-0 flex-1 flex-nowrap items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className="flex min-w-0 flex-1 flex-nowrap items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       data-testid="model-selector-filter-tags">
       {tags.map((tag) => (
         <ModelTag

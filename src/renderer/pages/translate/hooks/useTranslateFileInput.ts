@@ -1,3 +1,8 @@
+import { isEmpty } from 'es-toolkit/compat'
+import type { ClipboardEvent, Dispatch, DragEvent, MutableRefObject, SetStateAction } from 'react'
+import { useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
+
 import { loggerService } from '@logger'
 import { useDrag } from '@renderer/hooks/useDrag'
 import { useFiles } from '@renderer/hooks/useFiles'
@@ -12,10 +17,6 @@ import {
   shouldPreferPlainTextClipboard
 } from '@renderer/utils/translate'
 import { documentExts, imageExts, textExts } from '@shared/utils/file'
-import { isEmpty } from 'es-toolkit/compat'
-import type { ClipboardEvent, Dispatch, DragEvent, MutableRefObject, SetStateAction } from 'react'
-import { useCallback } from 'react'
-import { useTranslation } from 'react-i18next'
 
 import { useTranslateFileProcessor } from './useTranslateFileProcessor'
 

@@ -1,3 +1,7 @@
+import type { FC } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
+
 import { MessageEditingProvider } from '@renderer/components/chat/editing/MessageEditingContext'
 import type { TopicMessageFlowLiveState } from '@renderer/components/chat/flow'
 import {
@@ -5,7 +9,7 @@ import {
   TranslationOverlayProvider,
   TranslationOverlaySetterProvider
 } from '@renderer/components/chat/messages/blocks/MessagePartsContext'
-import type { MessageListActions } from '@renderer/components/chat/messages/types'
+import type { MessageListActions, MessageListSelectAllPagination } from '@renderer/components/chat/messages/types'
 import { ConversationGreeting } from '@renderer/components/chat/shell/ConversationGreeting'
 import ConversationStageCenter from '@renderer/components/chat/shell/ConversationStageCenter'
 import type {
@@ -20,9 +24,6 @@ import type { Topic } from '@renderer/types/topic'
 import type { CherryUIMessage } from '@shared/data/types/message'
 import { isUniqueModelId } from '@shared/data/types/model'
 import type { Provider } from '@shared/data/types/provider'
-import type { FC } from 'react'
-import { useEffect, useMemo, useRef } from 'react'
-import { useTranslation } from 'react-i18next'
 
 import ChatComposerSlot from './ChatComposerSlot'
 import ChatMain from './ChatMain'
@@ -74,6 +75,7 @@ const ChatContent: FC<Props> = ({
     activeNodeId,
     loadOlder,
     hasOlder,
+    selectAllPagination,
     mutate: messagesCacheMutate
   } = useTopicMessages(topic.id)
 
@@ -98,6 +100,7 @@ const ChatContent: FC<Props> = ({
       activeNodeId={activeNodeId}
       loadOlder={loadOlder}
       hasOlder={hasOlder}
+      selectAllPagination={selectAllPagination}
       messagesCacheMutate={messagesCacheMutate}
     />
   )
@@ -120,6 +123,7 @@ interface InnerProps extends Props {
   activeNodeId: string | null
   loadOlder: () => void
   hasOlder: boolean
+  selectAllPagination: MessageListSelectAllPagination
   messagesCacheMutate: ReturnType<typeof useTopicMessages>['mutate']
 }
 
@@ -143,6 +147,7 @@ const ChatContentInner: FC<InnerProps> = ({
   activeNodeId,
   loadOlder,
   hasOlder,
+  selectAllPagination,
   messagesCacheMutate
 }) => {
   const { t } = useTranslation()
@@ -224,6 +229,7 @@ const ChatContentInner: FC<InnerProps> = ({
         isMessagesStale={isHistoryStale}
         loadOlder={loadOlder}
         hasOlder={hasOlder}
+        selectAllPagination={selectAllPagination}
         openCitationsPanel={onOpenCitationsPanel}
         onStartBranchDraft={reserveBranch}
       />

@@ -1,7 +1,7 @@
 import { loggerService } from '@logger'
 import { PersistedLangCodeSchema } from '@shared/data/preference/preferenceTypes'
 
-import { legacyChatModelToUniqueId, type LegacyModelRef } from '../transformers/ModelTransformers'
+import { legacyChatModelToUniqueId } from '../transformers/ModelTransformers'
 import type { TransformResult } from './ComplexPreferenceMappings'
 
 const logger = loggerService.withContext('Migration:TranslateTransforms')
@@ -21,7 +21,7 @@ const parseLegacyTranslateModelId = (value: unknown) => {
   if (value == null) return null
 
   if (typeof value === 'object') {
-    return legacyChatModelToUniqueId(value as LegacyModelRef)
+    return legacyChatModelToUniqueId(value)
   }
 
   if (typeof value !== 'string') return null
@@ -31,7 +31,7 @@ const parseLegacyTranslateModelId = (value: unknown) => {
 
   try {
     const parsed = JSON.parse(value) as unknown
-    return parsed != null && typeof parsed === 'object' ? legacyChatModelToUniqueId(parsed as LegacyModelRef) : null
+    return parsed != null && typeof parsed === 'object' ? legacyChatModelToUniqueId(parsed) : null
   } catch {
     return null
   }

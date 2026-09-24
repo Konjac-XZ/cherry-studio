@@ -1,3 +1,7 @@
+import { ChevronRight, GripVertical, Minus, Pencil } from 'lucide-react'
+import React, { memo, useCallback, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
+
 import {
   Button,
   ContextMenu,
@@ -12,9 +16,6 @@ import { useGroupedSortableDragHandle } from '@renderer/components/VirtualList'
 import { toast } from '@renderer/services/toast'
 import { cn } from '@renderer/utils/style'
 import type { Model, UniqueModelId } from '@shared/data/types/model'
-import { ChevronRight, GripVertical, Minus, Pencil } from 'lucide-react'
-import React, { memo, useCallback, useMemo } from 'react'
-import { useTranslation } from 'react-i18next'
 
 import { modelListClasses } from '../primitives/ProviderSettingsPrimitives'
 import { getModelOperationErrorMessage } from './errorMessage'

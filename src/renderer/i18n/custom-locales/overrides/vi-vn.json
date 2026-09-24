@@ -7,7 +7,6 @@
   "settings.about.diagnostics.limit": "Để giữ dung lượng ZIP ở mức phù hợp, nhật ký và bản ghi chi tiết được giới hạn ở {{size}}. Thông tin mới hơn được ưu tiên giữ lại.",
   "settings.about.diagnostics.privacy.description": "Các bản ghi này có thể chứa nội dung bạn đã nhập, vị trí tệp, nội dung yêu cầu và phản hồi, cũng như thông tin kết nối dịch vụ. Cherry Studio không tự động che dữ liệu nhạy cảm hoặc tải các bản ghi lên. Chỉ chia sẻ riêng tệp ZIP với bộ phận hỗ trợ và tuyệt đối không đăng lên GitHub hay trang web công khai khác.",
   "settings.about.diagnostics.upload.actions.consent_upload": "Đồng ý và tải lên",
-  "settings.about.diagnostics.upload.dialog.title": "Tải gói chẩn đoán lên",
   "settings.about.diagnostics.upload.errors.upload_failed": "Không thể tạo hoặc lưu gói chẩn đoán",
   "settings.about.diagnostics.upload.manual.title": "Cần tải lên thủ công",
   "settings.about.diagnostics.upload.unknown.description": "Tệp ZIP đã được lưu vào thư mục Tải xuống nhưng phản hồi từ máy chủ bị gián đoạn. Có thể nội dung đã được gửi. Hãy kiểm tra trước khi mở biểu mẫu để tránh gửi hai lần.",

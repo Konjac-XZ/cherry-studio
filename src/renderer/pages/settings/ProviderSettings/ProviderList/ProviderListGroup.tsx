@@ -1,3 +1,7 @@
+import { ChevronRight, GripVertical, Plus, EyeOff, MoreVertical } from 'lucide-react'
+import { type ReactNode, useId, type KeyboardEvent, type MouseEvent, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
+
 import { ReorderableList } from '@cherrystudio/ui'
 import { CommandContextMenu, type CommandContextMenuExtraItem, CommandPopupMenu } from '@renderer/components/command'
 import { getProviderLabelKey } from '@renderer/i18n/label'
@@ -5,9 +9,6 @@ import { ProviderAvatar } from '@renderer/pages/settings/ProviderSettings/compon
 import { providerListClasses } from '@renderer/pages/settings/ProviderSettings/primitives/ProviderSettingsPrimitives'
 import { cn } from '@renderer/utils/style'
 import type { Provider } from '@shared/data/types/provider'
-import { ChevronRight, EyeOff, GripVertical, MoreVertical, Plus } from 'lucide-react'
-import { type KeyboardEvent, type MouseEvent, type ReactNode, useId, useMemo } from 'react'
-import { useTranslation } from 'react-i18next'
 
 import type { ProviderListContentItemState } from './ProviderListContent'
 

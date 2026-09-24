@@ -86,8 +86,9 @@ vi.mock('@main/services/mainWindowNavigation', () => ({
   openSettingsInMainWindow: openSettingsInMainWindowMock
 }))
 
-import { IpcChannel } from '@shared/IpcChannel'
 import { MockMainPreferenceServiceUtils } from '@test-mocks/main/PreferenceService'
+
+import { IpcChannel } from '@shared/IpcChannel'
 
 import { CommandService } from '../CommandService'
 

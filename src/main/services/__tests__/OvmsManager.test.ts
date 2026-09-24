@@ -1,5 +1,6 @@
-import { parseOvmsProcessIds, stopOvmsProcessIds } from '@main/services/OvmsManager'
 import { describe, expect, it, vi } from 'vitest'
+
+import { parseOvmsProcessIds, stopOvmsProcessIds } from '@main/services/OvmsManager'
 
 describe('OvmsManager shutdown helpers', () => {
   it('parses no, one, and many PowerShell process ids', () => {

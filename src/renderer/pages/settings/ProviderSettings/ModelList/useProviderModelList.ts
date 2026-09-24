@@ -1,10 +1,10 @@
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react'
+
 import { usePreference } from '@data/hooks/usePreference'
 import { computeMinimalMoves } from '@renderer/data/utils/reorder'
 import { useModelMutations, useModels } from '@renderer/hooks/useModel'
-import type { Model, UniqueModelId } from '@shared/data/types/model'
-import { parseUniqueModelId } from '@shared/data/types/model'
+import { type Model, type UniqueModelId, parseUniqueModelId } from '@shared/data/types/model'
 import { groupModelsByLayout } from '@shared/utils/model'
-import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react'
 
 import { PROVIDER_SETTINGS_MODEL_SWR_OPTIONS } from '../hooks/providerSetting/constants'
 import { applyModelGroupRename } from './modelLayout'

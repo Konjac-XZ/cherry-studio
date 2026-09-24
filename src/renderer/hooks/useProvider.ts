@@ -1,3 +1,7 @@
+import { isUndefined, omitBy } from 'es-toolkit/compat'
+import { useCallback } from 'react'
+import type { SWRConfiguration } from 'swr'
+
 import { useMutation, useQuery } from '@data/hooks/useDataApi'
 import { useDataChange } from '@data/hooks/useDataChange'
 import { usePreference } from '@data/hooks/usePreference'
@@ -13,9 +17,6 @@ import type {
 } from '@shared/data/api/schemas/providers'
 import type { ConcreteApiPaths } from '@shared/data/api/types'
 import type { ApiKeyEntry, AuthConfig, Provider } from '@shared/data/types/provider'
-import { isUndefined, omitBy } from 'es-toolkit/compat'
-import { useCallback } from 'react'
-import type { SWRConfiguration } from 'swr'
 
 const EMPTY_PROVIDERS: Provider[] = []
 const EMPTY_HIDDEN_PROVIDER_IDS: string[] = []
@@ -35,11 +36,7 @@ function getErrorType(error: unknown) {
  * use schema template paths directly, so no `as ConcreteApiPaths` casts are needed there.
  */
 function providerRefreshPaths(providerId: string): ConcreteApiPaths[] {
-  return [
-    '/providers',
-    `/providers/${providerId}` as ConcreteApiPaths,
-    `/providers/${providerId}/*` as ConcreteApiPaths
-  ]
+  return ['/providers', `/providers/${providerId}`, `/providers/${providerId}/*`]
 }
 
 // ─── Layer 1: List + Create ────────────────────────────────────────────

@@ -1,7 +1,8 @@
-import type { JsonStructure, JsonStructureCopySeparator } from '@renderer/utils/translate'
-import { normalizeJsonStructureSelection } from '@renderer/utils/translate'
 import type { ClipboardEvent, FC, ReactNode } from 'react'
 import { Fragment } from 'react'
+
+import type { JsonStructure, JsonStructureCopySeparator } from '@renderer/utils/translate'
+import { normalizeJsonStructureSelection } from '@renderer/utils/translate'
 
 type JsonValueType = 'array' | 'boolean' | 'null' | 'number' | 'object' | 'string'
 

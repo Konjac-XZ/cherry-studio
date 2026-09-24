@@ -1,8 +1,9 @@
+import { describe, expect, it, vi } from 'vitest'
+
 import { determineTargetLanguage } from '@renderer/utils/translate'
 import { parsePersistedLangCode, type TranslateLangCode } from '@shared/data/preference/preferenceTypes'
 import type { UniqueModelId } from '@shared/data/types/model'
 import type { TranslateHistory } from '@shared/data/types/translate'
-import { describe, expect, it, vi } from 'vitest'
 
 import { executePreparedTranslation, prepareTranslation, type TranslationPreparationPorts } from '../TranslationUseCase'
 

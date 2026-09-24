@@ -9,7 +9,6 @@
   "settings.about.diagnostics.limit": "To keep the ZIP manageable, logs and detailed records are limited to {{size}}. Newer information is kept first.",
   "settings.about.diagnostics.privacy.description": "These records may contain things you entered, file locations, request and response content, and service connection information. Cherry Studio does not redact or upload them automatically. Share the ZIP only with support, and never post it on GitHub or other public sites.",
   "settings.about.diagnostics.upload.actions.consent_upload": "Agree and upload",
-  "settings.about.diagnostics.upload.dialog.title": "Upload diagnostic bundle",
   "settings.about.diagnostics.upload.errors.upload_failed": "Could not build or preserve the diagnostic bundle",
   "settings.about.diagnostics.upload.manual.title": "Manual upload required",
   "settings.about.diagnostics.upload.unknown.description": "The ZIP was saved to Downloads, but the server response was interrupted. It may already have been submitted. Check before opening the form to avoid sending it twice.",

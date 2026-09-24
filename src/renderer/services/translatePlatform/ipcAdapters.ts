@@ -9,7 +9,7 @@ const emptyClipboardContent = (): ClipboardContent => ({ html: '', plainText: ''
 export const ipcClipboardGateway: ClipboardGateway = {
   async readBrowserRich() {
     const clipboard = typeof navigator !== 'undefined' ? navigator.clipboard : undefined
-    const read = (clipboard as (Clipboard & { read?: () => Promise<ClipboardItem[]> }) | undefined)?.read
+    const read = clipboard?.read
     if (!clipboard || typeof read !== 'function') return emptyClipboardContent()
 
     const items = await read.call(clipboard)

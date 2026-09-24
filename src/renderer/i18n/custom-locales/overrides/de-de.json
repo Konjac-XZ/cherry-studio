@@ -7,7 +7,6 @@
   "settings.about.diagnostics.limit": "Damit die ZIP-Datei handlich bleibt, sind Protokolle und detaillierte Aufzeichnungen auf {{size}} begrenzt. Neuere Informationen werden bevorzugt berücksichtigt.",
   "settings.about.diagnostics.privacy.description": "Diese Aufzeichnungen können Ihre Eingaben, Dateispeicherorte, Anfrage- und Antwortinhalte sowie Informationen zu Dienstverbindungen enthalten. Cherry Studio schwärzt diese Daten nicht und lädt sie nicht automatisch hoch. Geben Sie die ZIP-Datei nur an den Support weiter und veröffentlichen Sie sie niemals auf GitHub oder anderen öffentlichen Websites.",
   "settings.about.diagnostics.upload.actions.consent_upload": "Zustimmen und hochladen",
-  "settings.about.diagnostics.upload.dialog.title": "Diagnosepaket hochladen",
   "settings.about.diagnostics.upload.errors.upload_failed": "Das Diagnosepaket konnte nicht erstellt oder gespeichert werden",
   "settings.about.diagnostics.upload.manual.title": "Manuelles Hochladen erforderlich",
   "settings.about.diagnostics.upload.unknown.description": "Die ZIP-Datei wurde im Downloads-Ordner gespeichert, aber die Serverantwort wurde unterbrochen. Die Übermittlung war möglicherweise bereits erfolgreich. Prüfen Sie dies, bevor Sie das Formular öffnen, um eine doppelte Übermittlung zu vermeiden.",

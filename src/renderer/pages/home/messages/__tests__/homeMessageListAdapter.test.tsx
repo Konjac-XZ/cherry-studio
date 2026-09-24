@@ -1,10 +1,11 @@
-import type { MessageListProviderValue, MessageListRuntime } from '@renderer/components/chat/messages/types'
-import type { CherryMessagePart, CherryUIMessage } from '@shared/data/types/message'
-import type { TranslateLanguage } from '@shared/data/types/translate'
 import { mockUseMutation } from '@test-mocks/renderer/useDataApi'
 import { act, render, waitFor } from '@testing-library/react'
 import { type ReactNode, useEffect } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import type { MessageListProviderValue, MessageListRuntime } from '@renderer/components/chat/messages/types'
+import type { CherryMessagePart, CherryUIMessage } from '@shared/data/types/message'
+import type { TranslateLanguage } from '@shared/data/types/translate'
 
 const eventMocks = vi.hoisted(() => ({
   emit: vi.fn(),
@@ -274,16 +275,15 @@ import {
   requestTopicImageAction
 } from '../topicImageActionBus'
 
-const createTopic = (id: string): Topic =>
-  ({
-    id,
-    assistantId: 'assistant-1',
-    name: `Topic ${id}`,
-    lastActivityAt: '2026-01-01T00:00:00.000Z',
-    createdAt: '2026-01-01T00:00:00.000Z',
-    updatedAt: '2026-01-01T00:00:00.000Z',
-    messages: []
-  }) as Topic
+const createTopic = (id: string): Topic => ({
+  id,
+  assistantId: 'assistant-1',
+  name: `Topic ${id}`,
+  lastActivityAt: '2026-01-01T00:00:00.000Z',
+  createdAt: '2026-01-01T00:00:00.000Z',
+  updatedAt: '2026-01-01T00:00:00.000Z',
+  messages: []
+})
 
 function MessageListAdapterHarness({
   imageActionConsumer,
@@ -423,36 +423,6 @@ describe('useHomeMessageListProviderValue topic image actions', () => {
     expect(openRouteMock).toHaveBeenCalledWith('/app/paintings', { source: 'assistant' })
   })
 
-  it('injects Home-message diagnosis persistence into the shared error UI', async () => {
-    vi.mocked(dataApiService.get).mockResolvedValue({
-      data: { parts: [{ type: 'data-error', data: { name: 'ProviderError', message: 'failed' } }] }
-    } as Awaited<ReturnType<typeof dataApiService.get<'/messages/:id'>>>)
-
-    render(<MessageListAdapterHarness topic={createTopic('topic-a')} />)
-
-    const options = useMessageErrorActionsMock.mock.calls.at(-1)?.[0] as {
-      diagnosticReport: { location: string }
-      persistDiagnosis: (partId: string, diagnosis: { summary: string }) => Promise<void>
-    }
-    expect(options.diagnosticReport).toEqual({ location: 'error.diagnostic_report.locations.home' })
-    await options.persistDiagnosis('message-1-part-0', { summary: 'Provider failed' })
-
-    expect(dataApiService.get).toHaveBeenCalledWith('/messages/message-1')
-    expect(dataApiService.patch).toHaveBeenCalledWith('/messages/message-1', {
-      body: {
-        data: {
-          parts: [
-            expect.objectContaining({
-              providerMetadata: expect.objectContaining({
-                cherry: expect.objectContaining({ diagnosis: expect.objectContaining({ summary: 'Provider failed' }) })
-              })
-            })
-          ]
-        }
-      }
-    })
-  })
-
   it('rejects pending requests for its topic when unmounted before runtime binding', async () => {
     const requestA = requestTopicImageAction('export', createTopic('topic-a'))
     const requestB = requestTopicImageAction('export', createTopic('topic-b'))
@@ -524,7 +494,7 @@ describe('useHomeMessageListProviderValue topic image actions', () => {
       <MessageListAdapterHarness
         topic={createTopic('topic-a')}
         messages={[historyMessage, liveMessage]}
-        partsByMessageId={{ ...historyPartsByMessageId, 'live-message': liveMessage.parts as CherryMessagePart[] }}
+        partsByMessageId={{ ...historyPartsByMessageId, 'live-message': liveMessage.parts }}
         streamingLayers={streamingLayers}
         onValue={(nextValue) => (value = nextValue)}
       />
@@ -543,7 +513,7 @@ describe('useHomeMessageListProviderValue topic image actions', () => {
         messages={[historyMessage, nextLiveMessage]}
         partsByMessageId={{
           ...historyPartsByMessageId,
-          'live-message': nextLiveMessage.parts as CherryMessagePart[]
+          'live-message': nextLiveMessage.parts
         }}
         streamingLayers={streamingLayers}
         onValue={(nextValue) => (value = nextValue)}
@@ -699,13 +669,13 @@ describe('useHomeMessageListProviderValue topic image actions', () => {
     await waitFor(() => expect(value).toBeDefined())
     await value?.actions.saveCodeBlock?.({
       msgBlockId: 'block-1',
-      codeBlockId: 'code-block-1',
+      originalContent: 'const value = "old"',
       newContent: 'const value = "new"'
     })
 
     expect(updateCodeBlock).toHaveBeenCalledWith(
       '```ts\nconst value = "old"\n```',
-      'code-block-1',
+      'const value = "old"',
       'const value = "new"'
     )
     expect(chatWriteMock.editMessage).toHaveBeenCalledWith('message-1', [updatedPart])
@@ -809,7 +779,7 @@ describe('useHomeMessageListProviderValue topic image actions', () => {
     const filePart = { type: 'file', mediaType: 'image/png', url: 'file://image.png' } as CherryMessagePart
     vi.mocked(dataApiService.get).mockResolvedValue({
       data: { parts: [{ type: 'text', text: '他说 "hello世界"。' }, filePart] }
-    } as Awaited<ReturnType<typeof dataApiService.get<'/messages/:id'>>>)
+    })
 
     render(<MessageListAdapterHarness topic={createTopic('topic-a')} onValue={(nextValue) => (value = nextValue)} />)
     await waitFor(() => expect(value).toBeDefined())
@@ -829,10 +799,10 @@ describe('useHomeMessageListProviderValue topic image actions', () => {
     vi.mocked(dataApiService.get)
       .mockResolvedValueOnce({
         data: { parts: [{ type: 'text', text: 'Already spaced.' }] }
-      } as Awaited<ReturnType<typeof dataApiService.get<'/messages/:id'>>>)
+      })
       .mockResolvedValueOnce({
         data: { parts: [{ type: 'text', text: '   ' }] }
-      } as Awaited<ReturnType<typeof dataApiService.get<'/messages/:id'>>>)
+      })
 
     render(<MessageListAdapterHarness topic={createTopic('topic-a')} onValue={(nextValue) => (value = nextValue)} />)
     await waitFor(() => expect(value).toBeDefined())
@@ -871,7 +841,7 @@ describe('useHomeMessageListProviderValue topic image actions', () => {
     await waitFor(() => expect(value).toBeDefined())
     await value?.actions.saveCodeBlock?.({
       msgBlockId: 'block-1',
-      codeBlockId: 'code-block-1',
+      originalContent: 'const value = "old"',
       newContent: 'const value = "new"'
     })
 

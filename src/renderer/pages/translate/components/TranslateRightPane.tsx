@@ -1,3 +1,7 @@
+import type { PropsWithChildren } from 'react'
+import { lazy, Suspense, useMemo, useSyncExternalStore } from 'react'
+import { useTranslation } from 'react-i18next'
+
 import {
   type RightPanelCapability,
   type RightPanelComponentProps,
@@ -6,9 +10,6 @@ import {
 } from '@renderer/components/chat/panes/Shell'
 import { usePreference } from '@renderer/data/hooks/usePreference'
 import { translationWorkspaceService } from '@renderer/services/translation'
-import type { PropsWithChildren } from 'react'
-import { lazy, Suspense, useMemo, useSyncExternalStore } from 'react'
-import { useTranslation } from 'react-i18next'
 
 const TracePane = lazy(() =>
   import('@renderer/components/chat/trace/TracePane').then((module) => ({ default: module.TracePane }))

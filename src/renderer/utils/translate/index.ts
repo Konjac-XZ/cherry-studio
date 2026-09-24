@@ -20,11 +20,7 @@ export {
   pickBidirectionalTarget,
   UNKNOWN_LANG_CODE
 } from './language'
-export {
-  clampTranslatePanelSize,
-  getTranslatePanelBounds,
-  MIN_TRANSLATE_PANEL_PERCENT
-} from './layout'
+export { clampTranslatePanelSize, getTranslatePanelBounds, MIN_TRANSLATE_PANEL_PERCENT } from './layout'
 export { getTranslateModifierLabel } from './platform'
 export {
   applyRegexReplacementRules,

@@ -1,7 +1,8 @@
-import { cn } from '@renderer/utils/style'
-import { clampTranslatePanelSize } from '@renderer/utils/translate'
 import type { PointerEvent, RefObject } from 'react'
 import { useCallback } from 'react'
+
+import { cn } from '@renderer/utils/style'
+import { clampTranslatePanelSize } from '@renderer/utils/translate'
 
 type Props = {
   containerRef: RefObject<HTMLDivElement | null>

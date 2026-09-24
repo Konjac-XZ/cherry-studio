@@ -1,3 +1,5 @@
+import { describe, expect, it } from 'vitest'
+
 import {
   CreateTranslateGlossaryEntrySchema,
   CreateTranslateHistorySchema,
@@ -7,7 +9,6 @@ import {
   UpdateTranslateHistorySchema,
   UpdateTranslateLanguageSchema
 } from '@shared/data/api/schemas/translate'
-import { describe, expect, it } from 'vitest'
 
 describe('Translate handler validation (Zod schemas)', () => {
   describe('TranslateHistoryQuerySchema', () => {

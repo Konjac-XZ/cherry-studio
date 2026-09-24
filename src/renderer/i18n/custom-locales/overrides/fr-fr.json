@@ -7,7 +7,6 @@
   "settings.about.diagnostics.limit": "Pour limiter la taille du fichier ZIP, les journaux et les enregistrements détaillés sont limités à {{size}}. Les informations les plus récentes sont conservées en priorité.",
   "settings.about.diagnostics.privacy.description": "Ces enregistrements peuvent contenir des éléments que vous avez saisis, des emplacements de fichiers, le contenu de requêtes et de réponses, ainsi que des informations de connexion aux services. Cherry Studio ne les masque ni ne les téléverse automatiquement. Partagez le fichier ZIP uniquement avec l'assistance et ne le publiez jamais sur GitHub ni sur aucun autre site public.",
   "settings.about.diagnostics.upload.actions.consent_upload": "Accepter et envoyer",
-  "settings.about.diagnostics.upload.dialog.title": "Envoyer le paquet de diagnostic",
   "settings.about.diagnostics.upload.errors.upload_failed": "Impossible de créer ou d’enregistrer le paquet de diagnostic",
   "settings.about.diagnostics.upload.manual.title": "Envoi manuel requis",
   "settings.about.diagnostics.upload.unknown.description": "Le fichier ZIP a été enregistré dans Téléchargements, mais la réponse du serveur a été interrompue. Il a peut-être déjà été envoyé. Vérifiez avant d’ouvrir le formulaire afin d’éviter un double envoi.",

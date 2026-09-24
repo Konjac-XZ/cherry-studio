@@ -1,6 +1,7 @@
+import { describe, expect, it } from 'vitest'
+
 import type { Tab } from '@shared/data/cache/cacheValueTypes'
 import { deduplicateTabsByPage, getTabPageIdentity, isSameTabPage } from '@shared/utils/tabIdentity'
-import { describe, expect, it } from 'vitest'
 
 const tab = (id: string, url: string): Tab => ({ id, type: 'route', url, title: id })
 

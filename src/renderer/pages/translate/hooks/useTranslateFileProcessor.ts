@@ -1,3 +1,6 @@
+import { useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
+
 import { loggerService } from '@logger'
 import { toast } from '@renderer/services/toast'
 import { type FileContentGateway, ipcFileContentGateway } from '@renderer/services/translatePlatform'
@@ -6,8 +9,6 @@ import { formatErrorMessageWithPrefix } from '@renderer/utils/error'
 import { getFileExtension, isTextFile } from '@renderer/utils/file'
 import { MB } from '@shared/utils/constants'
 import { documentExts } from '@shared/utils/file'
-import { useCallback } from 'react'
-import { useTranslation } from 'react-i18next'
 
 const logger = loggerService.withContext('TranslateFileProcessor')
 

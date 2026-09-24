@@ -1,6 +1,7 @@
-import type { TranslateLanguage } from '@shared/data/types/translate'
 import { MockMainPreferenceServiceUtils } from '@test-mocks/main/PreferenceService'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import type { TranslateLanguage } from '@shared/data/types/translate'
 
 // `application.get('PreferenceService')` is mocked globally via
 // tests/main.setup.ts. We only need to override `AiStreamManager` so we can
@@ -220,7 +221,7 @@ describe('translateService.resolveTranslatePayload', () => {
   })
 
   it('throws translate.error.not_configured when the translate model preference is unset', async () => {
-    MockMainPreferenceServiceUtils.setPreferenceValue('feature.translate.model_id', '' as any)
+    MockMainPreferenceServiceUtils.setPreferenceValue('feature.translate.model_id', '')
 
     expect(() => translateService.resolveTranslatePayload('source', TARGET)).toThrow('translate.error.not_configured')
     expect(getByKeyMock).not.toHaveBeenCalled()

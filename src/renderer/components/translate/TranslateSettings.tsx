@@ -1,3 +1,11 @@
+import { MergeView } from '@codemirror/merge'
+import { EditorState } from '@codemirror/state'
+import { EditorView, placeholder } from '@codemirror/view'
+import { ArrowLeft, ArrowLeftRight, ChevronDown, PenLine, Plus, Settings2, X } from 'lucide-react'
+import type { FC, KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { memo, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+
 import {
   Alert,
   Button,
@@ -25,9 +33,6 @@ import {
   Switch,
   Tooltip
 } from '@cherrystudio/ui'
-import { MergeView } from '@codemirror/merge'
-import { EditorState } from '@codemirror/state'
-import { EditorView, placeholder } from '@codemirror/view'
 import { usePreference } from '@data/hooks/usePreference'
 import { loggerService } from '@logger'
 import ModelAvatar from '@renderer/components/Avatar/ModelAvatar'
@@ -58,10 +63,6 @@ import { isUniqueModelId, type UniqueModelId } from '@shared/data/types/model'
 import type { TranslateGlossaryEntry, TranslateLanguage } from '@shared/data/types/translate'
 import { isNonChatModel } from '@shared/utils/model'
 import { hasTranslateReasoningOverride } from '@shared/utils/translateRequestOptions'
-import { ArrowLeft, ArrowLeftRight, ChevronDown, PenLine, Plus, Settings2, X } from 'lucide-react'
-import type { FC, KeyboardEvent as ReactKeyboardEvent } from 'react'
-import { memo, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
 
 import IconButton from './IconButton'
 import LanguagePicker from './LanguagePicker'

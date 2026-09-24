@@ -1,9 +1,9 @@
+import { type FC, type MouseEvent, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@cherrystudio/ui'
 import { useInfiniteFlatItems, useInfiniteQuery } from '@renderer/data/hooks/useDataApi'
 import { formatCompactNumber } from '@renderer/utils/number'
-import type { FC, MouseEvent } from 'react'
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
 
 import { useMessageListActions, useMessageListMeta } from '../MessageListProvider'
 import type { MessageListItem } from '../types'

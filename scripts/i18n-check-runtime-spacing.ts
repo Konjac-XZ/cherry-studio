@@ -1,5 +1,6 @@
 import * as fs from 'fs'
 import * as path from 'path'
+
 import { Node, Project, type SourceFile } from 'ts-morph'
 
 import { composeLocale } from '../src/renderer/i18n/composeLocale'

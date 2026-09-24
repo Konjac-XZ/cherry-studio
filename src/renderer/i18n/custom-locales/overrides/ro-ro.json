@@ -7,7 +7,6 @@
   "settings.about.diagnostics.limit": "Pentru ca arhiva ZIP să rămână ușor de gestionat, jurnalele și înregistrările detaliate sunt limitate la {{size}}. Informațiile mai recente sunt păstrate cu prioritate.",
   "settings.about.diagnostics.privacy.description": "Aceste înregistrări pot conține informații introduse de tine, locații de fișiere, conținutul solicitărilor și răspunsurilor și informații despre conexiunile la servicii. Cherry Studio nu le anonimizează și nu le încarcă automat. Partajează arhiva ZIP numai cu echipa de asistență și nu o publica niciodată pe GitHub sau pe alte site-uri publice.",
   "settings.about.diagnostics.upload.actions.consent_upload": "Acceptă și încarcă",
-  "settings.about.diagnostics.upload.dialog.title": "Încarcă pachetul de diagnosticare",
   "settings.about.diagnostics.upload.errors.upload_failed": "Pachetul de diagnosticare nu a putut fi creat sau salvat",
   "settings.about.diagnostics.upload.manual.title": "Este necesară încărcarea manuală",
   "settings.about.diagnostics.upload.unknown.description": "Arhiva ZIP a fost salvată în Descărcări, dar răspunsul serverului a fost întrerupt. Este posibil ca trimiterea să fi fost deja finalizată. Verifică înainte de a deschide formularul pentru a evita trimiterea de două ori.",

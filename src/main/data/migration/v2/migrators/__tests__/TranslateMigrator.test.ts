@@ -1,6 +1,7 @@
-import { translateGlossaryTable } from '@data/db/schemas/translateGlossary'
 import { setupTestDatabase } from '@test-helpers/db'
 import { describe, expect, it } from 'vitest'
+
+import { translateGlossaryTable } from '@data/db/schemas/translateGlossary'
 
 import { TranslateMigrator } from '../TranslateMigrator'
 

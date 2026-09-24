@@ -1,8 +1,9 @@
+import { useCallback, useRef } from 'react'
+
 import { loggerService } from '@logger'
 import { useTemporaryValue } from '@renderer/hooks/useTemporaryValue'
 import { type ClipboardGateway, ipcClipboardGateway } from '@renderer/services/translatePlatform'
 import { clipboardFingerprint } from '@renderer/utils/translate'
-import { useCallback, useRef } from 'react'
 
 const logger = loggerService.withContext('TranslateClipboardWrite')
 

@@ -1,14 +1,15 @@
-// Downstream-owned Translate UI implementation.
-import { defaultMarkdownPlugins, Scrollbar, StreamingMarkdown, withMath } from '@cherrystudio/ui'
-import { CodeBlockView } from '@renderer/components/CodeBlockView/CodeBlockView'
-import { remarkLatexMath } from '@renderer/components/markdown'
-import { getNodeText } from '@renderer/utils/reactNodeText'
-import { getJsonStructureForDisplay, type JsonStructureCopySeparator } from '@renderer/utils/translate'
 import { Check, Copy } from 'lucide-react'
 import { type JSX, type Ref, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Components, ExtraProps } from 'streamdown'
 import { useIsCodeFenceIncomplete } from 'streamdown'
+
+// Downstream-owned Translate UI implementation.
+import { defaultMarkdownPlugins, Scrollbar, StreamingMarkdown, withMath } from '@cherrystudio/ui'
+import { CodeBlockView } from '@renderer/components/CodeBlockView/CodeBlockView'
+import { getNodeText } from '@renderer/utils/reactNodeText'
+import { remarkLatexMath } from '@renderer/utils/remarkLatexMath'
+import { getJsonStructureForDisplay, type JsonStructureCopySeparator } from '@renderer/utils/translate'
 
 import FloatingActionBar from '../../components/FloatingActionBar'
 import JsonStructureView from '../../components/JsonStructureView'

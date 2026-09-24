@@ -1,10 +1,11 @@
-// Downstream-owned Translate UI implementation.
-import { Button, NormalTooltip, Scrollbar } from '@cherrystudio/ui'
-import { useDrag } from '@renderer/hooks/useDrag'
 import { ClipboardPaste, LoaderCircle, Plus, X } from 'lucide-react'
 import type { KeyboardEvent, Ref } from 'react'
 import { useCallback, useLayoutEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
+
+// Downstream-owned Translate UI implementation.
+import { Button, NormalTooltip, Scrollbar } from '@cherrystudio/ui'
+import { useDrag } from '@renderer/hooks/useDrag'
 
 import FloatingActionBar from '../../components/FloatingActionBar'
 

@@ -1,7 +1,8 @@
 /** Checks source and translated catalog values before changes merge. */
 import * as fs from 'fs'
-import pangu from 'pangu'
 import * as path from 'path'
+
+import pangu from 'pangu'
 
 import { composeLocale } from '../src/renderer/i18n/composeLocale'
 

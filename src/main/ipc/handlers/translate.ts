@@ -1,8 +1,9 @@
+import { clipboard } from 'electron'
+
 import { application } from '@application'
 import { translateService } from '@main/services/translate/forkTranslateService'
 import type { translateRequestSchemas } from '@shared/ipc/schemas/translate'
 import type { IpcHandlersFor, WindowId } from '@shared/ipc/types'
-import { clipboard } from 'electron'
 
 function senderWebContents(senderId: WindowId | null): Electron.WebContents | undefined {
   if (senderId == null) return undefined
@@ -28,10 +29,21 @@ export const translateHandlers: IpcHandlersFor<typeof translateRequestSchemas> =
   'translate.clipboard_watch.stop': async (_request, { senderId }) => {
     if (senderId) application.get('ClipboardWatchService').unsubscribe(senderId)
   },
-  'translate.clipboard.read': async () => ({ text: clipboard.readText(), html: clipboard.readHTML() }),
+  'translate.clipboard.read': async () => {
+    const items = await clipboard.read()
+    let html = ''
+    for (const item of items) {
+      if (item.types.includes('text/html')) {
+        const data = await item.getType('text/html')
+        html = data instanceof Blob ? await data.text() : ''
+        break
+      }
+    }
+    return { text: await clipboard.readText(), html }
+  },
   'translate.clipboard.write': async (text) => {
-    clipboard.writeText(text)
-    return clipboard.readText() === text
+    await clipboard.writeText(text)
+    return (await clipboard.readText()) === text
   },
   'translate.window.focus': async (_request, { senderId }) => {
     if (!senderId) return

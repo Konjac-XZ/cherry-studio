@@ -1,3 +1,10 @@
+import { MockUseCacheUtils } from '@test-mocks/renderer/useCache'
+import { MockUsePreferenceUtils } from '@test-mocks/renderer/usePreference'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import type React from 'react'
+import { useEffect, useState } from 'react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
 import type * as TranslateHooks from '@renderer/hooks/translate'
 import { toast } from '@renderer/services/toast'
 import { translationWorkspaceService } from '@renderer/services/translation'
@@ -5,12 +12,6 @@ import type * as TranslateUtils from '@renderer/utils/translate'
 import type * as TranslateTextModule from '@renderer/utils/translate/translateText'
 import type { BinaryToolSnapshot } from '@shared/types/binary'
 import type { AbsoluteFilePath } from '@shared/types/file'
-import { MockUseCacheUtils } from '@test-mocks/renderer/useCache'
-import { MockUsePreferenceUtils } from '@test-mocks/renderer/usePreference'
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import type React from 'react'
-import { useEffect, useState } from 'react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { TranslationFiles } from '../../translationFiles'
 
@@ -1650,11 +1651,12 @@ describe('TranslatePage', () => {
     await waitFor(() => expect(smoothStreamResetMock).toHaveBeenCalledTimes(2))
   })
 
-  it('shows a cached translation immediately without replaying the smooth stream', async () => {
+  it('shows and auto-copies a cached translation immediately without replaying the smooth stream', async () => {
     MockUsePreferenceUtils.setMultiplePreferenceValues({
       'feature.translate.model_id': 'openai::gpt-4.1',
       'feature.translate.page.source_language': 'en-us',
-      'feature.translate.page.target_language': 'zh-cn'
+      'feature.translate.page.target_language': 'zh-cn',
+      'feature.translate.page.auto_copy': true
     })
     translateCoreMock.findCached.mockResolvedValueOnce({
       id: '01900000-0000-7000-8000-000000000000',
@@ -1676,6 +1678,7 @@ describe('TranslatePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'translate.button.translate' }))
 
     await waitFor(() => expect(screen.getByTestId('translate-output-content')).toHaveTextContent('缓存译文'))
+    await waitFor(() => expect(clipboardWriteTextMock).toHaveBeenCalledWith('缓存译文'))
     expect(smoothStreamResetMock).toHaveBeenLastCalledWith('缓存译文')
     expect(translateCoreMock.translateText).not.toHaveBeenCalled()
     expect(toast.info).toHaveBeenCalledWith('translate.info.reused_cached')

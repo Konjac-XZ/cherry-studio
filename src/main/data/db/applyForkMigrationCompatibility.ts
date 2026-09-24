@@ -16,6 +16,25 @@ export function applyForkMigrationCompatibility(db: DbType): void {
   db.run(sql.raw('CREATE INDEX IF NOT EXISTS `translate_history_cache_key_idx` ON `translate_history` (`cache_key`)'))
   db.run(sql.raw('CREATE INDEX IF NOT EXISTS `translate_history_model_id_idx` ON `translate_history` (`model_id`)'))
 
+  // Earlier fork builds used migration 0021 before upstream assigned it to paired devices.
+  if (hasForkMigration0021(db)) {
+    db.run(
+      sql.raw(`CREATE TABLE IF NOT EXISTS \`api_gateway_paired_device\` (
+      \`id\` text PRIMARY KEY NOT NULL,
+      \`name\` text NOT NULL,
+      \`platform\` text NOT NULL,
+      \`token_hash\` text NOT NULL,
+      \`created_at\` integer NOT NULL,
+      \`updated_at\` integer NOT NULL
+    )`)
+    )
+    db.run(
+      sql.raw(
+        'CREATE UNIQUE INDEX IF NOT EXISTS `api_gateway_paired_device_token_hash_unique_idx` ON `api_gateway_paired_device` (`token_hash`)'
+      )
+    )
+  }
+
   if (hasRetiredPersonalMigrationCollision(db)) {
     ensureColumn(db, 'user_model', 'input_modalities_explicit', 'integer DEFAULT false NOT NULL')
     ensureColumn(
@@ -59,5 +78,10 @@ function ensureColumn(db: DbType, table: string, column: string, definition: str
 
 function hasRetiredPersonalMigrationCollision(db: DbType): boolean {
   const rows = db.all(sql.raw('SELECT 1 FROM `__drizzle_migrations` WHERE `created_at` = 1787479168062 LIMIT 1'))
+  return rows.length > 0
+}
+
+function hasForkMigration0021(db: DbType): boolean {
+  const rows = db.all(sql.raw('SELECT 1 FROM `__drizzle_migrations` WHERE `created_at` = 1788397124856 LIMIT 1'))
   return rows.length > 0
 }

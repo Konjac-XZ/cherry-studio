@@ -7,7 +7,6 @@
   "settings.about.diagnostics.limit": "Чтобы ZIP-файл не был слишком большим, размер журналов и подробных записей ограничен {{size}}. Более новые сведения сохраняются в первую очередь.",
   "settings.about.diagnostics.privacy.description": "Эти записи могут содержать введённые вами данные, расположение файлов, содержимое запросов и ответов, а также сведения о подключении к сервисам. Cherry Studio не скрывает и не отправляет их автоматически. Передавайте ZIP-файл только службе поддержки и никогда не публикуйте его на GitHub или других общедоступных сайтах.",
   "settings.about.diagnostics.upload.actions.consent_upload": "Согласиться и отправить",
-  "settings.about.diagnostics.upload.dialog.title": "Отправить диагностический пакет",
   "settings.about.diagnostics.upload.errors.upload_failed": "Не удалось создать или сохранить диагностический пакет",
   "settings.about.diagnostics.upload.manual.title": "Требуется ручная отправка",
   "settings.about.diagnostics.upload.unknown.description": "ZIP-файл сохранён в папке «Загрузки», но ответ сервера прервался. Возможно, данные уже отправлены. Проверьте это перед открытием формы, чтобы не отправить их дважды.",

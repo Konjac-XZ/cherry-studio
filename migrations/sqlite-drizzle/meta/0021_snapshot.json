@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "b890a787-2fc5-4cbf-905e-bcd6b41a21f9",
+  "id": "6c3a7ff2-86f0-45cc-b1ba-79a637eae98a",
   "prevId": "5aa247ef-31a6-45ca-bbce-f6f2aec894b6",
   "tables": {
     "agent": {
@@ -1448,6 +1448,64 @@
           "value": "\"ai_usage_record\".\"cost\" IS NULL OR \"ai_usage_record\".\"cost\" <= 1.7976931348623157e308"
         }
       }
+    },
+    "api_gateway_paired_device": {
+      "name": "api_gateway_paired_device",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "platform": {
+          "name": "platform",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "token_hash": {
+          "name": "token_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "api_gateway_paired_device_token_hash_unique_idx": {
+          "name": "api_gateway_paired_device_token_hash_unique_idx",
+          "columns": ["token_hash"],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
     "app_state": {
       "name": "app_state",
@@ -4855,82 +4913,6 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "translate_glossary": {
-      "name": "translate_glossary",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "source_phrase": {
-          "name": "source_phrase",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "target_phrase": {
-          "name": "target_phrase",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "target_language": {
-          "name": "target_language",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "enabled": {
-          "name": "enabled",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "translate_glossary_target_language_idx": {
-          "name": "translate_glossary_target_language_idx",
-          "columns": ["target_language", "created_at"],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "translate_glossary_target_language_translate_language_lang_code_fk": {
-          "name": "translate_glossary_target_language_translate_language_lang_code_fk",
-          "tableFrom": "translate_glossary",
-          "tableTo": "translate_language",
-          "columnsFrom": ["target_language"],
-          "columnsTo": ["lang_code"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
     "translate_history": {
       "name": "translate_history",
       "columns": {
@@ -4977,20 +4959,6 @@
           "notNull": false,
           "autoincrement": false
         },
-        "model_id": {
-          "name": "model_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "cache_key": {
-          "name": "cache_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
         "star": {
           "name": "star",
           "type": "integer",
@@ -5023,16 +4991,6 @@
         "translate_history_star_created_at_idx": {
           "name": "translate_history_star_created_at_idx",
           "columns": ["star", "created_at"],
-          "isUnique": false
-        },
-        "translate_history_cache_key_idx": {
-          "name": "translate_history_cache_key_idx",
-          "columns": ["cache_key"],
-          "isUnique": false
-        },
-        "translate_history_model_id_idx": {
-          "name": "translate_history_model_id_idx",
-          "columns": ["model_id"],
           "isUnique": false
         }
       },

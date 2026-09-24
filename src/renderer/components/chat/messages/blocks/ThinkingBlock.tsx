@@ -1,10 +1,11 @@
+import { type CSSProperties, memo, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import BeatLoader from 'react-spinners/BeatLoader'
+
 import { type MarkdownSource, Tooltip } from '@cherrystudio/ui'
 import { loggerService } from '@logger'
 import ActionIconButton from '@renderer/components/ActionIconButton'
 import CopyIcon from '@renderer/components/icons/CopyIcon'
-import { type CSSProperties, memo, useEffect, useId, useMemo, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
-import BeatLoader from 'react-spinners/BeatLoader'
 
 import ChatMarkdown from '../markdown/ChatMarkdown'
 import { useMessageListActions, useMessageRenderConfig } from '../MessageListProvider'
@@ -158,7 +159,7 @@ const ThinkingBlock: React.FC<Props> = ({ id, content, isStreaming, showTitlePre
                 {streamingPreviewText && (
                   <span
                     aria-hidden="true"
-                    className="min-w-0 flex-1 overflow-hidden whitespace-nowrap text-[13px] leading-5"
+                    className="min-w-0 flex-1 overflow-hidden text-[13px] leading-5 whitespace-nowrap"
                     style={{ color: THINKING_MUTED_COLOR }}>
                     {streamingPreviewText}
                   </span>
@@ -167,7 +168,7 @@ const ThinkingBlock: React.FC<Props> = ({ id, content, isStreaming, showTitlePre
             ) : showTitlePreview && previewText ? (
               <span
                 aria-hidden="true"
-                className="min-w-0 flex-1 truncate whitespace-nowrap text-[13px] leading-5"
+                className="min-w-0 flex-1 truncate text-[13px] leading-5 whitespace-nowrap"
                 style={{ color: THINKING_MUTED_COLOR }}>
                 {previewText}
               </span>

@@ -1,5 +1,10 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
+import type * as ReactRouter from '@tanstack/react-router'
+import { createMemoryHistory, createRouter } from '@tanstack/react-router'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import * as React from 'react'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 
 // Import the real component from its source path: the `@cherrystudio/ui` barrel
 // is globally mocked for renderer tests, but this deeper specifier is not.
@@ -7,11 +12,6 @@ import { PageSidePanel } from '@cherrystudio/ui/components/composites/page-side-
 import { Combobox } from '@cherrystudio/ui/components/primitives/combobox'
 import { Dialog, DialogContent } from '@cherrystudio/ui/components/primitives/dialog'
 import type { Tab } from '@shared/data/cache/cacheValueTypes'
-import type * as ReactRouter from '@tanstack/react-router'
-import { createMemoryHistory, createRouter } from '@tanstack/react-router'
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import * as React from 'react'
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 
 const knobs = vi.hoisted(() => ({
   renderPage: (() => null) as (url: string) => React.ReactNode
@@ -33,9 +33,8 @@ const routerMocks = vi.hoisted(() => ({
 // @cherrystudio/ui stub shadows it).
 vi.mock('@cherrystudio/ui/components/primitives/portal-container', async (importOriginal) => importOriginal())
 vi.mock('@cherrystudio/ui', async () => {
-  const { DialogPortalContainerProvider, PortalContainerProvider, usePortalContainer } = await import(
-    '@cherrystudio/ui/components/primitives/portal-container'
-  )
+  const { DialogPortalContainerProvider, PortalContainerProvider, usePortalContainer } =
+    await import('@cherrystudio/ui/components/primitives/portal-container')
   return { DialogPortalContainerProvider, PortalContainerProvider, usePortalContainer }
 })
 
@@ -94,7 +93,7 @@ beforeAll(() => {
     observe() {}
     unobserve() {}
     disconnect() {}
-  } as unknown as typeof ResizeObserver
+  }
   Element.prototype.scrollIntoView = vi.fn()
 })
 
@@ -195,14 +194,14 @@ describe('TabRouter PageSidePanel portal isolation', () => {
   })
 
   it('keeps a trigger-search Combobox anchored after switching away and back', async () => {
-    const rectSpy = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (
-      this: HTMLElement
-    ) {
-      if (this.matches('[data-slot="popover-anchor"]'))
-        return DOMRect.fromRect({ x: 120, y: 40, width: 260, height: 36 })
-      if (this.matches('[role="combobox"]')) return DOMRect.fromRect({ x: 120, y: 40, width: 100, height: 36 })
-      return DOMRect.fromRect({ x: 0, y: 0, width: 100, height: 40 })
-    })
+    const rectSpy = vi
+      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockImplementation(function (this: HTMLElement) {
+        if (this.matches('[data-slot="popover-anchor"]'))
+          return DOMRect.fromRect({ x: 120, y: 40, width: 260, height: 36 })
+        if (this.matches('[role="combobox"]')) return DOMRect.fromRect({ x: 120, y: 40, width: 100, height: 36 })
+        return DOMRect.fromRect({ x: 0, y: 0, width: 100, height: 40 })
+      })
 
     function PageWithCombobox({ url }: { url: string }) {
       if (url !== '/b') return null

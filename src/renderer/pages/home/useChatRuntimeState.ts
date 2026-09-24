@@ -1,3 +1,6 @@
+import { t } from 'i18next'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+
 import { dataApiService } from '@data/DataApiService'
 import { useInvalidateCache } from '@data/hooks/useDataApi'
 import { usePreference } from '@data/hooks/usePreference'
@@ -51,8 +54,6 @@ import type { CherryMessagePart, CherryUIMessage, MessageStatus } from '@shared/
 import type { ServiceTierSelection, UniqueModelId } from '@shared/data/types/model'
 import { isBlankUserTurn } from '@shared/data/types/uiParts'
 import type { ReasoningEffortOption } from '@shared/types/aiSdk'
-import { t } from 'i18next'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { useChatWriteActions } from './hooks/useChatWriteActions'
 import { useTopicMessagesCache, type UseTopicMessagesCacheParams } from './hooks/useTopicMessagesCache'
@@ -449,9 +450,9 @@ export function useChatRuntimeState({
           const settings = assistantRef.current?.settings
           const assistantReplyAutomationEnabled = Boolean(
             settings?.autoCopy ||
-              settings?.autoTranslate ||
-              settings?.zhCnMarkdownSmartQuotes ||
-              settings?.zhMarkdownTextSpacing
+            settings?.autoTranslate ||
+            settings?.zhCnMarkdownSmartQuotes ||
+            settings?.zhMarkdownTextSpacing
           )
 
           if (
@@ -611,13 +612,15 @@ export function useChatRuntimeState({
   const sendMessage = useCallback(
     async (text: string, options?: ChatTurnInput['options']) => {
       try {
-        return await send({ text, options })
+        const sent = await send({ text, options })
+        if (sent) scrollToBottom()
+        return sent
       } catch (err) {
         logger.warn('failed to open conversation turn', err as Error)
         throw err
       }
     },
-    [send]
+    [scrollToBottom, send]
   )
 
   return {

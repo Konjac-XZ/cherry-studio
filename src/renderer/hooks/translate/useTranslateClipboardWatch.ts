@@ -1,3 +1,6 @@
+import type { MutableRefObject } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+
 import { loggerService } from '@logger'
 import {
   type ClipboardGateway,
@@ -6,8 +9,6 @@ import {
   type WindowGateway
 } from '@renderer/services/translatePlatform'
 import { clipboardFingerprint } from '@renderer/utils/translate'
-import type { MutableRefObject } from 'react'
-import { useCallback, useEffect, useRef, useState } from 'react'
 
 const logger = loggerService.withContext('TranslateClipboardWatch')
 const POLL_INTERVAL_MS = 500

@@ -1,6 +1,7 @@
-import { createInputScrollHandler, createOutputScrollHandler } from '@renderer/utils/translate'
 import type { RefObject } from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+
+import { createInputScrollHandler, createOutputScrollHandler } from '@renderer/utils/translate'
 
 type TranslateLayoutOverride = 'auto' | 'horizontal' | 'vertical'
 

@@ -1,11 +1,21 @@
-import { BlurCancelPointerSensor, type SortableDragHandleProps } from '@cherrystudio/ui'
-import type { DragEndEvent, DragOverEvent, DragStartEvent, UniqueIdentifier } from '@dnd-kit/core'
-import { DndContext, DragOverlay, KeyboardSensor, useDroppable, useSensor, useSensors } from '@dnd-kit/core'
+import {
+  type DragEndEvent,
+  type DragOverEvent,
+  type DragStartEvent,
+  type UniqueIdentifier,
+  DndContext,
+  DragOverlay,
+  KeyboardSensor,
+  useDroppable,
+  useSensor,
+  useSensors
+} from '@dnd-kit/core'
 import { SortableContext, type SortingStrategy, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS, useCombinedRefs } from '@dnd-kit/utilities'
-import type React from 'react'
-import { createContext, memo, use, useCallback, useMemo, useRef, useState } from 'react'
+import React, { createContext, memo, use, useCallback, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+
+import { BlurCancelPointerSensor, type SortableDragHandleProps } from '@cherrystudio/ui'
 
 import DynamicVirtualList, { type DynamicVirtualListProps } from './DynamicVirtualList'
 import { buildGroupedVirtualRows, type GroupedVirtualListGroup, type GroupedVirtualListRow } from './GroupedVirtualList'
@@ -150,8 +160,12 @@ export type GroupedSortableVirtualListDragCapabilities = {
   itemCrossGroup?: boolean
 }
 
-export interface GroupedSortableVirtualListProps<TGroup, TItem, THeader = TGroup, TFooter = unknown>
-  extends BaseDynamicVirtualListProps<TGroup, TItem, THeader, TFooter> {
+export interface GroupedSortableVirtualListProps<
+  TGroup,
+  TItem,
+  THeader = TGroup,
+  TFooter = unknown
+> extends BaseDynamicVirtualListProps<TGroup, TItem, THeader, TFooter> {
   groups: readonly GroupedVirtualListGroup<TGroup, TItem, THeader, TFooter>[]
   getGroupId: (group: TGroup, groupIndex: number) => UniqueIdentifier
   getGroupBoundaryId?: (group: TGroup, groupIndex: number) => UniqueIdentifier
@@ -598,8 +612,7 @@ function SortableItemRow<TGroup, TItem>({
   const setSortableNodeRef = useCombinedRefs(setNodeRef, setActivatorNodeRef)
 
   const content = dragHandle ? (
-    <GroupedSortableDragHandleContext
-      value={{ attributes, listeners, ref: setActivatorNodeRef as (element: HTMLElement | null) => void }}>
+    <GroupedSortableDragHandleContext value={{ attributes, listeners, ref: setActivatorNodeRef }}>
       {children}
     </GroupedSortableDragHandleContext>
   ) : (
@@ -705,8 +718,7 @@ function SortableGroupHeaderRow<TGroup, TItem>({
   const setSortableNodeRef = useCombinedRefs(setNodeRef, setActivatorNodeRef)
 
   const content = dragHandle ? (
-    <GroupedSortableDragHandleContext
-      value={{ attributes, listeners, ref: setActivatorNodeRef as (element: HTMLElement | null) => void }}>
+    <GroupedSortableDragHandleContext value={{ attributes, listeners, ref: setActivatorNodeRef }}>
       {children}
     </GroupedSortableDragHandleContext>
   ) : (

@@ -7,7 +7,6 @@
   "settings.about.diagnostics.limit": "Para manter o tamanho do ZIP controlado, os registos e os dados detalhados estão limitados a {{size}}. As informações mais recentes têm prioridade.",
   "settings.about.diagnostics.privacy.description": "Estes registos podem conter texto introduzido por si, localizações de ficheiros, conteúdo de pedidos e respostas e informações de ligação a serviços. O Cherry Studio não oculta nem carrega estes dados automaticamente. Partilhe o ZIP apenas com o suporte e nunca o publique no GitHub ou noutros sites públicos.",
   "settings.about.diagnostics.upload.actions.consent_upload": "Aceitar e carregar",
-  "settings.about.diagnostics.upload.dialog.title": "Carregar pacote de diagnóstico",
   "settings.about.diagnostics.upload.errors.upload_failed": "Não foi possível criar ou guardar o pacote de diagnóstico",
   "settings.about.diagnostics.upload.manual.title": "É necessário carregar manualmente",
   "settings.about.diagnostics.upload.unknown.description": "O ficheiro ZIP foi guardado na pasta Transferências, mas a resposta do servidor foi interrompida. O envio poderá já ter sido concluído. Verifique antes de abrir o formulário para evitar enviar duas vezes.",

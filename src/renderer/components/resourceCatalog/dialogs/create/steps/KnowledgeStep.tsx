@@ -1,7 +1,8 @@
-import { KnowledgeBaseField } from '@renderer/components/resourceCatalog/dialogs/components/EditDialogShared'
-import { openRoute } from '@renderer/services/mainWindowNavigation'
 import { useCallback } from 'react'
 import type { UseFormReturn } from 'react-hook-form'
+
+import { KnowledgeBaseField } from '@renderer/components/resourceCatalog/dialogs/components/EditDialogShared'
+import { openRoute } from '@renderer/services/mainWindowNavigation'
 
 import type { ResourceCreateWizardFormValues } from '../types'
 

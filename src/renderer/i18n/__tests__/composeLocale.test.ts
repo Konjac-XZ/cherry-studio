@@ -1,5 +1,6 @@
-import { composeLocale } from '@renderer/i18n/composeLocale'
 import { describe, expect, it } from 'vitest'
+
+import { composeLocale } from '@renderer/i18n/composeLocale'
 
 describe('composeLocale', () => {
   it('applies downstream English, locale, and explicit override layers in order', () => {

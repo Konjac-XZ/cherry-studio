@@ -1,6 +1,7 @@
-import { Button } from '@cherrystudio/ui'
 import { RefreshCw } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+
+import { Button } from '@cherrystudio/ui'
 
 type Props = {
   couldFlip: boolean

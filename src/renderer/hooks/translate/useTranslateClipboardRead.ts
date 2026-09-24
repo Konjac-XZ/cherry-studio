@@ -1,3 +1,5 @@
+import { useCallback } from 'react'
+
 import { loggerService } from '@logger'
 import { type ClipboardGateway, ipcClipboardGateway } from '@renderer/services/translatePlatform'
 import {
@@ -5,7 +7,6 @@ import {
   htmlToTranslateMarkdown,
   shouldPreferPlainTextClipboard
 } from '@renderer/utils/translate'
-import { useCallback } from 'react'
 
 const logger = loggerService.withContext('TranslateClipboardRead')
 

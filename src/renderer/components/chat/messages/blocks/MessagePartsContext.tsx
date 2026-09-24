@@ -5,10 +5,10 @@
  * Components read parts directly via useMessageParts / usePartsMap.
  */
 
+import { type ReactNode, createContext, use, useMemo } from 'react'
+
 import type { TranslateLangCode } from '@shared/data/preference/preferenceTypes'
 import type { CherryMessagePart } from '@shared/data/types/message'
-import type { ReactNode } from 'react'
-import { createContext, use, useMemo } from 'react'
 
 // ============================================================================
 // Refresh Context — allows deep components to trigger data refresh

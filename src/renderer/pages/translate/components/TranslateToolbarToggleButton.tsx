@@ -1,7 +1,8 @@
-import { Button } from '@cherrystudio/ui'
-import { cn } from '@renderer/utils/style'
 import type { ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
+
+import { Button } from '@cherrystudio/ui'
+import { cn } from '@renderer/utils/style'
 
 const activeColorClasses = {
   clipboardWatch: 'text-[#0f8f7d] hover:text-[#0f8f7d] focus-visible:text-[#0f8f7d]',

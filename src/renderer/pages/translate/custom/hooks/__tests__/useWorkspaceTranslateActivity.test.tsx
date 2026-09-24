@@ -1,8 +1,9 @@
-import { translationWorkspaceService } from '@renderer/services/translation'
-import { parseTranslateLangCode } from '@shared/data/preference/preferenceTypes'
 import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react'
 import { Activity, useState } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+
+import { translationWorkspaceService } from '@renderer/services/translation'
+import { parseTranslateLangCode } from '@shared/data/preference/preferenceTypes'
 
 const mocks = vi.hoisted(() => ({
   translateText: vi.fn()

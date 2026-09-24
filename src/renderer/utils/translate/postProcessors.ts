@@ -1,8 +1,9 @@
-import type { TranslateLangCode } from '@shared/data/preference/preferenceTypes'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import remarkParse from 'remark-parse'
 import { unified } from 'unified'
+
+import type { TranslateLangCode } from '@shared/data/preference/preferenceTypes'
 
 import { normalizeZhMarkdownTextSpacing } from './zhMarkdownSpacing'
 
@@ -308,7 +309,7 @@ export function normalizeEnMarkdownStraightQuotes(markdown: string): string {
 
   let root: MarkdownNode
   try {
-    root = unified().use(remarkParse).use(remarkGfm).use(remarkMath).parse(markdown) as MarkdownNode
+    root = unified().use(remarkParse).use(remarkGfm).use(remarkMath).parse(markdown)
   } catch {
     return markdown
   }
@@ -332,7 +333,7 @@ export function normalizeZhCnMarkdownQuotes(markdown: string): string {
 
   let root: MarkdownNode
   try {
-    root = unified().use(remarkParse).use(remarkGfm).use(remarkMath).parse(markdown) as MarkdownNode
+    root = unified().use(remarkParse).use(remarkGfm).use(remarkMath).parse(markdown)
   } catch {
     return markdown
   }
@@ -742,11 +743,11 @@ function isTextWrappedByHtmlSiblings(parentNode: MarkdownNode | undefined, child
 
   return Boolean(
     previousSibling?.type === 'html' &&
-      previousSibling.value &&
-      isOpeningHtmlTag(previousSibling.value) &&
-      nextSibling?.type === 'html' &&
-      nextSibling.value &&
-      isClosingHtmlTag(nextSibling.value)
+    previousSibling.value &&
+    isOpeningHtmlTag(previousSibling.value) &&
+    nextSibling?.type === 'html' &&
+    nextSibling.value &&
+    isClosingHtmlTag(nextSibling.value)
   )
 }
 

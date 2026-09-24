@@ -1,7 +1,8 @@
-import { toast } from '@renderer/services/toast'
-import type { TranslateLangCode, TranslateSourceLanguage } from '@shared/data/preference/preferenceTypes'
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { toast } from '@renderer/services/toast'
+import type { TranslateLangCode, TranslateSourceLanguage } from '@shared/data/preference/preferenceTypes'
 
 import { determineFlippedBidirectionalLanguages, useTranslateLanguageControls } from '../useTranslateLanguageControls'
 

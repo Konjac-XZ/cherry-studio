@@ -1,6 +1,7 @@
-import type { ClipboardGateway } from '@renderer/services/translatePlatform'
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import type { ClipboardGateway } from '@renderer/services/translatePlatform'
 
 import { useTranslateClipboardWrite } from '../useTranslateClipboardWrite'
 

@@ -1,6 +1,6 @@
-import type { TranslateLangCode } from '@shared/data/preference/preferenceTypes'
 import { renderHook } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
+
 
 import { countTranslateWords, useTranslateCounters, useTranslateOutputCounters } from '../useTranslateCounters'
 
@@ -20,12 +20,12 @@ describe('useTranslateCounters', () => {
     const { result, rerender } = renderHook((props: CounterProps) => useTranslateCounters(props), {
       initialProps: {
         input: 'hello',
-        nativeLanguage: 'zh-cn' as TranslateLangCode,
+        nativeLanguage: 'zh-cn',
         nativeToOtherPrompt: 'short prompt',
         otherToNativePrompt: 'a much longer prompt with several extra words',
         polishEnabled: false,
         polishPrompt: 'polish with extra context',
-        targetLanguage: 'en-us' as TranslateLangCode
+        targetLanguage: 'en-us'
       }
     })
     const nativeToOtherTokens = result.current.tokenCount

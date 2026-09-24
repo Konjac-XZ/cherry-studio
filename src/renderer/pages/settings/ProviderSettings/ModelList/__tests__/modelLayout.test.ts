@@ -1,5 +1,6 @@
-import type { Model } from '@shared/data/types/model'
 import { describe, expect, it } from 'vitest'
+
+import type { Model } from '@shared/data/types/model'
 
 import { applyModelGroupRename, applyModelListLayoutDrag, type ModelListLayoutDragPayload } from '../modelLayout'
 import type { ModelListGroupSection } from '../useProviderModelList'

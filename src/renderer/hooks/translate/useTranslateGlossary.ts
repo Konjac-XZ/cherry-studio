@@ -1,10 +1,11 @@
+import { useCallback } from 'react'
+
 import { useMutation, useQuery } from '@data/hooks/useDataApi'
 import type {
   CreateTranslateGlossaryEntryDto,
   TranslateGlossaryQuery,
   UpdateTranslateGlossaryEntryDto
 } from '@shared/data/api/schemas/translate'
-import { useCallback } from 'react'
 
 export function useTranslateGlossary(query?: TranslateGlossaryQuery) {
   const { data, error, isLoading, refetch } = useQuery('/translate/glossary', {

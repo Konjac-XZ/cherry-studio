@@ -1,7 +1,8 @@
-import type { ClipboardGateway, WindowGateway } from '@renderer/services/translatePlatform'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import type { MutableRefObject } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+
+import type { ClipboardGateway, WindowGateway } from '@renderer/services/translatePlatform'
 
 import { useTranslateClipboardWatch } from '../useTranslateClipboardWatch'
 

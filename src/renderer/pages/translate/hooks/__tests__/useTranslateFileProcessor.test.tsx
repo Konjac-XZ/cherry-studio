@@ -1,10 +1,11 @@
+import { act, renderHook } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
 import { toast } from '@renderer/services/toast'
 import type { FileContentGateway } from '@renderer/services/translatePlatform'
 import type { FileMetadata } from '@renderer/types/file'
 import type * as FileUtils from '@renderer/utils/file'
 import { MB } from '@shared/utils/constants'
-import { act, renderHook } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const isTextFileMock = vi.hoisted(() => vi.fn())
 

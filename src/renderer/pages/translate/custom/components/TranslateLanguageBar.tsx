@@ -1,3 +1,8 @@
+import { ArrowLeftRight } from 'lucide-react'
+import type { FC } from 'react'
+import { useCallback, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
+
 // Downstream-owned Translate UI implementation.
 import { Button, Combobox, type ComboboxOption, Tooltip } from '@cherrystudio/ui'
 import { useLanguages } from '@renderer/hooks/translate'
@@ -8,10 +13,6 @@ import type {
   TranslateLangCode,
   TranslateSourceLanguage
 } from '@shared/data/preference/preferenceTypes'
-import { ArrowLeftRight } from 'lucide-react'
-import type { FC } from 'react'
-import { useCallback, useMemo } from 'react'
-import { useTranslation } from 'react-i18next'
 
 type Props = {
   className?: string
@@ -162,13 +163,13 @@ const TranslateLanguageBar: FC<Props> = ({
         }}
       />
 
-      <Tooltip content={t('translate.exchange.label')} placement="bottom">
+      <Tooltip content={t('common.swap')} placement="bottom">
         <Button
           variant="ghost"
           size="icon"
           onClick={onExchange}
           disabled={!couldExchange}
-          aria-label={t('translate.exchange.label')}
+          aria-label={t('common.swap')}
           className="h-8 w-8 shrink-0 rounded-full text-muted-foreground shadow-none transition-all hover:bg-accent hover:text-foreground active:scale-90">
           <ArrowLeftRight size={14} />
         </Button>

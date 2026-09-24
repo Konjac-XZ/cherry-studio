@@ -1,5 +1,6 @@
-import { clampTranslatePanelSize, getTranslatePanelBounds } from '@renderer/utils/translate'
 import { describe, expect, it } from 'vitest'
+
+import { clampTranslatePanelSize, getTranslatePanelBounds } from '@renderer/utils/translate'
 
 describe('translate layout geometry', () => {
   it('uses responsive horizontal trailing-pane minimum widths', () => {

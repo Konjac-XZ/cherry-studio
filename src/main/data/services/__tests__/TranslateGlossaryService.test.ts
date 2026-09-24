@@ -1,10 +1,11 @@
+import { setupTestDatabase } from '@test-helpers/db'
+import { beforeEach, describe, expect, it } from 'vitest'
+
 import { translateGlossaryTable } from '@data/db/schemas/translateGlossary'
 import { translateLanguageTable } from '@data/db/schemas/translateLanguage'
 import { buildCustomizedDictionary, translateGlossaryService } from '@data/services/TranslateGlossaryService'
 import { ErrorCode } from '@shared/data/api/errors'
 import { parsePersistedLangCode } from '@shared/data/preference/preferenceTypes'
-import { setupTestDatabase } from '@test-helpers/db'
-import { beforeEach, describe, expect, it } from 'vitest'
 
 describe('TranslateGlossaryService', () => {
   const dbh = setupTestDatabase()

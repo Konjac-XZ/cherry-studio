@@ -1,6 +1,7 @@
-import type { TranslateLangCode } from '@shared/data/preference/preferenceTypes'
 import { useMemo } from 'react'
 import { estimateTokenCount } from 'tokenx'
+
+import type { TranslateLangCode } from '@shared/data/preference/preferenceTypes'
 
 const wordSegmenter = new Intl.Segmenter(undefined, { granularity: 'word' })
 

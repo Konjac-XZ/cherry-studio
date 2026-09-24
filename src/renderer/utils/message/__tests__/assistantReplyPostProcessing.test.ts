@@ -1,5 +1,6 @@
-import type { CherryMessagePart } from '@shared/data/types/message'
 import { describe, expect, it } from 'vitest'
+
+import type { CherryMessagePart } from '@shared/data/types/message'
 
 import { ASSISTANT_REPLY_BEAUTIFY_SETTINGS, postProcessAssistantReplyParts } from '../assistantReplyPostProcessing'
 
