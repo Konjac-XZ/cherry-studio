@@ -178,6 +178,31 @@ const TranslateHistoryList: FC<Props> = ({ isOpen, onHistoryItemClick, onClose }
     [onHistoryItemClick]
   )
 
+  const handleRowUse = useCallback(
+    async (item: DisplayedTranslateHistoryItem) => {
+      if (item.kind === 'text') {
+        handleReuse(item)
+        return
+      }
+      if (!isPdfTranslation(item)) {
+        setSelectedId(item.id)
+        return
+      }
+      try {
+        const files = await loadTranslationFiles(item.id)
+        if (!files.source?.path || !files.target?.path) {
+          toast.error(t('translate.history.file.unavailable'))
+          return
+        }
+        handleReuse(item, files)
+      } catch (error) {
+        logger.error('Failed to load the files of a translate history entry', error as Error)
+        toast.error(t('translate.history.file.unavailable'))
+      }
+    },
+    [handleReuse, t]
+  )
+
   const estimateItemSize = useCallback(() => ITEM_HEIGHT, [])
 
   const handleListScroll = useCallback(
@@ -198,9 +223,15 @@ const TranslateHistoryList: FC<Props> = ({ isOpen, onHistoryItemClick, onClose }
 
   const renderHistoryRow = useCallback(
     (item: DisplayedTranslateHistoryItem) => (
-      <HistoryRow item={item} onSelect={setSelectedId} onUpdate={updateHistory} onRemove={removeHistory} />
+      <HistoryRow
+        item={item}
+        onUse={handleRowUse}
+        onSelect={setSelectedId}
+        onUpdate={updateHistory}
+        onRemove={removeHistory}
+      />
     ),
-    [removeHistory, updateHistory]
+    [handleRowUse, removeHistory, updateHistory]
   )
   const showHistoryActions = showStared || history.length > 0
   const header = (
@@ -337,10 +368,11 @@ const useLanguageLabels = () => {
 
 const HistoryRow: FC<{
   item: DisplayedTranslateHistoryItem
+  onUse: (item: DisplayedTranslateHistoryItem) => void
   onSelect: (id: string) => void
   onUpdate: (id: string, data: { star: boolean }) => Promise<unknown>
   onRemove: (id: string) => Promise<unknown>
-}> = ({ item, onSelect, onUpdate, onRemove }) => {
+}> = ({ item, onUse, onSelect, onUpdate, onRemove }) => {
   const { t } = useTranslation()
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
 
@@ -357,11 +389,16 @@ const HistoryRow: FC<{
       <div
         role="button"
         tabIndex={0}
-        onClick={() => onSelect(item.id)}
+        onClick={() => onUse(item)}
+        onContextMenu={(event) => {
+          event.preventDefault()
+          onSelect(item.id)
+        }}
         onKeyDown={(e) => {
+          if (e.target !== e.currentTarget) return
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault()
-            onSelect(item.id)
+            onUse(item)
           }
         }}
         className="group relative flex h-[160px] w-full cursor-pointer flex-col gap-1 border-border-subtle border-t border-dashed px-6 py-2.5 text-left transition-colors last:border-b hover:bg-accent focus-visible:bg-accent focus-visible:outline-none">

@@ -1,5 +1,6 @@
 import { mockRendererLoggerService } from '@test-mocks/RendererLoggerService'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import type React from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -255,10 +256,24 @@ describe('TranslateHistory', () => {
     expect(screen.getByTestId('page-side-panel-header')).toHaveClass('pb-0')
   })
 
-  it('opens detail and supports reuse', () => {
+  it('uses a text translation directly on left-click', async () => {
+    const user = userEvent.setup()
     renderHistory(onHistoryItemClick)
 
-    fireEvent.click(screen.getByText('hello'))
+    await user.click(screen.getByText('hello'))
+
+    expect(onHistoryItemClick).toHaveBeenCalledWith(expect.objectContaining({ id: '1', sourceText: 'hello' }))
+    expect(screen.queryByRole('button', { name: 'translate.history.back' })).not.toBeInTheDocument()
+  })
+
+  it('opens detail on right-click and supports reuse', () => {
+    renderHistory(onHistoryItemClick)
+
+    const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true })
+    act(() => {
+      screen.getByText('hello').dispatchEvent(event)
+    })
+    expect(event.defaultPrevented).toBe(true)
     const backButton = screen.getByRole('button', { name: 'translate.history.back' })
     expect(screen.getByTestId('page-side-panel-header')).toContainElement(backButton)
     expect(screen.getByText('translate.history.source').closest('.overflow-y-auto')).toHaveClass('px-6', 'pt-3', 'pb-6')
@@ -268,10 +283,35 @@ describe('TranslateHistory', () => {
   })
 
   describe('PDF entries', () => {
+    it('loads and uses a PDF translation directly on left-click', async () => {
+      const user = userEvent.setup()
+      translateHistoryMock.useTranslateHistories.mockReturnValue(historyState({ items: [pdfHistory], total: 1 }))
+      renderHistory(onHistoryItemClick)
+
+      await user.click(screen.getByText('paper.pdf'))
+
+      await waitFor(() =>
+        expect(onHistoryItemClick).toHaveBeenCalledWith(expect.objectContaining({ id: '3' }), TRANSLATION_FILES)
+      )
+      expect(screen.queryByRole('button', { name: 'translate.history.back' })).not.toBeInTheDocument()
+    })
+
+    it('keeps the current translation when a PDF file is unavailable', async () => {
+      const user = userEvent.setup()
+      fileMocks.loadTranslationFiles.mockResolvedValue({ source: TRANSLATION_FILES.source, target: null })
+      translateHistoryMock.useTranslateHistories.mockReturnValue(historyState({ items: [pdfHistory], total: 1 }))
+      renderHistory(onHistoryItemClick)
+
+      await user.click(screen.getByText('paper.pdf'))
+
+      await waitFor(() => expect(toast.error).toHaveBeenCalledWith('translate.history.file.unavailable'))
+      expect(onHistoryItemClick).not.toHaveBeenCalled()
+    })
+
     const openPdfDetail = async (item: TranslateHistoryItem = pdfHistory) => {
       translateHistoryMock.useTranslateHistories.mockReturnValue(historyState({ items: [item], total: 1 }))
       renderHistory(onHistoryItemClick)
-      fireEvent.click(screen.getByText(item.sourceText))
+      fireEvent.contextMenu(screen.getByText(item.sourceText))
       await waitFor(() => expect(fileMocks.loadTranslationFiles).toHaveBeenCalledWith('3'))
       // Assertions below describe the loaded panel — settle the load the click started,
       // otherwise "no preview button" passes for the trivial reason that nothing rendered yet.
@@ -366,7 +406,7 @@ describe('TranslateHistory', () => {
       )
       translateHistoryMock.useTranslateHistories.mockReturnValue(historyState({ items: [pdfHistory], total: 1 }))
       const { unmount } = renderHistory(onHistoryItemClick)
-      fireEvent.click(screen.getByText('paper.pdf'))
+      fireEvent.contextMenu(screen.getByText('paper.pdf'))
       await waitFor(() => expect(fileMocks.loadTranslationFiles).toHaveBeenCalledWith('3'))
 
       unmount()
@@ -421,18 +461,18 @@ describe('TranslateHistory', () => {
   it('names the detail star action after the favourite action and exposes its state via aria-pressed', () => {
     renderHistory()
 
-    fireEvent.click(screen.getByText('hello'))
+    fireEvent.contextMenu(screen.getByText('hello'))
     expect(screen.getByRole('button', { name: 'translate.history.star' })).toHaveAttribute('aria-pressed', 'false')
 
     fireEvent.click(screen.getByRole('button', { name: 'translate.history.back' }))
-    fireEvent.click(screen.getByText('bye'))
+    fireEvent.contextMenu(screen.getByText('bye'))
     expect(screen.getByRole('button', { name: 'translate.history.star' })).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('supports star toggle inside detail panel', async () => {
     renderHistory()
 
-    fireEvent.click(screen.getByText('hello'))
+    fireEvent.contextMenu(screen.getByText('hello'))
     fireEvent.click(screen.getByRole('button', { name: 'translate.history.star' }))
 
     await waitFor(() => expect(updateMock).toHaveBeenCalledWith('1', { star: true }))
@@ -441,7 +481,7 @@ describe('TranslateHistory', () => {
   it('copies text from detail actions and shows success toast', async () => {
     renderHistory()
 
-    fireEvent.click(screen.getByText('hello'))
+    fireEvent.contextMenu(screen.getByText('hello'))
     const actionLabels = screen
       .getAllByRole('button')
       .map((button) => button.getAttribute('aria-label') ?? button.textContent)
@@ -459,7 +499,7 @@ describe('TranslateHistory', () => {
     writeTextMock.mockRejectedValueOnce(new Error('clipboard denied'))
     renderHistory()
 
-    fireEvent.click(screen.getByText('hello'))
+    fireEvent.contextMenu(screen.getByText('hello'))
     fireEvent.click(screen.getByRole('button', { name: 'translate.history.copy_target' }))
 
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith('common.copy_failed'))
@@ -468,7 +508,7 @@ describe('TranslateHistory', () => {
   it('invokes delete mutation from detail confirm dialog flow', async () => {
     renderHistory()
 
-    fireEvent.click(screen.getByText('hello'))
+    fireEvent.contextMenu(screen.getByText('hello'))
     fireEvent.click(screen.getByRole('button', { name: 'translate.history.delete' }))
 
     const deleteConfirm = [...translateHistoryMock.confirmDialogProps].reverse().find((dialog) => {
