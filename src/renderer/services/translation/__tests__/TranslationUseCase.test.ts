@@ -52,6 +52,57 @@ const command = {
 }
 
 describe('TranslationUseCase', () => {
+  it.each(['auto', 'en-us'] as const)(
+    'reuses polished history for an unpolished request with %s source language',
+    async (sourceLanguage) => {
+      const polished = history({ cacheKey: `polish-translate:${modelId}:${polishModelId}:en-us:zh-cn:hello` })
+      const adapter = ports({ findBySourceText: vi.fn(async () => [polished]) })
+
+      const result = await prepareTranslation({ ...command, sourceLanguage }, adapter)
+
+      expect(result).toMatchObject({
+        status: 'cache_hit',
+        history: polished,
+        value: { mode: 'translate', sourceLanguage: 'en-us', targetLanguage: 'zh-cn', translateModelId: modelId }
+      })
+      expect(adapter.plan).not.toHaveBeenCalledWith('zh-cn', 'polish')
+    }
+  )
+
+  it('does not reuse unpolished history for a polish request', async () => {
+    const unpolished = history()
+    const adapter = ports({
+      findBySourceText: vi.fn(async () => [unpolished]),
+      findCached: vi.fn(async (cacheKey) => (cacheKey === unpolished.cacheKey ? unpolished : undefined))
+    })
+
+    await expect(prepareTranslation({ ...command, mode: 'polish_then_translate' }, adapter)).resolves.toMatchObject({
+      status: 'ready',
+      value: { mode: 'polish_then_translate', polishModelId }
+    })
+  })
+
+  it.each([
+    `polish-translate:old-model:${polishModelId}:en-us:zh-cn:hello`,
+    `polish-translate:${modelId}:${polishModelId}:en-us:ja-jp:hello`,
+    `polish-translate:${modelId}:${polishModelId}:en-us:zh-cn:different text`
+  ])('rejects incompatible polished cache identity %s', async (cacheKey) => {
+    const adapter = ports({ findBySourceText: vi.fn(async () => [history({ cacheKey })]) })
+
+    await expect(prepareTranslation({ ...command, sourceLanguage: 'en-us' }, adapter)).resolves.toMatchObject({
+      status: 'ready'
+    })
+  })
+
+  it('bypasses polished history when a plain translation is forcibly refreshed', async () => {
+    const polished = history({ cacheKey: `polish-translate:${modelId}:${polishModelId}:en-us:zh-cn:hello` })
+    const adapter = ports({ findBySourceText: vi.fn(async () => [polished]) })
+
+    await expect(prepareTranslation({ ...command, forceRefresh: true }, adapter)).resolves.toMatchObject({
+      status: 'ready'
+    })
+  })
+
   it('restores compatible language decisions from history before detection', async () => {
     const compatible = history()
     const adapter = ports({ findBySourceText: vi.fn(async () => [compatible]) })

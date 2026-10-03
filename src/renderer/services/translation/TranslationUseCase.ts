@@ -1,7 +1,11 @@
 import type { TranslateLangCode } from '@shared/data/preference/preferenceTypes'
 import type { UniqueModelId } from '@shared/data/types/model'
 import type { TranslateHistory, TranslateOperation } from '@shared/data/types/translate'
-import { createPolishTranslateHistoryCacheKey, createTranslateHistoryCacheKey } from '@shared/utils/translateHistory'
+import {
+  createPolishTranslateHistoryCacheKey,
+  createTranslateHistoryCacheKey,
+  normalizeTranslateHistoryText
+} from '@shared/utils/translateHistory'
 
 export type TranslationMode = 'translate' | 'polish_then_translate'
 
@@ -126,6 +130,20 @@ const buildPreparedTranslation = async (
   }
 }
 
+const isCompatibleHistory = (history: TranslateHistory, value: PreparedTranslation): boolean => {
+  if (history.cacheKey === value.cacheKey) return true
+  if (value.mode !== 'translate' || history.kind !== 'text' || history.modelId !== value.translateModelId) return false
+
+  // A plain request can reuse any polish model, but must retain the translation identity.
+  const prefix = `polish-translate:${value.translateModelId}:`
+  const suffix = `:${value.sourceLanguage}:${value.targetLanguage}:${normalizeTranslateHistoryText(value.sourceText)}`
+  return Boolean(
+    history.cacheKey?.startsWith(prefix) &&
+    history.cacheKey.endsWith(suffix) &&
+    history.cacheKey.length > prefix.length + suffix.length
+  )
+}
+
 const findCompatibleHistoryBeforeDetection = async (
   command: TranslationPreparationCommand,
   ports: TranslationPreparationPorts,
@@ -149,7 +167,7 @@ const findCompatibleHistoryBeforeDetection = async (
     if (!target.success || target.language !== history.targetLanguage) continue
 
     const value = await buildPreparedTranslation(command, ports, history.sourceLanguage, history.targetLanguage, signal)
-    if (value.cacheKey === history.cacheKey) return { history, value }
+    if (isCompatibleHistory(history, value)) return { history, value }
   }
   return undefined
 }
@@ -180,6 +198,13 @@ export const prepareTranslation = async (
     const history = await ports.findCached(value.cacheKey)
     throwIfAborted(signal)
     if (history) return { status: 'cache_hit', history, value }
+
+    if (command.mode === 'translate' && command.sourceLanguage !== 'auto') {
+      const histories = await ports.findBySourceText(command.sourceText)
+      throwIfAborted(signal)
+      const polishedHistory = histories.find((entry) => isCompatibleHistory(entry, value))
+      if (polishedHistory) return { status: 'cache_hit', history: polishedHistory, value }
+    }
   }
 
   return { status: 'ready', value }
