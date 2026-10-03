@@ -327,12 +327,34 @@ describe('useSmoothStream', () => {
         settled = true
       })
     })
-    act(() => tick(16, 5))
     await Promise.resolve()
     expect(settled).toBe(false)
 
-    act(() => tick(16, 60))
+    act(() => tick(16))
     await vi.waitFor(() => expect(settled).toBe(true))
     expect(lastText(onUpdate)).toBe(text)
+  })
+
+  it('resolves a second completion when the same text is already displayed', async () => {
+    const onUpdate = vi.fn()
+    const { result } = renderHook(() => useSmoothStream({ onUpdate, minDelay: 0 }))
+
+    let firstCompletion!: Promise<void>
+    act(() => {
+      firstCompletion = result.current.complete('translated text')
+    })
+    act(() => tick(16))
+    await firstCompletion
+    expect(lastText(onUpdate)).toBe('translated text')
+
+    let settled = false
+    act(() => {
+      void result.current.complete('translated text').then(() => {
+        settled = true
+      })
+    })
+
+    await vi.waitFor(() => expect(settled).toBe(true))
+    expect(rafCallbacks.size).toBe(0)
   })
 })

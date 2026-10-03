@@ -2366,20 +2366,37 @@ describe('TranslatePage', () => {
     expect(translateCoreMock.addHistory).not.toHaveBeenCalled()
   })
 
-  it('auto-copies a successful translation before the page can be hidden', async () => {
+  it('shows completion on Translate after a delayed auto-copy, without a late toast after leaving', async () => {
     MockUsePreferenceUtils.setMultiplePreferenceValues({
       'feature.translate.model_id': 'openai::gpt-4.1',
       'feature.translate.page.source_language': 'zh-cn',
       'feature.translate.page.target_language': 'en-us',
       'feature.translate.page.auto_copy': true
     })
+    let finishClipboardWrite!: () => void
+    clipboardWriteTextMock.mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        finishClipboardWrite = resolve
+      })
+    )
 
-    const { rerender } = render(<TranslatePage />)
+    const { rerender, unmount } = render(<TranslatePage />)
     fireEvent.change(screen.getByLabelText('translate.input.placeholder'), { target: { value: 'hello' } })
     rerender(<TranslatePage />)
     fireEvent.click(screen.getByRole('button', { name: 'translate.button.translate' }))
 
     await waitFor(() => expect(clipboardWriteTextMock).toHaveBeenCalledWith('translated text'))
+    await waitFor(() => expect(screen.getByTestId('translate-output-content')).toHaveTextContent('translated text'))
+    expect(toast.success).not.toHaveBeenCalled()
+
+    await act(async () => {
+      finishClipboardWrite()
+    })
+
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith('translate.complete'))
+    unmount()
+    await Promise.resolve()
+    expect(toast.success).toHaveBeenCalledTimes(1)
 
     await waitFor(() =>
       expect(translateCoreMock.addHistory).toHaveBeenCalledWith({
@@ -2391,7 +2408,6 @@ describe('TranslatePage', () => {
         cacheKey: 'translate:openai::gpt-4.1:zh-cn:en-us:hello'
       })
     )
-    expect(toast.success).toHaveBeenCalledWith('translate.complete')
   })
 
   it('keeps the current target language when reusing history with a null target language', async () => {

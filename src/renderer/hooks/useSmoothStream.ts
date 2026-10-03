@@ -229,8 +229,9 @@ export const useSmoothStream = ({
         pendingCompletionRef.current?.resolve()
         pendingCompletionRef.current = { resolve, target: accumulated }
         update(accumulated, true)
+        settleCompletion()
       }),
-    [update]
+    [settleCompletion, update]
   )
 
   const renderLoop = useCallback(() => {
@@ -258,6 +259,7 @@ export const useSmoothStream = ({
       chunkQueueRef.current = []
       onUpdateRef.current(displayedTextRef.current)
       animationFrameRef.current = null
+      settleCompletion()
       return
     }
 
