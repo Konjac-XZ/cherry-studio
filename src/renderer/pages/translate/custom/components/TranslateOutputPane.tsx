@@ -10,6 +10,7 @@ import { defaultMarkdownPlugins, Scrollbar, StreamingMarkdown, withMath } from '
 import { CodeBlockView } from '@renderer/components/CodeBlockView/CodeBlockView'
 import { getNodeText } from '@renderer/utils/reactNodeText'
 import { remarkLatexMath } from '@renderer/utils/remarkLatexMath'
+import { copySelectionAsSemanticHtml } from '@renderer/utils/selectionClipboard'
 import { getJsonStructureForDisplay, type JsonStructureCopySeparator } from '@renderer/utils/translate'
 
 import FloatingActionBar from '../../components/FloatingActionBar'
@@ -88,7 +89,9 @@ const TranslateOutputPane = ({
         onScroll={onScroll}
         style={{ fontSize }}
         className="selectable min-h-0 flex-1 overflow-x-auto pt-[15px] pr-[21px] pb-[15px] pl-[21px] text-base leading-relaxed">
-        <div className="flex min-h-full flex-col">
+        <div
+          className="flex min-h-full flex-col"
+          onCopy={jsonStructure ? undefined : (event) => copySelectionAsSemanticHtml(event, !enableMarkdown)}>
           {translating && !translatedContent ? (
             <div className="flex items-center gap-2 text-muted-foreground">
               <div className="h-4 w-4 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground" />

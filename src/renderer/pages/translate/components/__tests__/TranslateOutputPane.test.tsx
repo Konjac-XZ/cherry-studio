@@ -93,4 +93,29 @@ describe('TranslateOutputPane', () => {
 
     expect(props.onExportToNotes).toHaveBeenCalledTimes(1)
   })
+
+  it('copies a manual body-text selection as semantic HTML', () => {
+    const props = baseProps()
+    props.enableMarkdown = true
+    props.translatedContent = 'Ordinary **emphasized** body text.'
+    render(<TranslateOutputPane {...props} />)
+    const body = screen.getByText('emphasized')
+    const range = document.createRange()
+    range.selectNodeContents(body)
+    const selection = window.getSelection()!
+    selection.removeAllRanges()
+    selection.addRange(range)
+    const data = new Map<string, string>()
+    const event = new Event('copy', { bubbles: true, cancelable: true })
+    Object.defineProperty(event, 'clipboardData', {
+      value: { setData: (type: string, value: string) => data.set(type, value) }
+    })
+    fireEvent(body, event)
+    selection.removeAllRanges()
+    expect(data.get('text/plain')).toBe('emphasized')
+    const html = document.createElement('div')
+    html.innerHTML = data.get('text/html') ?? ''
+    expect(html.querySelector('p strong')?.textContent).toBe('emphasized')
+    expect(html.querySelector('h1, [style], [class], [data-streamdown]')).toBeNull()
+  })
 })

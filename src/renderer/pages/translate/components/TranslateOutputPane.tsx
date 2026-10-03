@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { defaultMarkdownPlugins, Scrollbar, StreamingMarkdown, withMath } from '@cherrystudio/ui'
+import { copySelectionAsSemanticHtml } from '@renderer/utils/selectionClipboard'
 
 import IconButton from './IconButton'
 
@@ -37,7 +38,9 @@ const TranslateOutputPane = ({
         ref={ref}
         onScroll={onScroll}
         className="selectable min-h-0 flex-1 overflow-x-hidden p-4 pr-12 text-base leading-relaxed">
-        <div className="flex min-h-full flex-col">
+        <div
+          className="flex min-h-full flex-col"
+          onCopy={(event) => copySelectionAsSemanticHtml(event, !enableMarkdown)}>
           {translating && !translatedContent ? (
             <div className="flex items-center gap-2 text-muted-foreground">
               <div className="h-4 w-4 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground" />
