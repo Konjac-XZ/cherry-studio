@@ -904,6 +904,41 @@
   word-break: break-word;
 }
 
+[data-ui~='translate.output'] .markdown pre:has(> .code-block) {
+  overflow: visible;
+}
+
+/* Reserve toolbar space in the header instead of overlaying its language label. */
+[data-ui~='translate.output'] .markdown .code-block {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+[data-ui~='translate.output'] .markdown .code-block > .code-block-header {
+  grid-area: 1 / 1;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+[data-ui~='translate.output'] .markdown .code-block > [data-ui~='ui.code-toolbar'] {
+  grid-area: 1 / 2;
+  align-self: start;
+  top: 0;
+  height: auto;
+  padding: 4px 8px;
+}
+
+[data-ui~='translate.output'] .markdown .code-block .code-toolbar {
+  position: static;
+  height: auto;
+  min-height: 24px;
+  flex-wrap: wrap;
+}
+
+[data-ui~='translate.output'] .markdown .code-block > .split-view-wrapper {
+  grid-column: 1 / -1;
+}
+
 [data-ui~='translate.output'] .markdown .katex-display *,
 [data-ui~='translate.output'] .markdown mjx-container[display='true'] * {
   max-width: none;

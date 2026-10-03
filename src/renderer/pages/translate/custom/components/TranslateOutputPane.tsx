@@ -1,3 +1,4 @@
+import '@cherrystudio/ui/components/composites/markdown/styles'
 import { Check, Copy } from 'lucide-react'
 import { type JSX, type Ref, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'

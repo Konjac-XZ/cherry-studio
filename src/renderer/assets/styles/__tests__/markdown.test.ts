@@ -5,6 +5,46 @@ import { describe, expect, it } from 'vitest'
 
 const markdownStyles = readFileSync('src/renderer/assets/styles/markdown.css', 'utf8')
 
+describe('translate code block styles', () => {
+  it('reserves separate header space for the toolbar without clipping its sticky container', () => {
+    const declarationsFor = (selector: string) => {
+      const declarations: Record<string, string> = {}
+      postcss.parse(markdownStyles).walkRules((rule) => {
+        if (rule.selectors.includes(selector)) {
+          rule.walkDecls((declaration) => {
+            declarations[declaration.prop] = declaration.value
+          })
+        }
+      })
+      return declarations
+    }
+    const scope = "[data-ui~='translate.output'] .markdown"
+
+    expect(declarationsFor(`${scope} pre:has(> .code-block)`)).toMatchObject({ overflow: 'visible' })
+    expect(declarationsFor(`${scope} .code-block`)).toMatchObject({
+      display: 'grid',
+      'grid-template-columns': 'minmax(0, 1fr) auto'
+    })
+    expect(declarationsFor(`${scope} .code-block > .code-block-header`)).toMatchObject({
+      'grid-area': '1 / 1',
+      overflow: 'hidden',
+      'white-space': 'nowrap'
+    })
+    expect(declarationsFor(`${scope} .code-block > [data-ui~='ui.code-toolbar']`)).toMatchObject({
+      'grid-area': '1 / 2',
+      height: 'auto'
+    })
+    expect(declarationsFor(`${scope} .code-block .code-toolbar`)).toMatchObject({
+      position: 'static',
+      height: 'auto',
+      'flex-wrap': 'wrap'
+    })
+    expect(declarationsFor(`${scope} .code-block > .split-view-wrapper`)).toMatchObject({
+      'grid-column': '1 / -1'
+    })
+  })
+})
+
 describe('markdown image capture styles', () => {
   it('unclips inline and block formula bounds while capturing', () => {
     const expectedSelectors = [
