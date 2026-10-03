@@ -103,23 +103,37 @@ describe('TranslateOutputPane', () => {
     expect(container.querySelector('.markdown button')).toBeNull()
   })
 
-  it('lets each Markdown code block toggle automatic wrapping', async () => {
+  it.each([
+    { language: 'text', source: 'A very long translated line' },
+    { language: 'latex', source: String.raw`\section{A very long translated line}` }
+  ])('toggles wrapping for $language source code', async ({ language, source }) => {
     const user = userEvent.setup()
     const props = baseProps()
     props.enableMarkdown = true
-    props.translatedContent = '```latex\n\\section{A very long translated line}\n```'
+    props.translatedContent = ['```' + language, source, '```'].join('\n')
 
     const { container } = render(<TranslateOutputPane {...props} />)
 
+    if (language === 'latex') {
+      expect(screen.queryByRole('button', { name: 'code_block.wrap.off' })).not.toBeInTheDocument()
+      await user.click(await screen.findByRole('button', { name: 'preview.source' }))
+      await user.click(screen.getByRole('button', { name: 'code_block.more' }))
+    }
+
     const unwrapButton = await screen.findByRole('button', { name: 'code_block.wrap.off' })
+    expect(screen.getByText(source)).toBeInTheDocument()
     expect(container.querySelector('pre')).toHaveAttribute('data-wrapped', 'true')
 
     await user.click(unwrapButton)
 
-    expect(screen.getByRole('button', { name: 'code_block.wrap.on' })).toBeInTheDocument()
+    const wrapButton = screen.getByRole('button', { name: 'code_block.wrap.on' })
     expect(container.querySelector('pre')).toHaveAttribute('data-wrapped', 'false')
-  })
 
+    await user.click(wrapButton)
+
+    expect(screen.getByRole('button', { name: 'code_block.wrap.off' })).toBeInTheDocument()
+    expect(container.querySelector('pre')).toHaveAttribute('data-wrapped', 'true')
+  })
   it('shows completed structured JSON ahead of Markdown when explicitly enabled', () => {
     const props = baseProps()
     props.translatedContent = '{"message":"line 1\\nline 2"}'
