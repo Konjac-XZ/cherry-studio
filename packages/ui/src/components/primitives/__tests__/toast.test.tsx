@@ -2,15 +2,23 @@
 import '@testing-library/jest-dom/vitest'
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import type * as Motion from 'motion/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { getToastUtilities, type ToastLabels, ToastProvider, ToastViewport, useToasts } from '../toast'
+
+const motionTestMode = vi.hoisted(() => ({ reduced: false }))
+vi.mock('motion/react', async (importOriginal) => ({
+  ...(await importOriginal<typeof Motion>()),
+  useReducedMotion: () => motionTestMode.reduced
+}))
 
 const toast = getToastUtilities()
 
 describe('Toast', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    motionTestMode.reduced = true
   })
 
   afterEach(() => {
@@ -45,6 +53,7 @@ describe('Toast', () => {
     await user.click(screen.getByRole('button', { name: 'Restore Second' }))
     expect([...archived]).toEqual(['First', 'Third', 'Fourth'])
     expect(screen.queryByText('Second')).not.toBeInTheDocument()
+    fireEvent.blur(region, { relatedTarget: document.body })
     fireEvent.mouseLeave(region)
     expect(screen.getByText('First').closest('[inert]')).not.toBeNull()
   })
@@ -104,6 +113,49 @@ describe('Toast', () => {
     expect(screen.getByText('Saved')).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'notifications' })).toBeInTheDocument()
     expect(screen.getByRole('status')).toHaveAttribute('aria-live', 'polite')
+  })
+
+  it('animates a new toast into view and skips the entrance for reduced motion', () => {
+    motionTestMode.reduced = false
+    const view = render(<ToastViewport />)
+    act(() => {
+      toast.success('Animated')
+    })
+    expect(screen.getByRole('status').parentElement).toHaveStyle({ opacity: '0' })
+    view.unmount()
+    act(() => {
+      toast.closeAll()
+    })
+
+    motionTestMode.reduced = true
+    render(<ToastViewport />)
+    act(() => {
+      toast.success('Still')
+    })
+    expect(screen.getByRole('status').parentElement).not.toHaveStyle({ opacity: '0' })
+  })
+
+  it('keeps a departing toast mounted for its exit and removes it immediately with reduced motion', () => {
+    motionTestMode.reduced = false
+    const view = render(<ToastViewport />)
+    act(() => {
+      toast.success({ key: 'departure', title: 'Departing' })
+    })
+    act(() => {
+      toast.closeToast('departure')
+    })
+    expect(screen.getByText('Departing')).toBeInTheDocument()
+    view.unmount()
+
+    motionTestMode.reduced = true
+    render(<ToastViewport />)
+    act(() => {
+      toast.success({ key: 'instant', title: 'Instant' })
+    })
+    act(() => {
+      toast.closeToast('instant')
+    })
+    expect(screen.queryByText('Instant')).not.toBeInTheDocument()
   })
 
   it('dismisses an actionable toast before running its action without triggering the toast click', async () => {

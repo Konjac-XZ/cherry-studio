@@ -1,5 +1,5 @@
 import { AlertCircle, AlertTriangle, CheckCircle2, Info, LoaderCircle, X } from 'lucide-react'
-import { motion, useReducedMotion } from 'motion/react'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import type React from 'react'
 import { createContext, use, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 
@@ -459,46 +459,52 @@ export const ToastViewport = ({
     }
   }, [toasts.length])
 
-  if (toasts.length === 0) {
-    return null
-  }
-
   return (
-    <div
-      ref={viewportRef}
-      aria-label="notifications"
-      className={cn(
-        'pointer-events-auto fixed top-5 left-1/2 z-[10000] -translate-x-1/2 [-webkit-app-region:no-drag]',
-        expanded ? 'flex max-h-[calc(100vh-2.5rem)] flex-col items-center gap-2 overflow-y-auto p-2' : 'grid pb-4'
-      )}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      onFocus={() => setFocused(true)}
-      onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false)
-      }}
-      role="region">
-      {[...toasts].reverse().map((toast, index) => (
+    <AnimatePresence>
+      {toasts.length > 0 && (
         <motion.div
-          key={toast.key}
-          layout={reducedMotion ? false : 'position'}
-          transition={transition}
-          inert={!expanded && index > 0}
-          className={cn(!expanded && 'col-start-1 row-start-1')}
-          style={{ zIndex: toasts.length - index }}>
-          <motion.div
-            initial={false}
-            animate={{
-              y: expanded ? 0 : Math.min(index, 2) * 8,
-              scale: expanded ? 1 : 1 - Math.min(index, 2) * 0.04,
-              opacity: expanded || index < 3 ? 1 : 0
-            }}
-            transition={transition}
-            className="origin-top">
-            <ToastItem labels={toastLabels} store={store} toast={toast} />
-          </motion.div>
+          key="viewport"
+          ref={viewportRef}
+          aria-label="notifications"
+          className={cn(
+            'pointer-events-auto fixed top-5 left-1/2 z-[10000] -translate-x-1/2 [-webkit-app-region:no-drag]',
+            expanded ? 'flex max-h-[calc(100vh-2.5rem)] flex-col items-center gap-2 overflow-y-auto p-2' : 'grid pb-4'
+          )}
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
+          onFocus={() => setFocused(true)}
+          onBlur={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false)
+          }}
+          role="region"
+          exit={reducedMotion ? undefined : { y: -8, scale: 0.96, opacity: 0 }}
+          transition={transition}>
+          <AnimatePresence>
+            {[...toasts].reverse().map((toast, index) => (
+              <motion.div
+                key={toast.key}
+                layout={reducedMotion ? false : 'position'}
+                transition={transition}
+                exit={reducedMotion ? undefined : { y: -8, scale: 0.96, opacity: 0 }}
+                inert={!expanded && index > 0}
+                className={cn(!expanded && 'col-start-1 row-start-1')}
+                style={{ zIndex: toasts.length - index }}>
+                <motion.div
+                  initial={reducedMotion ? false : { y: -8, scale: 0.96, opacity: 0 }}
+                  animate={{
+                    y: expanded ? 0 : Math.min(index, 2) * 8,
+                    scale: expanded ? 1 : 1 - Math.min(index, 2) * 0.04,
+                    opacity: expanded || index < 3 ? 1 : 0
+                  }}
+                  transition={transition}
+                  className="origin-top">
+                  <ToastItem labels={toastLabels} store={store} toast={toast} />
+                </motion.div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </motion.div>
-      ))}
-    </div>
+      )}
+    </AnimatePresence>
   )
 }
