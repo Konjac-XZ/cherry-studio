@@ -762,10 +762,17 @@ describe('TabsProvider session restore', () => {
     expect(screen.getByTestId('session-ids')).toHaveTextContent('active-copy')
   })
 
-  it('merges duplicate restored Translate routes and preserves the active copy', async () => {
+  it('restores the active Translate tab without replaying its clipboard command', async () => {
     normalTabsValue = [
       { id: 'old-a', type: 'route', url: '/app/translate', title: '', lastAccessTime: 1, isDormant: true },
-      { id: 'old-b', type: 'route', url: '/app/translate?paste=1', title: '', lastAccessTime: 2, isDormant: false }
+      {
+        id: 'old-b',
+        type: 'route',
+        url: '/app/translate?paste=1&_=nonce-1',
+        title: '',
+        lastAccessTime: 2,
+        isDormant: false
+      }
     ]
     activeTabIdValue = 'old-b'
 
@@ -778,6 +785,8 @@ describe('TabsProvider session restore', () => {
     await waitFor(() => expect(screen.getByTestId('active')).toHaveTextContent('old-b'))
     expect((screen.getByTestId('session-ids').textContent ?? '').split(',')).toEqual(['files', 'old-b'])
     expect(screen.getByTestId('session-tabs')).toHaveTextContent('old-b:awake')
+    expect(screen.getByTestId('session-urls')).toHaveTextContent('old-b=/app/translate')
+    expect(screen.getByTestId('session-urls')).not.toHaveTextContent('paste=1')
   })
 
   it('drops transient mini-app tabs whose in-memory descriptor disappears on restart', async () => {

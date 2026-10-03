@@ -126,7 +126,18 @@ function isSettingsRouteTab(tab: Tab): boolean {
 type InitialSession = { normalTabs: Tab[]; pinnedTabs: Tab[]; activeTabId: string }
 
 function restoreTabs(tabs: Tab[], activeTabId: string): Tab[] {
-  return tabs.map((tab) => ({ ...tab, isDormant: tab.id !== activeTabId }))
+  return tabs.map((tab) => {
+    if (tab.type !== 'route' || !tab.url.startsWith('/app/translate?')) {
+      return { ...tab, isDormant: tab.id !== activeTabId }
+    }
+
+    const url = new URL(tab.url, 'https://www.cherry-ai.com')
+    if (url.searchParams.get('paste') !== '1') return { ...tab, isDormant: tab.id !== activeTabId }
+
+    url.searchParams.delete('paste')
+    url.searchParams.delete('_')
+    return { ...tab, url: `${url.pathname}${url.search}${url.hash}`, isDormant: tab.id !== activeTabId }
+  })
 }
 
 /**
